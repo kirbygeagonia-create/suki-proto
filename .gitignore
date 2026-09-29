@@ -1,0 +1,21 @@
+# Android wrapper is kept local; this repo publishes the web prototype only
+Sukinnect-Android/
+
+# Build output and caches
+build/
+dist/
+node_modules/
+.gradle/
+
+# Machine-specific and secret local config
+local.properties
+*.keystore
+*.jks
+.env
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.tmp
+*.swp
