@@ -2,3 +2,4 @@
 * text=auto
 *.pdf filter=lfs diff=lfs merge=lfs -text
 *.pptx filter=lfs diff=lfs merge=lfs -text
+reicon.js filter=lfs diff=lfs merge=lfs -text
