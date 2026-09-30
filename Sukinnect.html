@@ -197,35 +197,173 @@
     box-shadow:0 6px 16px rgba(3,82,174,0.18); cursor:pointer;
   }
 
-  .auth-hero{
-    background:var(--grad-brand-hero);
-    color:#fff; padding:38px 20px 30px; text-align:center; position:relative;
+  /* Sign-in is one phone screen, not a landing page: a slim brand bar, the form
+     straight after it, and the action pinned where the thumb is (36, 73). */
+  .auth-screen{
+    display:flex; flex-direction:column; min-height:100%; background:var(--grad-brand-soft);
   }
-  /* The official mark sits on a white tile: the logo file is RGB with a white
-     ground, so the SURFACE adapts to the brand instead of the logo adapting (35). */
-  .auth-logo-badge{
-    display:inline-flex; align-items:center; justify-content:center;
-    width:64px; height:64px; border-radius:18px; background:#fff; padding:7px;
-    margin-bottom:12px;
-    box-shadow:0 8px 22px rgba(3,0,43,.35), 0 0 0 1px rgba(255,255,255,.45);
+  .auth-bar{
+    position:relative; overflow:hidden; display:flex; align-items:center; gap:11px;
+    padding:13px 18px; background:var(--grad-brand-hero); color:#fff;
   }
-  .auth-logo-badge img{width:100%; height:100%; object-fit:contain; display:block;}
+  /* ACCENT GLOW (33): the logo's cyan at low alpha, one controlled layer. */
+  .auth-bar::after{
+    content:""; position:absolute; top:-64px; right:-44px; width:190px; height:190px;
+    border-radius:50%; pointer-events:none;
+    background:radial-gradient(circle, rgba(5,188,196,.32), rgba(5,188,196,0) 68%);
+  }
+  .auth-bar > *{ position:relative; z-index:1; }
+  /* The logo file has a white ground, so the SURFACE around it adapts to the
+     brand instead of the mark being altered (35). */
+  .auth-mark{
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    width:40px; height:40px; border-radius:12px; background:#fff; padding:4px;
+    box-shadow:0 4px 14px rgba(3,0,43,.30);
+  }
+  .auth-mark img{width:100%; height:100%; object-fit:contain; display:block;}
+  .auth-wordmark{
+    font-family:"Fraunces", ui-serif, serif; font-size:20px; font-weight:600;
+    letter-spacing:-.3px; line-height:1.15;
+  }
+  .auth-kicker{ font-size:11.5px; font-weight:500; opacity:.85; margin-top:1px; }
+  .auth-body{ flex:1; display:flex; flex-direction:column; padding:16px 18px 6px; }
+  /* SAFE CENTRING: auto margins only share out space that actually exists, so a
+     short screen breathes around the form instead of leaving one hole above the
+     action bar, while a tall one still starts at the top and scrolls (38, 73). */
+  .auth-form{ margin-top:auto; margin-bottom:auto; }
+  /* The page wash is the same value the fields use by default, so on this screen
+     they are lifted to surface white to stay legible as controls (41, 72). */
+  .auth-body .input-field{ background:var(--surface); }
+  .auth-heading{
+    font-family:"Fraunces", ui-serif, serif; font-size:19px; font-weight:600;
+    letter-spacing:-.2px; color:var(--ink);
+  }
+  .auth-sub{ font-size:11.5px; color:var(--ink-soft); margin-top:3px; line-height:1.45; }
+  /* Sticky inside .screen so the button never scrolls out of reach and the
+     keyboard cannot bury it (38, 73). .auth-body takes the leftover height, so
+     this sits flush at the bottom of a short screen without a gap above it. */
+  .auth-action{
+    position:sticky; bottom:0; z-index:2;
+    padding:12px 18px 16px; background:var(--surface);
+    border-top:1px solid var(--line); box-shadow:0 -8px 22px rgba(3,0,43,.07);
+  }
+  .auth-switch-line{ text-align:center; font-size:12px; color:var(--ink-soft); margin-top:10px; }
+  .auth-foot{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    margin-top:6px; font-size:10.5px; color:var(--mist);
+  }
+  .auth-foot .where{ display:inline-flex; align-items:center; gap:4px; }
+  .auth-foot svg{ color:var(--brand-secondary); }
+
+  /* Launch screen — the app's first brand moment. Full-bleed hero gradient,
+     official mark, and the deck's FIND/REVIEW/BOOK/RECORD spine as the only
+     copy. It plays once on cold load and is tappable to skip. */
+  .splash{
+    min-height:100%; padding:36px 28px; box-sizing:border-box;
+    background:var(--grad-brand-hero); color:#fff;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; position:relative; overflow:hidden; cursor:pointer;
+  }
+  .splash::after{
+    content:""; position:absolute; top:-58px; right:-58px; width:224px; height:224px;
+    background:radial-gradient(circle, rgba(5,188,196,.34), rgba(5,188,196,0) 68%);
+    pointer-events:none;
+  }
+  /* Same rule as the auth badge: the logo file has a white ground, so the tile
+     around it adapts to the brand instead of the mark being altered. */
+  .splash-mark{
+    width:108px; height:108px; border-radius:26px; background:#fff; padding:13px;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 16px 38px rgba(3,0,43,.42), 0 0 0 1px rgba(255,255,255,.5);
+    animation:splashRise .5s cubic-bezier(.22,.9,.32,1.18) both;
+  }
+  .splash-mark img{width:100%; height:100%; object-fit:contain; display:block;}
+  .splash-name{
+    font-family:'Fraunces', ui-serif, serif; font-size:31px; font-weight:600;
+    letter-spacing:-.4px; margin-top:20px;
+    animation:splashRise .5s .07s cubic-bezier(.22,.9,.32,1.18) both;
+  }
+  .splash-spine{
+    display:flex; align-items:center; gap:8px; margin-top:11px;
+    font-size:10.5px; font-weight:700; letter-spacing:.13em; text-transform:uppercase;
+    animation:splashRise .5s .14s cubic-bezier(.22,.9,.32,1.18) both;
+  }
+  .splash-spine i{width:4px; height:4px; border-radius:50%; background:var(--brand-secondary); flex-shrink:0;}
+  .splash-status{ width:158px; margin-top:28px; animation:splashRise .5s .2s cubic-bezier(.22,.9,.32,1.18) both; }
+  .splash-bar{ height:3px; border-radius:99px; background:rgba(255,255,255,.26); overflow:hidden; }
+  .splash-bar i{ display:block; width:38%; height:100%; border-radius:99px; background:#fff; animation:splashSlide 1.15s ease-in-out infinite; }
+  .splash-loading{ margin-top:9px; font-size:11px; font-weight:600; }
+  .splash-tag{
+    position:absolute; bottom:20px; left:16px; right:16px;
+    font-size:10px; font-weight:700; letter-spacing:.10em; text-transform:uppercase;
+  }
+  @keyframes splashRise{ from{ opacity:0; transform:translateY(12px); } to{ opacity:1; transform:none; } }
+  @keyframes splashSlide{ 0%{ transform:translateX(-102%); } 100%{ transform:translateX(262%); } }
+
+  /* One empty-state component for every list that can legitimately hold no
+     rows: the icon says which list, the title says what is missing, the body
+     says what to do about it. */
+  .empty{
+    background:var(--surface); border:1px solid var(--line); border-radius:16px;
+    padding:26px 20px; text-align:center; box-shadow:var(--shadow-xs);
+  }
+  .empty-icon{
+    width:46px; height:46px; border-radius:14px; margin:0 auto 12px;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--deep-100); color:var(--brand-primary);
+  }
+  .empty-title{ font-size:14px; font-weight:700; color:var(--ink); }
+  .empty-body{ font-size:12px; color:var(--ink-soft); margin-top:5px; line-height:1.5; }
+  .empty .btn{ margin-top:14px; }
+
+  /* Skeleton - the provider list keeps its shape while matching runs, so a
+     search never collapses into a blank panel. Under prefers-reduced-motion the
+     shared rule stops the shimmer sweep; the layout still holds. */
+  .skel{
+    background:var(--brand-tint-soft); border-radius:8px; position:relative; overflow:hidden;
+    display:block;
+  }
+  .skel::after{
+    content:""; position:absolute; inset:0; transform:translateX(-100%);
+    background:linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.75) 50%, rgba(255,255,255,0) 100%);
+    animation:skelShimmer 1.2s ease-in-out infinite;
+  }
+  .skel-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    padding:14px; margin-bottom:12px;
+  }
+  .skel-row{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .skel-note{
+    display:flex; align-items:center; gap:7px; font-size:12px; font-weight:600;
+    color:var(--ink-soft); margin-bottom:12px;
+  }
+  @keyframes skelShimmer{ 0%{ transform:translateX(-100%); } 100%{ transform:translateX(100%); } }
   .role-cards{
-    display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:16px 0;
+    display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:8px 0 18px;
   }
+  /* Three ways across a 390pt screen, so each card reads icon + name at a glance
+     rather than a stacked tile that pushes the form off the phone. */
   .role-card{
+    display:flex; align-items:center; gap:7px; text-align:left; min-height:48px;
     background:var(--surface); border:1.5px solid var(--line); border-radius:12px;
-    padding:12px 6px; text-align:center; cursor:pointer; transition:all 0.15s ease;
+    padding:7px 9px; cursor:pointer; transition:all 0.15s ease;
   }
   .role-card.active{
     border-color:var(--deep); background:var(--deep-100);
     box-shadow:0 4px 10px rgba(3, 82, 174, 0.1);
   }
-  .role-card .rc-icon{font-size:19px; margin-bottom:5px; display:block;}
+  .role-card .rc-icon{display:block; flex-shrink:0; line-height:0;}
+  .role-card .rc-text{ min-width:0; }
   /* Role choice is the main decision on this screen, so the labels are sized and
      shaded for reading at arm's length: 5.6:1 on the tinted selected card (72). */
-  .role-card .rc-name{font-size:12.5px; font-weight:700; color:var(--ink);}
-  .role-card .rc-sub{font-size:10.5px; color:var(--ink-soft); margin-top:3px;}
+  .role-card .rc-name{
+    display:block; font-size:12px; font-weight:700; color:var(--ink);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .role-card .rc-sub{
+    display:block; font-size:10px; color:var(--ink-soft); margin-top:1px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
 
   .input-field{
     display:flex; align-items:center; background:var(--cloud); border:1.5px solid var(--line);
@@ -242,6 +380,7 @@
   }
   .input-field .addon-btn{
     background:none; border:none; color:var(--mist); cursor:pointer; padding:6px 8px;
+    min-width:40px; min-height:40px; border-radius:10px;
     display:flex; align-items:center; justify-content:center;
   }
 
@@ -259,6 +398,7 @@
   .notif-item{
     background:#fff; border:1px solid var(--line); border-radius:14px; padding:14px;
     margin-bottom:10px; display:flex; gap:12px; align-items:flex-start; cursor:pointer;
+    width:100%; text-align:left; font:inherit; color:var(--ink);
   }
   .notif-item.unread{border-left:4px solid var(--deep); background:var(--background);}
   .notif-icon{
@@ -287,19 +427,97 @@
     flex-shrink:0; position:relative;
   }
   .filter-icon-btn:active{background:var(--deep-100);}
-
-  .filter-dropdown{
-    position:absolute; right:0; top:50px; background:#fff; border:1px solid var(--line);
-    border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.1); width:215px; z-index:50;
-    padding:8px; display:none;
+  /* How many constraints are actually narrowing the list - the count has to be
+     visible without opening the sheet, or a filter you forgot is a mystery. */
+  .filter-badge, .nav-badge{
+    position:absolute; top:-5px; right:-5px; min-width:17px; height:17px; padding:0 4px;
+    border-radius:999px; background:var(--brand-secondary); color:var(--brand-navy);
+    font-size:10px; font-weight:800; line-height:1; display:flex; align-items:center;
+    justify-content:center; box-shadow:0 0 0 2px var(--surface);
   }
-  .filter-dropdown.show{display:block;}
+  /* The nav count sits on the icon block, so it needs its own corner. */
+  .nav-badge{ top:1px; right:2px; }
+
+  /* Bottom sheet - the mobile-native way to raise a decision that needs more
+     room than a toast without replacing the screen behind it. Anchored inside
+     the phone shell rather than the viewport, so it lands correctly on the
+     device in app mode AND inside the desktop preview frame. */
+  .sheet-layer{
+    position:absolute; inset:0; z-index:60; display:flex; flex-direction:column;
+    justify-content:flex-end; pointer-events:none;
+  }
+  .sheet-scrim{
+    position:absolute; inset:0; background:rgba(3,0,43,.52);
+    animation:scrimIn .18s ease both; pointer-events:auto; border:none; cursor:pointer;
+  }
+  .sheet{
+    position:relative; background:var(--surface); border-radius:22px 22px 0 0;
+    box-shadow:0 -12px 34px rgba(3,0,43,.24); max-height:80%;
+    display:flex; flex-direction:column; pointer-events:auto;
+    animation:sheetUp .26s cubic-bezier(.22,.9,.32,1.04) both;
+  }
+  .sheet-grab{ width:38px; height:4px; border-radius:99px; background:var(--line); margin:9px auto 0; flex-shrink:0; }
+  .sheet-head{ padding:12px 18px 10px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-shrink:0; }
+  .sheet-title{ font-family:'Fraunces', ui-serif, serif; font-size:18px; font-weight:600; color:var(--ink); }
+  .sheet-sub{ font-size:11.5px; color:var(--mist); margin-top:2px; }
+  .sheet-close{
+    width:32px; height:32px; border-radius:50%; border:1px solid var(--line); background:var(--background);
+    color:var(--ink-soft); cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    font-family:inherit;
+  }
+  .sheet-body{ padding:2px 18px 10px; overflow-y:auto; -ms-overflow-style:none; scrollbar-width:none; }
+  .sheet-body::-webkit-scrollbar{display:none;}
+  .sheet-group{ margin-top:14px; }
+  .sheet-label{
+    font-size:10px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--mist); margin-bottom:7px;
+  }
+  .sheet-foot{
+    padding:12px 18px 16px; border-top:1px solid var(--line); background:var(--surface);
+    display:flex; align-items:center; gap:8px; flex-shrink:0;
+  }
+  @keyframes scrimIn{ from{ opacity:0; } to{ opacity:1; } }
+  @keyframes sheetUp{ from{ transform:translateY(102%); } to{ transform:none; } }
+
   .filter-option{
-    padding:8px 10px; font-size:12.5px; font-weight:600; color:var(--ink-soft); cursor:pointer;
-    border-radius:8px; display:flex; justify-content:space-between; align-items:center;
+    padding:9px 10px; font-size:12.5px; font-weight:600; color:var(--ink-soft); cursor:pointer;
+    border-radius:9px; display:flex; justify-content:space-between; align-items:center;
+    border:1px solid transparent; background:var(--background); width:100%; text-align:left;
+    font-family:inherit;
   }
   .filter-option:hover{background:var(--cloud); color:var(--deep);}
-  .filter-option.active{background:var(--deep-100); color:var(--deep);}
+  .filter-option.active{background:var(--deep-100); color:var(--deep); border-color:var(--line);}
+
+  /* Choice pills for the booking sheet: one obvious selected state, never the
+     green "verified" chip, because a pick is not a status. */
+  .pick{
+    display:inline-flex; align-items:center; gap:6px; font-family:inherit;
+    font-size:12px; font-weight:700; color:var(--ink-soft);
+    padding:9px 13px; min-height:38px; border-radius:999px; cursor:pointer;
+    background:var(--surface); border:1px solid var(--line); white-space:nowrap; flex-shrink:0;
+  }
+  .pick:active{background:var(--cloud);}
+  .pick.on{background:var(--deep); border-color:var(--deep); color:#fff;}
+  .req-rail{display:flex; gap:8px;}
+  .req-addr{display:flex; flex-direction:column; gap:8px;}
+  .req-addr .pick{width:100%; justify-content:flex-start; text-align:left; white-space:normal; border-radius:12px;}
+  .req-provider{
+    display:flex; align-items:center; gap:10px; padding:10px;
+    background:var(--background); border:1px solid var(--line); border-radius:14px;
+  }
+  .req-field{
+    width:100%; box-sizing:border-box; border:1px solid var(--line); border-radius:12px;
+    padding:11px 12px; font-family:inherit; font-size:13px; color:var(--ink);
+    background:var(--surface); outline:none; resize:none; line-height:1.45;
+  }
+  .req-field:focus{border-color:var(--deep); box-shadow:0 0 0 3px var(--deep-100);}
+  .req-terms{
+    background:var(--background); border:1px solid var(--line); border-radius:12px; padding:12px;
+    font-size:12.5px; color:var(--ink-soft);
+  }
+  .req-terms b{font-size:14px; font-weight:800; color:var(--deep);}
+  .req-terms .mut{font-size:11px; font-weight:600; color:var(--mist);}
+  .req-terms p{font-size:11.5px; line-height:1.55; margin:8px 0 0; color:var(--ink-soft);}
 
   .result-card{
     background:#fff; border:1px solid var(--line); border-radius:14px;
@@ -350,6 +568,19 @@
   .status-completed{background:var(--verified-100); color:var(--success-ink);}
   .status-cancelled{background:var(--alert-100); color:var(--error-ink);}
   .status-ongoing{background:var(--deep-100); color:var(--deep);}
+  /* Awaiting an answer is neither success nor a warning: neutral until the
+     provider replies, so the pill never implies a booked job. */
+  .status-requested{background:var(--background); color:var(--ink-soft); box-shadow:inset 0 0 0 1px var(--line);}
+  /* Nothing is chosen yet, so the picker draws hollow stars; the committed row
+     below it reuses .stars, so a 4/5 you tapped looks like a 4/5 you were shown. */
+  .rate-row{display:inline-flex; gap:2px;}
+  .rate-star{
+    background:transparent; border:none; cursor:pointer; color:var(--ink-soft);
+    min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center;
+    border-radius:12px; padding:0;
+  }
+  .rate-star:hover{ color:var(--gold); }
+  .rate-star:active{transform:scale(.9);}
   .bar{height:100%; border-radius:4px 4px 0 0;}
   .barchart{display:flex; align-items:flex-end; gap:8px; height:110px; margin-top:14px;}
   .barcol{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;}
@@ -416,6 +647,10 @@
   /* Live status pulse dot */
   .live-dot{ display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--verified); vertical-align:-1px; box-shadow:0 0 0 0 rgba(31,138,95,.45); animation:livePulse 1.6s ease-out infinite; }
   @keyframes livePulse{ 0%{ box-shadow:0 0 0 0 rgba(31,138,95,.45); } 70%{ box-shadow:0 0 0 7px rgba(31,138,95,0); } 100%{ box-shadow:0 0 0 0 rgba(31,138,95,0); } }
+  /* Awaiting another person is not success, so it does not borrow the green live
+     dot: brand blue pulses slowly to read as "in motion, nothing to do yet". */
+  .wait-dot{ display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--deep); vertical-align:-1px; animation:waitPulse 1.9s ease-in-out infinite; }
+  @keyframes waitPulse{ 0%,100%{ opacity:.3; } 50%{ opacity:1; } }
 
   /* Topbar — signature brand gradient with a cyan aura */
   .topbar{
@@ -461,10 +696,21 @@
   }
   .btn:hover{ filter:brightness(1.07); }
   .btn:active{ transform:scale(.97); }
+  /* Disabled - a control that cannot act must look inert, not merely refuse the
+     tap. Covers the loading state too, which used to rely on pointer-events
+     alone and so still looked fully enabled. */
+  .btn:disabled, .btn[disabled]{
+    opacity:.5; box-shadow:none; cursor:default; transform:none; filter:none;
+  }
+  .btn.btn-loading:disabled{ opacity:.68; }
+  .btn.secondary:disabled{ opacity:.5; }
+  .filter-icon-btn:disabled, .seg-btn:disabled, .sheet-close:disabled, .search-btn:disabled{ opacity:.45; cursor:default; }
   .btn.secondary{ transition:all .15s ease; }
   .btn.secondary:hover{ background:var(--background); }
   .btn:focus-visible, .navitem:focus-visible, .filter-icon-btn:focus-visible, .cat:focus-visible,
+  .notif-item:focus-visible, .rate-star:focus-visible,
   .role-card:focus-visible, .auth-switch:focus-visible, .seg-btn:focus-visible,
+  .addon-btn:focus-visible,
   .back-btn:focus-visible{
     outline:3px solid var(--brand-primary-light); outline-offset:2px;
   }
@@ -476,6 +722,9 @@
     animation:spin .7s linear infinite;
   }
   .btn-loading{ opacity:.85; pointer-events:none; }
+  /* The default spinner is white for gradient buttons; on a light surface it
+     would be invisible, so it takes the brand ink instead. */
+  .spinner.on-light{ border-color:var(--brand-tint); border-top-color:var(--brand-primary); }
   @keyframes spin{ to{ transform:rotate(360deg); } }
 
   /* ===== Enhancement layer (2/2) ===== */
@@ -542,54 +791,10 @@
   .cat .icon{ transition:transform .18s var(--ease-spring); }
   .cat:hover .icon{ transform:scale(1.15); }
 
-  /* Login — role cards + hero glows */
+  /* Login — role cards */
   .role-card{ transition:all .18s var(--ease-spring); box-shadow:var(--shadow-xs); }
   .role-card:hover{ transform:translateY(-2px); border-color:var(--brand-tint); }
   .role-card.active{ box-shadow:0 6px 16px rgba(3,82,174,.14); }
-  .auth-hero{ overflow:hidden; }
-  /* ACCENT GLOW (33): the logo's cyan and the deck's electric blue, at low alpha,
-     so the hero reads as brand depth rather than decoration. */
-  .auth-hero::before{
-    content:""; position:absolute; top:-70px; right:-70px; width:230px; height:230px;
-    border-radius:50%; pointer-events:none;
-    background:radial-gradient(circle, rgba(5,188,196,.30), transparent 68%);
-  }
-  .auth-hero::after{
-    content:""; position:absolute; bottom:-90px; left:-60px; width:240px; height:240px;
-    border-radius:50%; pointer-events:none;
-    background:radial-gradient(circle, rgba(14,77,255,.42), transparent 70%);
-  }
-  .auth-logo-badge{ animation:floaty 3.4s ease-in-out infinite; }
-  @keyframes floaty{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-5px); } }
-
-  /* Login panel — hero type, trust strip, role cards, form card */
-  .auth-hero > *{ position:relative; z-index:1; }   /* keep type crisp above the glows */
-  .auth-title{
-    font-family:"Fraunces", ui-serif, serif; font-size:34px; font-weight:600;
-    letter-spacing:-.6px; line-height:1.05; margin:2px 0 0;
-    text-shadow:0 2px 16px rgba(0,0,0,.30);
-  }
-  .auth-tagline{ font-size:12.5px; font-weight:500; opacity:.82; margin-top:6px; letter-spacing:.1px; }
-  .auth-location{
-    display:inline-flex; align-items:center; gap:6px; margin-top:12px;
-    font-size:11.5px; font-weight:600; letter-spacing:.2px;
-    padding:5px 12px; border-radius:999px;
-    background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.20);
-    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
-  }
-  .auth-location svg{ color:var(--brand-secondary); }
-  .auth-stats{
-    display:flex; align-items:stretch; justify-content:center; gap:10px; margin-top:16px;
-    padding:11px 8px; border-radius:14px;
-    background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.13);
-  }
-  .auth-stat{
-    flex:1; display:flex; flex-direction:column; align-items:center; gap:5px;
-    font-size:9.5px; font-weight:600; line-height:1.3; letter-spacing:.2px;
-    color:rgba(255,255,255,.90); text-transform:uppercase;
-  }
-  .auth-stat svg{ color:var(--brand-secondary); }
-  .auth-stat-div{ width:1px; background:rgba(255,255,255,.16); flex-shrink:0; }
   .auth-label{
     font-size:10.5px; font-weight:800; letter-spacing:1.1px; text-transform:uppercase;
     color:var(--ink-soft); margin:0 0 2px;
@@ -598,31 +803,40 @@
   .auth-input-label{ display:block; font-size:12px; font-weight:700; color:var(--ink-soft); cursor:pointer; }
   /* The role picker and the sign-in/register switch must be reachable by keyboard,
      so they are real buttons wearing the card/link styling (72). */
-  .role-card{ -webkit-appearance:none; appearance:none; display:block; width:100%; font:inherit; text-align:center; }
+  .role-card{ -webkit-appearance:none; appearance:none; width:100%; font:inherit; position:relative; }
   .auth-switch{
     background:none; border:none; padding:0; font:inherit; font-size:12px;
     color:var(--deep); font-weight:700; cursor:pointer; text-decoration:underline;
     text-underline-offset:3px;
   }
-  .auth-error{
+  /* "Forgot?" sits on its own label line, so the tap area is only 13px tall -
+     nowhere near a thumb. It borrows the space around it with padding and gives
+     the layout back with the matching negative margin (39). */
+  .row .auth-switch{ padding:9px 6px; margin:-9px -6px; }
+  /* One inline error style, shared by the sign-in fields and the Concierge;
+     .auth-error only carries the tighter spacing the auth form needs. */
+  .inline-error{
     display:flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600;
-    color:var(--error-ink); margin:-8px 0 12px;
+    color:var(--error-ink); margin:6px 0 10px;
   }
+  .auth-error{ margin:-8px 0 12px; }
   .input-field.invalid{ border-color:var(--error); background:var(--error-100); }
-  .auth-welcome{ padding-bottom:12px; margin-bottom:14px; border-bottom:1px dashed var(--line); }
-  .role-card{ position:relative; }
+  /* Selected is more than a tint: the tick is a second, non-colour cue (72). It
+     sits centred on the right edge and the label reserves space for it. */
   .role-card.active::after{
-    content:""; position:absolute; top:6px; right:6px; width:16px; height:16px; border-radius:50%;
+    content:""; position:absolute; top:50%; right:7px; transform:translateY(-50%);
+    width:15px; height:15px; border-radius:50%;
     background-color:var(--deep);
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 6 9 17l-5-5' fill='none' stroke='white' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-    background-size:9px; background-position:center; background-repeat:no-repeat;
+    background-size:8px; background-position:center; background-repeat:no-repeat;
     box-shadow:0 2px 6px rgba(3,82,174,.35);
     animation:riseIn .22s var(--ease-spring) both;
   }
+  .role-card.active .rc-text{ padding-right:15px; }
   .role-card .rc-icon{ color:var(--mist); transition:color .18s ease, transform .18s var(--ease-spring); }
   .role-card.active .rc-icon{ color:var(--deep); transform:translateY(-1px) scale(1.06); }
   .role-card.active .rc-name{ color:var(--deep); }
-  #login-btn{ padding:14px 16px; font-size:14px; }
+  #login-btn{ width:100%; display:flex; align-items:center; justify-content:center; gap:7px; padding:14px 16px; font-size:14px; }
 
   /* Concierge banner — hero feature treatment */
   .concierge-banner{ position:relative; overflow:hidden; transition:transform .18s ease, box-shadow .18s ease; }
@@ -729,6 +943,7 @@
   <div class="devicebar"><span>9:41</span><span style="display:inline-flex; align-items:flex-end; gap:2px;"><i style="display:inline-block; width:3px; height:4px; background:#1a1a1a; border-radius:1px;"></i><i style="display:inline-block; width:3px; height:6px; background:#1a1a1a; border-radius:1px;"></i><i style="display:inline-block; width:3px; height:8px; background:#1a1a1a; border-radius:1px;"></i><i style="display:inline-block; width:3px; height:10px; background:#1a1a1a; border-radius:1px;"></i><b style="margin-left:5px; font-weight:700;">5G</b><b style="margin-left:4px; font-weight:700;">100%</b></span></div>
   <div class="screen" id="screen"></div>
   <div id="navbar"></div>
+  <div id="sheet-root"></div>
   <div id="toast-root"></div>
 </div>
 
@@ -922,11 +1137,13 @@ function serviceAvatar(providerOrId, size = 40, style = ''){
        + ic(s.icon, Math.round(size * 0.5)) + '</div>';
 }
 
+// Each notification names the object that caused it, so opening one lands on the
+// booking or profile it describes rather than on a screen of the same name.
 const NOTIFICATIONS = [
-  {id:'n1', title:'Booking Confirmed', body:'Ramil Odiada has confirmed your plumbing request for Sat, Sep 12.', time:'10m ago', unread:true, icon:'droplet', bg:'var(--deep-100)'},
-  {id:'n2', title:'Verified Pro Nearby', body:'Cristy Fernandez (Cleaning Specialist) is now available in your area.', time:'2h ago', unread:true, icon:'bubbles', bg:'var(--verified-100)'},
-  {id:'n3', title:'Payment Processed', body:'Your payment of ₱515 to Cristy Fernandez was successful.', time:'Aug 30', unread:false, icon:'credit-card', bg:'var(--warning-100)'},
-  {id:'n4', title:'Service Completed', body:'Jerico Salamat completed electrical service. Please leave a rating!', time:'Aug 21', unread:false, icon:'star', bg:'var(--warning-100)'}
+  {id:'n1', title:'Booking Confirmed', body:'Ramil Odiada has confirmed your plumbing request for Sat, Sep 12.', time:'10m ago', unread:true, icon:'droplet', bg:'var(--deep-100)', bookingId:'b1'},
+  {id:'n2', title:'Verified Pro Nearby', body:'Cristy Fernandez (Cleaning Specialist) is now available in your area.', time:'2h ago', unread:true, icon:'bubbles', bg:'var(--verified-100)', providerId:'p3'},
+  {id:'n3', title:'Payment Processed', body:'Your payment of ₱515 to Cristy Fernandez was successful.', time:'Aug 30', unread:false, icon:'credit-card', bg:'var(--warning-100)', bookingId:'b3'},
+  {id:'n4', title:'Service Completed', body:'Jerico Salamat completed electrical service. Please leave a rating!', time:'Aug 21', unread:false, icon:'star', bg:'var(--warning-100)', bookingId:'b6'}
 ];
 
 const RESIDENT_BOOKINGS = [
@@ -964,6 +1181,17 @@ const RESIDENT_BOOKINGS = [
     arrivalTime:'Completed', 
     paymentStatus:'Paid Online', 
     myRating:5
+  },
+  {
+    id:'b6',
+    provider:PROVIDERS[1],
+    service:'Rewired the flooded outdoor junction box',
+    date:'Aug 21',
+    time:'10:00 AM',
+    status:'completed',
+    amount:480,
+    arrivalTime:'Completed',
+    paymentStatus:'Paid Online'
   },
   {
     id:'b4', 
@@ -1070,6 +1298,43 @@ const PROVIDER_BOOKINGS = [
     lng: 124.9500,
     phone: '+63 920 111 2233',
     notes: 'Client cancelled due to schedule conflict.'
+  },
+  // Sample inbox for the provider. These are the counterpart to the resident's
+  // "Waiting for them to accept": a request carries no agreed day, fee or ETA
+  // until this account answers it.
+  {
+    id: 'pb6',
+    title: 'Bathroom tap will not shut off',
+    client: 'Libby Tan',
+    barangay: 'Poblacion',
+    time: '9:00 AM',
+    date: 'Tomorrow, Sep 11',
+    amount: 350,
+    status: 'requested',
+    initials: 'LT',
+    address: 'Blk 5 Lot 2, Bonifacio St., Poblacion',
+    lat: 6.3652,
+    lng: 124.9301,
+    phone: '+63 917 222 8830',
+    notes: 'The tap in the small bathroom keeps running after I turn it off. Nothing is overflowing yet, but it has run all night twice this week.',
+    receivedAt: '20 minutes ago'
+  },
+  {
+    id: 'pb7',
+    title: 'Kitchen drain backs up when the sink runs',
+    client: 'Rogelio Delfin',
+    barangay: 'San Isidro',
+    time: '2:00 PM',
+    date: 'Saturday, Sep 12',
+    amount: 400,
+    status: 'requested',
+    initials: 'RD',
+    address: '6 Santiago Ave., San Isidro',
+    lat: 6.3887,
+    lng: 124.9463,
+    phone: '+63 921 777 4402',
+    notes: 'Water comes back up through the floor drain whenever the kitchen sink is full. Most days after dinner.',
+    receivedAt: '2 hours ago'
   }
 ];
 
@@ -1078,7 +1343,9 @@ const PROVIDER_BOOKINGS = [
 if (/[?&]app=1(&|$)/.test(location.search) || /SukinnectApp/i.test(navigator.userAgent)) document.body.classList.add('app-mode');
 
 let state = {
-  view:'login', 
+  // Cold launch shows the branded screen once; sign-out goes straight to
+  // 'login', so the launch screen is not a destination you can navigate to.
+  view:'splash', 
   authMode:'login',
   // Typed sign-in values and their inline errors. Kept in state so re-rendering
   // (role switch, password reveal) does not discard what the user entered (79).
@@ -1089,7 +1356,15 @@ let state = {
   tab:'home', 
   searchQuery:'', 
   sortBy:'smart_match',
-  filterDropdownOpen: false,
+  // Which bottom sheet is raised over the current screen (null = none). Like the
+  // profile modals it belongs to the screen that raised it, so it clears on
+  // every destination change.
+  sheet: null,
+  // Live discovery filters. null means "no constraint" so one shape covers all.
+  providerFilters:{ serviceId:null, barangay:null, maxWait:null },
+  // In-place loading UI: never part of a destination, so it repaints without
+  // replaying the entrance glide.
+  searching: false,
   selectedProvider:null, 
   selectedBookingId:'b1',
   selectedProviderBookingId:null,
@@ -1099,6 +1374,20 @@ let state = {
   conciergePhotoAttached: false,
   conciergePhotoName: '',
   conciergeAnalyzed: false,
+  conciergeAnalyzing: false,
+  // Rejections shown next to the control they belong to, not in a toast.
+  conciergePhotoError: null,
+  conciergeError: null,
+  // Booking request draft: null until the sheet is raised, then one object holds
+  // every term the resident has to see before confirming (AGENTS.md 52).
+  requestDraft: null,
+  requestSubmitting: false,
+  requestError: null,
+  // The provider's side of the same request: which answer is in flight, and
+  // whether the decline confirmation step is showing. Not a destination, so it
+  // repaints the detail card in place.
+  providerResponding: null,
+  providerDeclineConfirm: false,
   profileData:{
     name:'Ana Dela Cruz',
     email:'ana@demo.ph',
@@ -1134,6 +1423,7 @@ let state = {
   previousTab:'home',
   showPassword: false,
   conciergeInput:'',
+  conciergeServiceId:null,
   bookingFilter:'all',
   providerBookingFilter:'all',
   adminProviderCategory:'verified',
@@ -1223,6 +1513,9 @@ const ICONS = {
   send: {o:`<path fill-rule="evenodd" clip-rule="evenodd" d="M22.5615 5.64099C23.4636 3.04509 20.9861 0.522263 18.3803 1.44085L3.44476 6.70576C0.578346 7.71619 0.500509 11.7624 3.32388 12.8849L3.3397 12.891L8.29288 14.7318C8.75501 14.9178 9.12031 15.2916 9.2978 15.764L11.222 20.6243C12.3084 23.4996 16.3744 23.4454 17.3839 20.5402L22.5615 5.64099ZM18.8789 2.85553C20.2743 2.36365 21.643 3.71458 21.1447 5.14861L15.9671 20.0478C15.4171 21.6302 13.2126 21.6573 12.6238 20.0902L10.6996 15.2299C10.6224 15.0256 10.5257 14.8311 10.4119 14.6487L14.0303 11.0303C14.3232 10.7374 14.3232 10.2626 14.0303 9.96967C13.7374 9.67678 13.2626 9.67678 12.9697 9.96967L9.34872 13.5906C9.18799 13.4915 9.01788 13.4058 8.83985 13.335L8.82404 13.3289L3.87079 11.4881C2.34161 10.8732 2.38813 8.6687 3.94344 8.12043L18.8789 2.85553Z" fill="currentColor"/>`},
   wallet: {o:`<path d="M19 12C19 12.5523 18.5523 13 18 13C17.4477 13 17 12.5523 17 12C17 11.4477 17.4477 11 18 11C18.5523 11 19 11.4477 19 12Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M9.94358 3.25H13.0564C14.8942 3.24998 16.3498 3.24997 17.489 3.40314C18.6614 3.56076 19.6104 3.89288 20.3588 4.64124C21.2831 5.56563 21.5777 6.80363 21.6847 8.41008C22.2619 8.6641 22.6978 9.2013 22.7458 9.88179C22.7501 9.94199 22.75 10.0069 22.75 10.067C22.75 10.0725 22.75 10.0779 22.75 10.0833V13.9167C22.75 13.9221 22.75 13.9275 22.75 13.933C22.75 13.9931 22.7501 14.058 22.7458 14.1182C22.6978 14.7987 22.2619 15.3359 21.6847 15.5899C21.5777 17.1964 21.2831 18.4344 20.3588 19.3588C19.6104 20.1071 18.6614 20.4392 17.489 20.5969C16.3498 20.75 14.8942 20.75 13.0564 20.75H9.94359C8.10583 20.75 6.65019 20.75 5.51098 20.5969C4.33856 20.4392 3.38961 20.1071 2.64124 19.3588C1.89288 18.6104 1.56076 17.6614 1.40314 16.489C1.24997 15.3498 1.24998 13.8942 1.25 12.0564V11.9436C1.24998 10.1058 1.24997 8.65019 1.40314 7.51098C1.56076 6.33856 1.89288 5.38961 2.64124 4.64124C3.38961 3.89288 4.33856 3.56076 5.51098 3.40314C6.65019 3.24997 8.10582 3.24998 9.94358 3.25ZM20.1679 15.75H18.2308C16.0856 15.75 14.25 14.1224 14.25 12C14.25 9.87756 16.0856 8.25 18.2308 8.25H20.1679C20.0541 6.90855 19.7966 6.20043 19.2981 5.7019C18.8749 5.27869 18.2952 5.02502 17.2892 4.88976C16.2615 4.75159 14.9068 4.75 13 4.75H10C8.09318 4.75 6.73851 4.75159 5.71085 4.88976C4.70476 5.02502 4.12511 5.27869 3.7019 5.7019C3.27869 6.12511 3.02502 6.70476 2.88976 7.71085C2.75159 8.73851 2.75 10.0932 2.75 12C2.75 13.9068 2.75159 15.2615 2.88976 16.2892C3.02502 17.2952 3.27869 17.8749 3.7019 18.2981C4.12511 18.7213 4.70476 18.975 5.71085 19.1102C6.73851 19.2484 8.09318 19.25 10 19.25H13C14.9068 19.25 16.2615 19.2484 17.2892 19.1102C18.2952 18.975 18.8749 18.7213 19.2981 18.2981C19.7966 17.7996 20.0541 17.0915 20.1679 15.75ZM5.25 8C5.25 7.58579 5.58579 7.25 6 7.25H10C10.4142 7.25 10.75 7.58579 10.75 8C10.75 8.41421 10.4142 8.75 10 8.75H6C5.58579 8.75 5.25 8.41421 5.25 8ZM20.9235 9.75023C20.9032 9.75001 20.8766 9.75 20.8333 9.75H18.2308C16.8074 9.75 15.75 10.8087 15.75 12C15.75 13.1913 16.8074 14.25 18.2308 14.25H20.8333C20.8766 14.25 20.9032 14.25 20.9235 14.2498C20.936 14.2496 20.9426 14.2495 20.9457 14.2493L20.9479 14.2492C21.1541 14.2367 21.2427 14.0976 21.2495 14.0139C21.2495 14.0139 21.2497 14.0076 21.2498 13.9986C21.25 13.9808 21.25 13.9572 21.25 13.9167V10.0833C21.25 10.0428 21.25 10.0192 21.2498 10.0014C21.2497 9.99238 21.2495 9.98609 21.2495 9.98609C21.2427 9.90242 21.1541 9.7633 20.9479 9.75076C20.9479 9.75076 20.943 9.75043 20.9235 9.75023Z" fill="currentColor"/>`},
   globe: {o:`<path fill-rule="evenodd" clip-rule="evenodd" d="M9.20646 3.18191C8.95433 3.26179 8.70533 3.35257 8.46018 3.45411C7.33792 3.91897 6.3182 4.60032 5.45926 5.45926C4.60032 6.3182 3.91897 7.33792 3.45411 8.46018C3.0852 9.35081 2.85837 10.2922 2.78045 11.25H7.26094C7.29294 10.1541 7.39498 9.0741 7.56457 8.05057C7.7725 6.79558 8.07972 5.63914 8.47522 4.65039C8.69114 4.11057 8.9351 3.61641 9.20646 3.18191ZM12 1.25C10.5883 1.25 9.1904 1.52806 7.88615 2.06829C6.5819 2.60853 5.39683 3.40037 4.3986 4.3986C3.40037 5.39683 2.60853 6.5819 2.0683 7.88615C1.52806 9.1904 1.25 10.5883 1.25 12C1.25 13.4117 1.52806 14.8096 2.06829 16.1138C2.60853 17.4181 3.40037 18.6032 4.3986 19.6014C5.39683 20.5996 6.5819 21.3915 7.88615 21.9317C9.1904 22.4719 10.5883 22.75 12 22.75C13.4117 22.75 14.8096 22.4719 16.1138 21.9317C17.4181 21.3915 18.6032 20.5996 19.6014 19.6014C20.5996 18.6032 21.3915 17.4181 21.9317 16.1138C22.4719 14.8096 22.75 13.4117 22.75 12C22.75 10.5883 22.4719 9.1904 21.9317 7.88615C21.3915 6.5819 20.5996 5.39683 19.6014 4.3986C18.6032 3.40037 17.4181 2.60853 16.1138 2.0683C14.8096 1.52806 13.4117 1.25 12 1.25ZM12 2.75C11.7387 2.75 11.4012 2.87579 11.0088 3.2822C10.6134 3.69161 10.2176 4.33326 9.86793 5.20747C9.52056 6.07589 9.2385 7.12424 9.04439 8.29576C8.88866 9.23569 8.79316 10.2331 8.76162 11.25L15.2384 11.25C15.2068 10.2331 15.1113 9.23569 14.9556 8.29576C14.7615 7.12424 14.4794 6.0759 14.1321 5.20748C13.7824 4.33326 13.3866 3.69161 12.9912 3.2822C12.5988 2.87579 12.2613 2.75 12 2.75ZM16.7391 11.25C16.7071 10.1541 16.605 9.07411 16.4354 8.05057C16.2275 6.79558 15.9203 5.63914 15.5248 4.65039C15.3089 4.11057 15.0649 3.61641 14.7935 3.18191C15.0457 3.26179 15.2947 3.35257 15.5398 3.45411C16.6621 3.91897 17.6818 4.60032 18.5407 5.45926C19.3997 6.31821 20.081 7.33792 20.5459 8.46018C20.9148 9.35082 21.1416 10.2922 21.2195 11.25H16.7391ZM15.2384 12.75L8.76162 12.75C8.79316 13.7669 8.88866 14.7643 9.04439 15.7042C9.2385 16.8758 9.52056 17.9241 9.86793 18.7925C10.2176 19.6667 10.6134 20.3084 11.0088 20.7178C11.4012 21.1242 11.7387 21.25 12 21.25C12.2613 21.25 12.5988 21.1242 12.9912 20.7178C13.3866 20.3084 13.7824 19.6667 14.1321 18.7925C14.4794 17.9241 14.7615 16.8758 14.9556 15.7042C15.1113 14.7643 15.2068 13.7669 15.2384 12.75ZM14.7935 20.8181C15.0649 20.3836 15.3089 19.8894 15.5248 19.3496C15.9203 18.3609 16.2275 17.2044 16.4354 15.9494C16.605 14.9259 16.7071 13.8459 16.7391 12.75H21.2195C21.1416 13.7078 20.9148 14.6492 20.5459 15.5398C20.081 16.6621 19.3997 17.6818 18.5407 18.5407C17.6818 19.3997 16.6621 20.081 15.5398 20.5459C15.2947 20.6474 15.0457 20.7382 14.7935 20.8181ZM9.20646 20.8181C8.9351 20.3836 8.69114 19.8894 8.47521 19.3496C8.07971 18.3609 7.7725 17.2044 7.56457 15.9494C7.39498 14.9259 7.29294 13.8459 7.26094 12.75H2.78045C2.85837 13.7078 3.0852 14.6492 3.45411 15.5398C3.91897 16.6621 4.60032 17.6818 5.45926 18.5407C6.3182 19.3997 7.33792 20.081 8.46018 20.5459C8.70533 20.6474 8.95433 20.7382 9.20646 20.8181Z" fill="currentColor"/>`},
+  search: {o:`<circle cx="11" cy="11" r="8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></circle><line x1="21" y1="21" x2="16.65" y2="16.65" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></line>`},
+  x: {o:`<path d="M18 6 6 18" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"></path><path d="m6 6 12 12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"></path>`},
+  inbox: {o:`<polyline points="22 12 16 12 14 15 10 15 8 12 2 12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></polyline><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>`},
   clock: {o:`<g clip-path="url(#clip0_17007_17133)"> <path d="M12.75 6C12.75 5.58579 12.4142 5.25 12 5.25C11.5858 5.25 11.25 5.58579 11.25 6V12C11.25 12.2586 11.3832 12.4989 11.6025 12.636L15.6025 15.136C15.9538 15.3555 16.4165 15.2488 16.636 14.8975C16.8555 14.5462 16.7488 14.0835 16.3975 13.864L12.75 11.5843V6Z" fill="currentColor"/> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 0.25C5.51065 0.25 0.25 5.51065 0.25 12C0.25 18.4893 5.51065 23.75 12 23.75C18.4893 23.75 23.75 18.4893 23.75 12C23.75 5.51065 18.4893 0.25 12 0.25ZM1.75 12C1.75 6.33908 6.33908 1.75 12 1.75C17.6609 1.75 22.25 6.33908 22.25 12C22.25 17.6609 17.6609 22.25 12 22.25C6.33908 22.25 1.75 17.6609 1.75 12Z" fill="currentColor"/> </g> <defs> <clipPath id="clip0_17007_17133"> <rect width="24" height="24" fill="currentColor"/> </clipPath> </defs>`}
 };
 
@@ -1237,7 +1530,8 @@ const REICON_MAP = {
   scroll:'scroll', pencil:'edit', sparkles:'sparkles', 'chevron-left':'chevron-left',
   'arrow-right':'arrow-right', check:'check', 'check-circle':'check-circle',
   'alert-triangle':'alert-triangle', clock:'clock', wallet:'wallet', globe:'globe',
-  send:'send', droplet:'droplet', 'shield-check':'shield-check'
+  send:'send', droplet:'droplet', 'shield-check':'shield-check',
+  search:'search', inbox:'inbox'
 };
 
 function ic(name, size = 18, weight){
@@ -1325,6 +1619,499 @@ function renderAvatar(roleType, isLarge = false) {
   return `<div class="avatar-css ${cssClass} ${isLarge ? 'lg' : ''}"></div>`;
 }
 
+// Anything that came from the user is echoed back into the interface, so it
+// stays data and never becomes markup.
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+// One empty state for every list that can legitimately hold no rows: which
+// list (icon), what is missing (title), what to do next (body + action).
+function emptyState(icon, title, body, action){
+  return `<div class="empty">
+    <div class="empty-icon">${ic(icon,22)}</div>
+    <div class="empty-title">${title}</div>
+    <div class="empty-body">${body}</div>
+    ${action ? `<button class="btn sm secondary" id="${action.id}">${action.label}</button>` : ''}
+  </div>`;
+}
+
+// Booking rails for both roles share one empty state. The wording has to tell
+// an empty stage apart from an empty list, and offer the exit that belongs to
+// the role: a resident with no bookings still needs to find a provider, while a
+// provider with no requests waits on supply, not on search.
+function bookingListEmpty(filter, role){
+  const onAll = filter === 'all';
+  if(!onAll){
+    return emptyState('inbox',
+      'No ' + filter + ' bookings',
+      'Nothing is in this stage right now. Switch to All to see every booking and its record.',
+      { id:'bookings-show-all-btn', label:'Show all bookings' });
+  }
+  return role === 'provider'
+    ? emptyState('inbox', 'No requests yet',
+        'Customer requests land here the moment they are sent. Nothing has reached this account in the sample marketplace yet.',
+        { id:'bookings-open-fsm-btn', label:'Open FSM dispatch' })
+    : emptyState('inbox', 'No bookings yet',
+        'Services you request appear here with their status, payment record and receipt.',
+        { id:'bookings-find-btn', label:'Find a service' });
+}
+
+// Search text and the sheet's filters narrow the list through this one path, so
+// the count the sheet promises is the count the screen delivers.
+function providerMatches(){
+  const query = (state.searchQuery || '').trim().toLowerCase();
+  const f = state.providerFilters || {};
+  return PROVIDERS.filter(p =>
+    (!query || p.name.toLowerCase().includes(query) ||
+      p.service.toLowerCase().includes(query) ||
+      p.barangay.toLowerCase().includes(query)) &&
+    (!f.serviceId || p.serviceId === f.serviceId) &&
+    (!f.barangay || p.barangay === f.barangay) &&
+    (!f.maxWait || p.availabilityMin <= f.maxWait)
+  );
+}
+
+function activeFilterCount(){
+  const f = state.providerFilters || {};
+  return (f.serviceId ? 1 : 0) + (f.barangay ? 1 : 0) + (f.maxWait ? 1 : 0);
+}
+
+function openSheet(name){ state.sheet = name; render(); }
+function closeSheet(){ state.sheet = null; render(); }
+
+function toggleProviderFilter(key, value){
+  const f = state.providerFilters;
+  f[key] = f[key] === value ? null : value;
+  render();
+}
+
+function resetProviderFilters(){
+  state.providerFilters = blankFilters();
+  render();
+}
+
+function blankFilters(){
+  return { serviceId:null, barangay:null, maxWait:null };
+}
+
+// The empty result list offers one way out: drop everything that narrowed it,
+// because clearing only the search still leaves the filters in place.
+function clearDiscovery(){
+  state.searchQuery = '';
+  state.providerFilters = blankFilters();
+  runDiscovery();
+}
+
+function applyProviderFilters(){
+  state.sheet = null;
+  runDiscovery();
+}
+
+// The prototype has no backend to wait for, so a search holds the matching state
+// just long enough to read. Reduced motion skips the wait instead of trading one
+// animation for another.
+function runDiscovery(){
+  clearTimeout(runDiscovery._t);
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    state.searching = false; render(); return;
+  }
+  state.searching = true;
+  render();
+  runDiscovery._t = setTimeout(() => { state.searching = false; render(); }, 620);
+}
+
+// Every route into the results list goes through here, so the matching state
+// always shows, whether the resident typed a search or the Concierge handed one
+// over.
+function startDiscovery(query){
+  state.searchQuery = query;
+  state.tab = 'results';
+  runDiscovery();
+}
+
+// A category is a narrowing request rather than a text search: it replaces the
+// previous shortlist. Both the Home tiles and the Concierge hand-off use this so
+// the two entry points cannot drift apart.
+function openCategory(serviceId){
+  state.searchQuery = '';
+  state.providerFilters = Object.assign(blankFilters(), { serviceId: serviceId });
+  state.tab = 'results';
+  runDiscovery();
+}
+
+function openBookingDetail(bookingId){
+  state.selectedBookingId = bookingId;
+  state.tab = 'booking_detail';
+  render();
+}
+
+// The route is read off the record rather than trusted from the notification, so
+// a reference to something no longer there cannot strand the tap.
+function notificationRoute(n){
+  if(n.bookingId){
+    const b = RESIDENT_BOOKINGS.find(x => x.id === n.bookingId);
+    if(b) return { kind:'booking', id:b.id, label: b.status === 'completed' && !b.myRating ? 'booking to rate' : 'booking' };
+  }
+  if(n.providerId && PROVIDERS.some(p => p.id === n.providerId)){
+    return { kind:'provider', id:n.providerId, label:'provider profile' };
+  }
+  return null;
+}
+
+function openNotification(id){
+  const n = NOTIFICATIONS.find(x => x.id === id);
+  if(!n) return;
+  n.unread = false;
+  const route = notificationRoute(n);
+  if(!route){ render(); return; }
+  if(route.kind === 'booking'){ openBookingDetail(route.id); return; }
+  openProviderDetail(route.id, 'notifications');
+}
+
+function providerSkeletons(){
+  const rows = Array.from({length:3}).map(() => `
+    <div class="skel-card">
+      <div class="skel-row">
+        <span class="skel" style="width:42px; height:42px; border-radius:50%;"></span>
+        <span style="flex:1;">
+          <span class="skel" style="width:56%; height:13px;"></span>
+          <span class="skel" style="width:34%; height:10px; margin-top:7px;"></span>
+        </span>
+      </div>
+      <span class="skel" style="width:100%; height:44px; border-radius:10px;"></span>
+    </div>`).join('');
+  return `<div class="skel-note"><span class="spinner on-light"></span> Finding nearby providers&hellip;</div>${rows}`;
+}
+
+const WAIT_WINDOWS = [15,30,60];
+
+function filterOption(active, icon, label, onClick){
+  return `<button type="button" class="filter-option ${active ? 'active' : ''}" onclick="${onClick}" aria-pressed="${active}">
+    <span style="display:inline-flex; align-items:center; gap:7px;">${ic(icon,14)} ${label}</span>
+    ${active ? ic("check",14) : ''}
+  </button>`;
+}
+
+function providerFiltersSheet(){
+  const f = state.providerFilters;
+  const count = providerMatches().length;
+  const brgys = [...new Set(PROVIDERS.map(p => p.barangay))].sort();
+  return `
+    <div class="sheet-grab"></div>
+    <div class="sheet-head">
+      <div>
+        <div class="sheet-title">Filter providers</div>
+        <div class="sheet-sub">Narrow the list before you start reviewing who to book.</div>
+      </div>
+      <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close filters">${ic("x",15)}</button>
+    </div>
+    <div class="sheet-body">
+      <div class="sheet-group">
+        <div class="sheet-label">Service</div>
+        ${SERVICES.map(s => filterOption(f.serviceId === s.id, s.icon, s.label, `toggleProviderFilter('serviceId','${s.id}')`)).join('')}
+      </div>
+      <div class="sheet-group">
+        <div class="sheet-label">Barangay</div>
+        ${brgys.map(b => filterOption(f.barangay === b, 'map-pin', b, `toggleProviderFilter('barangay','${b}')`)).join('')}
+      </div>
+      <div class="sheet-group">
+        <div class="sheet-label">Arrives within</div>
+        ${WAIT_WINDOWS.map(m => filterOption(f.maxWait === m, 'clock', m + ' minutes', `toggleProviderFilter('maxWait',${m})`)).join('')}
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <button type="button" class="btn secondary" style="flex:1; border-radius:12px;" onclick="resetProviderFilters()">Reset</button>
+      <button type="button" class="btn" style="flex:1.3; border-radius:12px;" onclick="applyProviderFilters()">${count} match${count === 1 ? '' : 'es'}</button>
+    </div>`;
+}
+
+const SHEET_LABELS = { providerFilters:'Filter providers', bookingRequest:'Book an appointment' };
+
+const REQUEST_TIMES = ['8:00 AM','10:00 AM','1:00 PM','3:00 PM','5:00 PM'];
+
+// The three nearest days, worked out when the sheet opens, so a request the
+// resident raises now reads as a real upcoming job instead of inheriting a
+// frozen date from the sample records.
+function requestDays(){
+  const now = new Date();
+  return [0,1,2].map(offset => {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
+    const date = d.toLocaleDateString('en-PH', { weekday:'short', month:'short', day:'numeric' });
+    return { date, label: offset === 0 ? 'Today' : offset === 1 ? 'Tomorrow' : date };
+  });
+}
+
+function requestPayments(){
+  const list = (state.profileData.paymentMethods || []).slice();
+  if(list.indexOf('Cash on Arrival') === -1) list.push('Cash on Arrival');
+  return list;
+}
+
+// Provider Detail is entered from results, from a booking, and from admin. One
+// entry point keeps the map initialisation and the back target identical for all
+// of them instead of drifting per call site.
+function openProviderDetail(providerId, fromTab){
+  const p = PROVIDERS.find(x => x.id === providerId) || PROVIDERS[2];
+  state.selectedProvider = p;
+  state.previousTab = fromTab || 'results';
+  state.tab = 'provider_detail';
+  render();
+  setTimeout(() => {
+    if(document.getElementById('leafletmap')){
+      const map = L.map('leafletmap').setView([6.3665, 124.9338], 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+      L.marker([6.3665, 124.9338]).addTo(map);
+    }
+  }, 100);
+}
+
+function openBookingProvider(bookingId){
+  const b = RESIDENT_BOOKINGS.find(x => x.id === bookingId);
+  if(b) openProviderDetail(b.provider.id, 'booking_detail');
+}
+
+// The Concierge already heard what is wrong. When it sorted to the same trade as
+// this provider, carry the wording across instead of asking twice.
+function openBookingRequest(){
+  const p = state.selectedProvider;
+  if(!p) return;
+  const carried = state.conciergeAnalyzed && state.conciergeServiceId === p.serviceId ? state.conciergeInput : '';
+  state.requestDraft = { service: carried, dayIdx:0, timeIdx:1, addrIdx:0, payIdx:0 };
+  state.requestError = null;
+  openSheet('bookingRequest');
+}
+
+function pickRequest(key, idx){
+  state.requestDraft[key] = idx;
+  render();
+}
+
+function requestInput(el){
+  state.requestDraft.service = el.value;
+  if(state.requestError){
+    state.requestError = null;
+    const note = document.getElementById('request-error');
+    if(note) note.remove();
+  }
+}
+
+function requestPick(active, label, onClick){
+  return `<button type="button" class="pick ${active ? 'on' : ''}" aria-pressed="${active}" onclick="${onClick}">${label}</button>`;
+}
+
+// "GCash" contains the word "cash", so a substring test would bill an e-wallet
+// pick as physical money handed over on site. Match the option by its full name.
+function isCashPayment(method){
+  return /cash on arrival/i.test(method || '');
+}
+
+function bookingRequestSheet(){
+  const p = state.selectedProvider;
+  if(!p) return '';
+  const d = state.requestDraft || { service:'', dayIdx:0, timeIdx:1, addrIdx:0, payIdx:0 };
+  const days = requestDays();
+  const pays = requestPayments();
+  const addrs = state.profileData.savedAddresses || [state.profileData.address];
+  const pay = pays[d.payIdx] || pays[0];
+  const cash = isCashPayment(pay);
+  return `
+    <div class="sheet-grab"></div>
+    <div class="sheet-head">
+      <div>
+        <div class="sheet-title">Book ${esc(p.name.split(' ')[0])}</div>
+        <div class="sheet-sub">Check every term below &mdash; nothing is confirmed until the provider accepts.</div>
+      </div>
+      <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close">${ic("x",15)}</button>
+    </div>
+    <div class="sheet-body">
+      <div class="sheet-group" style="margin-top:0;">
+        <div class="req-provider">
+          ${serviceAvatar(p, 40, '')}
+          <div style="flex:1;">
+            <div style="font-size:13.5px; font-weight:700; color:var(--ink);">${esc(p.name)}</div>
+            <div style="font-size:11.5px; color:var(--mist); margin-top:1px;">${esc(p.service)} &middot; Barangay ${esc(p.barangay)} &middot; ${p.distanceKm} km away</div>
+          </div>
+          <span class="chip" style="background:var(--background); color:var(--ink-soft); box-shadow:inset 0 0 0 1px var(--line);">Arrives ~${p.availabilityMin} min</span>
+        </div>
+      </div>
+
+      <div class="sheet-group">
+        <div class="sheet-label">What needs doing</div>
+        <textarea id="request-service" class="req-field" rows="3" oninput="requestInput(this)" placeholder="e.g. Kitchen faucet drips all night and the joint under the sink is wet.">${esc(d.service)}</textarea>
+        ${state.requestError ? `<div class="inline-error" id="request-error" role="alert">${ic("alert-triangle",12)} ${state.requestError}</div>` : ''}
+      </div>
+
+      <div class="sheet-group">
+        <div class="sheet-label">Day</div>
+        <div class="hscroll req-rail">
+          ${days.map((day, i) => requestPick(d.dayIdx === i, day.label + (day.label === day.date ? '' : ' &middot; ' + day.date), `pickRequest('dayIdx',${i})`)).join('')}
+        </div>
+      </div>
+
+      <div class="sheet-group">
+        <div class="sheet-label">Preferred time</div>
+        <div class="hscroll req-rail">
+          ${REQUEST_TIMES.map((t, i) => requestPick(d.timeIdx === i, t, `pickRequest('timeIdx',${i})`)).join('')}
+        </div>
+      </div>
+
+      <div class="sheet-group">
+        <div class="sheet-label">Service address</div>
+        <div class="req-addr">
+          ${addrs.map((a, i) => requestPick(d.addrIdx === i, ic('map-pin',12) + ' ' + esc(a), `pickRequest('addrIdx',${i})`)).join('')}
+        </div>
+      </div>
+
+      <div class="sheet-group">
+        <div class="sheet-label">Payment</div>
+        <div class="hscroll req-rail">
+          ${pays.map((m, i) => requestPick(d.payIdx === i, esc(m), `pickRequest('payIdx',${i})`)).join('')}
+        </div>
+      </div>
+
+      <div class="sheet-group">
+        <div class="req-terms">
+          <div class="row"><span>Indicative rate</span><b>${peso(p.rate)} <span class="mut">/ ${esc(p.rateUnit)}</span></b></div>
+          <p>
+            The rate is what this provider charges as a starting point, not a final quote.
+            ${cash
+              ? 'You settle in cash when the work is done, and the provider records it here.'
+              : 'Pay with ' + esc(pay) + ' once the provider confirms the scope and price.'}
+            The booking and its record stay in Sukinnect either way.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <button type="button" class="btn secondary" style="flex:1; border-radius:12px;" onclick="closeSheet()">Cancel</button>
+      <button type="button" class="btn" style="flex:1.5; border-radius:12px;" ${state.requestSubmitting ? 'disabled' : ''} onclick="submitBookingRequest()">
+        ${state.requestSubmitting
+          ? '<span class="spinner"></span> Sending your request&hellip;'
+          : 'Send request ' + ic('arrow-right',12)}
+      </button>
+    </div>`;
+}
+
+let bookingSeq = 100;
+
+function submitBookingRequest(){
+  if(state.requestSubmitting) return;
+  const p = state.selectedProvider;
+  const d = state.requestDraft;
+  if(!p || !d) return;
+  const field = document.getElementById('request-service');
+  const text = (field ? field.value : d.service || '').trim();
+  d.service = text;
+  if(text.length < 5){
+    state.requestError = 'Tell the provider what to expect in a few words - a request with no description gets passed over.';
+    render();
+    // render() replaces the sheet, so the field held before it is detached.
+    // Focus the live node or the caret is lost the moment it is needed.
+    const live = document.getElementById('request-service');
+    if(live){ live.focus(); live.setSelectionRange(live.value.length, live.value.length); }
+    return;
+  }
+  state.requestError = null;
+  state.requestSubmitting = true;
+  render();
+  setTimeout(() => {
+    const days = requestDays();
+    const pays = requestPayments();
+    const pay = pays[d.payIdx] || pays[0];
+    const booking = {
+      id: 'b' + (++bookingSeq),
+      provider: p,
+      service: text,
+      date: days[d.dayIdx].date,
+      time: REQUEST_TIMES[d.timeIdx],
+      status: 'requested',
+      amount: p.rate,
+      arrivalTime: 'Awaiting provider',
+      paymentStatus: isCashPayment(pay) ? 'Pending (Cash on Arrival)' : 'Unpaid',
+      paymentMethod: pay,
+      address: (state.profileData.savedAddresses || [state.profileData.address])[d.addrIdx]
+    };
+    RESIDENT_BOOKINGS.unshift(booking);
+    NOTIFICATIONS.unshift({
+      id: 'n' + booking.id,
+      title: 'Request sent to ' + p.name,
+      body: 'Waiting for them to accept ' + booking.date + ' at ' + booking.time + '.',
+      time: 'Just now',
+      unread: true,
+      icon: 'clock',
+      bg: 'var(--deep-100)',
+      bookingId: booking.id
+    });
+    state.requestSubmitting = false;
+    state.requestDraft = null;
+    state.sheet = null;
+    openBookingDetail(booking.id);
+    showToast('Request sent - ' + p.name + ' has to accept it');
+  }, 900);
+}
+
+function cancelBookingRequest(id){
+  const b = RESIDENT_BOOKINGS.find(x => x.id === id);
+  if(!b || b.status !== 'requested') return;
+  b.status = 'cancelled';
+  b.cancelReason = 'Cancelled by you while waiting for the provider';
+  render();
+  showToast('Request withdrawn - the provider is no longer notified');
+}
+
+function sheetHTML(){
+  if(state.sheet === 'providerFilters') return providerFiltersSheet();
+  if(state.sheet === 'bookingRequest') return bookingRequestSheet();
+  return '';
+}
+
+// The layer mounts once per sheet, then only the panel's contents are replaced,
+// so tapping a chip updates the rows in place instead of replaying the slide-up.
+function renderSheet(){
+  const root = document.getElementById('sheet-root');
+  if(!root) return;
+  if(!state.sheet){ root.innerHTML = ''; root._open = null; return; }
+  if(root._open !== state.sheet){
+    root.innerHTML = `<div class="sheet-layer">
+      <button type="button" class="sheet-scrim" onclick="closeSheet()" aria-label="Close"></button>
+      <div class="sheet" role="dialog" aria-modal="true"></div>
+    </div>`;
+    root._open = state.sheet;
+  }
+  const panel = root.querySelector('.sheet');
+  panel.setAttribute('aria-label', SHEET_LABELS[state.sheet] || 'Options');
+  panel.innerHTML = sheetHTML();
+}
+
+function splashHTML(){
+  return `<div class="splash" id="splash-screen">
+    <div class="splash-mark"><img src="Sukinnect_Logo.png" alt="Sukinnect logo"></div>
+    <div class="splash-name">Sukinnect</div>
+    <div class="splash-spine">
+      <span>Find</span><i></i><span>Review</span><i></i><span>Book</span><i></i><span>Record</span>
+    </div>
+    <div class="splash-status">
+      <div class="splash-bar"><i></i></div>
+      <div class="splash-loading">Loading sample marketplace data</div>
+    </div>
+    <div class="splash-tag">Prototype &middot; tap to continue</div>
+  </div>`;
+}
+
+// The launch screen plays once per cold load. render() is re-invoked at boot by
+// the icon set resolving, so the timer is armed only the first time; otherwise
+// the splash would restart under itself.
+function bootFromSplash(){
+  const el = document.getElementById('splash-screen');
+  const go = () => { clearTimeout(bootFromSplash._t); bootFromSplash._t = undefined; state.view = 'login'; render(); };
+  if(el) el.onclick = go;
+  if(bootFromSplash._t === undefined){
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    bootFromSplash._t = setTimeout(go, reduce ? 250 : 1250);
+  }
+}
+
 function render(){
   const screen = document.getElementById('screen');
   const nav = document.getElementById('navbar');
@@ -1351,9 +2138,22 @@ function render(){
   // visit (this is what left the log-out dialog popping up by itself).
   if(changed) clearModals();
 
+  // The sheet lives in its own layer above the screen and the tab bar, so it
+  // paints independently of whichever screen is underneath it.
+  renderSheet();
+
   // Keep the reader's place during in-place updates; start at the top of a
   // genuinely new screen. Applied instantly so nothing slides on its own.
   const keepScroll = changed ? 0 : screen.scrollTop;
+
+  if(state.view === 'splash'){
+    if(nav._html !== ''){ nav.innerHTML = ''; nav._html = ''; }
+    screen.innerHTML = splashHTML();
+    screen.classList.toggle('anim', changed);
+    setScreenScroll(screen, 0);
+    bootFromSplash();
+    return;
+  }
 
   if(state.view === 'login'){
     if(nav._html !== ''){ nav.innerHTML = ''; nav._html = ''; }
@@ -1403,67 +2203,59 @@ function loginHTML(){
   const err = state.authError || {};
 
   return `
-  <div style="background:var(--grad-brand-soft); min-height:100%;">
-    <div class="auth-hero">
-      <div class="auth-logo-badge"><img src="Sukinnect_Logo.png" width="50" height="50" alt="Sukinnect logo"></div>
-      <h1 class="auth-title">Sukinnect</h1>
-      <div class="auth-tagline">Verified local help, one tap away</div>
-      <div class="auth-location">${ic("map-pin",12)} Now serving &middot; Tupi, South Cotabato</div>
-
-      <div class="auth-stats">
-        <div class="auth-stat">${ic("badge-check",15)}<span>ID-Checked<br>Pros</span></div>
-        <div class="auth-stat-div"></div>
-        <div class="auth-stat">${ic("wallet",15)}<span>GCash &middot; Maya<br>Payment Partner</span></div>
-        <div class="auth-stat-div"></div>
-        <div class="auth-stat">${ic("globe",15)}<span>Barangay-Level<br>Matching</span></div>
+  <div class="auth-screen">
+    <header class="auth-bar">
+      <span class="auth-mark"><img src="Sukinnect_Logo.png" width="32" height="32" alt="Sukinnect logo"></span>
+      <div>
+        <div class="auth-wordmark">Sukinnect</div>
+        <div class="auth-kicker">Verified local help, one tap away</div>
       </div>
-    </div>
+    </header>
 
-    <div class="pad" style="padding-top:18px;">
-      <p class="auth-label">Choose Account Type</p>
+    <div class="auth-body">
+      <div class="auth-form">
+      <p class="auth-label">Sign in as</p>
 
       <div class="role-cards" role="group" aria-label="Account type">
         <button type="button" class="role-card ${state.role==='resident'?'active':''}" id="rt-resident" aria-pressed="${state.role==='resident'}">
-          <span class="rc-icon">${ic("home",18)}</span>
-          <div class="rc-name">Resident</div>
-          <div class="rc-sub">Need help</div>
+          <span class="rc-icon">${ic("home",17)}</span>
+          <span class="rc-text"><span class="rc-name">Resident</span><span class="rc-sub">Need help</span></span>
         </button>
         <button type="button" class="role-card ${state.role==='provider'?'active':''}" id="rt-provider" aria-pressed="${state.role==='provider'}">
-          <span class="rc-icon">${ic("wrench",18)}</span>
-          <div class="rc-name">Service Pro</div>
-          <div class="rc-sub">Offer skills</div>
+          <span class="rc-icon">${ic("wrench",17)}</span>
+          <span class="rc-text"><span class="rc-name">Service Pro</span><span class="rc-sub">Offer skills</span></span>
         </button>
         <button type="button" class="role-card ${state.role==='admin'?'active':''}" id="rt-admin" aria-pressed="${state.role==='admin'}">
-          <span class="rc-icon">${ic("shield",18)}</span>
-          <div class="rc-name">Admin</div>
-          <div class="rc-sub">Operations</div>
+          <span class="rc-icon">${ic("shield",17)}</span>
+          <span class="rc-text"><span class="rc-name">Admin</span><span class="rc-sub">Operations</span></span>
         </button>
       </div>
 
-      <div class="card" style="padding:18px 16px; margin-bottom:14px;">
-        <div class="auth-welcome">
-          <div style="font-family:'Fraunces',serif; font-size:17px; font-weight:600; color:var(--ink);">${isRegister ? 'Create your account' : 'Welcome back'}</div>
-          <div style="font-size:11.5px; color:var(--mist); margin-top:2px;">Demo environment &mdash; credentials are prefilled, just tap Sign In</div>
-        </div>
+      <div class="auth-heading">${isRegister ? 'Create your account' : 'Welcome back'}</div>
+      <div class="auth-sub">${isRegister
+        ? 'Prototype build &mdash; nothing is stored and no account is really created.'
+        : 'Demo environment &mdash; the credentials are prefilled for the role above.'}</div>
+
+      <div style="margin-top:14px;">
         ${isRegister ? `
           <label class="auth-input-label" for="reg-name">Full Name</label>
           <div class="input-field">
-            <input id="reg-name" value="${val('name', 'Juan Dela Cruz')}" placeholder="Enter your full name" autocomplete="name" oninput="authInput('name', this)">
+            <input id="reg-name" value="${val('name', 'Juan Dela Cruz')}" placeholder="Enter your full name" autocomplete="name" enterkeyhint="next" oninput="authInput('name', this)">
             <span style="opacity:0.55; display:inline-flex;">${ic("user",15)}</span>
           </div>
         ` : ''}
 
         <label class="auth-input-label" for="login-email">${isRegister ? 'Email' : 'Registered Email'}</label>
         <div class="input-field ${err.email ? 'invalid' : ''}">
-          <input id="login-email" value="${email}" placeholder="Enter your email" inputmode="email" autocomplete="email" ${err.email ? 'aria-invalid="true" aria-describedby="err-email"' : ''} oninput="authInput('email', this)">
+          <input id="login-email" value="${email}" placeholder="Enter your email" inputmode="email" autocomplete="email" enterkeyhint="next" ${err.email ? 'aria-invalid="true" aria-describedby="err-email"' : ''} oninput="authInput('email', this)">
           <span style="opacity:0.55; display:inline-flex;">${ic("mail",15)}</span>
         </div>
-        ${err.email ? `<div class="auth-error" id="err-email">${ic("alert-triangle",12)} ${err.email}</div>` : ''}
+        ${err.email ? `<div class="inline-error auth-error" id="err-email">${ic("alert-triangle",12)} ${err.email}</div>` : ''}
 
         ${isRegister ? `
           <label class="auth-input-label" for="reg-brgy">Barangay Location</label>
           <div class="input-field">
-            <input id="reg-brgy" value="${val('brgy', 'Poblacion')}" placeholder="Enter barangay" autocomplete="address-level2" oninput="authInput('brgy', this)">
+            <input id="reg-brgy" value="${val('brgy', 'Poblacion')}" placeholder="Enter barangay" autocomplete="address-level2" enterkeyhint="next" oninput="authInput('brgy', this)">
             <span style="opacity:0.55; display:inline-flex;">${ic("map-pin",15)}</span>
           </div>
         ` : ''}
@@ -1473,25 +2265,28 @@ function loginHTML(){
           ${!isRegister ? `<button type="button" class="auth-switch" style="font-size:11px;" onclick="showToast('Password reset is not part of this prototype.')">Forgot?</button>` : ''}
         </div>
         <div class="input-field ${err.pass ? 'invalid' : ''}">
-          <input id="login-pass" type="${state.showPassword ? 'text' : 'password'}" value="${pass}" placeholder="Enter password" autocomplete="${isRegister ? 'new-password' : 'current-password'}" ${err.pass ? 'aria-invalid="true" aria-describedby="err-pass"' : ''} oninput="authInput('pass', this)">
+          <input id="login-pass" type="${state.showPassword ? 'text' : 'password'}" value="${pass}" placeholder="Enter password" autocomplete="${isRegister ? 'new-password' : 'current-password'}" enterkeyhint="go" ${err.pass ? 'aria-invalid="true" aria-describedby="err-pass"' : ''} oninput="authInput('pass', this)">
           <button class="addon-btn" id="toggle-pw-btn" type="button" aria-label="${state.showPassword ? 'Hide password' : 'Show password'}" title="${state.showPassword ? 'Hide password' : 'Show password'}" aria-pressed="${state.showPassword}">
             ${state.showPassword ? ic('eye-off',15) : ic('eye',15)}
           </button>
         </div>
-        ${err.pass ? `<div class="auth-error" id="err-pass">${ic("alert-triangle",12)} ${err.pass}</div>` : ''}
-
-        <button class="btn" style="width:100%; margin-top:10px; display:flex; align-items:center; justify-content:center; gap:7px;" id="login-btn">
-          <span>${isRegister ? 'Create New Account' : `Sign In as ${state.role === 'admin' ? 'Admin' : state.role === 'provider' ? 'Service Pro' : 'Resident'}`}</span> ${ic("arrow-right",15)}
-        </button>
+        ${err.pass ? `<div class="inline-error auth-error" id="err-pass">${ic("alert-triangle",12)} ${err.pass}</div>` : ''}
       </div>
+      </div>
+    </div>
 
-      <div style="text-align:center;">
-        <p style="font-size:12px; color:var(--ink-soft); margin-bottom:8px;">
-          ${isRegister ? 'Already have an account? <button type="button" class="auth-switch" id="toggle-auth-mode">Sign in</button>' : 'Don\'t have an account? <button type="button" class="auth-switch" id="toggle-auth-mode">Register now</button>'}
-        </p>
-        <div style="font-size:11px; color:var(--mist);">
-          Prototype build &middot; sample data only
-        </div>
+    <div class="auth-action">
+      <button class="btn" id="login-btn">
+        <span>${isRegister ? 'Create New Account' : `Sign In as ${state.role === 'admin' ? 'Admin' : state.role === 'provider' ? 'Service Pro' : 'Resident'}`}</span> ${ic("arrow-right",15)}
+      </button>
+
+      <p class="auth-switch-line">
+        ${isRegister ? 'Already have an account? <button type="button" class="auth-switch" id="toggle-auth-mode">Sign in</button>' : 'Don\'t have an account? <button type="button" class="auth-switch" id="toggle-auth-mode">Register now</button>'}
+      </p>
+
+      <div class="auth-foot">
+        <span class="where">${ic("map-pin",11)} Now serving &middot; Tupi, South Cotabato</span>
+        <span>Prototype build &middot; sample data only</span>
       </div>
     </div>
   </div>`;
@@ -1528,38 +2323,49 @@ function bindLogin(){
     };
   }
 
-  document.getElementById('login-btn').onclick=function(){
-    const btn = this;
-    if(btn.dataset.busy) return;
-    const emailEl = document.getElementById('login-email');
-    const passEl = document.getElementById('login-pass');
-    const errors = {};
-    if (!emailEl.value.trim()) errors.email = 'Enter your email to continue.';
-    if (!passEl.value.trim()) errors.pass = 'Enter your password.';
-    if (errors.email || errors.pass) {
-      state.authError = errors;
-      render();
-      (errors.email ? document.getElementById('login-email') : document.getElementById('login-pass')).focus();
-      return;
-    }
-    state.authError = {};
-    btn.dataset.busy = '1';
-    const original = btn.innerHTML;
-    btn.classList.add('btn-loading');
-    btn.innerHTML = '<span class="spinner"></span> ' + (state.authMode === 'register' ? 'Creating account...' : 'Signing in...');
-    setTimeout(() => {
-      delete btn.dataset.busy;
-      btn.classList.remove('btn-loading');
-      btn.innerHTML = original;
-      showToast('Signed in to the demo environment');
-      state.view='app';
-      clearProfileModals();
-      if(state.role==='resident') state.tab='home';
-      else if(state.role==='provider') state.tab='dashboard';
-      else state.tab='admin_dashboard';
-      render();
-    }, 700);
-  };
+  document.getElementById('login-btn').onclick = submitAuth;
+  // A phone keyboard's action key has to do something, and on this screen the
+  // only thing worth doing is the screen's primary action (38, 73).
+  document.querySelectorAll('.auth-form input').forEach(inp => {
+    inp.onkeydown = (e) => { if(e.key === 'Enter') submitAuth(); };
+  });
+}
+
+// One path for the button and for Enter, so the two can never drift apart (65).
+function submitAuth(){
+  const btn = document.getElementById('login-btn');
+  if(!btn || btn.dataset.busy) return;
+  const emailEl = document.getElementById('login-email');
+  const passEl = document.getElementById('login-pass');
+  const isRegister = state.authMode === 'register';
+  const errors = {};
+  if (!emailEl.value.trim()) errors.email = 'Enter your email to continue.';
+  if (!passEl.value.trim()) errors.pass = 'Enter your password.';
+  if (errors.email || errors.pass) {
+    state.authError = errors;
+    render();
+    (errors.email ? document.getElementById('login-email') : document.getElementById('login-pass')).focus();
+    return;
+  }
+  state.authError = {};
+  btn.dataset.busy = '1';
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.classList.add('btn-loading');
+  btn.innerHTML = '<span class="spinner"></span> ' + (isRegister ? 'Creating account...' : 'Signing in...');
+  setTimeout(() => {
+    delete btn.dataset.busy;
+    btn.disabled = false;
+    btn.classList.remove('btn-loading');
+    btn.innerHTML = original;
+    showToast(isRegister ? 'Prototype build - this account is not stored' : 'Signed in to the demo environment');
+    state.view='app';
+    clearProfileModals();
+    if(state.role==='resident') state.tab='home';
+    else if(state.role==='provider') state.tab='dashboard';
+    else state.tab='admin_dashboard';
+    render();
+  }, 700);
 }
 
 function navHTML(){
@@ -1574,7 +2380,7 @@ function navHTML(){
     return `<div class="bottomnav">
       ${navItem('dashboard','chart','Dash')}
       ${navItem('fsm','route','FSM')}
-      ${navItem('bookings','calendar','Bookings')}
+      ${navItem('bookings','calendar','Bookings', pendingProviderRequests().length)}
       ${navItem('messages','chat','Messages')}
       ${navItem('profile','user','Profile')}
     </div>`;
@@ -1587,8 +2393,8 @@ function navHTML(){
   </div>`;
 }
 
-function navItem(id,icon,label){
-  return `<div class="navitem ${state.tab===id?'active':''}" data-nav="${id}"><span class="ic">${ic(icon,19)}</span>${label}</div>`;
+function navItem(id,icon,label,count){
+  return `<div class="navitem ${state.tab===id?'active':''}" data-nav="${id}"${count ? ' aria-label="' + label + ', ' + count + ' waiting for you"' : ''}><span class="ic">${ic(icon,19)}${count ? `<span class="nav-badge">${count}</span>` : ''}</span>${label}</div>`;
 }
 
 function residentTabHTML(){
@@ -1632,7 +2438,9 @@ function adminTabHTML(){
 }
 
 function residentHome(){
-  const upcoming = RESIDENT_BOOKINGS.find(b=>b.status==='upcoming' || b.status==='ongoing');
+  // A live job on the doorstep outranks a request still waiting for an answer.
+  const active = RESIDENT_BOOKINGS.find(b => b.status === 'ongoing' || b.status === 'upcoming')
+              || RESIDENT_BOOKINGS.find(b => b.status === 'requested');
   const hasUnread = NOTIFICATIONS.some(n=>n.unread);
   return `
   <div class="topbar">
@@ -1666,7 +2474,7 @@ function residentHome(){
 
     <div class="search-container">
       <div class="search-wrapper">
-        <input placeholder="Search barangay, service, or provider..." id="search-input" value="${state.searchQuery || ''}">
+        <input placeholder="Search barangay, service, or provider..." id="search-input" value="${esc(state.searchQuery)}">
         <button class="search-btn" id="search-btn" title="Search">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </button>
@@ -1677,17 +2485,17 @@ function residentHome(){
       ${SERVICES.map(s=>`<div class="cat" data-service="${s.id}"><div class="icon">${ic(s.icon,22)}</div>${s.label}</div>`).join('')}
     </div>
 
-    ${upcoming? `
+    ${active? `
     <h3 style="font-size:14px; margin:20px 0 8px;">Active booking</h3>
-    <div class="card row" data-booking="${upcoming.id}" style="cursor:pointer;">
+    <div class="card row" data-booking="${active.id}" style="cursor:pointer;">
       <div style="display:flex; gap:10px; align-items:center;">
-        ${photoAvatar(upcoming.provider, 40)}
+        ${photoAvatar(active.provider, 40)}
         <div>
-          <div style="font-weight:600; font-size:14px;">${upcoming.service}</div>
-          <div style="font-size:12px; color:var(--mist); margin-top:2px;">${upcoming.provider.name} · ${upcoming.date}, ${upcoming.time}</div>
+          <div style="font-weight:600; font-size:14px;">${active.service}</div>
+          <div style="font-size:12px; color:var(--mist); margin-top:2px;">${active.provider.name} · ${active.status === 'requested' ? 'Requested for ' : ''}${active.date}, ${active.time}</div>
         </div>
       </div>
-      <span class="chip status-${upcoming.status}">${upcoming.status}</span>
+      <span class="chip status-${active.status}">${active.status}</span>
     </div>` : ''}
 
     <h3 style="font-size:14px; margin:20px 0 8px;">Book again</h3>
@@ -1703,6 +2511,13 @@ function residentHome(){
 }
 
 function residentConcierge(){
+  // Everything the briefing card shows is read back from the category captured
+  // when Analyze ran, so editing the description afterwards cannot leave the
+  // card describing one trade while the button opens another.
+  const sorted = state.conciergeAnalyzed ? serviceMeta(state.conciergeServiceId) : null;
+  const sort = state.conciergeAnalyzed
+    ? (CONCIERGE_SORTS.find(s => s.id === state.conciergeServiceId) || CONCIERGE_SORTS[2])
+    : null;
   return `
   <div style="background:var(--grad-hero); color:#fff; padding:18px 18px 14px;">
     <div style="display:flex; align-items:center; gap:10px;">
@@ -1711,7 +2526,7 @@ function residentConcierge(){
         <div style="font-family:'Fraunces',serif; font-size:19px; font-weight:600; display:flex; align-items:center; gap:6px;">
           AI Service Concierge ${ic("sparkles",16)}
         </div>
-        <div style="font-size:12px; opacity:0.85; margin-top:2px;">Intelligent Problem & Photo Assistant</div>
+        <div style="font-size:12px; opacity:0.85; margin-top:2px;">Describe the problem, then review who to book</div>
       </div>
     </div>
   </div>
@@ -1720,72 +2535,77 @@ function residentConcierge(){
     
     <div style="background:var(--grad-brand-dark); border-radius:16px; padding:16px; color:#fff; margin-bottom:14px; box-shadow:0 6px 16px rgba(3,82,174,0.18);">
       <p style="font-size:12.5px; line-height:1.5; opacity:0.95; margin:0;">
-        Describe your problem or upload a photo of the breakdown. Our computer vision and NLP model will instantly analyze the severity and prepare a technician briefing.
+        Describe the problem or attach a photo. This prototype sorts what you provide into a service category and prepares a job briefing for the provider &mdash; it does not diagnose the fault.
       </p>
     </div>
 
     <div class="card" style="border-radius:16px; padding:16px; background:#fff; border:1px solid var(--line); margin-bottom:14px;">
       <label style="font-size:13px; font-weight:700; color:var(--ink); display:block; margin-bottom:8px;">Describe the Issue</label>
-      <textarea id="concierge-input-field" rows="4" style="width:100%; border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:14px; font-family:inherit; font-size:13.5px; outline:none; color:var(--ink); resize:none;" placeholder="Describe what is broken, leaking, or needs maintenance...">${state.conciergeInput || ''}</textarea>
+      <textarea id="concierge-input-field" rows="4" oninput="conciergeInput(this)" style="width:100%; border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:14px; font-family:inherit; font-size:13.5px; outline:none; color:var(--ink); resize:none;" placeholder="Describe what is broken, leaking, or needs maintenance...">${esc(state.conciergeInput)}</textarea>
 
       <label style="font-size:13px; font-weight:700; color:var(--ink); display:block; margin-bottom:8px;">Attach Photo of Breakdown</label>
       
       <button class="btn secondary" style="width:100%; background:#fff; border:1.5px solid var(--line); border-radius:12px; padding:12px; font-size:13.5px; font-weight:700; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:12px; box-shadow:0 2px 5px rgba(0,0,0,0.02);" onclick="document.getElementById('hidden-file-input').click()">
-        <input type="file" id="hidden-file-input" style="display:none;" onchange="handlePhotoUpload(event)">
+        <input type="file" id="hidden-file-input" accept="image/*" style="display:none;" onchange="handlePhotoUpload(event)">
         ${ic("camera",16)}
-        <span>${state.conciergePhotoAttached ? state.conciergePhotoName : 'Upload / Snap Photo'}</span>
+        <span>${state.conciergePhotoAttached ? esc(state.conciergePhotoName) : 'Upload / Snap Photo'}</span>
       </button>
+      ${state.conciergePhotoError ? `<div class="inline-error">${ic("alert-triangle",12)} ${state.conciergePhotoError}</div>` : ''}
+      ${state.conciergePhotoAttached && !state.conciergePhotoError ? `<button type="button" class="auth-switch" style="display:block; margin:-6px auto 12px;" onclick="removeConciergePhoto()">Remove photo</button>` : ''}
 
       <div class="hscroll" style="display:flex; gap:8px; margin-bottom:16px;">
         <span class="chip" style="cursor:pointer; background:var(--background); border:1px solid var(--line); color:var(--ink-soft); font-weight:600; padding:6px 12px; border-radius:999px;" onclick="setExampleText('My sink has been leaking since this morning and there is water all over the kitchen.')">${ic("droplet",13)} Try: Sink leak</span>
         <span class="chip" style="cursor:pointer; background:var(--background); border:1px solid var(--line); color:var(--ink-soft); font-weight:600; padding:6px 12px; border-radius:999px;" onclick="setExampleText('Our main circuit breaker trips whenever the refrigerator turns on.')">${ic("zap",13)} Try: Tripping breaker</span>
       </div>
 
-      <button class="btn" style="width:100%; border-radius:12px; padding:14px; font-size:14px;" id="concierge-analyze-btn">
-        Analyze Text & Photo Evidence ${ic("arrow-right",12)}
+      ${state.conciergeError ? `<div class="inline-error" id="concierge-error" role="alert">${ic("alert-triangle",12)} ${state.conciergeError}</div>` : ''}
+      <button class="btn" style="width:100%; border-radius:12px; padding:14px; font-size:14px;" id="concierge-analyze-btn" ${state.conciergeAnalyzing ? 'disabled' : ''}>
+        ${state.conciergeAnalyzing
+          ? '<span class="spinner"></span> Preparing the job briefing&hellip;'
+          : 'Analyze Text & Photo Evidence ' + ic("arrow-right",12)}
       </button>
     </div>
 
     ${state.conciergeAnalyzed ? `
       <div class="card" style="border-radius:18px; padding:16px; background:#fff; border:2px solid var(--brand-navy); box-shadow:0 6px 20px rgba(0,0,0,0.06);">
         <div class="row" style="margin-bottom:12px;">
-          <span style="background:var(--error-100); color:var(--error-ink); font-size:11.5px; font-weight:800; padding:5px 12px; border-radius:999px;">
-            Urgency: High
+          <span style="background:${sorted.bg}; color:${sorted.fg}; font-size:11.5px; font-weight:800; padding:5px 12px; border-radius:999px; display:inline-flex; align-items:center; gap:5px;">
+            ${ic(sorted.icon,12)} ${sorted.label}
           </span>
-          <span style="background:var(--brand-tint-soft); color:var(--brand-primary); font-size:11.5px; font-weight:700; padding:5px 12px; border-radius:999px;">
-            AI Vision & Text Diagnosis
+          <span style="background:var(--background); color:var(--ink-soft); font-size:11.5px; font-weight:700; padding:5px 12px; border-radius:999px; border:1px solid var(--line);">
+            Sorted from your description
           </span>
         </div>
 
         <div style="font-family:'Fraunces',serif; font-size:17px; font-weight:700; color:var(--ink); margin-bottom:6px;">
-          Likely Issue: Pipe Joint / Faucet Rupture
+          Job briefing for ${sorted.label} providers
         </div>
 
         <p style="font-size:12.5px; color:var(--ink-soft); line-height:1.45; margin-bottom:14px;">
-          Identified probable plumbing malfunction based on text and photo evidence. Urgent dispatch recommended.
+          The prototype only groups what you reported under one service category &mdash; nobody has inspected the fault, so the provider confirms the cause and price on site.
         </p>
 
         <div style="background:var(--background); border-radius:12px; padding:12px; margin-bottom:14px; border:1px solid var(--line);">
-          <div style="font-size:12px; font-weight:700; color:var(--ink); margin-bottom:4px;">Clarifying Question:</div>
+          <div style="font-size:12px; font-weight:700; color:var(--ink); margin-bottom:4px;">Clarifying question:</div>
           <div style="font-size:12px; color:var(--ink-soft); font-style:italic; margin-bottom:10px;">
-            "Is the water leaking continuously, or only when the faucet valve is open?"
+            "${sort.ask}"
           </div>
           <div style="display:flex; gap:8px;">
-            <button class="btn sm secondary" style="flex:1; background:#fff; border:1px solid var(--line); border-radius:10px; font-weight:700; font-size:11.5px; color:var(--ink); padding:8px;" onclick="showToast('Recorded: Continuous stream.')">Yes, continuous stream</button>
-            <button class="btn sm secondary" style="flex:1; background:#fff; border:1px solid var(--line); border-radius:10px; font-weight:700; font-size:11.5px; color:var(--ink); padding:8px;" onclick="showToast('Recorded: Slow dripping only.')">Slow dripping only</button>
+            <button class="btn sm secondary" style="flex:1; background:#fff; border:1px solid var(--line); border-radius:10px; font-weight:700; font-size:11.5px; color:var(--ink); padding:8px;" onclick="showToast('Added to the briefing for the provider')">${sort.ans[0]}</button>
+            <button class="btn sm secondary" style="flex:1; background:#fff; border:1px solid var(--line); border-radius:10px; font-weight:700; font-size:11.5px; color:var(--ink); padding:8px;" onclick="showToast('Added to the briefing for the provider')">${sort.ans[1]}</button>
           </div>
         </div>
 
         <div style="font-size:11px; font-weight:800; text-transform:uppercase; color:var(--mist); letter-spacing:0.5px; margin-bottom:6px;">
-          Generated Job Briefing for Provider:
+          Sent with your request:
         </div>
         
         <div style="background:#fff; border:1px dashed var(--line); border-radius:10px; padding:10px; font-size:12px; color:var(--ink); font-style:italic; margin-bottom:16px;">
-          "Customer reports: '${state.conciergeInput || ''}'. Photo attached: ${state.conciergePhotoAttached}. Issue categorized as Pipe Joint / Faucet Rupture."
+          "Customer reports: '${esc(state.conciergeInput) || '(no description typed)'}'. ${state.conciergePhotoAttached ? 'A photo came with it.' : 'No photo was attached.'} Filed under ${sorted.label} &mdash; confirm the scope and price with the provider before booking."
         </div>
 
-        <button class="btn" style="width:100%; border-radius:12px; padding:14px; font-size:14px;" onclick="state.searchQuery='Plumbing'; state.tab='results'; render();">
-          View Smart Matches (Plumbing) ${ic("arrow-right",12)}
+        <button class="btn" style="width:100%; border-radius:12px; padding:14px; font-size:14px;" onclick="conciergeFindMatches()">
+          Show ${sorted.label} providers ${ic("arrow-right",12)}
         </button>
       </div>
     ` : ''}
@@ -1794,53 +2614,123 @@ function residentConcierge(){
 }
 
 function handlePhotoUpload(e){
-  if(e.target.files && e.target.files[0]){
-    state.conciergePhotoAttached = true;
-    state.conciergePhotoName = e.target.files[0].name;
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  // A photo of the problem has to actually be a photo. The rejection reads from
+  // the control it belongs to, and the field is cleared so the same pick can be
+  // retried once the resident chooses a different file.
+  if(!file.type.startsWith('image/')){
+    state.conciergePhotoAttached = false;
+    state.conciergePhotoName = '';
+    state.conciergePhotoError = 'That is not a photo. Choose a .jpg or .png picture of the problem.';
+    e.target.value = '';
     render();
+    return;
   }
+  state.conciergePhotoAttached = true;
+  state.conciergePhotoName = file.name;
+  state.conciergePhotoError = null;
+  render();
+}
+
+function removeConciergePhoto(){
+  state.conciergePhotoAttached = false;
+  state.conciergePhotoName = '';
+  state.conciergePhotoError = null;
+  const input = document.getElementById('hidden-file-input');
+  if(input) input.value = '';
+  render();
 }
 
 function setExampleText(txt){
   state.conciergeInput = txt;
+  state.conciergeError = null;
   const textarea = document.getElementById('concierge-input-field');
   if(textarea) textarea.value = txt;
 }
 
+// The description is held in state as it is typed, so a re-render for any other
+// reason (attaching a photo, a rejected file) cannot silently discard it.
+function conciergeInput(el){
+  state.conciergeInput = el.value;
+  if(state.conciergeError){
+    state.conciergeError = null;
+    const note = document.getElementById('concierge-error');
+    if(note) note.remove();
+  }
+}
+
+// The prototype cannot see a fault, so it does not claim to. It reads the
+// resident's own words and sorts them into one of the existing service
+// categories, then asks the question a provider would need answered. Trades are
+// tested in list order and matched on whole words only, so "dishwasher" cannot
+// be read as a shipment and "a slight leak" cannot be read as a lighting fault.
+const CONCIERGE_SORTS = [
+  { id:'electrical', words:['breaker','breakers','wiring','wire','wires','socket','sockets','outlet','outlets','light','lights','fan','fans','surge','power','fuse','fuses','electric','electrical','switch','switches'],
+    ask:'Does the breaker trip immediately, or only once the appliance has been running for a while?', ans:['Trips right away','Only after a while'] },
+  { id:'appliance',  words:['refrigerator','fridge','washer','washing','dryer','freezer','oven','microwave','aircon','conditioner','dispenser','dishwasher','appliance','appliances'],
+    ask:'What brand and model is the unit, and does it make any noise or smell when it runs?', ans:['Runs quietly','Noisy or smells'] },
+  { id:'plumbing',   words:['leak','leaks','leaking','drip','drips','dripping','pipe','pipes','faucet','faucets','tap','taps','sink','sinks','toilet','toilets','drain','drains','water','clog','clogged','septic','flood','flooding','shower'],
+    ask:'Is the water leaking continuously, or only when the faucet valve is open?', ans:['Leaks continuously','Only when open'] },
+  { id:'cleaning',   words:['clean','cleans','cleaning','cleaner','sweep','sweeping','mop','mopping','laundry','housekeeping','sanitize','wash','washing','scrub','pest','pests','roach','roaches','gutter','gutters','yard'],
+    ask:'Is this a one-time deep clean, or a recurring schedule you want set up?', ans:['One-time deep clean','Recurring'] },
+  { id:'tutoring',   words:['tutor','tutors','tutoring','lesson','lessons','school','homework','review','math','english','science','coach','grade','grades','tutorial'],
+    ask:'What grade level and subject should the sessions cover?', ans:['One subject','Several subjects'] },
+  { id:'delivery',   words:['deliver','delivers','delivery','haul','hauling','truck','transfer','furniture','cargo','package','packages','moving'],
+    ask:'What is being moved, and is there someone at both ends to help load and unload?', ans:['Help at both ends','No help available'] },
+];
+
+function matchConciergeService(text){
+  const t = (text || '').toLowerCase();
+  const hit = CONCIERGE_SORTS.find(s => {
+    s._re = s._re || new RegExp('(^|[^a-z0-9])(' + s.words.join('|') + ')([^a-z0-9]|$)');
+    return s._re.test(t);
+  });
+  return hit || CONCIERGE_SORTS[2];
+}
+
+// The Concierge hands off through the same filter path the results screen uses,
+// so "show me this category" cannot disagree with the list it opens.
+function conciergeFindMatches(){
+  const s = SERVICES.find(x => x.id === state.conciergeServiceId) || SERVICES[0];
+  openCategory(s.id);
+}
+
 function residentNotifications(){
+  const unread = NOTIFICATIONS.filter(n => n.unread).length;
   return `
   <div class="topbar">
     <div style="display:flex; align-items:center; gap:8px;">
       <button id="back-home-from-notifs" class="back-btn">${ic("chevron-left",18)}</button>
-      <div class="title">Notifications</div>
-      <button id="mark-all-notifs-btn" class="btn sm" style="background:rgba(255,255,255,0.12); color:#fff; box-shadow:none;">Mark all as read</button>
+      <div>
+        <div class="title">Notifications</div>
+        <div class="sub">${unread ? unread + ' unread' : 'Nothing unread'}</div>
+      </div>
     </div>
+    <button id="mark-all-notifs-btn" class="btn sm" style="background:rgba(255,255,255,0.12); color:#fff; box-shadow:none;" ${unread ? '' : 'disabled'}>Mark all as read</button>
   </div>
   <div class="pad">
-    ${NOTIFICATIONS.map(n => `
-      <div class="notif-item ${n.unread ? 'unread' : ''}">
-        <div class="notif-icon" style="background:${n.bg};">${ic(n.icon,16)}</div>
-        <div style="flex:1;">
-          <div class="row"><span style="font-size:13px; font-weight:700;">${n.title}</span><span style="font-size:10.5px; color:var(--mist);">${n.time}</span></div>
-          <div style="font-size:12px; color:var(--ink-soft); margin-top:3px;">${n.body}</div>
-        </div>
-      </div>
-    `).join('')}
+    <div style="font-size:11.5px; color:var(--mist); margin-bottom:12px;">Each alert opens the booking or profile it came from.</div>
+    ${NOTIFICATIONS.map(n => {
+      const route = notificationRoute(n);
+      return `
+      <button type="button" class="notif-item ${n.unread ? 'unread' : ''}" data-notif="${n.id}" aria-label="${esc(n.title)}${route ? ' - open ' + esc(route.label) : ''}">
+        <span class="notif-icon" style="background:${n.bg};">${ic(n.icon,16)}</span>
+        <span style="flex:1;">
+          <span class="row" style="align-items:baseline;"><span style="font-size:13px; font-weight:700;">${esc(n.title)}</span><span style="font-size:10.5px; color:var(--mist); white-space:nowrap; margin-left:8px;">${esc(n.time)}</span></span>
+          <span style="display:block; font-size:12px; color:var(--ink-soft); margin-top:3px;">${esc(n.body)}</span>
+          ${route ? `<span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:800; color:var(--deep); margin-top:7px;">Open ${esc(route.label)} ${ic("arrow-right",11)}</span>` : ''}
+        </span>
+      </button>`;
+    }).join('')}
   </div>`;
 }
 
 function residentResults(){
   const query = (state.searchQuery || '').trim().toLowerCase();
-  let list = [...PROVIDERS];
-
-  if(query){
-    list = list.filter(p => 
-      p.name.toLowerCase().includes(query) ||
-      p.service.toLowerCase().includes(query) ||
-      p.barangay.toLowerCase().includes(query)
-    );
-  }
-  if(list.length === 0) list = [...PROVIDERS];
+  const filtersOn = activeFilterCount();
+  const narrowing = !!query || filtersOn > 0;
+  const list = providerMatches();
 
   return `
   <div class="topbar">
@@ -1848,19 +2738,20 @@ function residentResults(){
       <button id="back-home-btn" class="back-btn">${ic("chevron-left",18)}</button>
       <div class="title" style="font-family:'Fraunces',serif; font-size:19px; font-weight:600;">Find Services</div>
     </div>
-    <div style="font-size:12px; opacity:0.85;">${list.length} smart matches</div>
+    <div style="font-size:12px; opacity:0.85;">${state.searching ? 'Matching…' : (narrowing ? list.length + ' of ' + PROVIDERS.length + ' providers' : PROVIDERS.length + ' smart matches')}</div>
   </div>
   <div class="pad">
     <div class="search-container" style="margin-bottom:12px;">
       <div class="search-wrapper">
-        <input placeholder="Search barangay, service, or provide..." id="search-input" value="${state.searchQuery || ''}">
+        <input placeholder="Search barangay, service, or provider..." id="search-input" value="${esc(state.searchQuery)}">
         <button class="search-btn" id="search-btn" title="Search">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </button>
       </div>
-      <div class="filter-icon-btn" id="filter-icon-toggle" title="Filter options">
+      <button type="button" class="filter-icon-btn" id="provider-filter-btn" title="Filter options" aria-label="Filter providers${filtersOn ? ', ' + filtersOn + ' active' : ''}" aria-pressed="${filtersOn > 0}" onclick="openSheet('providerFilters')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
-      </div>
+        ${filtersOn ? `<span class="filter-badge">${filtersOn}</span>` : ''}
+      </button>
     </div>
 
     <div class="row" style="margin-bottom:10px; font-size:13px;">
@@ -1868,7 +2759,14 @@ function residentResults(){
       <span style="color:var(--mist); font-size:11.5px;">Sorted by: <b style="color:var(--ink);">Smart Job Match</b></span>
     </div>
 
-    ${list.map(p => `
+    ${state.searching ? providerSkeletons() : list.length === 0 ? emptyState(
+      'search',
+      filtersOn ? 'No provider meets these filters' : 'No provider matches &ldquo;' + esc(state.searchQuery) + '&rdquo;',
+      filtersOn
+        ? 'Nobody in the sample marketplace covers all of the constraints at once. Widen the arrival window, or clear the search and filters.'
+        : 'Try a barangay such as Poblacion, a service such as Plumbing, or a shorter part of the name.',
+      {id:'clear-search-btn', label:'Clear search & filters'}
+    ) : list.map(p => `
       <div class="card" data-provider-detail="${p.id}" style="cursor:pointer; border-radius:14px; padding:14px; margin-bottom:12px; border:1px solid var(--line); background:#fff;">
         <div class="row" style="margin-bottom:10px;">
           <span style="background:var(--brand-tint-soft); color:var(--brand-primary); font-size:11px; font-weight:800; padding:4px 9px; border-radius:6px; display:inline-flex; align-items:center; gap:3px;">
@@ -2004,10 +2902,10 @@ function residentProviderDetail(){
 
   <div class="book-bar" style="background:#fff; border-top:1px solid var(--line); padding:12px 18px; display:flex; align-items:center; justify-content:space-between; position:sticky; bottom:0; z-index:20;">
     <div>
-      <div style="font-size:11px; color:var(--mist); font-weight:600;">Base Rate</div>
-      <div style="font-size:16px; font-weight:800; color:var(--deep);">${peso(p.rate)} <span style="font-size:11px; font-weight:500; color:var(--mist);">/ ${p.rateUnit}</span></div>
+      <div style="font-size:11px; color:var(--mist); font-weight:600;">Indicative rate</div>
+      <div style="font-size:16px; font-weight:800; color:var(--deep);">${peso(p.rate)} <span style="font-size:11px; font-weight:500; color:var(--mist);">/ ${esc(p.rateUnit)}</span></div>
     </div>
-    <button class="btn" style="background:var(--brand-primary); color:#fff; border-radius:12px; padding:11px 20px; font-weight:700; font-size:13.5px; cursor:pointer;" onclick="showToast('Booking request sent successfully to ${p.name}!')">
+    <button class="btn" style="background:var(--brand-primary); color:#fff; border-radius:12px; padding:11px 20px; font-weight:700; font-size:13.5px; cursor:pointer;" onclick="openBookingRequest()">
       Book Appointment
     </button>
   </div>`;
@@ -2067,7 +2965,7 @@ function residentMessagesList(){
       <button class="seg-btn ${state.msgFilter==='unread'?'on':''}" onclick="state.msgFilter='unread'; render();">${ic("mail",13)} Unread <span class="seg-count">${unreadCount}</span></button>
     </div>
 
-    ${shownThreads.length === 0 ? '<div style="text-align:center; color:var(--mist); padding:26px 0; font-size:13px;">You are all caught up - no unread messages.</div>' : shownThreads.map(m => `
+    ${shownThreads.length === 0 ? emptyState('mail', 'No unread messages', 'You have caught up on every conversation here. Open All to read the full threads.', {id:'msgs-show-all-btn', label:'Show all conversations'}) : shownThreads.map(m => `
       <div class="card" data-open-chat-id="${m.id}" style="cursor:pointer; padding:14px; margin-bottom:10px; border-radius:14px; border:1px solid var(--line); display:flex; align-items:flex-start; gap:12px; background:#fff;">
         ${serviceAvatar(m.id, 44, '')}
         <div style="flex:1; min-width:0;">
@@ -2139,7 +3037,61 @@ function statusColors(status){
   if(status === 'upcoming')  return {bg:'var(--warning-100)', fg:'var(--warning-ink)'};
   if(status === 'completed') return {bg:'var(--success-100)', fg:'var(--success-ink)'};
   if(status === 'cancelled') return {bg:'var(--error-100)',   fg:'var(--error-ink)'};
+  // Nothing has been agreed yet, so a request does not take the active blue that
+  // "ongoing" means. Same treatment as .status-requested so one status cannot be
+  // quiet on Home and loud in the list.
+  if(status === 'requested') return {bg:'var(--background)',  fg:'var(--ink-soft)'};
   return {bg:'var(--brand-tint-soft)', fg:'var(--brand-primary)'};
+}
+
+// The rating belongs to this record. This prototype stores it on the booking and
+// does not claim it moved the provider's public average.
+function setBookingRating(bookingId, rating){
+  const b = RESIDENT_BOOKINGS.find(x => x.id === bookingId);
+  if(!b || b.status !== 'completed' || !rating) return;
+  b.myRating = rating;
+  render();
+  showToast('You rated ' + rating + ' out of 5 - saved with this record');
+}
+
+function changeBookingRating(bookingId){
+  const b = RESIDENT_BOOKINGS.find(x => x.id === bookingId);
+  if(!b || b.status !== 'completed') return;
+  b.myRating = null;
+  render();
+}
+
+function ratingBlock(b){
+  if(b.status !== 'completed') return '';
+  const first = esc(b.provider.name.split(' ')[0]);
+  if(b.myRating){
+    return `
+      <div class="card" style="border-radius:14px; padding:14px; margin-bottom:14px; border:1px solid var(--line); background:#fff;">
+        <div class="row" style="align-items:flex-start;">
+          <div>
+            <div style="font-size:13.5px; font-weight:700; color:var(--ink);">You rated this ${b.myRating} out of 5</div>
+            <div style="font-size:11.5px; color:var(--mist); margin-top:2px;">Kept with the booking record, not published as a review.</div>
+          </div>
+          <button type="button" id="change-rating-btn" style="background:transparent; border:1px solid var(--line); border-radius:10px; padding:7px 11px; font-size:11.5px; font-weight:700; color:var(--ink); cursor:pointer;">Change</button>
+        </div>
+        <div style="margin-top:8px;">${stars(b.myRating, 16)}</div>
+      </div>`;
+  }
+  return `
+    <div class="card" style="border-radius:14px; padding:14px; margin-bottom:14px; border:1px solid var(--line); background:#fff;">
+      <div style="font-size:13.5px; font-weight:700; color:var(--ink);">How did ${first} do?</div>
+      <div style="font-size:11.5px; color:var(--mist); margin-top:2px; margin-bottom:8px;">Tap a star. It is saved with this booking record.</div>
+      <div class="rate-row" role="group" aria-label="Rate this service from 1 to 5 stars">
+        ${[1,2,3,4,5].map(i => `<button type="button" class="rate-star" data-rate="${i}" aria-label="${i} out of 5">${ic('star', 22)}</button>`).join('')}
+      </div>
+    </div>`;
+}
+
+function ratingCell(b){
+  if(b.myRating) return `<span style="display:inline-flex; align-items:center; gap:4px;">${stars(b.myRating,11)}</span>`;
+  if(b.status === 'completed') return '<span style="color:var(--deep); font-weight:700;">Tap below to rate</span>';
+  if(b.status === 'cancelled') return '<span style="color:var(--mist); font-weight:600;">Not rated</span>';
+  return '<span style="color:var(--mist); font-weight:600;">After the service</span>';
 }
 
 function residentBookingDetail(){
@@ -2160,7 +3112,7 @@ function residentBookingDetail(){
     
     <div class="card" style="border-radius:18px; padding:16px; background:#fff; border:1px solid var(--line); margin-bottom:12px;">
       <div style="font-size:17px; font-weight:700; color:var(--ink);">${b.service}</div>
-      <div style="font-size:12px; color:var(--mist); margin-top:2px; margin-bottom:14px;">Scheduled: <b style="color:var(--ink);">${b.date}, ${b.time}</b></div>
+      <div style="font-size:12px; color:var(--mist); margin-top:2px; margin-bottom:14px;">${b.status === 'requested' ? 'Requested for' : 'Scheduled'}: <b style="color:var(--ink);">${b.date}, ${b.time}</b></div>
 
       <div style="background:var(--background); border:1px solid var(--line); border-radius:14px; padding:12px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;">
         <div style="display:flex; gap:12px; align-items:center;">
@@ -2170,9 +3122,30 @@ function residentBookingDetail(){
             <div style="font-size:11.5px; color:var(--mist); margin-top:2px;">${b.provider.service} · Barangay ${b.provider.barangay}</div>
           </div>
         </div>
-        <button class="btn sm secondary" style="background:#fff; border:1px solid var(--line); border-radius:10px; font-weight:700; color:var(--ink); padding:7px 12px; box-shadow:none;" onclick="state.selectedProvider = PROVIDERS[0]; state.previousTab = 'booking_detail'; state.tab = 'provider_detail'; render();">View Profile</button>
+        <button class="btn sm secondary" style="background:#fff; border:1px solid var(--line); border-radius:10px; font-weight:700; color:var(--ink); padding:7px 12px; box-shadow:none;" onclick="openBookingProvider('${b.id}')">View Profile</button>
       </div>
 
+      ${b.status === 'requested' ? `
+        <div style="background:var(--background); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:14px;">
+          <div class="row" style="margin-bottom:10px;">
+            <span style="font-size:11px; font-weight:800; text-transform:uppercase; color:var(--ink-soft); display:flex; align-items:center; gap:5px;">
+              <span class="wait-dot"></span> Waiting for ${esc(b.provider.name.split(' ')[0])} to accept
+            </span>
+            <span style="font-size:11.5px; color:var(--mist);">No charge yet</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--ink-soft);">
+            <div style="font-weight:700; color:var(--deep);">${ic('check',12)} Request sent</div>
+            <div style="font-weight:700; color:var(--deep); display:flex; align-items:center; gap:4px;">${ic('clock',12)} Provider reviewing the job</div>
+            <div style="color:var(--mist);">○ Accepted &middot; you will be notified</div>
+            <div style="color:var(--mist);">○ Provider arrives &middot; ${b.arrivalTime === 'Awaiting provider' ? 'time confirmed on acceptance' : esc(b.arrivalTime)}</div>
+            <div style="color:var(--mist);">○ Work completed &middot; payment and record</div>
+          </div>
+          <p style="font-size:11.5px; color:var(--mist); line-height:1.5; margin:10px 0 0;">
+            Nothing is charged yet, and no time is fixed until the provider accepts. They can also decline - you can then try another match.
+          </p>
+          <button type="button" class="btn sm danger" style="width:100%; margin-top:12px; border-radius:10px;" onclick="cancelBookingRequest('${b.id}')">Withdraw this request</button>
+        </div>
+      ` : ''}
       ${b.status === 'ongoing' ? `
         <div style="background:var(--success-100); border-radius:14px; padding:14px; margin-bottom:14px; border:1px solid var(--border);">
           <div class="row" style="margin-bottom:10px;">
@@ -2206,14 +3179,17 @@ function residentBookingDetail(){
           <b style="font-size:12.5px; color:var(--ink);">${b.paymentStatus}</b>
         </div>
         <div style="margin-top:4px;">
-          <span style="color:var(--mist); font-size:11px;">Total Fee:</span><br>
+          <span style="color:var(--mist); font-size:11px;">${b.status === 'requested' ? 'Indicative fee:' : 'Total Fee:'}</span><br>
           <b style="font-size:13px; color:var(--deep);">${peso(b.amount)}</b>
+          ${b.status === 'requested' ? '<div style="font-size:10.5px; color:var(--mist); margin-top:2px;">Settled after the provider confirms the scope</div>' : ''}
         </div>
         <div style="margin-top:4px;">
           <span style="color:var(--mist); font-size:11px;">Rating:</span><br>
-          <b style="font-size:13px; color:var(--ink); display:inline-flex; align-items:center; gap:4px;">${b.myRating ? stars(b.myRating,11) : '<span style="color:var(--mist); font-weight:600;">Pending</span>'}</b>
+          <b style="font-size:13px; color:var(--ink); display:inline-flex; align-items:center; gap:4px;">${ratingCell(b)}</b>
         </div>
       </div>
+
+      ${ratingBlock(b)}
 
       <div style="display:flex; gap:10px; margin-bottom: ${b.status === 'completed' ? '12px' : '0'};">
         <button class="btn secondary" style="flex:1; background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px; font-size:13px; font-weight:700; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.04);" data-chat-booking-provider-id="${b.provider.id}">
@@ -2236,6 +3212,7 @@ function residentBookingDetail(){
 
 function residentBookings(){
   const filter = state.bookingFilter || 'all';
+  const waitingCount = RESIDENT_BOOKINGS.filter(b => b.status === 'requested').length;
   const filtered = RESIDENT_BOOKINGS.filter(b => {
     if(filter === 'all') return true;
     return b.status === filter;
@@ -2250,19 +3227,20 @@ function residentBookings(){
     
     <div class="seg hscroll" style="margin-bottom:16px;">
       <button class="seg-btn ${filter==='all'?'on':''}" onclick="state.bookingFilter='all'; render();">All</button>
+      ${waitingCount ? `<button class="seg-btn ${filter==='requested'?'on':''}" onclick="state.bookingFilter='requested'; render();">Requested <span class="seg-count">${waitingCount}</span></button>` : ''}
       <button class="seg-btn ${filter==='ongoing'?'on':''}" onclick="state.bookingFilter='ongoing'; render();">Ongoing</button>
       <button class="seg-btn ${filter==='upcoming'?'on':''}" onclick="state.bookingFilter='upcoming'; render();">Upcoming</button>
       <button class="seg-btn ${filter==='completed'?'on':''}" onclick="state.bookingFilter='completed'; render();">Completed</button>
       <button class="seg-btn ${filter==='cancelled'?'on':''}" onclick="state.bookingFilter='cancelled'; render();">Cancelled</button>
     </div>
 
-    ${filtered.length === 0 ? '<div style="text-align:center; color:var(--mist); padding:30px 0; font-size:13px;">No bookings found in this category.</div>' : ''}
+    ${filtered.length === 0 ? bookingListEmpty(filter, 'resident') : ''}
 
     ${filtered.map(b => {
       const sc = statusColors(b.status);
 
       return `
-        <div class="card" onclick="state.selectedBookingId='${b.id}'; state.tab='booking_detail'; render();" style="cursor:pointer; border-radius:14px; padding:14px; margin-bottom:12px; border:1px solid var(--line); background:#fff;">
+        <div class="card" onclick="openBookingDetail('${b.id}')" style="cursor:pointer; border-radius:14px; padding:14px; margin-bottom:12px; border:1px solid var(--line); background:#fff;">
           <div class="row" style="align-items:flex-start; margin-bottom:8px;">
             <div style="display:flex; gap:12px; align-items:center;">
               ${serviceAvatar(b.provider, 40, '')}
@@ -2296,6 +3274,7 @@ function clearModals(){
   state.providerProfileModal = null;
   state.adminAccountModal = null;
   state.verificationModal = null;
+  state.sheet = null;
 }
 
 // Full session reset - called on every sign-in and on every log-out. The flags
@@ -2320,7 +3299,11 @@ function clearProfileModals(){
   state.conciergePhotoAttached = false;
   state.conciergePhotoName = '';
   state.conciergeAnalyzed = false;
+  state.conciergeAnalyzing = false;
   state.conciergeInput = '';
+  state.conciergeServiceId = null;
+  state.conciergePhotoError = null;
+  state.conciergeError = null;
   state.adminSessionLocked = false;
   // sub-screen + filter state back to its defaults
   state.residentProfileSection = null;
@@ -2331,6 +3314,15 @@ function clearProfileModals(){
   state.messageFilter = 'all';
   state.bookingFilter = 'all';
   state.providerBookingFilter = 'all';
+  // discovery filters belong to the session, not to the person
+  state.providerFilters = blankFilters();
+  state.searching = false;
+  state.sheet = null;
+  state.requestDraft = null;
+  state.requestSubmitting = false;
+  state.requestError = null;
+  state.providerResponding = null;
+  state.providerDeclineConfirm = false;
   state.adminProviderCategory = 'verified';
   state.adminVerifiedSearch = '';
   state.adminVerifiedFiltersOpen = false;
@@ -2712,6 +3704,7 @@ function providerDashboard(){
   const positivePercent = Math.round(positiveReviews / reviewTotal * 100);
   const neutralPercent = Math.round(neutralReviews / reviewTotal * 100);
   const negativePercent = 100 - positivePercent - neutralPercent;
+  const waiting = pendingProviderRequests();
   return `
   <div class="topbar">
     <div style="display:flex; align-items:center; gap:10px;">
@@ -2723,6 +3716,26 @@ function providerDashboard(){
     </div>
   </div>
   <div class="pad">
+    ${waiting.length ? `
+    <div class="card" style="border:1px solid var(--line); border-left:4px solid var(--deep); border-radius:14px; padding:14px; margin-bottom:14px; background:#fff;">
+      <div class="row" style="align-items:flex-start; margin-bottom:2px;">
+        <div>
+          <div style="font-size:13px; font-weight:800; color:var(--ink);">${waiting.length} request${waiting.length === 1 ? '' : 's'} waiting on your answer</div>
+          <div style="font-size:11.5px; color:var(--ink-soft); line-height:1.5; margin-top:3px;">Nothing is booked until you accept - the client has no confirmed time yet.</div>
+        </div>
+        <span class="wait-dot" style="margin-top:4px;"></span>
+      </div>
+      ${waiting.map(b => `
+        <button type="button" data-provider-booking-id="${b.id}" aria-label="Open request from ${esc(b.client)}" style="width:100%; text-align:left; background:var(--background); border:1px solid var(--line); border-radius:10px; padding:10px 11px; margin-top:9px; cursor:pointer; font:inherit; color:var(--ink); display:flex; align-items:center; gap:8px;">
+          <span style="flex:1;">
+            <span style="display:block; font-size:12.5px; font-weight:700;">${esc(b.title)}</span>
+            <span style="display:block; font-size:11px; color:var(--mist); margin-top:2px;">${esc(b.client)} · Brgy. ${esc(b.barangay)} · received ${esc(b.receivedAt || 'just now')}</span>
+          </span>
+          <span style="font-size:12px; font-weight:800;">${peso(b.amount)}</span>
+          <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',13)}</span>
+        </button>`).join('')}
+    </div>` : ''}
+
     <div class="card">
       <div class="row" style="margin-bottom:8px;">
         <span style="font-weight:700; font-size:13px; color:var(--ink);">Client Feedback Sentiment</span>
@@ -2896,39 +3909,143 @@ function providerFSM(){
   </div>`;
 }
 
+// A request is not a booking yet: nothing is scheduled and no fee is agreed
+// until this account answers it. One source for the queue, so the nav badge,
+// the rail and the dashboard cannot disagree about how many are waiting.
+function pendingProviderRequests(){
+  return PROVIDER_BOOKINGS.filter(b => b.status === 'requested');
+}
+
+// The pin marks the client's door, so it only mounts for a job this account
+// actually took. Requests and closed records stay at barangay level (56).
+function initProviderBookingMap(booking){
+  const mapEl = document.getElementById('provider-booking-map');
+  if(!mapEl || !booking) return;
+  const map = L.map('provider-booking-map').setView([booking.lat, booking.lng], 15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+  L.marker([booking.lat, booking.lng]).addTo(map).bindPopup(booking.address).openPopup();
+}
+
+function findProviderBooking(bookingId){
+  return PROVIDER_BOOKINGS.find(b => b.id === bookingId) || null;
+}
+
+// One entry point for the provider's booking screen so the map set-up and the
+// per-request prompts live in one place instead of being re-typed per call site.
+function openProviderBooking(bookingId){
+  state.selectedProviderBookingId = bookingId;
+  // A decline prompt belongs to one request; it must not follow you to the next.
+  state.providerDeclineConfirm = false;
+  state.tab = 'provider_booking_detail';
+  render();
+  setTimeout(() => initProviderBookingMap(findProviderBooking(bookingId)), 100);
+}
+
+// The write is deferred so the control can show what it is doing (47) and so a
+// second tap cannot answer the same request twice.
+function answerRequest(bookingId, action){
+  const b = findProviderBooking(bookingId);
+  if(!b || b.status !== 'requested' || state.providerResponding) return;
+  state.providerResponding = { id: bookingId, action: action };
+  render();
+  setTimeout(() => {
+    // The prompt stays on screen while the answer is in flight, so the spinner
+    // replaces the buttons the user just pressed rather than a different card.
+    state.providerResponding = null;
+    state.providerDeclineConfirm = false;
+    if(action === 'accept'){
+      b.status = 'upcoming';
+      showToast('Accepted - ' + b.client + ' is notified and ' + b.date + ', ' + b.time + ' is held for you');
+      render();
+      // Accepting is what unlocks the door: the screen now carries a live map, so
+      // it has to be mounted for the booking that just appeared in the DOM.
+      setTimeout(() => initProviderBookingMap(b), 100);
+      return;
+    }
+    b.status = 'cancelled';
+    b.cancelReason = 'Declined by you';
+    showToast('Declined - ' + b.client + ' can now look for another provider');
+    render();
+  }, 750);
+}
+
+function requestActionCard(b){
+  const busy = state.providerResponding && state.providerResponding.id === b.id;
+  const busyAction = busy ? state.providerResponding.action : null;
+  if(state.providerDeclineConfirm){
+    return `
+    <div class="card" style="border:1px solid var(--alert); border-radius:14px; padding:14px; margin-bottom:14px; background:var(--alert-100);">
+      <div style="font-size:13px; font-weight:800; color:var(--error-ink);">Decline this request?</div>
+      <div style="font-size:12px; color:var(--ink-soft); line-height:1.5; margin-top:5px;">${esc(b.client)} will be told you could not take it and can look for another provider. This does not remove the record.</div>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button type="button" class="btn sm secondary" style="flex:1; border-radius:10px;" id="keep-request-btn" ${busy ? 'disabled' : ''}>Keep it</button>
+        <button type="button" class="btn danger" style="flex:1.2; border-radius:10px;" id="confirm-decline-btn" ${busy ? 'disabled' : ''}>${busyAction === 'decline' ? `<span class="spinner"></span> Declining&hellip;` : 'Yes, decline'}</button>
+      </div>
+    </div>`;
+  }
+  return `
+    <div class="card" style="border:1px solid var(--line); border-left:4px solid var(--deep); border-radius:14px; padding:14px; margin-bottom:14px; background:#fff;">
+      <div class="row" style="align-items:flex-start; margin-bottom:8px;">
+        <div>
+          <div style="font-size:13px; font-weight:800; color:var(--ink);">Action required</div>
+          <div style="font-size:11.5px; color:var(--ink-soft); line-height:1.5; margin-top:3px;">This is a request, not a booking yet. Nothing is scheduled and no fee is agreed until you answer.</div>
+        </div>
+        <span class="wait-dot" style="margin-top:4px;"></span>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; font-size:12px; padding:10px; background:var(--background); border-radius:10px;">
+        <div><span style="color:var(--mist); font-size:10.5px;">Received</span><br><b>${esc(b.receivedAt || 'Just now')}</b></div>
+        <div><span style="color:var(--mist); font-size:10.5px;">Requested for</span><br><b>${esc(b.date)}, ${esc(b.time)}</b></div>
+        <div><span style="color:var(--mist); font-size:10.5px;">Client is in</span><br><b>Brgy. ${esc(b.barangay)}</b></div>
+        <div><span style="color:var(--mist); font-size:10.5px;">Indicative fee</span><br><b>${peso(b.amount)}</b></div>
+      </div>
+      <div style="font-size:11px; color:var(--mist); margin-top:7px;">Confirm the scope and final price with the client before you start.</div>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button type="button" class="btn" style="flex:1.4; border-radius:10px;" id="accept-request-btn" ${busy ? 'disabled' : ''}>${busyAction === 'accept' ? `<span class="spinner"></span> Accepting&hellip;` : 'Accept request'}</button>
+        <button type="button" class="btn secondary" style="flex:1; border-radius:10px;" id="decline-request-btn" ${busy ? 'disabled' : ''}>Decline</button>
+      </div>
+    </div>`;
+}
+
 function providerBookings(){
   const filter = state.providerBookingFilter || 'all';
+  const waiting = pendingProviderRequests().length;
   const filtered = PROVIDER_BOOKINGS.filter(b => filter === 'all' || b.status === filter);
   return `
   <div style="background:var(--grad-hero); color:#fff; padding:18px 18px 14px;">
     <div style="font-family:'Fraunces',serif; font-size:22px; font-weight:600;">Bookings</div>
+    <div style="font-size:11.5px; opacity:0.85; margin-top:3px;">${waiting ? waiting + ' request' + (waiting === 1 ? '' : 's') + ' waiting on your answer' : 'Nothing waiting on your answer'}</div>
   </div>
   <div class="pad" style="background:var(--cloud); padding-bottom:40px;">
     <div class="seg hscroll" style="margin-bottom:16px;">
-      ${['all','ongoing','upcoming','completed','cancelled'].map(status => `
-        <button class="seg-btn ${filter === status ? 'on' : ''}" onclick="state.providerBookingFilter='${status}'; render();${status[0].toUpperCase() + status.slice(1)}</button>
+      ${['all','requested','ongoing','upcoming','completed','cancelled'].map(status => `
+        <button class="seg-btn ${filter === status ? 'on' : ''}"${status === 'requested' && waiting ? ' aria-label="Requested, ' + waiting + ' waiting for you"' : ''} onclick="state.providerBookingFilter='${status}'; render();">${status[0].toUpperCase() + status.slice(1)}${status === 'requested' && waiting ? ' (' + waiting + ')' : ''}</button>
       `).join('')}
     </div>
-    ${filtered.length === 0 ? '<div style="text-align:center; color:var(--mist); padding:30px 0; font-size:13px;">No bookings found in this category.</div>' : filtered.map(b => `
+    ${filtered.length === 0 ? bookingListEmpty(filter, 'provider') : filtered.map(b => `
       <div class="card" data-provider-booking-id="${b.id}" style="cursor:pointer; border-radius:14px; padding:14px; margin-bottom:12px; border:1px solid var(--line); background:#fff;">
         <div class="row" style="align-items:flex-start; margin-bottom:8px;">
           <div style="display:flex; gap:12px; align-items:center;">
-            <img class="img-avatar" src="${photoFor(b.id)}" alt="${b.client}" style="width:40px; height:40px;">
+            <img class="img-avatar" src="${photoFor(b.id)}" alt="${esc(b.client)}" style="width:40px; height:40px;">
             <div>
-              <div style="font-size:14.5px; font-weight:700; color:var(--ink); line-height:1.3;">${b.title}</div>
-              <div style="font-size:11.5px; color:var(--mist); margin-top:2px;">${b.client} - ${b.date}, ${b.time}</div>
+              <div style="font-size:14.5px; font-weight:700; color:var(--ink); line-height:1.3;">${esc(b.title)}</div>
+              <div style="font-size:11.5px; color:var(--mist); margin-top:2px;">${esc(b.client)} - ${b.status === 'requested' ? 'asked for ' : ''}${esc(b.date)}, ${esc(b.time)}</div>
             </div>
           </div>
           <span class="chip" style="font-size:10px; text-transform:uppercase; background:${statusColors(b.status).bg}; color:${statusColors(b.status).fg};">${b.status}</span>
         </div>
-        <div style="font-size:13px; font-weight:700; color:var(--ink); margin-top:6px;">${peso(b.amount)}</div>
+        ${b.status === 'requested' ? `<div style="font-size:11px; font-weight:800; text-transform:uppercase; color:var(--deep); display:flex; align-items:center; gap:5px; margin-top:4px;"><span class="wait-dot"></span> Needs your answer</div>` : ''}
+        <div style="font-size:13px; font-weight:700; color:var(--ink); margin-top:6px;">${peso(b.amount)}${b.status === 'requested' ? `<span style="font-size:11px; font-weight:600; color:var(--mist);"> indicative</span>` : ''}</div>
       </div>
     `).join('')}
   </div>`;
 }
 
 function providerBookingDetail(){
-  const booking = PROVIDER_BOOKINGS.find(b => b.id === state.selectedProviderBookingId) || PROVIDER_BOOKINGS[0];
+  const booking = findProviderBooking(state.selectedProviderBookingId) || PROVIDER_BOOKINGS[0];
+  const isOpen = booking.status === 'requested';
+  // Only a job this account took is entitled to the client's door and number. A
+  // request has no agreement yet and a closed record no longer needs the visit.
+  const onJob = booking.status === 'upcoming' || booking.status === 'ongoing' || booking.status === 'completed';
   return `
   <div style="background:var(--grad-hero); color:#fff; padding:18px 18px 14px;">
     <div style="display:flex; align-items:center; gap:10px;">
@@ -2939,29 +4056,44 @@ function providerBookingDetail(){
     </div>
   </div>
   <div class="pad" style="background:var(--cloud); padding-bottom:40px;">
+    ${isOpen ? requestActionCard(booking) : ''}
     <div class="card">
       <div style="display:flex; gap:12px; align-items:center; margin-bottom:14px;">
-        <img class="img-avatar" src="${photoFor(booking.id)}" alt="${booking.client}" style="width:44px; height:44px;">
-        <div><div style="font-size:16px; font-weight:800;">${booking.title}</div><div style="font-size:12px; color:var(--mist);">Client: ${booking.client}</div></div>
+        <img class="img-avatar" src="${photoFor(booking.id)}" alt="${esc(booking.client)}" style="width:44px; height:44px;">
+        <div><div style="font-size:16px; font-weight:800;">${esc(booking.title)}</div><div style="font-size:12px; color:var(--mist);">Client: ${esc(booking.client)}</div></div>
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12.5px; line-height:1.45;">
         <div><div style="color:var(--mist);">Status</div><b style="text-transform:capitalize;">${booking.status}</b></div>
-        <div><div style="color:var(--mist);">Schedule</div><b>${booking.date}, ${booking.time}</b></div>
-        <div><div style="color:var(--mist);">Service fee</div><b>${peso(booking.amount)}</b></div>
-        <div><div style="color:var(--mist);">Client phone</div><b>${booking.phone}</b></div>
+        <div><div style="color:var(--mist);">${isOpen ? 'Requested slot' : 'Schedule'}</div><b>${esc(booking.date)}, ${esc(booking.time)}</b></div>
+        <div><div style="color:var(--mist);">${isOpen ? 'Indicative fee' : 'Service fee'}</div><b>${peso(booking.amount)}</b></div>
+        <div><div style="color:var(--mist);">Client phone</div><b ${onJob ? '' : 'style="font-weight:600; color:var(--ink-soft);"'}>${onJob ? esc(booking.phone) : 'Withheld'}</b></div>
       </div>
+      ${isOpen ? `<div style="font-size:11.5px; color:var(--ink-soft); line-height:1.5; margin-top:12px; padding-top:10px; border-top:1px solid var(--line);">The client was shown your starting rate. They have not been charged and no time is fixed until you accept.</div>` : ''}
+      ${booking.cancelReason ? `<div style="font-size:11.5px; color:var(--error-ink); margin-top:10px;">${esc(booking.cancelReason)}.</div>` : ''}
     </div>
 
     <div class="card">
       <div style="font-size:13px; font-weight:800; margin-bottom:8px;">Client location</div>
-      <div style="font-size:12.5px; color:var(--ink-soft); margin-bottom:10px;">${booking.address}</div>
-      <div id="provider-booking-map" style="height:220px; border-radius:12px; border:1px solid var(--line); width:100%; overflow:hidden;"></div>
-      <div style="font-size:11px; color:var(--mist); margin-top:7px;">Pinned address for ${booking.client}. Drag to explore the map and zoom for directions.</div>
+      ${onJob ? `
+        <div style="font-size:12.5px; color:var(--ink-soft); margin-bottom:10px;">${esc(booking.address)}</div>
+        <div id="provider-booking-map" style="height:220px; border-radius:12px; border:1px solid var(--line); width:100%; overflow:hidden;"></div>
+        <div style="font-size:11px; color:var(--mist); margin-top:7px;">Pinned address for ${esc(booking.client)}. Drag to explore the map and zoom for directions.</div>
+      ` : `
+        <div style="display:flex; gap:10px; align-items:flex-start; padding:12px; background:var(--background); border:1px solid var(--line); border-radius:12px;">
+          <span style="color:var(--deep); flex-shrink:0; margin-top:1px;">${ic('lock',16)}</span>
+          <div style="font-size:12.5px; line-height:1.5;">
+            <div style="font-weight:800;">Brgy. ${esc(booking.barangay)}</div>
+            <div style="color:var(--ink-soft); margin-top:3px;">${isOpen
+              ? 'The exact address and the client number are shared once you accept. The barangay is enough to judge the travel and the slot.'
+              : 'This booking is closed, so the exact address and the client number are not shown.'}</div>
+          </div>
+        </div>
+      `}
     </div>
 
     <div class="card">
-      <div style="font-size:13px; font-weight:800; margin-bottom:6px;">Job notes</div>
-      <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.5;">${booking.notes}</div>
+      <div style="font-size:13px; font-weight:800; margin-bottom:6px;">Job notes from ${esc(booking.client)}</div>
+      <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.5;">${esc(booking.notes)}</div>
     </div>
   </div>`;
 }
@@ -3015,39 +4147,44 @@ function bindTabHandlers(){
   });
 
   document.querySelectorAll('[data-provider-booking-id]').forEach(el => {
-    el.onclick = () => {
-      const bid = el.dataset.providerBookingId;
-      state.selectedProviderBookingId = bid;
-      state.tab = 'provider_booking_detail';
-      render();
-      setTimeout(() => {
-        const mapEl = document.getElementById('provider-booking-map');
-        if(mapEl){
-          const bData = PROVIDER_BOOKINGS.find(item => item.id === bid) || PROVIDER_BOOKINGS[0];
-          const map = L.map('provider-booking-map').setView([bData.lat, bData.lng], 15);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-          L.marker([bData.lat, bData.lng]).addTo(map).bindPopup(bData.address).openPopup();
-        }
-      }, 100);
-    };
+    el.onclick = () => openProviderBooking(el.dataset.providerBookingId);
   });
 
+  // The provider's answer to a request. Both controls are bound to the booking
+  // currently on screen, so a stale id from a previous detail view cannot be
+  // answered by accident.
+  const acceptRequestBtn = document.getElementById('accept-request-btn');
+  if(acceptRequestBtn) acceptRequestBtn.onclick = () => answerRequest(state.selectedProviderBookingId, 'accept');
+  const declineRequestBtn = document.getElementById('decline-request-btn');
+  if(declineRequestBtn) declineRequestBtn.onclick = () => { state.providerDeclineConfirm = true; render(); };
+  const keepRequestBtn = document.getElementById('keep-request-btn');
+  if(keepRequestBtn) keepRequestBtn.onclick = () => { state.providerDeclineConfirm = false; render(); };
+  const confirmDeclineBtn = document.getElementById('confirm-decline-btn');
+  if(confirmDeclineBtn) confirmDeclineBtn.onclick = () => answerRequest(state.selectedProviderBookingId, 'decline');
+
   document.querySelectorAll('[data-provider-detail]').forEach(el => {
-    el.onclick = () => {
-      const pid = el.dataset.providerDetail;
-      state.selectedProvider = PROVIDERS.find(p => p.id === pid) || PROVIDERS[2];
-      state.previousTab = 'results';
-      state.tab = 'provider_detail';
-      render();
-      setTimeout(() => {
-        if(document.getElementById('leafletmap')){
-          const map = L.map('leafletmap').setView([6.3665, 124.9338], 15);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-          L.marker([6.3665, 124.9338]).addTo(map);
-        }
-      }, 100);
-    };
+    el.onclick = () => openProviderDetail(el.dataset.providerDetail, 'results');
   });
+
+  // Home advertises three shortcuts with cursor:pointer; each now goes where its
+  // label claims instead of sitting inert.
+  document.querySelectorAll('[data-service]').forEach(el => {
+    el.onclick = () => openCategory(el.dataset.service);
+  });
+  document.querySelectorAll('[data-booking]').forEach(el => {
+    el.onclick = () => openBookingDetail(el.dataset.booking);
+  });
+  document.querySelectorAll('[data-provider]').forEach(el => {
+    el.onclick = () => openProviderDetail(el.dataset.provider, 'home');
+  });
+  document.querySelectorAll('[data-notif]').forEach(el => {
+    el.onclick = () => openNotification(el.dataset.notif);
+  });
+  document.querySelectorAll('[data-rate]').forEach(el => {
+    el.onclick = () => setBookingRating(state.selectedBookingId, Number(el.dataset.rate));
+  });
+  const changeRatingBtn = document.getElementById('change-rating-btn');
+  if(changeRatingBtn) changeRatingBtn.onclick = () => changeBookingRating(state.selectedBookingId);
 
   const chatProBtn = document.querySelector('[data-chat-booking-provider-id]');
   if(chatProBtn){
@@ -3084,14 +4221,26 @@ function bindTabHandlers(){
   if(conciergeAnalyzeBtn){
     conciergeAnalyzeBtn.onclick = () => {
       if(state.conciergeAnalyzing) return;
+      const field = document.getElementById('concierge-input-field');
+      const text = (field ? field.value : state.conciergeInput || '').trim();
+      state.conciergeInput = text;
+      // The briefing is built from what the resident supplied, so an empty
+      // request has nothing to work from and says so instead of inventing one.
+      if(!text && !state.conciergePhotoAttached){
+        state.conciergeError = 'Describe the problem or attach a photo first - the briefing needs something to work from.';
+        render();
+        return;
+      }
+      state.conciergeError = null;
+      // Capture the category now, from the words supplied at this moment.
+      state.conciergeServiceId = matchConciergeService(text).id;
       state.conciergeAnalyzing = true;
-      conciergeAnalyzeBtn.classList.add('btn-loading');
-      conciergeAnalyzeBtn.innerHTML = '<span class="spinner"></span> Analyzing photo & text...';
+      render();
       setTimeout(() => {
         state.conciergeAnalyzing = false;
         state.conciergeAnalyzed = true;
         render();
-        showToast('Diagnosis ready - technician brief prepared');
+        showToast('Briefing ready - shortlisted under ' + serviceMeta(state.conciergeServiceId).label.toLowerCase());
       }, 1400);
     };
   }
@@ -3118,12 +4267,30 @@ function bindTabHandlers(){
   const searchBtn = document.getElementById('search-btn');
   const searchInput = document.getElementById('search-input');
   if(searchBtn && searchInput){
-    searchBtn.onclick = () => {
-      state.searchQuery = searchInput.value;
-      state.tab = 'results';
-      render();
-    };
+    searchBtn.disabled = state.searching;
+    searchBtn.onclick = () => startDiscovery(searchInput.value);
   }
+  // On a phone the keyboard's search key sends Enter, so submitting from the
+  // field has to work the same as tapping the magnifier.
+  if(searchInput) searchInput.onkeydown = (e) => {
+    if(e.key === 'Enter') startDiscovery(searchInput.value);
+  };
+
+  // Every empty-state exit binds from this one table: an empty list that offers
+  // a way out has to actually deliver it, on whichever screen raised it.
+  const EMPTY_EXITS = {
+    'clear-search-btn': clearDiscovery,
+    'msgs-show-all-btn': () => { state.msgFilter = 'all'; render(); },
+    // Both booking rails share this exit; each role only reads its own filter,
+    // so resetting both costs nothing.
+    'bookings-show-all-btn': () => { state.bookingFilter = 'all'; state.providerBookingFilter = 'all'; render(); },
+    'bookings-find-btn': () => { state.tab = 'results'; render(); },
+    'bookings-open-fsm-btn': () => { state.tab = 'fsm'; render(); },
+  };
+  Object.keys(EMPTY_EXITS).forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.onclick = EMPTY_EXITS[id];
+  });
 
   const chatMsgList = document.getElementById('chat-msg-list');
   if(chatMsgList) chatMsgList.scrollTop = chatMsgList.scrollHeight;
