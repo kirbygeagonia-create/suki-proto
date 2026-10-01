@@ -2,6 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<!-- viewport-fit=cover is what makes env(safe-area-inset-*) report a real
+     height; without it the top bar and bottom nav sit under the notch and the
+     gesture bar on a phone. mobile-web-app-capable lets the WebView shell and
+     "Add to home screen" launch it full-bleed, and the theme colour is the logo
+     navy so the system bars match the app instead of the browser default. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#03002B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sukinnect">
 <title>Sukinnect — Prototype Preview</title>
 <link href="fonts/fonts.css" rel="stylesheet">
 <link rel="stylesheet" href="leaflet/leaflet.css">
@@ -56,6 +67,21 @@
     --border-strong:#C9D5FF;
     --ring:0 0 0 3px rgba(3,82,174,.18);
 
+    /* Structure scale: one 4pt rhythm, one radius set and the touch minimums, so
+       a component asks for a step instead of inventing a number (65). */
+    --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px;
+    --s-5:20px; --s-6:24px; --s-7:28px; --s-8:32px;
+    --r-sm:10px; --r-md:14px; --r-lg:20px; --r-sheet:28px; --r-pill:999px;
+    --tap:44px; --field-h:52px; --cta-h:52px; --nav-h:62px;
+    /* Type scale. --t-caption is the floor: nothing on any screen renders below
+       12px, and a label that will not fit wraps instead of shrinking. Inputs are
+       16px because a smaller input makes a mobile browser zoom the page on focus. */
+    --t-caption:12px; --t-body:14px; --t-body-lg:15px;
+    --t-input:16px; --t-title:20px; --t-display:30px;
+    /* System bars: zero in the desktop preview, real on a notched phone (7.1). */
+    --sat:env(safe-area-inset-top, 0px);
+    --sab:env(safe-area-inset-bottom, 0px);
+
     /* semantic state - deliberately not brand */
     --success:#1f8a5f; --success-100:#e2f3ea;
     --warning:#ffb800; --warning-600:#e6a300; --warning-100:#fff3cd;
@@ -98,7 +124,9 @@
     margin:0; background:var(--brand-tint-soft); color:var(--ink);
     font-family:"Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
     display:flex; align-items:flex-start; justify-content:center;
-    padding:32px 12px; min-height:100vh;
+    /* dvh tracks a mobile browser's real visible height as its address bar
+       hides and shows; vh keeps the fallback for engines that lack it. */
+    padding:32px 12px; min-height:100vh; min-height:100dvh;
   }
   h1,h2,h3{font-family:"Fraunces", ui-serif, serif; margin:0;}
   .phone{
@@ -120,7 +148,10 @@
     }
   .screen::-webkit-scrollbar{display:none;}
   .topbar{
-    background:var(--deep); color:#fff; padding:18px 18px 14px;
+    /* --sat is 0 in the desktop preview and the real notch height on a phone, so
+       the same rule keeps the title clear of both (7.1). */
+    background:var(--deep); color:#fff;
+    padding:calc(18px + var(--sat)) 18px 14px;
     display:flex; align-items:center; justify-content:space-between;
   }
   .topbar .title{font-family:"Fraunces",serif; font-size:19px; font-weight:600;}
@@ -197,63 +228,146 @@
     box-shadow:0 6px 16px rgba(3,82,174,0.18); cursor:pointer;
   }
 
-  /* Sign-in is one phone screen, not a landing page: a slim brand bar, the form
-     straight after it, and the action pinned where the thumb is (36, 73). */
+  /* Sign-in: the brand owns the top of the first screen and the form rises out
+     of it as a sheet, so the two read as one moment carried on from the splash
+     rather than a page with a form on it (5). */
   .auth-screen{
-    display:flex; flex-direction:column; min-height:100%; background:var(--grad-brand-soft);
+    display:flex; flex-direction:column; min-height:100%; background:var(--surface);
   }
-  .auth-bar{
-    position:relative; overflow:hidden; display:flex; align-items:center; gap:11px;
-    padding:13px 18px; background:var(--grad-brand-hero); color:#fff;
+  /* The browser's default 16px paragraph margins were costing ~80px of dead
+     vertical space on this screen, which is what pushed the form past the fold
+     on a 640pt phone. Spacing here is deliberate, never inherited. */
+  .auth-screen p{ margin:0; }
+  .auth-hero{
+    position:relative; overflow:hidden; flex:none; text-align:center; color:var(--text-on-brand);
+    padding:calc(var(--sat) + 56px) var(--s-5) 76px;
+    background:var(--grad-brand-hero);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
   }
-  /* ACCENT GLOW (33): the logo's cyan at low alpha, one controlled layer. */
-  .auth-bar::after{
-    content:""; position:absolute; top:-64px; right:-44px; width:190px; height:190px;
-    border-radius:50%; pointer-events:none;
-    background:radial-gradient(circle, rgba(5,188,196,.32), rgba(5,188,196,0) 68%);
+  /* ACCENT GLOW (33): the logo's cyan at low alpha, one layer only. */
+  .auth-hero::after{
+    content:""; position:absolute; top:-104px; left:50%; width:330px; height:330px;
+    margin-left:-165px; border-radius:50%; pointer-events:none;
+    background:radial-gradient(circle, rgba(5,188,196,.30), rgba(5,188,196,0) 66%);
   }
-  .auth-bar > *{ position:relative; z-index:1; }
+  /* Concentric rings at a quiet opacity keep the hero a surface instead of a
+     flat fill. Painted once, no blur, no image: cheap on a low-end WebView. */
+  .auth-hero::before{
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
+    background:repeating-radial-gradient(circle at 50% 30%,
+      rgba(255,255,255,.06) 0 1px, rgba(255,255,255,0) 1px 24px);
+  }
+  .auth-hero > *{ position:relative; z-index:1; }
   /* The logo file has a white ground, so the SURFACE around it adapts to the
      brand instead of the mark being altered (35). */
   .auth-mark{
-    display:flex; align-items:center; justify-content:center; flex-shrink:0;
-    width:40px; height:40px; border-radius:12px; background:#fff; padding:4px;
-    box-shadow:0 4px 14px rgba(3,0,43,.30);
+    display:flex; align-items:center; justify-content:center; flex:none;
+    width:96px; height:96px; border-radius:var(--r-lg); background:#fff; padding:10px;
+    box-shadow:0 12px 30px rgba(3,0,43,.34);
   }
   .auth-mark img{width:100%; height:100%; object-fit:contain; display:block;}
   .auth-wordmark{
-    font-family:"Fraunces", ui-serif, serif; font-size:20px; font-weight:600;
-    letter-spacing:-.3px; line-height:1.15;
+    font-family:"Fraunces", ui-serif, serif; font-size:var(--t-display); font-weight:600;
+    letter-spacing:-.5px; line-height:1.1; margin-top:12px;
   }
-  .auth-kicker{ font-size:11.5px; font-weight:500; opacity:.85; margin-top:1px; }
-  .auth-body{ flex:1; display:flex; flex-direction:column; padding:16px 18px 6px; }
-  /* SAFE CENTRING: auto margins only share out space that actually exists, so a
-     short screen breathes around the form instead of leaving one hole above the
-     action bar, while a tall one still starts at the top and scrolls (38, 73). */
-  .auth-form{ margin-top:auto; margin-bottom:auto; }
-  /* The page wash is the same value the fields use by default, so on this screen
-     they are lifted to surface white to stay legible as controls (41, 72). */
-  .auth-body .input-field{ background:var(--surface); }
-  .auth-heading{
-    font-family:"Fraunces", ui-serif, serif; font-size:19px; font-weight:600;
-    letter-spacing:-.2px; color:var(--ink);
+  .auth-tagline{ font-size:var(--t-body-lg); font-weight:500; opacity:.92; margin-top:5px; }
+  /* The deck's spine, carried over from the splash as one quiet row. */
+  .auth-loop{
+    display:flex; align-items:center; gap:7px; margin-top:14px;
+    font-size:var(--t-caption); font-weight:800; letter-spacing:.13em; opacity:.82;
   }
-  .auth-sub{ font-size:11.5px; color:var(--ink-soft); margin-top:3px; line-height:1.45; }
-  /* Sticky inside .screen so the button never scrolls out of reach and the
-     keyboard cannot bury it (38, 73). .auth-body takes the leftover height, so
-     this sits flush at the bottom of a short screen without a gap above it. */
+  .auth-loop i{ font-style:normal; color:var(--brand-secondary); }
+  /* The sheet is the only white surface on the screen, so it reads as a card
+     lifted over the brand rather than a background. */
+  .auth-sheet{
+    flex:1; display:flex; flex-direction:column; box-sizing:border-box;
+    margin-top:calc(0px - var(--s-6)); padding:var(--s-6) var(--s-5) 0;
+    background:var(--surface); border-radius:var(--r-sheet) var(--r-sheet) 0 0;
+    box-shadow:0 -14px 34px rgba(3,0,43,.16);
+  }
+  .auth-title{
+    font-family:"Fraunces", ui-serif, serif; font-size:24px; font-weight:600;
+    letter-spacing:-.3px; color:var(--ink); line-height:1.15;
+  }
+  .auth-sub{ font-size:var(--t-body); color:var(--ink-soft); margin-top:4px; line-height:1.45; }
+  /* Resident and Service Pro are the two people the marketplace exists for, so
+     they are the decision on screen. Admin is an operations role and stays
+     reachable from the footer line instead of competing with them (5). */
+  .auth-role{
+    display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:var(--s-5);
+    padding:4px; background:var(--cloud); border-radius:var(--r-md);
+    box-shadow:inset 0 0 0 1px var(--line);
+  }
+  .auth-role button{
+    min-height:var(--tap); border:none; border-radius:calc(var(--r-md) - 3px);
+    background:transparent; font:inherit; font-size:var(--t-body); font-weight:700;
+    color:var(--ink-soft); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  /* The pressed option lifts a white chip out of the tray: the state is depth and
+     weight, not colour alone (71, 72). */
+  .auth-role button[aria-pressed="true"]{
+    background:var(--surface); color:var(--deep); box-shadow:var(--shadow-xs);
+  }
+  .auth-group{ margin-top:var(--s-5); }
+  .auth-group-name{
+    display:flex; align-items:center; gap:6px; margin-bottom:var(--s-2);
+    font-size:var(--t-caption); font-weight:800; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--mist);
+  }
+  .auth-note{
+    font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5;
+    margin-top:var(--s-2); display:flex; gap:6px; align-items:flex-start;
+  }
+  /* Sticky inside the scroller so the keyboard can never bury the primary
+     action, and it sits straight after the fields rather than sinking away from
+     them - the footer cluster takes the leftover height instead (38, 73). */
   .auth-action{
-    position:sticky; bottom:0; z-index:2;
-    padding:12px 18px 16px; background:var(--surface);
-    border-top:1px solid var(--line); box-shadow:0 -8px 22px rgba(3,0,43,.07);
+    position:sticky; bottom:0; z-index:2; margin-top:var(--s-5);
+    padding:0 0 calc(var(--s-4) + var(--sab)); background:var(--surface);
   }
-  .auth-switch-line{ text-align:center; font-size:12px; color:var(--ink-soft); margin-top:10px; }
+  /* The demo shortcut shares the Email label row so it costs no vertical space
+     on a short phone; the hit area is full height and the negative margin gives
+     the row's height back (39). */
+  .auth-demo{
+    display:inline-flex; align-items:center; gap:5px;
+    min-height:var(--tap); padding:0 var(--s-2); margin:-11px -2px;
+    border-radius:var(--r-pill);
+    background:var(--cloud); border:1px dashed var(--border-strong);
+    font:inherit; font-size:var(--t-caption); font-weight:700; color:var(--deep);
+    cursor:pointer; white-space:nowrap;
+  }
+  .auth-switch-line{
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    min-height:var(--tap); margin-top:auto;
+    font-size:var(--t-body); color:var(--ink-soft);
+  }
   .auth-foot{
-    display:flex; align-items:center; justify-content:space-between; gap:8px;
-    margin-top:6px; font-size:10.5px; color:var(--mist);
+    display:flex; align-items:center; justify-content:space-between; gap:var(--s-2);
+    font-size:var(--t-caption); color:var(--mist); line-height:1.4;
   }
   .auth-foot .where{ display:inline-flex; align-items:center; gap:4px; }
-  .auth-foot svg{ color:var(--brand-secondary); }
+  .auth-foot svg{ color:var(--brand-secondary); flex:none; }
+  .auth-admin{
+    background:none; border:none; padding:0; font:inherit; font-size:var(--t-caption);
+    font-weight:700; color:var(--ink-soft); cursor:pointer; text-decoration:underline;
+    text-underline-offset:3px;
+  }
+  .auth-note-line{ margin-top:2px; font-size:var(--t-caption); color:var(--mist); }
+
+  /* Short phones: the hero gives ground to the sheet instead of the form
+     scrolling away. Height-keyed, because a 640pt phone is the same width. */
+  @media (max-height:720px){
+    .auth-hero{ padding:calc(var(--sat) + 14px) var(--s-5) 18px; }
+    .auth-mark{ width:66px; height:66px; padding:7px; border-radius:var(--r-md); }
+    .auth-wordmark{ font-size:var(--t-title); margin-top:9px; }
+    .auth-tagline{ font-size:var(--t-body); }
+    .auth-loop{ margin-top:10px; }
+    .auth-sheet{ margin-top:calc(0px - var(--s-4)); padding-top:var(--s-4); }
+    .auth-role{ margin-top:var(--s-3); }
+    .auth-group{ margin-top:var(--s-3); }
+    .auth-action{ margin-top:var(--s-4); }
+  }
 
   /* Launch screen — the app's first brand moment. Full-bleed hero gradient,
      official mark, and the deck's FIND/REVIEW/BOOK/RECORD spine as the only
@@ -338,49 +452,26 @@
     color:var(--ink-soft); margin-bottom:12px;
   }
   @keyframes skelShimmer{ 0%{ transform:translateX(-100%); } 100%{ transform:translateX(100%); } }
-  .role-cards{
-    display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:8px 0 18px;
-  }
-  /* Three ways across a 390pt screen, so each card reads icon + name at a glance
-     rather than a stacked tile that pushes the form off the phone. */
-  .role-card{
-    display:flex; align-items:center; gap:7px; text-align:left; min-height:48px;
-    background:var(--surface); border:1.5px solid var(--line); border-radius:12px;
-    padding:7px 9px; cursor:pointer; transition:all 0.15s ease;
-  }
-  .role-card.active{
-    border-color:var(--deep); background:var(--deep-100);
-    box-shadow:0 4px 10px rgba(3, 82, 174, 0.1);
-  }
-  .role-card .rc-icon{display:block; flex-shrink:0; line-height:0;}
-  .role-card .rc-text{ min-width:0; }
-  /* Role choice is the main decision on this screen, so the labels are sized and
-     shaded for reading at arm's length: 5.6:1 on the tinted selected card (72). */
-  .role-card .rc-name{
-    display:block; font-size:12px; font-weight:700; color:var(--ink);
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  }
-  .role-card .rc-sub{
-    display:block; font-size:10px; color:var(--ink-soft); margin-top:1px;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  }
 
   .input-field{
-    display:flex; align-items:center; background:var(--cloud); border:1.5px solid var(--line);
-    border-radius:12px; padding:0 12px; margin-top:6px; margin-bottom:14px; transition:all 0.15s ease;
+    display:flex; align-items:center; min-height:var(--field-h);
+    background:var(--cloud); border:1.5px solid var(--line);
+    border-radius:var(--r-md); padding:0 var(--s-3);
+    margin-top:6px; margin-bottom:14px; transition:all 0.15s ease;
   }
   .input-field:focus-within{
     border-color:var(--deep); background:var(--surface); box-shadow:0 0 0 3px var(--deep-100);
   }
-  /* 14px vertical padding puts the field at ~46px tall, which is the comfortable
-     thumb target for the email and password fields (39). */
+  /* 16px input text: below that a mobile browser zooms the page when the field
+     takes focus, and the user loses the screen they were reading (12). The field
+     itself is --field-h (52pt) because it is the most tapped control in a form. */
   .input-field input{
     width:100%; border:none; outline:none; background:transparent; padding:14px 0;
-    font-size:13.5px; font-family:inherit; color:var(--ink); font-weight:500;
+    font-size:var(--t-input); font-family:inherit; color:var(--ink); font-weight:500;
   }
   .input-field .addon-btn{
-    background:none; border:none; color:var(--mist); cursor:pointer; padding:6px 8px;
-    min-width:40px; min-height:40px; border-radius:10px;
+    background:none; border:none; color:var(--mist); cursor:pointer;
+    min-width:var(--tap); min-height:var(--tap); border-radius:var(--r-sm);
     display:flex; align-items:center; justify-content:center;
   }
 
@@ -546,7 +637,8 @@
   .review-item:last-child{border-bottom:none;}
   .book-bar{
     display:flex; align-items:center; justify-content:space-between;
-    background:#fff; border-top:1px solid var(--line); padding:12px 18px;
+    background:#fff; border-top:1px solid var(--line);
+    padding:12px 18px calc(12px + var(--sab));
     position:sticky; bottom:0; left:0; right:0; z-index:20;
   }
 
@@ -593,7 +685,9 @@
      UI/UX ENHANCEMENT LAYER — Sukinnect design system polish (1/2)
      Depth, motion and accessibility, driven by the brand tokens above.
      ============================================================ */
-  *{ -webkit-tap-highlight-color:transparent; }
+  /* manipulation keeps panning but drops the 300ms double-tap-zoom delay, which
+     is the reason a web app feels sticky against the finger on Android. */
+  *{ -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
   ::selection{ background:var(--brand-tint); color:var(--brand-navy); }
 
   body{
@@ -628,6 +722,15 @@
   @keyframes riseIn{ from{ transform:translateY(10px); } to{ transform:none; } }
 
   .screen:not(.anim) > *{ animation:none; }
+
+  /* Sign-in keeps its own entrance: the hero holds still so the logo reads as
+     the same object the splash just showed, and the sheet rises over it. Driven
+     by the destination gate above, so switching role or sign-in/register mode
+     repaints in place and never replays the rise (46, 79, 5). */
+  .screen.anim > .auth-screen{ animation:none; }
+  .screen.anim .auth-sheet{ animation:sheetRise .35s var(--ease-spring) both; }
+  .screen:not(.anim) .auth-sheet{ animation:none; }
+  @keyframes sheetRise{ from{ transform:translateY(34px); } to{ transform:none; } }
 
   /* Short stagger — long delays read as "still loading", so keep it tight */
   .screen.anim .pad > *{ animation:riseIn .3s cubic-bezier(.22,.8,.32,1) both; }
@@ -709,7 +812,7 @@
   .btn.secondary:hover{ background:var(--background); }
   .btn:focus-visible, .navitem:focus-visible, .filter-icon-btn:focus-visible, .cat:focus-visible,
   .notif-item:focus-visible, .rate-star:focus-visible,
-  .role-card:focus-visible, .auth-switch:focus-visible, .seg-btn:focus-visible,
+  .auth-role button:focus-visible, .auth-switch:focus-visible, .seg-btn:focus-visible,
   .addon-btn:focus-visible,
   .back-btn:focus-visible{
     outline:3px solid var(--brand-primary-light); outline-offset:2px;
@@ -731,7 +834,9 @@
 
   /* Bottom navigation — glass bar, animated active state */
   .bottomnav{
-    padding:6px 10px 8px; gap:2px;
+    padding:6px 10px calc(8px + var(--sab));
+    min-height:calc(var(--nav-h) + var(--sab));
+    gap:2px;
     background:rgba(255,255,255,.92);
     backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
     border-top:1px solid var(--border);
@@ -791,52 +896,30 @@
   .cat .icon{ transition:transform .18s var(--ease-spring); }
   .cat:hover .icon{ transform:scale(1.15); }
 
-  /* Login — role cards */
-  .role-card{ transition:all .18s var(--ease-spring); box-shadow:var(--shadow-xs); }
-  .role-card:hover{ transform:translateY(-2px); border-color:var(--brand-tint); }
-  .role-card.active{ box-shadow:0 6px 16px rgba(3,82,174,.14); }
-  .auth-label{
-    font-size:10.5px; font-weight:800; letter-spacing:1.1px; text-transform:uppercase;
-    color:var(--ink-soft); margin:0 0 2px;
-  }
   /* Labels are real <label for>, so tapping the word focuses the field (39). */
-  .auth-input-label{ display:block; font-size:12px; font-weight:700; color:var(--ink-soft); cursor:pointer; }
-  /* The role picker and the sign-in/register switch must be reachable by keyboard,
-     so they are real buttons wearing the card/link styling (72). */
-  .role-card{ -webkit-appearance:none; appearance:none; width:100%; font:inherit; position:relative; }
+  .auth-input-label{
+    display:block; font-size:var(--t-body); font-weight:700; color:var(--ink-soft); cursor:pointer;
+  }
   .auth-switch{
-    background:none; border:none; padding:0; font:inherit; font-size:12px;
+    background:none; border:none; padding:0; font:inherit; font-size:var(--t-body);
     color:var(--deep); font-weight:700; cursor:pointer; text-decoration:underline;
     text-underline-offset:3px;
   }
-  /* "Forgot?" sits on its own label line, so the tap area is only 13px tall -
-     nowhere near a thumb. It borrows the space around it with padding and gives
-     the layout back with the matching negative margin (39). */
-  .row .auth-switch{ padding:9px 6px; margin:-9px -6px; }
+  /* "Forgot?" sits on its own label line, so it borrows a thumb-sized hit area
+     from the padding and gives the space back with the negative margin (39). */
+  .row .auth-switch{ padding:11px 6px; margin:-11px -6px; }
   /* One inline error style, shared by the sign-in fields and the Concierge;
      .auth-error only carries the tighter spacing the auth form needs. */
   .inline-error{
-    display:flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600;
+    display:flex; align-items:center; gap:5px; font-size:var(--t-caption); font-weight:600;
     color:var(--error-ink); margin:6px 0 10px;
   }
   .auth-error{ margin:-8px 0 12px; }
   .input-field.invalid{ border-color:var(--error); background:var(--error-100); }
-  /* Selected is more than a tint: the tick is a second, non-colour cue (72). It
-     sits centred on the right edge and the label reserves space for it. */
-  .role-card.active::after{
-    content:""; position:absolute; top:50%; right:7px; transform:translateY(-50%);
-    width:15px; height:15px; border-radius:50%;
-    background-color:var(--deep);
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 6 9 17l-5-5' fill='none' stroke='white' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-    background-size:8px; background-position:center; background-repeat:no-repeat;
-    box-shadow:0 2px 6px rgba(3,82,174,.35);
-    animation:riseIn .22s var(--ease-spring) both;
+  #login-btn{
+    width:100%; min-height:var(--cta-h); font-size:var(--t-body-lg);
+    display:flex; align-items:center; justify-content:center; gap:7px; padding:14px 16px;
   }
-  .role-card.active .rc-text{ padding-right:15px; }
-  .role-card .rc-icon{ color:var(--mist); transition:color .18s ease, transform .18s var(--ease-spring); }
-  .role-card.active .rc-icon{ color:var(--deep); transform:translateY(-1px) scale(1.06); }
-  .role-card.active .rc-name{ color:var(--deep); }
-  #login-btn{ width:100%; display:flex; align-items:center; justify-content:center; gap:7px; padding:14px 16px; font-size:14px; }
 
   /* Concierge banner — hero feature treatment */
   .concierge-banner{ position:relative; overflow:hidden; transition:transform .18s ease, box-shadow .18s ease; }
@@ -883,7 +966,7 @@
      tap and then gets reset by the next repaint — which is exactly what makes
      content look like it "re-appears". Neutralise it there. */
   @media (hover:none){
-    .card:hover, .role-card:hover, .cat:hover, .notif-item:hover, .result-card:hover,
+    .card:hover, .cat:hover, .notif-item:hover, .result-card:hover,
     .concierge-banner:hover, .provider-hero-card:hover, .bookrow:hover,
     .filter-option:hover, .match-pill:hover, .why-box:hover, .stat:hover{
       transform:none !important;
@@ -2189,105 +2272,126 @@ function setScreenScroll(el, top){
   el.style.scrollBehavior = previous;
 }
 
-function loginHTML(){
-  let defaultEmail = 'ana@demo.ph';
-  if(state.role==='provider') defaultEmail = 'ramil@demo.ph';
-  else if(state.role==='admin') defaultEmail = 'admin@sukinnect.ph';
+/* The sample credentials this prototype ships with. They are demo data, not
+   accounts, so they no longer sit in the fields on first view: one tap on
+   "Use demo account" fills them, and the form starts as a real sign-in (86). */
+const DEMO_LOGIN = {
+  email: { resident:'ana@demo.ph', provider:'ramil@demo.ph', admin:'admin@sukinnect.ph' },
+  name: 'Juan Dela Cruz', brgy: 'Poblacion', pass: 'demo1234'
+};
 
+function fillDemoAuth(){
+  state.auth = {
+    name: DEMO_LOGIN.name, email: DEMO_LOGIN.email[state.role] || DEMO_LOGIN.email.resident,
+    pass: DEMO_LOGIN.pass, brgy: DEMO_LOGIN.brgy
+  };
+  state.authError = {};
+  render();
+}
+
+const AUTH_ROLE_LABEL = { resident:'Resident', provider:'Service Pro', admin:'Admin' };
+
+function loginHTML(){
   const isRegister = state.authMode === 'register';
-  // null = never touched, so the role's sample credential shows; '' = the resident
-  // cleared it, which must stay cleared so the required-field error can appear (49).
-  const val = (key, fallback) => state.auth[key] === null ? fallback : state.auth[key];
-  const email = val('email', defaultEmail);
-  const pass = val('pass', 'demo1234');
+  // null = never touched, so the field is empty; '' = the resident cleared it,
+  // which must stay cleared so the required-field error can appear (49).
+  const val = (key) => state.auth[key] || '';
   const err = state.authError || {};
+  const isAdmin = state.role === 'admin';
 
   return `
   <div class="auth-screen">
-    <header class="auth-bar">
-      <span class="auth-mark"><img src="Sukinnect_Logo.png" width="32" height="32" alt="Sukinnect logo"></span>
-      <div>
-        <div class="auth-wordmark">Sukinnect</div>
-        <div class="auth-kicker">Verified local help, one tap away</div>
-      </div>
+    <header class="auth-hero">
+      <span class="auth-mark"><img src="Sukinnect_Logo.png" width="76" height="76" alt="Sukinnect logo"></span>
+      <div class="auth-wordmark">Sukinnect</div>
+      <p class="auth-tagline">Verified local help, one tap away</p>
+      <p class="auth-loop">FIND<i>&middot;</i>REVIEW<i>&middot;</i>BOOK<i>&middot;</i>RECORD</p>
     </header>
 
-    <div class="auth-body">
-      <div class="auth-form">
-      <p class="auth-label">Sign in as</p>
+    <div class="auth-sheet">
+      <h1 class="auth-title">${isRegister ? 'Create your account' : 'Welcome back'}</h1>
+      <p class="auth-sub">${isRegister
+        ? 'Two minutes now, and help from your own barangay is a tap away.'
+        : 'Find, review and book verified help near you.'}</p>
 
-      <div class="role-cards" role="group" aria-label="Account type">
-        <button type="button" class="role-card ${state.role==='resident'?'active':''}" id="rt-resident" aria-pressed="${state.role==='resident'}">
-          <span class="rc-icon">${ic("home",17)}</span>
-          <span class="rc-text"><span class="rc-name">Resident</span><span class="rc-sub">Need help</span></span>
+      <div class="auth-role" role="group" aria-label="Account type">
+        <button type="button" id="rt-resident" aria-pressed="${state.role==='resident'}">
+          ${ic("home",16)} Resident
         </button>
-        <button type="button" class="role-card ${state.role==='provider'?'active':''}" id="rt-provider" aria-pressed="${state.role==='provider'}">
-          <span class="rc-icon">${ic("wrench",17)}</span>
-          <span class="rc-text"><span class="rc-name">Service Pro</span><span class="rc-sub">Offer skills</span></span>
-        </button>
-        <button type="button" class="role-card ${state.role==='admin'?'active':''}" id="rt-admin" aria-pressed="${state.role==='admin'}">
-          <span class="rc-icon">${ic("shield",17)}</span>
-          <span class="rc-text"><span class="rc-name">Admin</span><span class="rc-sub">Operations</span></span>
+        <button type="button" id="rt-provider" aria-pressed="${state.role==='provider'}">
+          ${ic("wrench",16)} Service Pro
         </button>
       </div>
+      ${isAdmin ? `<p class="auth-group-name" style="margin:8px 0 0;">${ic("shield",12)} Signing in as Admin &middot; operations</p>` : ''}
 
-      <div class="auth-heading">${isRegister ? 'Create your account' : 'Welcome back'}</div>
-      <div class="auth-sub">${isRegister
-        ? 'Prototype build &mdash; nothing is stored and no account is really created.'
-        : 'Demo environment &mdash; the credentials are prefilled for the role above.'}</div>
-
-      <div style="margin-top:14px;">
+      <div class="auth-group">
         ${isRegister ? `
+          <p class="auth-group-name">1 &middot; Account</p>
           <label class="auth-input-label" for="reg-name">Full Name</label>
-          <div class="input-field">
-            <input id="reg-name" value="${val('name', 'Juan Dela Cruz')}" placeholder="Enter your full name" autocomplete="name" enterkeyhint="next" oninput="authInput('name', this)">
-            <span style="opacity:0.55; display:inline-flex;">${ic("user",15)}</span>
+          <div class="input-field ${err.name ? 'invalid' : ''}">
+            <input id="reg-name" value="${val('name')}" placeholder="Enter your full name" autocomplete="name" enterkeyhint="next" ${err.name ? 'aria-invalid="true" aria-describedby="err-name"' : ''} oninput="authInput('name', this)">
+            <span style="opacity:0.55; display:inline-flex;">${ic("user",16)}</span>
           </div>
-        ` : ''}
-
-        <label class="auth-input-label" for="login-email">${isRegister ? 'Email' : 'Registered Email'}</label>
-        <div class="input-field ${err.email ? 'invalid' : ''}">
-          <input id="login-email" value="${email}" placeholder="Enter your email" inputmode="email" autocomplete="email" enterkeyhint="next" ${err.email ? 'aria-invalid="true" aria-describedby="err-email"' : ''} oninput="authInput('email', this)">
-          <span style="opacity:0.55; display:inline-flex;">${ic("mail",15)}</span>
-        </div>
-        ${err.email ? `<div class="inline-error auth-error" id="err-email">${ic("alert-triangle",12)} ${err.email}</div>` : ''}
-
-        ${isRegister ? `
-          <label class="auth-input-label" for="reg-brgy">Barangay Location</label>
-          <div class="input-field">
-            <input id="reg-brgy" value="${val('brgy', 'Poblacion')}" placeholder="Enter barangay" autocomplete="address-level2" enterkeyhint="next" oninput="authInput('brgy', this)">
-            <span style="opacity:0.55; display:inline-flex;">${ic("map-pin",15)}</span>
-          </div>
+          ${err.name ? `<div class="inline-error auth-error" id="err-name">${ic("alert-triangle",13)} ${err.name}</div>` : ''}
         ` : ''}
 
         <div class="row">
+          <label class="auth-input-label" for="login-email">Email</label>
+          <button type="button" class="auth-demo" id="demo-fill-btn">${ic("sparkles",13)} Use demo account</button>
+        </div>
+        <div class="input-field ${err.email ? 'invalid' : ''}">
+          <input id="login-email" value="${val('email')}" placeholder="you@example.com" inputmode="email" autocomplete="email" enterkeyhint="next" ${err.email ? 'aria-invalid="true" aria-describedby="err-email"' : ''} oninput="authInput('email', this)">
+          <span style="opacity:0.55; display:inline-flex;">${ic("mail",16)}</span>
+        </div>
+        ${err.email ? `<div class="inline-error auth-error" id="err-email">${ic("alert-triangle",13)} ${err.email}</div>` : ''}
+
+        <div class="row">
           <label class="auth-input-label" for="login-pass">Password</label>
-          ${!isRegister ? `<button type="button" class="auth-switch" style="font-size:11px;" onclick="showToast('Password reset is not part of this prototype.')">Forgot?</button>` : ''}
+          ${!isRegister ? `<button type="button" class="auth-switch" style="font-size:var(--t-caption);" onclick="showToast('Password reset is not part of this prototype.')">Forgot?</button>` : ''}
         </div>
         <div class="input-field ${err.pass ? 'invalid' : ''}">
-          <input id="login-pass" type="${state.showPassword ? 'text' : 'password'}" value="${pass}" placeholder="Enter password" autocomplete="${isRegister ? 'new-password' : 'current-password'}" enterkeyhint="go" ${err.pass ? 'aria-invalid="true" aria-describedby="err-pass"' : ''} oninput="authInput('pass', this)">
+          <input id="login-pass" type="${state.showPassword ? 'text' : 'password'}" value="${val('pass')}" placeholder="Enter password" autocomplete="${isRegister ? 'new-password' : 'current-password'}" enterkeyhint="${isRegister ? 'next' : 'go'}" ${err.pass ? 'aria-invalid="true" aria-describedby="err-pass"' : ''} oninput="authInput('pass', this)">
           <button class="addon-btn" id="toggle-pw-btn" type="button" aria-label="${state.showPassword ? 'Hide password' : 'Show password'}" title="${state.showPassword ? 'Hide password' : 'Show password'}" aria-pressed="${state.showPassword}">
-            ${state.showPassword ? ic('eye-off',15) : ic('eye',15)}
+            ${state.showPassword ? ic('eye-off',16) : ic('eye',16)}
           </button>
         </div>
-        ${err.pass ? `<div class="inline-error auth-error" id="err-pass">${ic("alert-triangle",12)} ${err.pass}</div>` : ''}
+        ${err.pass ? `<div class="inline-error auth-error" id="err-pass">${ic("alert-triangle",13)} ${err.pass}</div>` : ''}
       </div>
-      </div>
-    </div>
 
-    <div class="auth-action">
-      <button class="btn" id="login-btn">
-        <span>${isRegister ? 'Create New Account' : `Sign In as ${state.role === 'admin' ? 'Admin' : state.role === 'provider' ? 'Service Pro' : 'Resident'}`}</span> ${ic("arrow-right",15)}
-      </button>
+      ${isRegister ? `
+        <div class="auth-group">
+          <p class="auth-group-name">2 &middot; Location</p>
+          <label class="auth-input-label" for="reg-brgy">Barangay</label>
+          <div class="input-field ${err.brgy ? 'invalid' : ''}">
+            <input id="reg-brgy" value="${val('brgy')}" placeholder="Which barangay are you in?" autocomplete="address-level2" enterkeyhint="go" ${err.brgy ? 'aria-invalid="true" aria-describedby="err-brgy"' : ''} oninput="authInput('brgy', this)">
+            <span style="opacity:0.55; display:inline-flex;">${ic("map-pin",16)}</span>
+          </div>
+          ${err.brgy ? `<div class="inline-error auth-error" id="err-brgy">${ic("alert-triangle",13)} ${err.brgy}</div>` : ''}
+          ${isAdmin ? '' : `<p class="auth-note">${ic(state.role==='provider' ? 'shield' : 'map-pin',13)} ${state.role==='provider'
+            ? 'Provider accounts are reviewed before they appear in the marketplace.'
+            : 'Your barangay decides which nearby providers you are shown.'}</p>`}
+        </div>
+      ` : ''}
+
+      <div class="auth-action">
+        <button class="btn" id="login-btn">
+          <span>${isRegister ? 'Create New Account' : 'Sign in as ' + AUTH_ROLE_LABEL[state.role]}</span> ${ic("arrow-right",16)}
+        </button>
+      </div>
 
       <p class="auth-switch-line">
-        ${isRegister ? 'Already have an account? <button type="button" class="auth-switch" id="toggle-auth-mode">Sign in</button>' : 'Don\'t have an account? <button type="button" class="auth-switch" id="toggle-auth-mode">Register now</button>'}
+        ${isRegister
+          ? 'Already have an account? <button type="button" class="auth-switch" id="toggle-auth-mode">Sign in</button>'
+          : 'New to Sukinnect? <button type="button" class="auth-switch" id="toggle-auth-mode">Create an account</button>'}
       </p>
 
-      <div class="auth-foot">
-        <span class="where">${ic("map-pin",11)} Now serving &middot; Tupi, South Cotabato</span>
-        <span>Prototype build &middot; sample data only</span>
-      </div>
+      <footer class="auth-foot">
+        <span class="where">${ic("map-pin",12)} Now serving Tupi, South Cotabato</span>
+        ${isAdmin
+          ? `<button type="button" class="auth-admin" id="rt-admin-exit">Switch to Resident</button>`
+          : `<button type="button" class="auth-admin" id="rt-admin">Admin sign-in</button>`}
+      </footer>
+      <p class="auth-note-line">Prototype build &middot; sample data only, nothing is stored.</p>
     </div>
   </div>`;
 }
@@ -2303,9 +2407,19 @@ function authInput(key, el){
 }
 
 function bindLogin(){
-  document.getElementById('rt-resident').onclick=()=>{state.role='resident';render();};
-  document.getElementById('rt-provider').onclick=()=>{state.role='provider';render();};
-  document.getElementById('rt-admin').onclick=()=>{state.role='admin';render();};
+  // Admin is chosen from the footer line, so the element that swaps the role
+  // differs by state; bind whichever one this render put on screen.
+  const pickRole = (id, role) => {
+    const node = document.getElementById(id);
+    if(node) node.onclick = () => { state.role = role; render(); };
+  };
+  pickRole('rt-resident', 'resident');
+  pickRole('rt-provider', 'provider');
+  pickRole('rt-admin', 'admin');
+  pickRole('rt-admin-exit', 'resident');
+
+  const demo = document.getElementById('demo-fill-btn');
+  if(demo) demo.onclick = fillDemoAuth;
 
   const toggleAuth = document.getElementById('toggle-auth-mode');
   if(toggleAuth){
@@ -2326,7 +2440,7 @@ function bindLogin(){
   document.getElementById('login-btn').onclick = submitAuth;
   // A phone keyboard's action key has to do something, and on this screen the
   // only thing worth doing is the screen's primary action (38, 73).
-  document.querySelectorAll('.auth-form input').forEach(inp => {
+  document.querySelectorAll('.auth-sheet input').forEach(inp => {
     inp.onkeydown = (e) => { if(e.key === 'Enter') submitAuth(); };
   });
 }
@@ -2335,16 +2449,20 @@ function bindLogin(){
 function submitAuth(){
   const btn = document.getElementById('login-btn');
   if(!btn || btn.dataset.busy) return;
-  const emailEl = document.getElementById('login-email');
-  const passEl = document.getElementById('login-pass');
+  const value = (id) => { const node = document.getElementById(id); return node ? node.value.trim() : ''; };
   const isRegister = state.authMode === 'register';
   const errors = {};
-  if (!emailEl.value.trim()) errors.email = 'Enter your email to continue.';
-  if (!passEl.value.trim()) errors.pass = 'Enter your password.';
-  if (errors.email || errors.pass) {
+  if (!value('login-email')) errors.email = 'Enter your email to continue.';
+  if (!value('login-pass')) errors.pass = 'Enter your password.';
+  if (isRegister && !value('reg-name')) errors.name = 'Tell us who to greet.';
+  if (isRegister && !value('reg-brgy')) errors.brgy = 'Your barangay decides who is nearby.';
+  if (Object.keys(errors).length) {
     state.authError = errors;
     render();
-    (errors.email ? document.getElementById('login-email') : document.getElementById('login-pass')).focus();
+    // Focus the first field, in reading order, that still needs the reader (49, 73).
+    const invalid = [['reg-name','name'], ['login-email','email'], ['reg-brgy','brgy'], ['login-pass','pass']]
+      .find(pair => errors[pair[1]]);
+    if (invalid) document.getElementById(invalid[0]).focus();
     return;
   }
   state.authError = {};
@@ -2352,7 +2470,7 @@ function submitAuth(){
   const original = btn.innerHTML;
   btn.disabled = true;
   btn.classList.add('btn-loading');
-  btn.innerHTML = '<span class="spinner"></span> ' + (isRegister ? 'Creating account...' : 'Signing in...');
+  btn.innerHTML = '<span class="spinner"></span> ' + (isRegister ? 'Creating account...' : 'Signing you in...');
   setTimeout(() => {
     delete btn.dataset.busy;
     btn.disabled = false;
@@ -3339,8 +3457,8 @@ function signOut(){
   state.view = 'login';
   state.authMode = 'login';
   state.showPassword = false;
-  // The next person to use this device should see the sample credential for the
-  // role they pick, not whatever the previous session typed (78).
+  // The next person to use this device should get an empty form, not whatever
+  // the previous session typed; the sample credential is one tap away (78).
   state.auth = {email:null, pass:null, name:null, brgy:null};
   state.authError = {};
   state.role = 'resident';
