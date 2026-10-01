@@ -420,19 +420,9 @@
     position:sticky; bottom:0; z-index:2; margin-top:var(--s-4);
     padding:0 0 calc(var(--s-4) + var(--sab)); background:var(--surface);
   }
-  /* The demo shortcut shares the Email label row. It must NOT reach outside that
-     row: it is a filled pill, so a negative margin to buy a thumb-sized hit area
-     made its own background and border bleed over the label and the field below,
-     and the focus ring drew over them too. The row carries the height instead. */
+  /* The password label line is tall enough for "Forgot?" to be a thumb target
+     without its focus ring reaching into the field below (39). */
   .auth-group .row{ min-height:var(--tap); }
-  .auth-demo{
-    display:inline-flex; align-items:center; gap:5px;
-    min-height:34px; padding:0 var(--s-3);
-    border-radius:var(--r-pill);
-    background:var(--cloud); border:1px dashed var(--border-strong);
-    font:inherit; font-size:var(--t-caption); font-weight:700; color:var(--deep);
-    cursor:pointer; white-space:nowrap;
-  }
   .auth-switch-line{
     display:flex; align-items:center; justify-content:center; gap:6px;
     margin-top:auto; padding:14px 0; font-size:var(--t-body); color:var(--ink-soft);
@@ -465,7 +455,6 @@
     .auth-role{ margin-top:var(--s-3); }
     .auth-group{ margin-top:var(--s-3); }
     .auth-group .row{ min-height:40px; }
-    .auth-demo{ min-height:32px; }
     .auth-sheet{ padding-top:14px; }
     .auth-switch-line{ padding:10px 0; }
     .auth-action{ margin-top:var(--s-3); }
@@ -1073,7 +1062,7 @@
      tappable component carries its own pressed state (7.6). Kept as one list
      rather than a per-component rule so the feel is identical everywhere (11). */
   .concierge-row:active, .job-row:active, .auth-role button:active,
-  .auth-demo:active, .auth-admin:active, .auth-switch:active,
+  .auth-admin:active, .auth-switch:active,
   .btn:active:not(:disabled), .filter-icon-btn:active:not(:disabled), .back-btn:active,
   .seg-btn:active:not(:disabled), .sheet-close:active, .cat:active, .navitem:active,
   .notif-item:active, .result-card:active, .bookrow:active, .filter-option:active,
@@ -2429,22 +2418,13 @@ function setScreenScroll(el, top){
   el.style.scrollBehavior = previous;
 }
 
-/* The sample credentials this prototype ships with. They are demo data, not
-   accounts, so they no longer sit in the fields on first view: one tap on
-   "Use demo account" fills them, and the form starts as a real sign-in (86). */
+/* The sample credential set this prototype signs in with, kept in one place so
+   the fields, the button label and the honesty note can never disagree. It is
+   demo data, not an account, and the screen says so (86). */
 const DEMO_LOGIN = {
   email: { resident:'ana@demo.ph', provider:'ramil@demo.ph', admin:'admin@sukinnect.ph' },
   name: 'Juan Dela Cruz', brgy: 'Poblacion', pass: 'demo1234'
 };
-
-function fillDemoAuth(){
-  state.auth = {
-    name: DEMO_LOGIN.name, email: DEMO_LOGIN.email[state.role] || DEMO_LOGIN.email.resident,
-    pass: DEMO_LOGIN.pass, brgy: DEMO_LOGIN.brgy
-  };
-  state.authError = {};
-  render();
-}
 
 const AUTH_ROLE_LABEL = { resident:'Resident', provider:'Service Pro', admin:'Admin' };
 
@@ -2452,7 +2432,13 @@ function loginHTML(){
   const isRegister = state.authMode === 'register';
   // null = never touched, so the field is empty; '' = the resident cleared it,
   // which must stay cleared so the required-field error can appear (49).
-  const val = (key) => state.auth[key] || '';
+  const demoEmail = DEMO_LOGIN.email[state.role] || DEMO_LOGIN.email.resident;
+  // null = never touched, so the role's sample credential shows; '' = the resident
+  // cleared it, which must stay cleared so the required-field error can appear (49).
+  const val = (key) => {
+    if (state.auth[key] !== null && state.auth[key] !== undefined) return state.auth[key];
+    return { email:demoEmail, pass:DEMO_LOGIN.pass, name:DEMO_LOGIN.name, brgy:DEMO_LOGIN.brgy }[key] || '';
+  };
   const err = state.authError || {};
   const isAdmin = state.role === 'admin';
 
@@ -2469,7 +2455,7 @@ function loginHTML(){
       <h1 class="auth-title">${isRegister ? 'Create your account' : 'Welcome back'}</h1>
       <p class="auth-sub">${isRegister
         ? 'Two minutes now, and help from your own barangay is a tap away.'
-        : 'Find, review and book verified help near you.'}</p>
+        : 'Demo environment - the credentials below are prefilled for the role above.'}</p>
 
       <div class="auth-role" role="group" aria-label="Account type">
         <button type="button" id="rt-resident" aria-pressed="${state.role==='resident'}">
@@ -2486,18 +2472,15 @@ function loginHTML(){
           <p class="auth-group-name">1 &middot; Account</p>
           <label class="auth-input-label" for="reg-name">Full Name</label>
           <div class="input-field ${err.name ? 'invalid' : ''}">
-            <input id="reg-name" value="${val('name')}" placeholder="Enter your full name" autocomplete="name" enterkeyhint="next" ${err.name ? 'aria-invalid="true" aria-describedby="err-name"' : ''} oninput="authInput('name', this)">
+            <input id="reg-name" value="${esc(val('name'))}" placeholder="Enter your full name" autocomplete="name" enterkeyhint="next" ${err.name ? 'aria-invalid="true" aria-describedby="err-name"' : ''} oninput="authInput('name', this)">
             <span style="opacity:0.55; display:inline-flex;">${ic("user",16)}</span>
           </div>
           ${err.name ? `<div class="inline-error auth-error" id="err-name">${ic("alert-triangle",13)} ${err.name}</div>` : ''}
         ` : ''}
 
-        <div class="row">
-          <label class="auth-input-label" for="login-email">Email</label>
-          <button type="button" class="auth-demo" id="demo-fill-btn">${ic("sparkles",13)} Use demo account</button>
-        </div>
+        <label class="auth-input-label" for="login-email">Email</label>
         <div class="input-field ${err.email ? 'invalid' : ''}">
-          <input id="login-email" value="${val('email')}" placeholder="you@example.com" inputmode="email" autocomplete="email" enterkeyhint="next" ${err.email ? 'aria-invalid="true" aria-describedby="err-email"' : ''} oninput="authInput('email', this)">
+          <input id="login-email" value="${esc(val('email'))}" placeholder="you@example.com" inputmode="email" autocomplete="email" enterkeyhint="next" ${err.email ? 'aria-invalid="true" aria-describedby="err-email"' : ''} oninput="authInput('email', this)">
           <span style="opacity:0.55; display:inline-flex;">${ic("mail",16)}</span>
         </div>
         ${err.email ? `<div class="inline-error auth-error" id="err-email">${ic("alert-triangle",13)} ${err.email}</div>` : ''}
@@ -2507,7 +2490,7 @@ function loginHTML(){
           ${!isRegister ? `<button type="button" class="auth-switch" style="font-size:var(--t-caption);" onclick="showToast('Password reset is not part of this prototype.')">Forgot?</button>` : ''}
         </div>
         <div class="input-field ${err.pass ? 'invalid' : ''}">
-          <input id="login-pass" type="${state.showPassword ? 'text' : 'password'}" value="${val('pass')}" placeholder="Enter password" autocomplete="${isRegister ? 'new-password' : 'current-password'}" enterkeyhint="${isRegister ? 'next' : 'go'}" ${err.pass ? 'aria-invalid="true" aria-describedby="err-pass"' : ''} oninput="authInput('pass', this)">
+          <input id="login-pass" type="${state.showPassword ? 'text' : 'password'}" value="${esc(val('pass'))}" placeholder="Enter password" autocomplete="${isRegister ? 'new-password' : 'current-password'}" enterkeyhint="${isRegister ? 'next' : 'go'}" ${err.pass ? 'aria-invalid="true" aria-describedby="err-pass"' : ''} oninput="authInput('pass', this)">
           <button class="addon-btn" id="toggle-pw-btn" type="button" aria-label="${state.showPassword ? 'Hide password' : 'Show password'}" title="${state.showPassword ? 'Hide password' : 'Show password'}" aria-pressed="${state.showPassword}">
             ${state.showPassword ? ic('eye-off',16) : ic('eye',16)}
           </button>
@@ -2520,7 +2503,7 @@ function loginHTML(){
           <p class="auth-group-name">2 &middot; Location</p>
           <label class="auth-input-label" for="reg-brgy">Barangay</label>
           <div class="input-field ${err.brgy ? 'invalid' : ''}">
-            <input id="reg-brgy" value="${val('brgy')}" placeholder="Which barangay are you in?" autocomplete="address-level2" enterkeyhint="go" ${err.brgy ? 'aria-invalid="true" aria-describedby="err-brgy"' : ''} oninput="authInput('brgy', this)">
+            <input id="reg-brgy" value="${esc(val('brgy'))}" placeholder="Which barangay are you in?" autocomplete="address-level2" enterkeyhint="go" ${err.brgy ? 'aria-invalid="true" aria-describedby="err-brgy"' : ''} oninput="authInput('brgy', this)">
             <span style="opacity:0.55; display:inline-flex;">${ic("map-pin",16)}</span>
           </div>
           ${err.brgy ? `<div class="inline-error auth-error" id="err-brgy">${ic("alert-triangle",13)} ${err.brgy}</div>` : ''}
@@ -2574,9 +2557,6 @@ function bindLogin(){
   pickRole('rt-provider', 'provider');
   pickRole('rt-admin', 'admin');
   pickRole('rt-admin-exit', 'resident');
-
-  const demo = document.getElementById('demo-fill-btn');
-  if(demo) demo.onclick = fillDemoAuth;
 
   const toggleAuth = document.getElementById('toggle-auth-mode');
   if(toggleAuth){
