@@ -420,12 +420,14 @@
     position:sticky; bottom:0; z-index:2; margin-top:var(--s-4);
     padding:0 0 calc(var(--s-4) + var(--sab)); background:var(--surface);
   }
-  /* The demo shortcut shares the Email label row so it costs no vertical space
-     on a short phone; the hit area is full height and the negative margin gives
-     the row's height back (39). */
+  /* The demo shortcut shares the Email label row. It must NOT reach outside that
+     row: it is a filled pill, so a negative margin to buy a thumb-sized hit area
+     made its own background and border bleed over the label and the field below,
+     and the focus ring drew over them too. The row carries the height instead. */
+  .auth-group .row{ min-height:var(--tap); }
   .auth-demo{
     display:inline-flex; align-items:center; gap:5px;
-    min-height:var(--tap); padding:0 var(--s-2); margin:-11px -2px;
+    min-height:34px; padding:0 var(--s-3);
     border-radius:var(--r-pill);
     background:var(--cloud); border:1px dashed var(--border-strong);
     font:inherit; font-size:var(--t-caption); font-weight:700; color:var(--deep);
@@ -462,6 +464,11 @@
     .auth-sheet{ margin-top:calc(0px - var(--s-4)); padding-top:var(--s-4); }
     .auth-role{ margin-top:var(--s-3); }
     .auth-group{ margin-top:var(--s-3); }
+    .auth-group .row{ min-height:40px; }
+    .auth-demo{ min-height:32px; }
+    .auth-sheet{ padding-top:14px; }
+    .auth-switch-line{ padding:10px 0; }
+    .auth-action{ margin-top:var(--s-3); }
     .auth-action{ margin-top:var(--s-4); }
   }
 
@@ -1011,7 +1018,7 @@
   }
   /* "Forgot?" sits on its own label line, so it borrows a thumb-sized hit area
      from the padding and gives the space back with the negative margin (39). */
-  .row .auth-switch{ padding:11px 6px; margin:-11px -6px; }
+  .row .auth-switch{ padding:11px 6px; margin:0 -6px; }
   /* One inline error style, shared by the sign-in fields and the Concierge;
      .auth-error only carries the tighter spacing the auth form needs. */
   .inline-error{
