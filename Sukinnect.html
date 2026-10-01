@@ -173,6 +173,25 @@
     background:#fff; border:1px solid var(--line); border-radius:14px;
     padding:14px; margin-bottom:12px;
   }
+  /* Progressive disclosure for the Smart Match evidence: the score is the
+     summary, the reasons come on tap (19). Native details/summary keeps it
+     keyboard and screen-reader operable with no JS (72). */
+  .why-fold{
+    background:var(--background); border-radius:var(--r-sm); padding:0 10px;
+    font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5;
+  }
+  .why-fold summary{
+    display:flex; align-items:center; min-height:var(--tap); padding:9px 0;
+    cursor:pointer; font-weight:800; color:var(--deep); list-style:none;
+  }
+  .why-fold summary::-webkit-details-marker{ display:none; }
+  .why-fold summary::after{
+    content:""; width:7px; height:7px; margin-left:auto; flex-shrink:0;
+    border-right:2px solid var(--deep); border-bottom:2px solid var(--deep);
+    transform:rotate(45deg); transition:transform .18s ease;
+  }
+  .why-fold[open] summary::after{ transform:rotate(-135deg); }
+  .why-fold > div{ padding:9px 0 11px; border-top:1px solid var(--line); }
   .chip{
     display:inline-flex; align-items:center; gap:5px; font-size:var(--t-caption); font-weight:600;
     padding:4px 10px; border-radius:999px; background:var(--verified-100); color:var(--success-ink);
@@ -227,18 +246,41 @@
   }
 
   .catgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:12px;}
+  /* Nine centimetres of tile so the main entry point of the app is a comfortable
+     thumb target, icon badge top-left and the label bottom-left. The service
+     colour is confined to the badge: it is a secondary cue, the brand is not (45). */
   .cat{
-    background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px 8px;
-    text-align:center; font-size:12px; font-weight:600; cursor:pointer; color:var(--ink);
+    display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-end;
+    gap:8px; min-height:92px; padding:10px; text-align:left;
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md);
+    font-size:var(--t-body); font-weight:700; cursor:pointer; color:var(--ink);
   }
-  .cat:active{background:var(--deep-100);}
-  .cat .icon{font-size:20px; margin-bottom:6px;}
+  .cat .badge{
+    width:36px; height:36px; border-radius:11px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  /* The concierge is a prototype feature that sharpens discovery; it must not
+     outrank search and categories, so it is one row, not a hero (20, 8). */
+  .concierge-row{
+    display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md);
+    padding:11px var(--s-3); margin-bottom:var(--s-3); cursor:pointer; font:inherit;
+    color:var(--ink);
+  }
+  .concierge-row .cr-ic{
+    width:34px; height:34px; border-radius:var(--r-sm); flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--brand-tint-soft); color:var(--deep);
+  }
+  .concierge-row .cr-t{ display:block; font-size:var(--t-body); font-weight:700; }
+  .concierge-row .cr-s{ display:block; font-size:var(--t-caption); color:var(--ink-soft); margin-top:1px; }
+  /* Compact progress for the active booking: four real states this prototype has,
+     plus the payment status as its own pill, never merged in (22). */
+  .mini-steps{ display:flex; align-items:center; gap:3px; margin-top:9px; }
+  .mini-steps .st{ flex:1; height:4px; border-radius:var(--r-pill); background:var(--border-strong); }
+  .mini-steps .st.on{ background:var(--grad-accent); }
+  .mini-steps .st.now{ background:var(--brand-secondary); }
 
-  .concierge-banner{
-    background:var(--grad-brand-panel);
-    border-radius:16px; padding:15px; color:#fff; margin-bottom:14px;
-    box-shadow:0 6px 16px rgba(3,82,174,0.18); cursor:pointer;
-  }
 
   /* Sign-in: the brand owns the top of the first screen and the form rises out
      of it as a sheet, so the two read as one moment carried on from the splash
@@ -415,7 +457,7 @@
     animation:splashRise .5s .14s cubic-bezier(.22,.9,.32,1.18) both;
   }
   .splash-spine i{width:4px; height:4px; border-radius:50%; background:var(--brand-secondary); flex-shrink:0;}
-  .splash-status{ width:158px; margin-top:28px; animation:splashRise .5s .2s cubic-bezier(.22,.9,.32,1.18) both; }
+  .splash-status{ width:220px; margin-top:28px; animation:splashRise .5s .2s cubic-bezier(.22,.9,.32,1.18) both; }
   .splash-bar{ height:3px; border-radius:99px; background:rgba(255,255,255,.26); overflow:hidden; }
   .splash-bar i{ display:block; width:38%; height:100%; border-radius:99px; background:#fff; animation:splashSlide 1.15s ease-in-out infinite; }
   .splash-loading{ margin-top:9px; font-size:var(--t-caption); font-weight:600; }
@@ -488,7 +530,7 @@
   }
 
   .notif-btn{
-    background:rgba(255,255,255,0.15); border:none; border-radius:50%; width:38px; height:38px;
+    background:rgba(255,255,255,0.15); border:none; border-radius:50%; width:var(--tap); height:var(--tap);
     display:flex; align-items:center; justify-content:center; cursor:pointer; color:#fff;
     position:relative; transition:background 0.2s;
   }
@@ -511,16 +553,17 @@
 
   .search-container{display:flex; align-items:center; gap:8px; position:relative;}
   .search-wrapper{
-    display:flex; align-items:center; background:#fff; border:1px solid var(--line);
-    border-radius:12px; padding:4px 6px 4px 12px; gap:8px; flex:1;
+    display:flex; align-items:center; min-height:var(--field-h);
+    background:#fff; border:1px solid var(--line);
+    border-radius:var(--r-md); padding:4px 6px 4px 12px; gap:8px; flex:1;
   }
   .search-wrapper input{
-    border:none; outline:none; font-family:inherit; font-size:13px; width:100%;
+    border:none; outline:none; font-family:inherit; font-size:var(--t-input); width:100%;
     background:transparent; color:var(--ink);
   }
   .search-btn{
-    background:var(--deep); color:#fff; border:none; border-radius:8px;
-    width:34px; height:34px; cursor:pointer; display:flex;
+    background:var(--deep); color:#fff; border:none; border-radius:var(--r-sm);
+    width:var(--tap); height:var(--tap); cursor:pointer; display:flex;
     align-items:center; justify-content:center; flex-shrink:0;
   }
   .search-btn:active{background:var(--deep-700);}
@@ -940,15 +983,6 @@
     display:flex; align-items:center; justify-content:center; gap:7px; padding:14px 16px;
   }
 
-  /* Concierge banner — hero feature treatment */
-  .concierge-banner{ position:relative; overflow:hidden; transition:transform .18s ease, box-shadow .18s ease; }
-  .concierge-banner::after{
-    content:""; position:absolute; top:-50px; right:-40px; width:160px; height:160px;
-    border-radius:50%; pointer-events:none;
-    background:radial-gradient(circle, rgba(5,188,196,.26), transparent 68%);
-  }
-  .concierge-banner:hover{ transform:translateY(-2px); box-shadow:0 10px 26px rgba(3,82,174,.28); }
-
   /* Result & notification cards */
   .result-card{ transition:all .18s ease; }
   .result-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-md); border-color:var(--brand-tint); }
@@ -993,7 +1027,7 @@
   .seg-btn:active:not(:disabled), .sheet-close:active, .cat:active, .navitem:active,
   .notif-item:active, .result-card:active, .bookrow:active, .filter-option:active,
   .auth-role button:active, .auth-demo:active, .auth-admin:active, .auth-switch:active,
-  .concierge-banner:active, .provider-row:active{
+  .provider-row:active{
     transform:scale(.98); filter:brightness(.97);
   }
 
@@ -1002,7 +1036,7 @@
      content look like it "re-appears". Neutralise it there. */
   @media (hover:none){
     .card:hover, .cat:hover, .notif-item:hover, .result-card:hover,
-    .concierge-banner:hover, .provider-hero-card:hover, .bookrow:hover,
+    .provider-hero-card:hover, .bookrow:hover,
     .filter-option:hover, .match-pill:hover, .why-box:hover, .stat:hover{
       transform:none !important;
     }
@@ -2233,7 +2267,7 @@ function splashHTML(){
     </div>
     <div class="splash-status">
       <div class="splash-bar"><i></i></div>
-      <div class="splash-loading">Loading sample marketplace data</div>
+      <div class="splash-loading">Loading sample data</div>
     </div>
     <div class="splash-tag">Prototype &middot; tap to continue</div>
   </div>`;
@@ -2642,16 +2676,28 @@ function residentHome(){
   const active = RESIDENT_BOOKINGS.find(b => b.status === 'ongoing' || b.status === 'upcoming')
               || RESIDENT_BOOKINGS.find(b => b.status === 'requested');
   const hasUnread = NOTIFICATIONS.some(n=>n.unread);
+  // Only the four states this prototype really has. Saying what happens next is
+  // the point of the stepper, not the decoration (21).
+  const STAGES = ['Requested', 'Accepted', 'In progress', 'Completed'];
+  const stageIndex = { requested:0, upcoming:1, ongoing:2, completed:3 }[active && active.status];
+  const nextStep = active ? {
+    requested:'Waiting for the provider to answer',
+    upcoming:'Confirmed - the visit is held for this slot',
+    ongoing:'On the job now - you will see the fee when it closes',
+    completed:'Done - pay and rate it from the booking',
+    cancelled: active.cancelReason || 'Closed'
+  }[active.status] : '';
+
   return `
   <div class="topbar">
-    <div style="display:flex; align-items:center; gap:10px; cursor:pointer;" data-nav="profile">
+    <div class="hb" data-nav="profile" style="cursor:pointer;">
       ${photoAvatar('resident', 40)}
       <div>
-        <div class="title">${state.profileData.name}</div>
-        <div class="sub">Poblacion District · Tap profile</div>
+        <div class="title">${state.profileData.name.split(' ')[0]}</div>
+        <div class="sub">${ic("map-pin",11)} Brgy. ${esc(state.profileData.barangay)} · Tap to open profile</div>
       </div>
     </div>
-    <button class="notif-btn" id="open-notifs-btn" title="Notifications">
+    <button class="notif-btn" id="open-notifs-btn" title="Notifications" aria-label="Notifications${hasUnread ? ', unread' : ''}">
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
         <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
@@ -2660,51 +2706,59 @@ function residentHome(){
     </button>
   </div>
   <div class="pad">
-    <div class="concierge-banner" id="open-concierge-btn">
-      <div class="row" style="align-items:flex-start;">
-        <div>
-          <span style="font-size:var(--t-caption); font-weight:800; letter-spacing:0.5px; text-transform:uppercase; color:#fff;"><span style="color:var(--brand-secondary); display:inline-flex; vertical-align:-2px;">${ic("lightbulb",11)}</span> AI Service Concierge</span>
-          <div style="font-size:15px; font-weight:700; margin-top:3px;">Describe or snap a photo of the problem</div>
-          <div style="font-size:var(--t-caption); opacity:0.85; margin-top:3px;">Prototype concierge &mdash; it clarifies what you described, then shortlists smart matches.</div>
-        </div>
-        <span style="margin-left:6px; display:inline-flex;">${ic("sparkles",22)}</span>
-      </div>
-      <button class="btn sm" style="background:#fff; color:var(--deep); margin-top:10px; font-weight:800;">Ask AI Concierge ${ic("arrow-right",12)}</button>
-    </div>
-
     <div class="search-container">
       <div class="search-wrapper">
-        <input placeholder="Search barangay, service, or provider..." id="search-input" value="${esc(state.searchQuery)}">
-        <button class="search-btn" id="search-btn" title="Search">
+        <input placeholder="Search barangay, service, or provider..." id="search-input" value="${esc(state.searchQuery)}" aria-label="Search services, providers or barangays">
+        <button class="search-btn" id="search-btn" title="Search" aria-label="Search">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </button>
       </div>
     </div>
 
+    <h3 style="font-size:var(--t-body); margin:20px 0 2px;">What do you need done?</h3>
     <div class="catgrid">
-      ${SERVICES.map(s=>`<div class="cat" data-service="${s.id}"><div class="icon">${ic(s.icon,22)}</div>${s.label}</div>`).join('')}
+      ${SERVICES.map(s=>{ const m = serviceMeta(s.id); return `<button type="button" class="cat" data-service="${s.id}"><span class="badge" style="background:${m.bg}; color:${m.fg};">${ic(s.icon,18)}</span><span>${esc(s.label)}</span></button>`; }).join('')}
     </div>
 
     ${active? `
-    <h3 style="font-size:14px; margin:20px 0 8px;">Active booking</h3>
-    <div class="card row" data-booking="${active.id}" style="cursor:pointer;">
-      <div style="display:flex; gap:10px; align-items:center;">
-        ${photoAvatar(active.provider, 40)}
-        <div>
-          <div style="font-weight:600; font-size:14px;">${active.service}</div>
-          <div style="font-size:12px; color:var(--mist); margin-top:2px;">${active.provider.name} · ${active.status === 'requested' ? 'Requested for ' : ''}${active.date}, ${active.time}</div>
+    <h3 style="font-size:var(--t-body); margin:20px 0 8px;">Active booking</h3>
+    <div class="card" data-booking="${active.id}" style="cursor:pointer;">
+      <div class="row" style="align-items:flex-start;">
+        <div style="display:flex; gap:10px; align-items:center; min-width:0;">
+          ${photoAvatar(active.provider, 40)}
+          <div style="min-width:0;">
+            <div style="font-weight:700; font-size:var(--t-body-lg);">${esc(active.service)}</div>
+            <div style="font-size:var(--t-body); color:var(--mist); margin-top:2px;">${active.provider.name} · ${active.date}, ${active.time}</div>
+          </div>
         </div>
+        <span class="chip status-${active.status}">${active.status}</span>
       </div>
-      <span class="chip status-${active.status}">${active.status}</span>
+      <div class="mini-steps" role="img" aria-label="Stage ${stageIndex+1} of ${STAGES.length}: ${STAGES[stageIndex]}">
+        ${STAGES.map((label, i) => `<span class="st ${i < stageIndex ? 'on' : ''}${i === stageIndex ? ' now' : ''}"></span>`).join('')}
+      </div>
+      <div class="row" style="margin-top:8px; gap:8px;">
+        <span style="font-size:var(--t-body); color:var(--ink-soft);">${nextStep}</span>
+        ${(() => { const paid = /paid/i.test(active.paymentStatus) && !/unpaid|pending/i.test(active.paymentStatus); const c = statusColors(paid ? 'completed' : 'requested'); return `<span class="chip" style="background:${c.bg}; color:${c.fg};">${esc(active.paymentStatus)}</span>`; })()}
+      </div>
     </div>` : ''}
 
-    <h3 style="font-size:14px; margin:20px 0 8px;">Book again</h3>
+    <button type="button" class="concierge-row" id="open-concierge-btn" style="margin-top:20px;">
+      <span class="cr-ic">${ic("lightbulb",17)}</span>
+      <span style="min-width:0;">
+        <span class="cr-t">Describe or snap the problem</span>
+        <span class="cr-s">Prototype concierge · it clarifies, then shortlists matches</span>
+      </span>
+      <span style="margin-left:auto; color:var(--mist); display:inline-flex;">${ic("arrow-right",15)}</span>
+    </button>
+
+    <h3 style="font-size:var(--t-body); margin:20px 0 8px;">Book again</h3>
     <div class="hscroll" style="display:flex; gap:10px;">
       ${[PROVIDERS[0],PROVIDERS[2],PROVIDERS[1]].map(p=>`
-        <div class="card" style="min-width:130px; text-align:center; cursor:pointer;" data-provider="${p.id}">
-          <div style="display:flex; justify-content:center; margin-bottom:8px;">${photoAvatar(p, 44)}</div>
-          <div style="font-size:12px; font-weight:600;">${p.name.split(' ')[0]}</div>
-          <div style="display:flex; align-items:center; justify-content:center; gap:4px; margin-top:2px;">${stars(p.rating,10)}<span style="font-size:var(--t-caption); font-weight:700; color:var(--mist);">${p.rating}</span></div>
+        <div class="card" style="min-width:140px; text-align:center; cursor:pointer; margin-bottom:0;" data-provider="${p.id}">
+          <div style="display:flex; justify-content:center; margin-bottom:8px;">${photoAvatar(p, 56)}</div>
+          <div style="font-size:var(--t-body); font-weight:600;">${p.name.split(' ')[0]}</div>
+          <div style="font-size:var(--t-caption); color:var(--mist); margin-top:1px;">${esc(p.service)}</div>
+          <div style="display:flex; align-items:center; justify-content:center; gap:4px; margin-top:4px;">${stars(p.rating,12)}<span style="font-size:var(--t-caption); font-weight:700; color:var(--ink);">${p.rating}</span></div>
         </div>`).join('')}
     </div>
   </div>`;
@@ -2967,36 +3021,42 @@ function residentResults(){
         : 'Try a barangay such as Poblacion, a service such as Plumbing, or a shorter part of the name.',
       {id:'clear-search-btn', label:'Clear search & filters'}
     ) : list.map(p => `
-      <div class="card" data-provider-detail="${p.id}" style="cursor:pointer; border-radius:14px; padding:14px; margin-bottom:12px; border:1px solid var(--line); background:#fff;">
+      <div class="card" data-provider-detail="${p.id}" style="cursor:pointer;">
         <div class="row" style="margin-bottom:10px;">
           <span style="background:var(--brand-tint-soft); color:var(--brand-primary); font-size:var(--t-caption); font-weight:800; padding:4px 9px; border-radius:6px; display:inline-flex; align-items:center; gap:3px;">
             ${ic("zap",12)} ${p.smartMatch.score}% Match
           </span>
-          <span style="background:var(--warning-100); color:var(--warning-ink); font-size:var(--t-caption); font-weight:700; padding:4px 10px; border-radius:999px;">
-            Trust Score: ${p.trustScore}/100
-          </span>
+          ${(p.badges && p.badges.length) ? `<span class="chip" style="background:var(--success-100); color:var(--success-ink);">${ic("badge-check",12)} Verified</span>` : ''}
         </div>
 
         <div class="row" style="align-items:flex-start; margin-bottom:10px;">
-          <div style="display:flex; gap:10px; align-items:center;">
+          <div style="display:flex; gap:10px; align-items:center; min-width:0;">
             ${serviceAvatar(p, 42, '')}
-            <div>
-              <div style="font-size:15px; font-weight:700; color:var(--ink);">${p.name}</div>
+            <div style="min-width:0;">
+              <div style="font-size:var(--t-body-lg); font-weight:700; color:var(--ink);">${p.name}</div>
               <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px; display:flex; align-items:center; gap:3px;">
-                <span style="color:var(--error-ink); display:inline-flex;">${ic("map-pin",12)}</span> ${p.distanceKm} km · Arrives in ~${p.availabilityMin} mins
+                ${ic("map-pin",12)} ${p.distanceKm} km · Brgy. ${esc(p.barangay)} · arrives ~${p.availabilityMin} min
+              </div>
+              <div style="font-size:var(--t-body); margin-top:5px;">
+                <b>from ${peso(p.rate)}</b>
+                <span style="color:var(--mist); font-size:var(--t-caption);">${esc(p.rateUnit)} · estimate</span>
               </div>
             </div>
           </div>
-          <div style="text-align:right;">
-            <div style="display:flex; align-items:center; justify-content:flex-end; gap:5px;">${stars(p.rating,11)}<span style="font-size:12.5px; font-weight:800; color:var(--gold-600);">${p.rating.toFixed(1)}</span></div>
-            <div style="font-size:17px; font-weight:700; color:var(--ink); margin-top:2px;">${p.service}</div>
+          <div style="text-align:right; flex-shrink:0;">
+            <div style="display:flex; align-items:center; justify-content:flex-end; gap:5px;">${stars(p.rating,12)}<span style="font-size:12.5px; font-weight:800;">${p.rating.toFixed(1)}</span></div>
+            <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${esc(p.service)}</div>
           </div>
         </div>
 
-        <div style="background:var(--background); border-radius:10px; padding:10px; font-size:var(--t-caption); color:var(--ink-soft); line-height:1.45;">
-          <div style="font-size:var(--t-caption); font-weight:800; text-transform:uppercase; color:var(--mist); margin-bottom:4px; letter-spacing:0.5px;">Why this provider was matched:</div>
-          ${p.smartMatch.reasons.map(r => `<div><span style="color:var(--success-ink); display:inline-flex; vertical-align:-2px;">${ic("check",12)}</span> ${r}</div>`).join('')}
-        </div>
+        <!-- Summary first, evidence on demand: the reasons stay one tap away so
+             the list can be scanned (19, 8). -->
+        <details class="why-fold">
+          <summary>Why this match (${p.smartMatch.reasons.length})</summary>
+          <div style="padding-top:7px;">
+            ${p.smartMatch.reasons.map(r => `<div><span style="color:var(--success-ink); display:inline-flex; vertical-align:-2px;">${ic("check",12)}</span> ${r}</div>`).join('')}
+          </div>
+        </details>
       </div>
     `).join('')}
   </div>`;
