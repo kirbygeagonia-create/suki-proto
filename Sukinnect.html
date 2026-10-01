@@ -75,7 +75,7 @@
     --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px;
     --s-5:20px; --s-6:24px; --s-7:28px; --s-8:32px;
     --r-sm:10px; --r-md:14px; --r-lg:20px; --r-sheet:28px; --r-pill:999px;
-    --tap:44px; --field-h:52px; --cta-h:52px; --nav-h:62px;
+    --tap:44px; --field-h:48px; --cta-h:50px; --nav-h:62px;
     /* Type scale. --t-caption is the floor: nothing on any screen renders below
        12px, and a label that will not fit wraps instead of shrinking. Inputs are
        16px because a smaller input makes a mobile browser zoom the page on focus. */
@@ -168,10 +168,10 @@
      instead of pushing the actions off the screen. */
   .topbar .hb{ display:flex; align-items:center; gap:10px; min-width:0; }
   .topbar .hb > div{ min-width:0; }
-  .pad{padding:16px;}
+  .pad{padding:14px 14px 20px;}
   .card{
-    background:var(--surface); border:1px solid var(--line); border-radius:14px;
-    padding:14px; margin-bottom:12px;
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md);
+    padding:12px 13px; margin-bottom:10px;
   }
   /* Progressive disclosure for the Smart Match evidence: the score is the
      summary, the reasons come on tap (19). Native details/summary keeps it
@@ -197,7 +197,7 @@
   .job-row{
     display:flex; align-items:center; gap:10px; width:100%; text-align:left;
     background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md);
-    padding:11px var(--s-3); margin-bottom:8px; cursor:pointer; font:inherit; color:var(--ink);
+    padding:7px var(--s-3); margin-bottom:8px; cursor:pointer; font:inherit; color:var(--ink);
     min-height:var(--tap);
   }
   .job-row .jr-time{ font-size:var(--t-body); font-weight:800; color:var(--deep); flex-shrink:0; min-width:60px; }
@@ -220,7 +220,7 @@
   .card-body{ font-size:var(--t-body); line-height:1.8; margin-top:9px; }
   .section-label{
     font-size:var(--t-caption); font-weight:800; color:var(--mist);
-    letter-spacing:.04em; margin:12px 0 7px;
+    letter-spacing:.05em; margin:18px 0 8px;
   }
   .modal-layer{
     position:fixed; inset:0; background:rgba(0,0,0,.48); z-index:50;
@@ -239,7 +239,7 @@
   .badge-gold{background:var(--warning-100); color:var(--warning-ink);}
   .badge-alert{background:var(--alert-100); color:var(--error-ink);}
   .row{display:flex; align-items:center; justify-content:space-between;}
-  .btn{
+  .btn{min-height:var(--tap); 
     background:var(--deep); color:var(--text-on-brand); border:none; border-radius:12px;
     padding:12px 16px; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit;
     box-shadow:0 4px 12px rgba(3, 82, 174, 0.2); transition:all 0.15s ease;
@@ -285,30 +285,30 @@
     font-size: 16px;
   }
 
-  .catgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:12px;}
+  .catgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
   /* Nine centimetres of tile so the main entry point of the app is a comfortable
      thumb target, icon badge top-left and the label bottom-left. The service
      colour is confined to the badge: it is a secondary cue, the brand is not (45). */
   .cat{
     display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-end;
-    gap:8px; min-height:92px; padding:10px; text-align:left;
+    gap:5px; min-height:70px; padding:8px 8px 9px; text-align:left;
     background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md);
     font-size:var(--t-body); font-weight:700; cursor:pointer; color:var(--ink);
   }
   .cat .badge{
-    width:36px; height:36px; border-radius:11px; flex-shrink:0;
+    width:30px; height:30px; border-radius:9px; flex-shrink:0;
     display:flex; align-items:center; justify-content:center;
   }
   /* The concierge is a prototype feature that sharpens discovery; it must not
      outrank search and categories, so it is one row, not a hero (20, 8). */
   .concierge-row{
-    display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+    display:flex; align-items:center; gap:9px; width:100%; text-align:left;
     background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md);
-    padding:11px var(--s-3); margin-bottom:var(--s-3); cursor:pointer; font:inherit;
-    color:var(--ink);
+    padding:6px 10px; min-height:52px; box-sizing:border-box; cursor:pointer;
+    font:inherit; color:var(--ink);
   }
   .concierge-row .cr-ic{
-    width:34px; height:34px; border-radius:var(--r-sm); flex-shrink:0;
+    width:28px; height:28px; border-radius:var(--r-sm); flex-shrink:0;
     display:flex; align-items:center; justify-content:center;
     background:var(--brand-tint-soft); color:var(--deep);
   }
@@ -334,7 +334,7 @@
   .auth-screen p{ margin:0; }
   .auth-hero{
     position:relative; overflow:hidden; flex:none; text-align:center; color:var(--text-on-brand);
-    padding:calc(var(--sat) + 56px) var(--s-5) 76px;
+    padding:calc(var(--sat) + 30px) var(--s-5) 44px;
     background:var(--grad-brand-hero);
     display:flex; flex-direction:column; align-items:center; justify-content:center;
   }
@@ -356,18 +356,18 @@
      brand instead of the mark being altered (35). */
   .auth-mark{
     display:flex; align-items:center; justify-content:center; flex:none;
-    width:96px; height:96px; border-radius:var(--r-lg); background:var(--surface); padding:10px;
-    box-shadow:0 12px 30px rgba(3,0,43,.34);
+    width:76px; height:76px; border-radius:18px; background:var(--surface); padding:8px;
+    box-shadow:0 10px 26px rgba(3,0,43,.30);
   }
   .auth-mark img{width:100%; height:100%; object-fit:contain; display:block;}
   .auth-wordmark{
-    font-family:"Fraunces", ui-serif, serif; font-size:var(--t-display); font-weight:600;
-    letter-spacing:-.5px; line-height:1.1; margin-top:12px;
+    font-family:"Fraunces", ui-serif, serif; font-size:26px; font-weight:600;
+    letter-spacing:-.4px; line-height:1.1; margin-top:11px;
   }
-  .auth-tagline{ font-size:var(--t-body-lg); font-weight:500; opacity:.92; margin-top:5px; }
+  .auth-tagline{ font-size:var(--t-body); font-weight:500; opacity:.9; margin-top:4px; }
   /* The deck's spine, carried over from the splash as one quiet row. */
   .auth-loop{
-    display:flex; align-items:center; gap:7px; margin-top:14px;
+    display:flex; align-items:center; gap:6px; margin-top:12px;
     font-size:var(--t-caption); font-weight:800; letter-spacing:.13em; opacity:.82;
   }
   .auth-loop i{ font-style:normal; color:var(--brand-secondary); }
@@ -375,7 +375,7 @@
      lifted over the brand rather than a background. */
   .auth-sheet{
     flex:1; display:flex; flex-direction:column; box-sizing:border-box;
-    margin-top:calc(0px - var(--s-6)); padding:var(--s-6) var(--s-5) 0;
+    margin-top:-20px; padding:18px var(--s-5) 0;
     background:var(--surface); border-radius:var(--r-sheet) var(--r-sheet) 0 0;
     box-shadow:0 -14px 34px rgba(3,0,43,.16);
   }
@@ -388,8 +388,8 @@
      they are the decision on screen. Admin is an operations role and stays
      reachable from the footer line instead of competing with them (5). */
   .auth-role{
-    display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:var(--s-5);
-    padding:4px; background:var(--cloud); border-radius:var(--r-md);
+    display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:var(--s-4);
+    padding:3px; background:var(--cloud); border-radius:var(--r-md);
     box-shadow:inset 0 0 0 1px var(--line);
   }
   .auth-role button{
@@ -417,7 +417,7 @@
      action, and it sits straight after the fields rather than sinking away from
      them - the footer cluster takes the leftover height instead (38, 73). */
   .auth-action{
-    position:sticky; bottom:0; z-index:2; margin-top:var(--s-5);
+    position:sticky; bottom:0; z-index:2; margin-top:var(--s-4);
     padding:0 0 calc(var(--s-4) + var(--sab)); background:var(--surface);
   }
   /* The demo shortcut shares the Email label row so it costs no vertical space
@@ -433,8 +433,7 @@
   }
   .auth-switch-line{
     display:flex; align-items:center; justify-content:center; gap:6px;
-    min-height:var(--tap); margin-top:auto;
-    font-size:var(--t-body); color:var(--ink-soft);
+    margin-top:auto; padding:14px 0; font-size:var(--t-body); color:var(--ink-soft);
   }
   .auth-foot{
     display:flex; align-items:center; justify-content:space-between; gap:var(--s-2);
@@ -455,8 +454,8 @@
   /* Short phones: the hero gives ground to the sheet instead of the form
      scrolling away. Height-keyed, because a 640pt phone is the same width. */
   @media (max-height:720px){
-    .auth-hero{ padding:calc(var(--sat) + 14px) var(--s-5) 18px; }
-    .auth-mark{ width:66px; height:66px; padding:7px; border-radius:var(--r-md); }
+    .auth-hero{ padding:calc(var(--sat) + 12px) var(--s-5) 16px; }
+    .auth-mark{ width:60px; height:60px; padding:6px; border-radius:var(--r-md); }
     .auth-wordmark{ font-size:var(--t-title); margin-top:9px; }
     .auth-tagline{ font-size:var(--t-body); }
     .auth-loop{ margin-top:10px; }
@@ -554,7 +553,7 @@
     display:flex; align-items:center; min-height:var(--field-h);
     background:var(--cloud); border:1.5px solid var(--line);
     border-radius:var(--r-md); padding:0 var(--s-3);
-    margin-top:6px; margin-bottom:14px; transition:all 0.15s ease;
+    margin-top:5px; margin-bottom:11px; transition:all 0.15s ease;
   }
   .input-field:focus-within{
     border-color:var(--deep); background:var(--surface); box-shadow:0 0 0 3px var(--deep-100);
@@ -875,7 +874,6 @@
 
   /* Cards — layered soft depth */
   .card{
-    border-radius:16px;
     box-shadow:var(--shadow-sm);
     transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
   }
@@ -2454,7 +2452,7 @@ function loginHTML(){
   return `
   <div class="auth-screen">
     <header class="auth-hero">
-      <span class="auth-mark"><img src="Sukinnect_Logo.png" width="76" height="76" alt="Sukinnect logo"></span>
+      <span class="auth-mark"><img src="Sukinnect_Logo.png" width="60" height="60" alt="Sukinnect logo"></span>
       <div class="auth-wordmark">Sukinnect</div>
       <p class="auth-tagline">Verified local help, one tap away</p>
       <p class="auth-loop">FIND<i>&middot;</i>REVIEW<i>&middot;</i>BOOK<i>&middot;</i>RECORD</p>
@@ -2779,50 +2777,49 @@ function residentHome(){
       </div>
     </div>
 
-    <h3 style="font-size:var(--t-body); margin:20px 0 2px;">What do you need done?</h3>
+    <div class="section-label" style="margin-top:16px;">Browse by service</div>
     <div class="catgrid">
-      ${SERVICES.map(s=>{ const m = serviceMeta(s.id); return `<button type="button" class="cat" data-service="${s.id}"><span class="badge" style="background:${m.bg}; color:${m.fg};">${ic(s.icon,18)}</span><span>${esc(s.label)}</span></button>`; }).join('')}
+      ${SERVICES.map(s=>{ const m = serviceMeta(s.id); return `<button type="button" class="cat" data-service="${s.id}"><span class="badge" style="background:${m.bg}; color:${m.fg};">${ic(s.icon,16)}</span><span>${esc(s.label)}</span></button>`; }).join('')}
     </div>
 
     ${active? `
-    <h3 style="font-size:var(--t-body); margin:20px 0 8px;">Active booking</h3>
-    <div class="card" data-booking="${active.id}" style="cursor:pointer;">
-      <div class="row" style="align-items:flex-start;">
+    <div class="section-label">Active booking</div>
+    <div class="card" data-booking="${active.id}" style="cursor:pointer; padding:11px 13px;">
+      <div class="row" style="align-items:flex-start; gap:10px;">
         <div style="display:flex; gap:10px; align-items:center; min-width:0;">
-          ${photoAvatar(active.provider, 40)}
+          ${photoAvatar(active.provider, 36)}
           <div style="min-width:0;">
             <div style="font-weight:700; font-size:var(--t-body-lg);">${esc(active.service)}</div>
-            <div style="font-size:var(--t-body); color:var(--mist); margin-top:2px;">${active.provider.name} · ${active.date}, ${active.time}</div>
+            <div style="font-size:var(--t-caption); color:var(--mist); margin-top:1px;">${active.provider.name} · ${active.date}, ${active.time}</div>
           </div>
         </div>
-        <span class="chip status-${active.status}">${active.status}</span>
+        <span class="chip status-${active.status}" style="flex-shrink:0;">${active.status}</span>
       </div>
       <div class="mini-steps" role="img" aria-label="Stage ${stageIndex+1} of ${STAGES.length}: ${STAGES[stageIndex]}">
         ${STAGES.map((label, i) => `<span class="st ${i < stageIndex ? 'on' : ''}${i === stageIndex ? ' now' : ''}"></span>`).join('')}
       </div>
-      <div class="row" style="margin-top:8px; gap:8px;">
-        <span style="font-size:var(--t-body); color:var(--ink-soft);">${nextStep}</span>
-        ${(() => { const paid = /paid/i.test(active.paymentStatus) && !/unpaid|pending/i.test(active.paymentStatus); const c = statusColors(paid ? 'completed' : 'requested'); return `<span class="chip" style="background:${c.bg}; color:${c.fg};">${esc(active.paymentStatus)}</span>`; })()}
+      <div class="row" style="margin-top:7px; gap:8px; font-size:var(--t-caption);">
+        <span style="color:var(--ink-soft); min-width:0;">${nextStep}</span>
+        ${(() => { const paid = /paid/i.test(active.paymentStatus) && !/unpaid|pending/i.test(active.paymentStatus); const c = statusColors(paid ? 'completed' : 'requested'); return `<span class="chip" style="background:${c.bg}; color:${c.fg}; flex-shrink:0;">${esc(active.paymentStatus)}</span>`; })()}
       </div>
     </div>` : ''}
 
-    <button type="button" class="concierge-row" id="open-concierge-btn" style="margin-top:20px;">
-      <span class="cr-ic">${ic("lightbulb",17)}</span>
-      <span style="min-width:0;">
+    <button type="button" class="concierge-row" id="open-concierge-btn" style="margin-top:18px;">
+      <span class="cr-ic">${ic("lightbulb",15)}</span>
+      <span style="min-width:0; flex:1;">
         <span class="cr-t">Describe or snap the problem</span>
-        <span class="cr-s">Prototype concierge · it clarifies, then shortlists matches</span>
+        <span class="cr-s">Prototype concierge &middot; clarifies, then shortlists</span>
       </span>
-      <span style="margin-left:auto; color:var(--mist); display:inline-flex;">${ic("arrow-right",15)}</span>
+      <span style="color:var(--mist); display:inline-flex;">${ic("arrow-right",14)}</span>
     </button>
 
-    <h3 style="font-size:var(--t-body); margin:20px 0 8px;">Book again</h3>
-    <div class="hscroll" style="display:flex; gap:10px;">
+    <div class="section-label">Book again</div>
+    <div class="hscroll" style="display:flex; gap:8px;">
       ${[PROVIDERS[0],PROVIDERS[2],PROVIDERS[1]].map(p=>`
-        <div class="card" style="min-width:140px; text-align:center; cursor:pointer; margin-bottom:0;" data-provider="${p.id}">
-          <div style="display:flex; justify-content:center; margin-bottom:8px;">${photoAvatar(p, 56)}</div>
-          <div style="font-size:var(--t-body); font-weight:600;">${p.name.split(' ')[0]}</div>
-          <div style="font-size:var(--t-caption); color:var(--mist); margin-top:1px;">${esc(p.service)}</div>
-          <div style="display:flex; align-items:center; justify-content:center; gap:4px; margin-top:4px;">${stars(p.rating,12)}<span style="font-size:var(--t-caption); font-weight:700; color:var(--ink);">${p.rating}</span></div>
+        <div class="card" style="min-width:112px; text-align:center; cursor:pointer; margin-bottom:0; padding:11px 8px;" data-provider="${p.id}">
+          <div style="display:flex; justify-content:center; margin-bottom:6px;">${photoAvatar(p, 44)}</div>
+          <div style="font-size:var(--t-body); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.name.split(' ')[0]}</div>
+          <div style="display:flex; align-items:center; justify-content:center; gap:3px; margin-top:3px;">${stars(p.rating,11)}<span style="font-size:var(--t-caption); font-weight:700; color:var(--ink);">${p.rating}</span></div>
         </div>`).join('')}
     </div>
   </div>`;
