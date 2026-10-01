@@ -44,8 +44,8 @@
     --brand-tint-soft:#E7EDFF;
 
     /* gradients */
-    --grad-brand:linear-gradient(155deg,#03002B 0%,var(--brand-primary) 52%,var(--brand-primary-light) 100%);
-    --grad-brand-soft:linear-gradient(160deg,#F1F5FF 0%,var(--brand-tint) 46%,#FFFFFF 100%);
+    --grad-brand:linear-gradient(155deg,var(--brand-navy) 0%,var(--brand-primary) 52%,var(--brand-primary-light) 100%);
+    --grad-brand-soft:linear-gradient(160deg,var(--background) 0%,var(--brand-tint) 46%,var(--surface) 100%);
     --grad-brand-dark:linear-gradient(160deg,var(--brand-navy-deep) 0%,var(--brand-navy) 100%);
     --grad-accent:linear-gradient(90deg,var(--brand-primary-light) 0%,var(--brand-secondary) 100%);
     /* Same three brand stops, re-angled per surface so a tall hero, a dark feature
@@ -153,7 +153,7 @@
   .topbar{
     /* --sat is 0 in the desktop preview and the real notch height on a phone, so
        the same rule keeps the title clear of both (7.1). */
-    background:var(--deep); color:#fff;
+    background:var(--deep); color:var(--text-on-brand);
     padding:calc(18px + var(--sat)) 18px 14px;
     display:flex; align-items:center; justify-content:space-between;
   }
@@ -170,7 +170,7 @@
   .topbar .hb > div{ min-width:0; }
   .pad{padding:16px;}
   .card{
-    background:#fff; border:1px solid var(--line); border-radius:14px;
+    background:var(--surface); border:1px solid var(--line); border-radius:14px;
     padding:14px; margin-bottom:12px;
   }
   /* Progressive disclosure for the Smart Match evidence: the score is the
@@ -217,17 +217,19 @@
     display:inline-flex; align-items:center; gap:5px; font-size:var(--t-caption); font-weight:600;
     padding:4px 10px; border-radius:999px; background:var(--verified-100); color:var(--success-ink);
   }
+  /* A chip that is a control, not a label, has to be tappable (12). */
+  button.chip{ min-height:var(--tap); padding:0 var(--s-3); }
   .badge-gold{background:var(--warning-100); color:var(--warning-ink);}
   .badge-alert{background:var(--alert-100); color:var(--error-ink);}
   .row{display:flex; align-items:center; justify-content:space-between;}
   .btn{
-    background:var(--deep); color:#fff; border:none; border-radius:12px;
+    background:var(--deep); color:var(--text-on-brand); border:none; border-radius:12px;
     padding:12px 16px; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit;
     box-shadow:0 4px 12px rgba(3, 82, 174, 0.2); transition:all 0.15s ease;
   }
   .btn:active{transform:scale(0.98); box-shadow:none;}
-  .btn.secondary{background:#fff; color:var(--deep); border:1px solid var(--deep); box-shadow:none;}
-  .btn.sm{padding:7px 12px; font-size:12px; border-radius:8px;}
+  .btn.secondary{background:var(--surface); color:var(--deep); border:1px solid var(--deep); box-shadow:none;}
+  .btn.sm{padding:7px 12px; min-height:var(--tap); font-size:var(--t-body); border-radius:var(--r-sm);}
   /* Destructive actions keep error semantics but use the darker ink: a white label on
      --error measures 4.38:1 at 12px, on --error-ink it is 5.5:1 (70, 72). */
   .btn.danger{background:var(--error-ink); box-shadow:0 4px 12px rgba(197,48,48,.2);}
@@ -337,7 +339,7 @@
      brand instead of the mark being altered (35). */
   .auth-mark{
     display:flex; align-items:center; justify-content:center; flex:none;
-    width:96px; height:96px; border-radius:var(--r-lg); background:#fff; padding:10px;
+    width:96px; height:96px; border-radius:var(--r-lg); background:var(--surface); padding:10px;
     box-shadow:0 12px 30px rgba(3,0,43,.34);
   }
   .auth-mark img{width:100%; height:100%; object-fit:contain; display:block;}
@@ -449,7 +451,7 @@
      copy. It plays once on cold load and is tappable to skip. */
   .splash{
     min-height:100%; padding:36px 28px; box-sizing:border-box;
-    background:var(--grad-brand-hero); color:#fff;
+    background:var(--grad-brand-hero); color:var(--text-on-brand);
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     text-align:center; position:relative; overflow:hidden; cursor:pointer;
   }
@@ -461,7 +463,7 @@
   /* Same rule as the auth badge: the logo file has a white ground, so the tile
      around it adapts to the brand instead of the mark being altered. */
   .splash-mark{
-    width:108px; height:108px; border-radius:26px; background:#fff; padding:13px;
+    width:108px; height:108px; border-radius:26px; background:var(--surface); padding:13px;
     display:flex; align-items:center; justify-content:center;
     box-shadow:0 16px 38px rgba(3,0,43,.42), 0 0 0 1px rgba(255,255,255,.5);
     animation:splashRise .5s cubic-bezier(.22,.9,.32,1.18) both;
@@ -480,7 +482,7 @@
   .splash-spine i{width:4px; height:4px; border-radius:50%; background:var(--brand-secondary); flex-shrink:0;}
   .splash-status{ width:220px; margin-top:28px; animation:splashRise .5s .2s cubic-bezier(.22,.9,.32,1.18) both; }
   .splash-bar{ height:3px; border-radius:99px; background:rgba(255,255,255,.26); overflow:hidden; }
-  .splash-bar i{ display:block; width:38%; height:100%; border-radius:99px; background:#fff; animation:splashSlide 1.15s ease-in-out infinite; }
+  .splash-bar i{ display:block; width:38%; height:100%; border-radius:99px; background:var(--surface); animation:splashSlide 1.15s ease-in-out infinite; }
   .splash-loading{ margin-top:9px; font-size:var(--t-caption); font-weight:600; }
   .splash-tag{
     position:absolute; bottom:20px; left:16px; right:16px;
@@ -552,7 +554,7 @@
 
   .notif-btn{
     background:rgba(255,255,255,0.15); border:none; border-radius:50%; width:var(--tap); height:var(--tap);
-    display:flex; align-items:center; justify-content:center; cursor:pointer; color:#fff;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-on-brand);
     position:relative; transition:background 0.2s;
   }
   .notif-btn:hover{background:rgba(255,255,255,0.25);}
@@ -562,7 +564,7 @@
   }
 
   .notif-item{
-    background:#fff; border:1px solid var(--line); border-radius:14px; padding:14px;
+    background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:14px;
     margin-bottom:10px; display:flex; gap:12px; align-items:flex-start; cursor:pointer;
     width:100%; text-align:left; font:inherit; color:var(--ink);
   }
@@ -575,7 +577,7 @@
   .search-container{display:flex; align-items:center; gap:8px; position:relative;}
   .search-wrapper{
     display:flex; align-items:center; min-height:var(--field-h);
-    background:#fff; border:1px solid var(--line);
+    background:var(--surface); border:1px solid var(--line);
     border-radius:var(--r-md); padding:4px 6px 4px 12px; gap:8px; flex:1;
   }
   .search-wrapper input{
@@ -583,13 +585,13 @@
     background:transparent; color:var(--ink);
   }
   .search-btn{
-    background:var(--deep); color:#fff; border:none; border-radius:var(--r-sm);
+    background:var(--deep); color:var(--text-on-brand); border:none; border-radius:var(--r-sm);
     width:var(--tap); height:var(--tap); cursor:pointer; display:flex;
     align-items:center; justify-content:center; flex-shrink:0;
   }
   .search-btn:active{background:var(--deep-700);}
   .filter-icon-btn{
-    background:#fff; border:1px solid var(--line); border-radius:12px; width:44px; height:44px;
+    background:var(--surface); border:1px solid var(--line); border-radius:12px; width:44px; height:44px;
     display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--deep);
     flex-shrink:0; position:relative;
   }
@@ -669,7 +671,7 @@
     background:var(--surface); border:1px solid var(--line); white-space:nowrap; flex-shrink:0;
   }
   .pick:active{background:var(--cloud);}
-  .pick.on{background:var(--deep); border-color:var(--deep); color:#fff;}
+  .pick.on{background:var(--deep); border-color:var(--deep); color:var(--text-on-brand);}
   .req-rail{display:flex; gap:8px;}
   .req-addr{display:flex; flex-direction:column; gap:8px;}
   .req-addr .pick{width:100%; justify-content:flex-start; text-align:left; white-space:normal; border-radius:12px;}
@@ -692,7 +694,7 @@
   .req-terms p{font-size:var(--t-caption); line-height:1.55; margin:8px 0 0; color:var(--ink-soft);}
 
   .result-card{
-    background:#fff; border:1px solid var(--line); border-radius:14px;
+    background:var(--surface); border:1px solid var(--line); border-radius:14px;
     padding:14px; margin-bottom:12px; cursor:pointer; transition:border-color 0.15s;
   }
   .result-card:active{border-color:var(--deep);}
@@ -706,7 +708,7 @@
   }
 
   .provider-hero-card{
-    background:#fff; border:1px solid var(--line); border-radius:18px;
+    background:var(--surface); border:1px solid var(--line); border-radius:18px;
     padding:16px; box-shadow:0 4px 15px rgba(0,0,0,0.03); margin-bottom:16px;
   }
   .cred-badge{
@@ -718,12 +720,12 @@
   .review-item:last-child{border-bottom:none;}
   .book-bar{
     display:flex; align-items:center; justify-content:space-between;
-    background:#fff; border-top:1px solid var(--line);
+    background:var(--surface); border-top:1px solid var(--line);
     padding:12px 18px calc(12px + var(--sab));
     position:sticky; bottom:0; left:0; right:0; z-index:20;
   }
 
-  .bottomnav{display:flex; border-top:1px solid var(--line); background:#fff; flex-shrink:0; position:relative; z-index:30;}
+  .bottomnav{display:flex; border-top:1px solid var(--line); background:var(--surface); flex-shrink:0; position:relative; z-index:30;}
   .navitem{
     flex:1; text-align:center; padding:6px 4px 7px; min-height:var(--tap);
     background:none; border:none; font-family:inherit;
@@ -733,7 +735,7 @@
   .navitem .ic{font-size:19px; display:block; margin-bottom:2px;}
   .navitem.active{color:var(--deep); font-weight:800;}
   .statgrid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
-  .stat{background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px;}
+  .stat{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px;}
   .stat .num{font-family:"Fraunces",serif; font-size:22px; font-weight:600;}
   .stat .lbl{font-size:var(--t-caption); color:var(--mist); margin-top:2px;}
   .bookrow{display:flex; gap:10px; padding:10px 0; border-bottom:1px solid var(--line);}
@@ -905,7 +907,7 @@
   /* Loading spinner for async-style feedback */
   .spinner{
     display:inline-block; width:14px; height:14px; vertical-align:-2px; margin-right:2px;
-    border:2.5px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%;
+    border:2.5px solid rgba(255,255,255,.35); border-top-color:var(--text-on-brand); border-radius:50%;
     animation:spin .7s linear infinite;
   }
   .btn-loading{ opacity:.85; pointer-events:none; }
@@ -1083,7 +1085,7 @@
     width:var(--tap); height:var(--tap); border-radius:50%; flex-shrink:0;
     display:inline-flex; align-items:center; justify-content:center;
     background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.30);
-    color:#fff; cursor:pointer; padding:0;
+    color:var(--text-on-brand); cursor:pointer; padding:0;
     transition:background .15s ease, transform .12s ease;
   }
   .back-btn:hover{ background:rgba(255,255,255,.26); }
@@ -1101,7 +1103,7 @@
   ::-webkit-scrollbar-thumb{ background:var(--brand-tint); border-radius:99px; border:2px solid transparent; background-clip:content-box; }
   ::-webkit-scrollbar-thumb:hover{ background:var(--text-secondary); background-clip:content-box; }
   .seg{ display:flex; gap:6px; background:var(--brand-tint-soft); padding:4px; border-radius:14px; }
-  .seg-btn{ flex:1; border:none; background:transparent; color:var(--brand-navy); font-weight:700; font-size:12.5px; padding:9px 10px; border-radius:10px; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; justify-content:center; gap:6px; transition:background .16s ease, color .16s ease, box-shadow .16s ease; }
+  .seg-btn{ flex:1; min-height:var(--tap); border:none; background:transparent; color:var(--brand-navy); font-weight:700; font-size:12.5px; padding:9px 10px; border-radius:10px; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; justify-content:center; gap:6px; transition:background .16s ease, color .16s ease, box-shadow .16s ease; }
   .seg-btn.on{ background:var(--grad-brand-dark); color:var(--text-on-brand); box-shadow:0 3px 10px rgba(3,0,43,.28); }
   .seg-count{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px; border-radius:999px; background:rgba(3,0,43,.12); font-size:var(--t-caption); font-weight:800; }
   .seg-btn.on .seg-count{ background:rgba(255,255,255,.22); }
@@ -3918,14 +3920,14 @@ function adminVerifications(){
     <div class="card"><div class="row"><b style="font-size:13px;">Expiring in 30 days</b><span class="chip badge-gold">5 credentials</span></div><div style="font-size:12px; line-height:1.55; margin-top:8px;"><b>Ramil Odiada</b><br>Barangay Clearance<br>Expires October 2, 2026</div><button class="btn sm" style="width:100%; margin-top:10px;" onclick="state.adminAlertState.reminderSent=true; adminLog('Renewal reminder sent','Ramil Odiada','Provider notified'); render();">${state.adminAlertState.reminderSent ? 'Reminder Sent' : 'Send Reminder'}</button></div>
     <div class="card"><div class="row"><b style="font-size:13px;">Credential status</b><span class="chip badge-alert">Review needed</span></div><div style="font-size:12px; color:var(--ink-soft); margin-top:7px;">No provider is automatically suspended. Review the provider verification status before taking action.</div></div>
     ` : category === 'verified' ? `
-    <div style="display:flex; gap:8px; margin-bottom:10px;"><div style="flex:1; background:#fff; border:1px solid var(--line); border-radius:10px; padding:9px 10px; display:flex; align-items:center; gap:7px;"><span style="font-size:16px;">⌕</span><input value="${state.adminVerifiedSearch || ''}" oninput="state.adminVerifiedSearch=this.value; render();" placeholder="Search name, service, or barangay..." style="width:100%; border:0; outline:0; font:inherit; font-size:var(--t-caption); background:transparent;"></div><button class="btn sm secondary" style="padding:7px 10px;" onclick="state.adminVerifiedFiltersOpen=!state.adminVerifiedFiltersOpen; render();">Filter${(state.adminVerifiedPerformance !== 'all' || state.adminVerifiedCredential !== 'all') ? 's (1)' : ''}</button></div>
+    <div style="display:flex; gap:8px; margin-bottom:10px;"><div style="flex:1; min-height:44px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md); padding:9px 10px; display:flex; align-items:center; gap:7px;"><span style="font-size:16px;">⌕</span><input value="${state.adminVerifiedSearch || ''}" oninput="state.adminVerifiedSearch=this.value; render();" placeholder="Search name, service, or barangay..." style="width:100%; border:0; outline:0; font:inherit; font-size:var(--t-caption); background:transparent;"></div><button class="btn sm secondary" style="padding:7px 10px;" onclick="state.adminVerifiedFiltersOpen=!state.adminVerifiedFiltersOpen; render();">Filter${(state.adminVerifiedPerformance !== 'all' || state.adminVerifiedCredential !== 'all') ? 's (1)' : ''}</button></div>
     ${state.adminVerifiedFiltersOpen ? `<div class="card" style="padding:10px; margin-bottom:10px;"><div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:var(--t-caption);"><label>Service<select onchange="state.adminVerifiedService=this.value; render();" style="width:100%; padding:7px; margin-top:3px;"><option value="all">All Services</option><option value="plumbing">Plumbing</option><option value="electrical">Electrical</option><option value="cleaning">Cleaning</option><option value="appliance">Appliance</option></select></label><label>Barangay<select onchange="state.adminVerifiedBarangay=this.value; render();" style="width:100%; padding:7px; margin-top:3px;"><option value="all">All Barangays</option><option value="poblacion">Poblacion</option><option value="san isidro">San Isidro</option><option value="sta. cruz">Sta. Cruz</option></select></label><label>Performance<select onchange="state.adminVerifiedPerformance=this.value; render();" style="width:100%; padding:7px; margin-top:3px;"><option value="all">All</option><option value="normal">Normal</option><option value="monitor">Monitor</option><option value="needs-review">Needs Review</option></select></label><label>Credentials<select onchange="state.adminVerifiedCredential=this.value; render();" style="width:100%; padding:7px; margin-top:3px;"><option value="all">All</option><option value="valid">Valid</option><option value="expiring-soon">Expiring Soon</option><option value="expired">Expired</option></select></label></div><button class="btn sm secondary" style="margin-top:10px;" onclick="state.adminVerifiedSearch=''; state.adminVerifiedService='all'; state.adminVerifiedBarangay='all'; state.adminVerifiedPerformance='all'; state.adminVerifiedCredential='all'; state.adminVerifiedFiltersOpen=false; render();">Reset</button></div>` : ''}
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><div><b style="font-size:14px;">${visibleVerified.length} Verified Providers</b><div style="font-size:var(--t-caption); color:var(--gold-600);">1 provider needs attention</div></div><select onchange="state.adminVerifiedSort=this.value; render();" style="padding:7px; border:1px solid var(--line); border-radius:8px; font:inherit; font-size:var(--t-caption);"><option value="newest">Newest Verified</option><option value="rating">Highest Rating</option><option value="jobs">Most Completed Jobs</option></select></div>
     ${visibleVerified.map(provider => { const meta=adminProviderMeta(provider); return `
       <div class="card" style="padding:11px; margin-bottom:10px;"><div class="row" style="align-items:flex-start;"><div style="display:flex; gap:10px; align-items:center;">${photoAvatar(provider, 42)}<div><b style="font-size:13px;">${provider.name}</b><div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${provider.service} - Brgy. ${provider.barangay}</div></div></div><span class="chip">Verified</span></div><div style="display:flex; gap:8px; margin-top:9px; font-size:var(--t-caption); color:var(--ink-soft);"><span style="display:inline-flex; align-items:center; gap:4px;">${stars(provider.rating,11)}<span>${provider.rating}</span></span><span>${provider.jobs} jobs</span></div><div style="display:flex; gap:5px; margin-top:8px; flex-wrap:wrap;"><span class="chip" style="background:${meta.performance==='Normal'?'var(--success-100)':meta.performance==='Monitor'?'var(--warning-100)':'var(--error-100)'}; color:${meta.performance==='Normal'?'var(--success-ink)':meta.performance==='Monitor'?'var(--warning-ink)':'var(--error-ink)'};">${meta.performance}</span><button class="chip" style="border:0; cursor:pointer;" onclick="state.adminProviderCategory='credentials'; state.adminCredentialProvider='${provider.id}'; render();">Credentials: ${meta.credential}</button></div><div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px;">Last active: ${meta.active}</div><div style="display:flex; gap:6px; margin-top:9px;"><button class="btn sm" style="flex:1;" onclick="openAdminProviderProfile('${provider.id}')">View Provider</button><button class="btn sm secondary" style="width:42px; padding:7px;" aria-label="More actions" onclick="state.adminProviderMenu=state.adminProviderMenu==='${provider.id}' ? null : '${provider.id}'; render();">⋮</button></div>${state.adminProviderMenu===provider.id ? `<div style="display:flex; flex-direction:column; gap:5px; margin-top:8px;"><button class="btn sm secondary" onclick="openAdminProviderProfile('${provider.id}')">View Provider</button><button class="btn sm secondary" onclick="state.adminProviderCategory='credentials'; state.adminCredentialProvider='${provider.id}'; render();">View Credentials</button><button class="btn sm secondary" onclick="openAdminProviderProfile('${provider.id}'); state.adminProviderSection='bookings';">View Bookings</button><button class="btn sm secondary" onclick="openAdminProviderProfile('${provider.id}'); state.adminProviderSection='reviews';">View Reviews &amp; Complaints</button></div>` : ''}</div>`; }).join('') || '<div class="card" style="text-align:center; color:var(--mist);">No verified providers match these filters.</div>'}
     ` : `
     <div style="display:flex; gap:8px; margin-bottom:10px;">
-      <div style="flex:1; background:#fff; border:1px solid var(--line); border-radius:10px; padding:9px 10px; display:flex; align-items:center; gap:7px;"><span style="font-size:17px;">⌕</span><input placeholder="Search provider name, service, or location..." style="width:100%; border:0; outline:0; font:inherit; font-size:var(--t-caption); background:transparent;"></div>
+      <div style="flex:1; min-height:44px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md); padding:9px 10px; display:flex; align-items:center; gap:7px;"><span style="font-size:17px;">⌕</span><input placeholder="Search provider name, service, or location..." style="width:100%; border:0; outline:0; font:inherit; font-size:var(--t-caption); background:transparent;"></div>
       <button class="btn sm secondary" style="padding:7px 10px;" onclick="state.adminVerifiedFiltersOpen=!state.adminVerifiedFiltersOpen; render();" aria-expanded="${state.adminVerifiedFiltersOpen}">Filters <span class="chip" style="padding:2px 6px; margin-left:3px;">2</span></button>
     </div>
     <div style="margin-bottom:12px;"><button class="btn sm secondary" style="font-size:var(--t-caption);" onclick="cycleAdminPendingSort()">Sort: ${ADMIN_PENDING_SORTS.find(s => s[0] === state.adminPendingSort)[1]} ${ic('refresh-cw',11)}</button></div>
@@ -3951,7 +3953,7 @@ function adminDisputes(){
   <div class="pad" style="background:var(--cloud); padding-bottom:40px;">
     <div class="card"><div class="row"><b style="font-size:14px;">Dispute case #LS-2026-0148</b><span class="chip badge-gold">Under Review</span></div><div style="font-size:12px; line-height:1.6; margin-top:9px;">Customer: Ana D.<br>Provider: Ramil O.<br>Service: Plumbing Repair<br>Amount: ₱850<br>Priority: Normal</div></div>
     <div class="card"><b style="font-size:14px;">Case summary</b><div style="font-size:12px; color:var(--ink-soft); line-height:1.55; margin-top:8px;">The customer confirmed completion and payment was released. Two days later, the customer reported that the leak had returned within the service warranty period.</div><div style="font-size:12px; margin-top:9px; color:var(--success-ink);">${ic("check",12)} Provider arrival recorded<br>${ic("check",12)} Before and after evidence available<br>${ic("check",12)} Customer confirmed completion<br>${ic("check",12)} Payment released</div></div>
-    <details class="card"><summary style="font-size:14px; font-weight:800; cursor:pointer;">Evidence timeline</summary><div style="font-size:var(--t-caption); line-height:1.8; margin-top:10px;">Sep 12, 2:00 PM - Booking started<br>Sep 12, 2:14 PM - Provider arrived<br>Sep 12, 2:19 PM - Before-service photo uploaded<br>Sep 12, 3:06 PM - Service marked complete<br>Sep 12, 3:11 PM - Payment released<br>Sep 14, 10:45 AM - Dispute submitted</div></details>
+    <details class="card"><summary style="font-size:var(--t-body); font-weight:800; cursor:pointer; min-height:var(--tap); display:flex; align-items:center;">Evidence timeline</summary><div style="font-size:var(--t-caption); line-height:1.8; margin-top:10px;">Sep 12, 2:00 PM - Booking started<br>Sep 12, 2:14 PM - Provider arrived<br>Sep 12, 2:19 PM - Before-service photo uploaded<br>Sep 12, 3:06 PM - Service marked complete<br>Sep 12, 3:11 PM - Payment released<br>Sep 14, 10:45 AM - Dispute submitted</div></details>
     <div class="card"><b style="font-size:14px;">Recommended next step</b><div style="font-size:12px; color:var(--ink-soft); margin-top:7px;">Review warranty eligibility and request the provider response. This summary supports review and does not determine fault.</div><div style="display:flex; gap:6px; margin-top:10px;"><button class="btn sm secondary" style="flex:1;" onclick="state.adminWarrantyShown=!state.adminWarrantyShown; render();" aria-expanded="${!!state.adminWarrantyShown}">${state.adminWarrantyShown ? 'Hide warranty record' : 'Review warranty'}</button><button class="btn sm" style="flex:1;" onclick="state.adminAlertState.providerResponse=true; adminLog('Provider response requested','Case #LS-2026-0148','Provider notified'); render();">${responseRequested ? 'Response Requested' : 'Request Provider Response'}</button></div></div>
 ${state.adminWarrantyShown ? `<div class="card"><b style="font-size:14px;">Warranty record</b><div style="font-size:12px; line-height:1.8; margin-top:8px;">Service completed September 12, 2026<br>Warranty stated to run until September 19, 2026<br>Dispute raised September 14 - inside the warranty window<br>Same fault reported as the completed job: leak returned</div><div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:8px;">Eligibility is a question for the administrator and the provider; nothing here decides it.</div></div>` : ''}
   </div>`;
@@ -4479,7 +4481,7 @@ function providerProfileHub(){
 const row = (id, title, detail) => settingsRow('providerProfileSection', id, title, detail);
   const detail = section === 'services' ? `<div class="card"><b>Services Offered</b><div style="font-size:12px; line-height:1.8; margin-top:9px;">Faucet Repair - ₱350 - 45-60 min - <b style="color:var(--success-ink);">Active</b><br>Pipe Leak Repair - ₱450 - 60 min - <b style="color:var(--success-ink);">Active</b><br>Drain Cleaning - ₱400 - 45 min - <b style="color:var(--success-ink);">Active</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('add_service')">+ Add Service</button></div>` : section === 'pricing' ? `<div class="card"><b>Pricing &amp; Rates</b><div style="font-size:12px; line-height:1.8; margin-top:9px;">Call-out fee: <b>${pp.rate}</b><br>Hourly rate: Optional<br>Emergency rate: Optional</div><button class="btn sm" style="margin-top:8px;" onclick="providerProfileAction('pricing')">Edit Pricing</button></div>` : section === 'area' ? `<div class="card"><b>Service Area</b><div style="font-size:12px; line-height:1.8; margin-top:9px;">Base barangay: <b>${pp.barangay}</b><br>Service radius: <b>${pp.serviceRadius}</b><br><span style="color:var(--success-ink); display:inline-flex; align-items:center; gap:2px;">${ic("check",11)} Poblacion</span><br><span style="color:var(--success-ink); display:inline-flex; align-items:center; gap:2px;">${ic("check",11)} San Isidro</span><br><span style="color:var(--success-ink); display:inline-flex; align-items:center; gap:2px;">${ic("check",11)} Barangay 2</span></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('area')">Change Radius</button></div>` : section === 'hours' ? `<div class="card"><b>Working Hours</b><div style="font-size:12px; line-height:1.8; margin-top:9px;">Monday - Saturday: <b>${pp.workingHours}</b><br>Sunday: Unavailable</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('hours')">Edit Hours</button></div>` : section === 'dispatch' ? `<div class="card"><b>Emergency Dispatch</b><div style="font-size:12px; line-height:1.8; margin-top:9px;">Status: <b style="color:var(--success-ink);">${state.providerEmergencyDispatch ? 'Enabled' : 'Disabled'}</b><br>Accept urgent requests outside normal booking flow when available.<br>Emergency radius: 3 km<br>Emergency hours: 6:00 AM - 10:00 PM</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('dispatch')">${state.providerEmergencyDispatch ? 'Disable' : 'Enable'} Dispatch</button></div>` : section === 'credentials' ? `<div class="card"><b>Credentials &amp; Verification</b><div style="font-size:12px; line-height:1.8; margin-top:9px;">ID Verification - <b style="color:var(--success-ink);">Verified</b><br>TESDA Plumbing NC II - <b style="color:var(--success-ink);">Valid</b><br>NBI Clearance - <b style="color:var(--success-ink);">Valid</b><br>Barangay Clearance - <b style="color:var(--gold-600);">Expires in 23 days</b></div></div>` : section === 'reputation' ? `<div class="card"><b>Reputation</b><div class="statgrid" style="margin-top:10px;"><div class="stat"><div class="num">94</div><div class="lbl">Trust score</div></div><div class="stat"><div class="num">4.9</div><div class="lbl">Rating</div></div><div class="stat"><div class="num">96%</div><div class="lbl">Completion</div></div><div class="stat"><div class="num">4%</div><div class="lbl">Cancellation</div></div></div><div style="font-size:12px; color:var(--ink-soft); margin-top:9px;">Trust remains strong because completion and customer ratings are consistently high.</div></div>` : section === 'portfolio' ? `<div class="card"><b>Work Portfolio</b><div style="font-size:12px; margin-top:9px;">${state.providerPortfolio.length ? state.providerPortfolio.map(item=>`${item.service} - ${item.description}`).join('<hr>') : 'No portfolio items added yet.'}</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('portfolio_add')">+ Add Work</button></div>` : section === 'payout' ? `<div class="card"><b>Payout &amp; Earnings</b><div style="font-size:12px; line-height:1.8; margin-top:9px;">Current payout: <b>GCash (0918***4321)</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('payout')">Manage Payout</button></div>` : section === 'security' ? `<div class="card"><b>Account &amp; Security</b><div style="font-size:12px; line-height:1.8; margin-top:9px;">Password: <b>••••••••</b><br>PIN: <b>Enabled</b><br>Two-factor authentication: <b style="color:var(--success-ink);">Enabled</b><br>Active sessions: <b>2</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('password')">Change Password</button></div>` : section === 'notifications' ? `<div class="card"><b>Notification Preferences</b>${[['requests','New Service Requests'],['bookings','Booking Updates'],['messages','Customer Messages'],['quotes','Quotation Responses'],['payments','Payment Received'],['opportunities','High Demand Opportunities'],['schedule','Schedule Alerts'],['trust','Trust Score Changes'],['credentials','Credential Expiry'],['reviews','Customer Reviews']].map(([key,label])=>`<label class="row" style="font-size:12px; padding:6px 0;">${label}<input type="checkbox" ${state.providerNotifications[key]?'checked':''} onchange="state.providerNotifications['${key}']=this.checked;"></label>`).join('')}</div>` : section === 'preview' ? `<div class="card"><div style="text-align:center;">${photoAvatar('self', 56)}<div style="font-size:18px; font-weight:800; margin-top:8px;">${pp.name}</div><div style="font-size:12px; color:var(--mist);">${pp.service}</div><div style="margin-top:9px; display:flex; align-items:center; justify-content:center; gap:5px;">${stars(4.9,12)}<span style="font-weight:700;">4.9</span><span style="color:var(--mist);">- 214 completed jobs</span></div><div style="color:var(--success-ink); margin-top:6px;">ID Verified - Top Rated</div><div style="font-size:12px; text-align:left; margin-top:12px;">Service Area: ${pp.barangay} + nearby barangays<br>Starting Rate: ${pp.rate}<br>Services: Faucet Repair, Pipe Leak Repair, Drain Cleaning</div></div></div>` : '';
   const modal = state.providerProfileModal;
-  return `<div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><button onclick="state.tab='dashboard'; state.providerProfileSection=null; render();" class="back-btn" aria-label="Back">${ic("chevron-left",18)}</button><div class="title">Provider Profile</div></div></div><div class="pad" style="background:var(--cloud); padding-bottom:40px;"><div class="card" style="text-align:center;">${photoAvatar('self', 56)}<div style="font-size:18px; font-weight:800; margin-top:10px;">${pp.name}</div><div style="font-size:12px; color:var(--mist); margin-top:3px;">${pp.service} - Brgy. ${pp.barangay}</div><div style="display:flex; justify-content:center; gap:6px; margin-top:10px;"><span class="chip">ID Verified</span><span class="chip">Top Rated</span></div><button class="btn sm secondary" style="margin-top:10px;" onclick="providerProfileAction('edit')">Edit Professional Profile</button></div><div class="card"><div class="row"><b style="font-size:13px;">Professional status</b><span class="chip">Active</span></div><div style="font-size:12px; line-height:1.8; margin-top:8px;">Availability: <b style="color:var(--success-ink);">${state.providerAvailability}</b><br>Trust Score: <button style="border:0; background:transparent; color:var(--deep); font-weight:800; cursor:pointer;" onclick="state.providerProfileSection='reputation'; render();">94 / 100</button><br>Credentials: <b style="color:var(--success-ink);">All Valid</b></div></div><div class="card"><div class="row" style="margin-bottom:9px;"><b style="font-size:13px;">Contact and service details</b><button class="btn sm secondary" onclick="providerProfileAction('edit')">Edit</button></div><div style="font-size:12px; line-height:1.8;">Email: <b>${pp.email}</b><br>Phone: <b>${pp.phone}</b><br>Rate: <b>${pp.rate}</b><br>Service radius: <b>${pp.serviceRadius}</b><br>Working hours: <b>${pp.workingHours}</b><br>Emergency dispatch: <b>${state.providerEmergencyDispatch ? 'Enabled' : 'Disabled'}</b><br>Payout account: <b>GCash (0918***4321)</b></div></div><div style="font-size:var(--t-caption); font-weight:800; color:var(--mist); margin:12px 0 7px;">SERVICE SETTINGS</div>${row('services','Services Offered','Faucet Repair, Pipe Leak Repair, Drain Cleaning')}${row('pricing','Pricing & Rates',pp.rate)}${row('area','Service Area',pp.serviceRadius)}${row('hours','Working Hours',pp.workingHours)}${row('dispatch','Emergency Dispatch',state.providerEmergencyDispatch?'Enabled':'Disabled')}<div style="font-size:var(--t-caption); font-weight:800; color:var(--mist); margin:12px 0 7px;">PROFESSIONAL</div>${row('credentials','Credentials & Verification','ID verified - credential status')}${row('reputation','Reputation & Trust Score','94 / 100 - 4.9 rating')}${row('portfolio','Work Portfolio','Service photos and examples')}${row('preview','Preview Public Profile','See what Residents see')}<div style="font-size:var(--t-caption); font-weight:800; color:var(--mist); margin:12px 0 7px;">FINANCIAL</div>${row('payout','Payout & Earnings','GCash (0918***4321)') }<div style="font-size:var(--t-caption); font-weight:800; color:var(--mist); margin:12px 0 7px;">ACCOUNT</div>${row('security','Password & Sign-in','PIN enabled - 2FA enabled')}${row('notifications','Notification Preferences','Service and security alerts')}${section ? `<div style="margin-top:4px;">${detail}</div>` : ''}<button class="btn" style="width:100%; margin-top:12px; background:#fff; color:var(--error-ink); border:1px solid var(--alert); box-shadow:none;" onclick="providerProfileAction('logout')">Log Out</button></div>${modal ? `<div style="position:fixed; inset:0; background:rgba(0,0,0,.48); z-index:50; display:flex; align-items:center; justify-content:center; padding:18px;"><div class="card" style="width:100%; max-width:350px;"><div class="row"><b>${modal==='edit'?'EDIT SERVICE PROFILE':modal==='logout'?'LOG OUT?':modal==='payout'?'PAYOUT ACCOUNT':modal==='dispatch'?'ENABLE EMERGENCY DISPATCH?':modal==='add_service'?'ADD SERVICE':modal==='portfolio_add'?'ADD WORK':'Update'}</b><button aria-label="Close" onclick="state.providerProfileModal=null; render();" style="border:0; background:transparent; font-size:20px;">&times;</button></div>${modal==='edit'?`<label style="display:block; font-size:12px; margin-top:10px;">Email (read-only)<input value="${pp.email}" readonly style="width:100%; padding:9px; margin-top:4px; background:var(--background);"></label><label style="display:block; font-size:12px; margin-top:8px;">Phone Number<input id="provider-profile-phone" value="${pp.phone}" style="width:100%; padding:9px; margin-top:4px;"></label><label style="display:block; font-size:12px; margin-top:8px;">Service Rate<input id="provider-profile-rate" value="${pp.rate}" style="width:100%; padding:9px; margin-top:4px;"></label><label style="display:block; font-size:12px; margin-top:8px;">Service Radius<input id="provider-profile-radius" value="${pp.serviceRadius}" style="width:100%; padding:9px; margin-top:4px;"></label><label style="display:block; font-size:12px; margin-top:8px;">Working Hours<input id="provider-profile-hours" value="${pp.workingHours}" style="width:100%; padding:9px; margin-top:4px;"></label><button class="btn" style="width:100%; margin-top:12px;" onclick="saveProviderProfessionalProfile()">Save Changes</button>`:modal==='dispatch'?`<div style="font-size:12px; margin-top:12px;">You may receive urgent service requests during selected emergency hours.</div><button class="btn" style="width:100%; margin-top:12px;" onclick="state.providerEmergencyDispatch=!state.providerEmergencyDispatch; state.providerProfileModal=null; render();">Enable</button>`:modal==='payout'?`<div style="font-size:12px; margin-top:12px;">Current: GCash (0918***4321)<br><br>For security, confirm your password or PIN before changing payout account.</div><button class="btn" style="width:100%; margin-top:12px;" onclick="state.providerProfileModal='saved'; render();">Continue</button>`:modal==='logout'?`<div style="font-size:12px; margin-top:12px;">Are you sure you want to log out of your Sukinnect provider account?</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm secondary" style="flex:1;" onclick="state.providerProfileModal=null; render();">Cancel</button><button class="btn sm danger" style="flex:1;" onclick="signOut()">Log Out</button></div>`:modal==='add_service'?`<input placeholder="Service name" style="width:100%; padding:9px; margin-top:12px;"><button class="btn" style="width:100%; margin-top:12px;" onclick="state.providerProfileModal='saved'; render();">Save Service</button>`:modal==='portfolio_add'?`<input placeholder="Service" style="width:100%; padding:9px; margin-top:12px;"><textarea placeholder="Description" style="width:100%; min-height:70px; margin-top:8px; padding:9px;"></textarea><button class="btn" style="width:100%; margin-top:12px;" onclick="state.providerProfileModal='saved'; render();">Save Work</button>`:`<div style="font-size:12px; color:var(--success-ink); margin-top:12px;">Changes saved successfully.</div><button class="btn" style="width:100%; margin-top:12px;" onclick="state.providerProfileModal=null; render();">Close</button>`}</div></div>`:''}`;
+  return `<div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><button onclick="state.tab='dashboard'; state.providerProfileSection=null; render();" class="back-btn" aria-label="Back">${ic("chevron-left",18)}</button><div class="title">Provider Profile</div></div></div><div class="pad" style="background:var(--cloud); padding-bottom:40px;"><div class="card" style="text-align:center;">${photoAvatar('self', 56)}<div style="font-size:18px; font-weight:800; margin-top:10px;">${pp.name}</div><div style="font-size:12px; color:var(--mist); margin-top:3px;">${pp.service} - Brgy. ${pp.barangay}</div><div style="display:flex; justify-content:center; gap:6px; margin-top:10px;"><span class="chip">ID Verified</span><span class="chip">Top Rated</span></div><button class="btn sm secondary" style="margin-top:10px;" onclick="providerProfileAction('edit')">Edit Professional Profile</button></div><div class="card"><div class="row"><b style="font-size:13px;">Professional status</b><span class="chip">Active</span></div><div style="font-size:12px; line-height:1.8; margin-top:8px;">Availability: <b style="color:var(--success-ink);">${state.providerAvailability}</b><br>Trust Score: <button class="auth-admin" style="font-size:var(--t-body);" onclick="state.providerProfileSection='reputation'; render();">94 / 100</button><br>Credentials: <b style="color:var(--success-ink);">All Valid</b></div></div><div class="card"><div class="row" style="margin-bottom:9px;"><b style="font-size:13px;">Contact and service details</b><button class="btn sm secondary" onclick="providerProfileAction('edit')">Edit</button></div><div style="font-size:12px; line-height:1.8;">Email: <b>${pp.email}</b><br>Phone: <b>${pp.phone}</b><br>Rate: <b>${pp.rate}</b><br>Service radius: <b>${pp.serviceRadius}</b><br>Working hours: <b>${pp.workingHours}</b><br>Emergency dispatch: <b>${state.providerEmergencyDispatch ? 'Enabled' : 'Disabled'}</b><br>Payout account: <b>GCash (0918***4321)</b></div></div><div style="font-size:var(--t-caption); font-weight:800; color:var(--mist); margin:12px 0 7px;">SERVICE SETTINGS</div>${row('services','Services Offered','Faucet Repair, Pipe Leak Repair, Drain Cleaning')}${row('pricing','Pricing & Rates',pp.rate)}${row('area','Service Area',pp.serviceRadius)}${row('hours','Working Hours',pp.workingHours)}${row('dispatch','Emergency Dispatch',state.providerEmergencyDispatch?'Enabled':'Disabled')}<div style="font-size:var(--t-caption); font-weight:800; color:var(--mist); margin:12px 0 7px;">PROFESSIONAL</div>${row('credentials','Credentials & Verification','ID verified - credential status')}${row('reputation','Reputation & Trust Score','94 / 100 - 4.9 rating')}${row('portfolio','Work Portfolio','Service photos and examples')}${row('preview','Preview Public Profile','See what Residents see')}<div style="font-size:var(--t-caption); font-weight:800; color:var(--mist); margin:12px 0 7px;">FINANCIAL</div>${row('payout','Payout & Earnings','GCash (0918***4321)') }<div style="font-size:var(--t-caption); font-weight:800; color:var(--mist); margin:12px 0 7px;">ACCOUNT</div>${row('security','Password & Sign-in','PIN enabled - 2FA enabled')}${row('notifications','Notification Preferences','Service and security alerts')}${section ? `<div style="margin-top:4px;">${detail}</div>` : ''}<button class="btn" style="width:100%; margin-top:12px; background:#fff; color:var(--error-ink); border:1px solid var(--alert); box-shadow:none;" onclick="providerProfileAction('logout')">Log Out</button></div>${modal ? `<div style="position:fixed; inset:0; background:rgba(0,0,0,.48); z-index:50; display:flex; align-items:center; justify-content:center; padding:18px;"><div class="card" style="width:100%; max-width:350px;"><div class="row"><b>${modal==='edit'?'EDIT SERVICE PROFILE':modal==='logout'?'LOG OUT?':modal==='payout'?'PAYOUT ACCOUNT':modal==='dispatch'?'ENABLE EMERGENCY DISPATCH?':modal==='add_service'?'ADD SERVICE':modal==='portfolio_add'?'ADD WORK':'Update'}</b><button aria-label="Close" onclick="state.providerProfileModal=null; render();" style="border:0; background:transparent; font-size:20px;">&times;</button></div>${modal==='edit'?`<label style="display:block; font-size:12px; margin-top:10px;">Email (read-only)<input value="${pp.email}" readonly style="width:100%; padding:9px; margin-top:4px; background:var(--background);"></label><label style="display:block; font-size:12px; margin-top:8px;">Phone Number<input id="provider-profile-phone" value="${pp.phone}" style="width:100%; padding:9px; margin-top:4px;"></label><label style="display:block; font-size:12px; margin-top:8px;">Service Rate<input id="provider-profile-rate" value="${pp.rate}" style="width:100%; padding:9px; margin-top:4px;"></label><label style="display:block; font-size:12px; margin-top:8px;">Service Radius<input id="provider-profile-radius" value="${pp.serviceRadius}" style="width:100%; padding:9px; margin-top:4px;"></label><label style="display:block; font-size:12px; margin-top:8px;">Working Hours<input id="provider-profile-hours" value="${pp.workingHours}" style="width:100%; padding:9px; margin-top:4px;"></label><button class="btn" style="width:100%; margin-top:12px;" onclick="saveProviderProfessionalProfile()">Save Changes</button>`:modal==='dispatch'?`<div style="font-size:12px; margin-top:12px;">You may receive urgent service requests during selected emergency hours.</div><button class="btn" style="width:100%; margin-top:12px;" onclick="state.providerEmergencyDispatch=!state.providerEmergencyDispatch; state.providerProfileModal=null; render();">Enable</button>`:modal==='payout'?`<div style="font-size:12px; margin-top:12px;">Current: GCash (0918***4321)<br><br>For security, confirm your password or PIN before changing payout account.</div><button class="btn" style="width:100%; margin-top:12px;" onclick="state.providerProfileModal='saved'; render();">Continue</button>`:modal==='logout'?`<div style="font-size:12px; margin-top:12px;">Are you sure you want to log out of your Sukinnect provider account?</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm secondary" style="flex:1;" onclick="state.providerProfileModal=null; render();">Cancel</button><button class="btn sm danger" style="flex:1;" onclick="signOut()">Log Out</button></div>`:modal==='add_service'?`<input placeholder="Service name" style="width:100%; padding:9px; margin-top:12px;"><button class="btn" style="width:100%; margin-top:12px;" onclick="state.providerProfileModal='saved'; render();">Save Service</button>`:modal==='portfolio_add'?`<input placeholder="Service" style="width:100%; padding:9px; margin-top:12px;"><textarea placeholder="Description" style="width:100%; min-height:70px; margin-top:8px; padding:9px;"></textarea><button class="btn" style="width:100%; margin-top:12px;" onclick="state.providerProfileModal='saved'; render();">Save Work</button>`:`<div style="font-size:12px; color:var(--success-ink); margin-top:12px;">Changes saved successfully.</div><button class="btn" style="width:100%; margin-top:12px;" onclick="state.providerProfileModal=null; render();">Close</button>`}</div></div>`:''}`;
 }
 
 function bindTabHandlers(){
