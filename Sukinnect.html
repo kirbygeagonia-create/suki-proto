@@ -324,9 +324,14 @@
 
   /* Sign-in: the brand owns the top of the first screen and the form rises out
      of it as a sheet, so the two read as one moment carried on from the splash
-     rather than a page with a form on it (5). */
+     rather than a page with a form on it (5).
+     The screen is a RIGID column, never a content-sized one: the hero keeps its
+     height and the sheet takes exactly the space that is left, so the white
+     container can never be taller than the phone. Whatever the form needs
+     beyond that scrolls INSIDE the sheet (see .auth-sheet) instead of pushing
+     the white surface past the bottom edge when the role changes (5, 38). */
   .auth-screen{
-    display:flex; flex-direction:column; min-height:100%; background:var(--surface);
+    display:flex; flex-direction:column; height:100%; background:var(--surface);
   }
   /* The browser's default 16px paragraph margins were costing ~80px of dead
      vertical space on this screen, which is what pushed the form past the fold
@@ -372,13 +377,23 @@
   }
   .auth-loop i{ font-style:normal; color:var(--brand-secondary); }
   /* The sheet is the only white surface on the screen, so it reads as a card
-     lifted over the brand rather than a background. */
+     lifted over the brand rather than a background. It is also the form's own
+     scroller: `min-height:0` stops a flex item from being sized by its content,
+     so the sheet is always exactly the height the hero leaves and the form
+     reflows inside it. Switching role or sign-in/register mode can therefore
+     never shrink the white container, jump it, or run its bottom edge past the
+     phone - the one thing that made the Admin role look broken on a short
+     screen (5, 38). */
   .auth-sheet{
-    flex:1; display:flex; flex-direction:column; box-sizing:border-box;
+    flex:1; min-height:0; display:flex; flex-direction:column; box-sizing:border-box;
     margin-top:-20px; padding:18px var(--s-5) 0;
     background:var(--surface); border-radius:var(--r-sheet) var(--r-sheet) 0 0;
     box-shadow:0 -14px 34px rgba(3,0,43,.16);
+    overflow-y:auto; overscroll-behavior:none;
+    -ms-overflow-style:none; scrollbar-width:none;
   }
+  /* Same scrollbar-free look as the screen and the chip rails (72). */
+  .auth-sheet::-webkit-scrollbar{ display:none; width:0; height:0; }
   .auth-title{
     font-family:"Fraunces", ui-serif, serif; font-size:var(--t-title-lg); font-weight:600;
     letter-spacing:-.3px; color:var(--ink); line-height:1.15;
@@ -2386,9 +2401,14 @@ function render(){
 
   if(state.view === 'login'){
     if(nav._html !== ''){ nav.innerHTML = ''; nav._html = ''; }
+    // The sheet is its own scroller (see .auth-sheet), so carry its position
+    // across the re-render the same way the screen's is carried - swapping role
+    // or sign-in/register mode must not move the form under the finger.
+    const keepAuth = changed ? 0 : authSheetTop(screen);
     screen.innerHTML = loginHTML();
     screen.classList.toggle('anim', changed);
     setScreenScroll(screen, keepScroll);
+    setAuthSheetScroll(screen, keepAuth);
     bindLogin();
     return;
   }
@@ -2416,6 +2436,22 @@ function setScreenScroll(el, top){
   el.style.scrollBehavior = 'auto';
   el.scrollTop = top;
   el.style.scrollBehavior = previous;
+}
+
+// The sign-in form scrolls inside its own white sheet, so that position needs
+// the same care as the screen's: read it before the re-render and put it back
+// after, or picking a role would snap the form back to the title (5).
+function authSheetTop(el){
+  const sheet = el.querySelector('.auth-sheet');
+  return sheet ? sheet.scrollTop : 0;
+}
+function setAuthSheetScroll(el, top){
+  const sheet = el.querySelector('.auth-sheet');
+  if(!sheet) return;
+  const previous = sheet.style.scrollBehavior;
+  sheet.style.scrollBehavior = 'auto';
+  sheet.scrollTop = top;
+  sheet.style.scrollBehavior = previous;
 }
 
 /* The sample credential set this prototype signs in with, kept in one place so
@@ -2531,7 +2567,7 @@ function loginHTML(){
           ? `<button type="button" class="auth-admin" id="rt-admin-exit">Switch to Resident</button>`
           : `<button type="button" class="auth-admin" id="rt-admin">Admin sign-in</button>`}
       </footer>
-      <p class="auth-note-line">Prototype build &middot; sample data only, nothing is stored.</p>
+      <p class="auth-note-line">Prototype build 1.1 &middot; sample data only, nothing is stored.</p>
     </div>
   </div>`;
 }
