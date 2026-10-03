@@ -17,6 +17,7 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   'listingById', 'agoText', 'serviceMeta', 'peso', 'pesoShort', 'pesoCompact', 'rateLabel',
   'toCentavos', 'toPesos', 'computeBreakdown', 'breakdownForBooking', 'postEvent', 'settlementLines', 'settlementToProvider', 'freezePricing', 'commissionRateFor', 'CONFIG_DEFAULTS', 'CONFIG_AUDIT',
   'accountBalance', 'ledgerBalance', 'ledgerFor', 'ACCOUNTS', 'LEDGER_EVENTS',
+  'PAYMENTS', 'PAYOUTS', 'PAYMENT_LABELS', 'paymentsFor', 'recordPayment', 'Gateway',
   'TRANSITIONS', 'BOOKING_STATES', 'FINISHED_STATES', 'attemptTransition', 'transitionAllowed',
   'nextActionFor', 'bookingTimeline', 'label', 'stateHint', 'recordStatusEvent', 'seedStatusHistory',
   'applyDueTransitions', 'MockGateway', 'authorizeBooking', 'captureBooking', 'voidBooking',

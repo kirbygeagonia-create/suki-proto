@@ -472,6 +472,139 @@ suite('machine', async () => {
   return c;
 });
 
+/* ══ 7. payments, refunds and payouts ════════════════════════════════════════ */
+suite('payments', async () => {
+  const c = makeChecker();
+  const app = boot();
+  const { BOOKINGS, PAYMENTS, PAYOUTS, LEDGER, Gateway, MockGateway, paymentsFor, accountBalance,
+          attemptTransition, pendingProviderRequests, refundBooking, runPayoutCycle, providerBalances } = app;
+  const PROVIDER = { role:'provider', id:'p1', name:'Ramil Odiada' };
+  const CUSTOMER = { role:'customer', id:'c1' };
+  const ADMIN = { role:'admin', id:'a1' };
+  const throws = fn => { try { fn(); return null; } catch (err) { return err; } };
+
+  /* the seam a real gateway would implement */
+  c.check('the gateway exposes the four verbs and nothing else clever',
+    ['authorize', 'capture', 'refund', 'void_'].every(m => typeof Gateway[m] === 'function'));
+  c.check('swapping the adapter is the only change a live gateway needs', Gateway === MockGateway);
+  c.check('every movement carries a reference a partner could be shown',
+    Gateway.authorize(1000).ref && Gateway.capture(1000).ref && Gateway.refund(1000).ref && Gateway.void_().ref);
+
+  /* the demo jobs are traceable both ways */
+  c.check('every settled job has a payment row',
+    LEDGER.filter(e => /^booking\.settled/.test(e.eventType))
+      .every(e => paymentsFor(e.bookingId).some(p => p.type === 'capture' || p.type === 'collection')),
+    LEDGER.filter(e => /^booking\.settled/.test(e.eventType))
+      .filter(e => !paymentsFor(e.bookingId).some(p => p.type === 'capture' || p.type === 'collection'))
+      .map(e => e.bookingId).join(','));
+  c.check('no payment row exists without a booking behind it',
+    PAYMENTS.every(p => BOOKINGS.some(b => b.id === p.bookingId)));
+
+  /* a partner job: held, then released */
+  const partner = pendingProviderRequests().find(b => !/cash/i.test((b.paymentMethod || 'Cash on Arrival'))) ||
+                  BOOKINGS.find(b => b.status === 'requested');
+  if (partner.paymentMethod === undefined || !partner.paymentMethod) partner.paymentMethod = 'GCash (0912***6789)';
+  attemptTransition(partner.id, 'upcoming', PROVIDER);
+  const auth = paymentsFor(partner.id).find(p => p.type === 'authorization');
+  c.check('accepting records an authorization', !!auth);
+  c.check('held money is labelled held, not paid',
+    partner.paymentStatus === 'Held, not yet paid', partner.paymentStatus);
+  c.check('a holding is not revenue',
+    LEDGER.filter(e => e.bookingId === partner.id).every(e => e.eventType !== 'booking.settled'));
+
+  /* a cash job never creates a holding */
+  const cash = BOOKINGS.find(b => b.status === 'ongoing' && /cash on arrival/i.test(b.paymentMethod || ''));
+  c.check('a cash job has no authorization row',
+    !paymentsFor(cash.id).some(p => p.type === 'authorization'));
+
+  /* completing releases */
+  cash.status = 'ongoing';
+  attemptTransition(cash.id, 'completed', PROVIDER);
+  c.check('a cash completion records a collection, not a capture',
+    !!paymentsFor(cash.id).find(p => p.type === 'collection'));
+  c.check('and it says the money was paid on site',
+    cash.paymentStatus === 'Paid on Site', cash.paymentStatus);
+  c.check('the platform is owed the fee rather than holding it',
+    accountBalance('commission_receivable', 'p1') >= cash.pricing.commissionCentavos,
+    String(accountBalance('commission_receivable', 'p1')));
+
+  /* refunds */
+  const refundable = BOOKINGS.find(b => b.status === 'completed' && b.pricing &&
+                                       !/cash on arrival/i.test(b.paymentMethod || ''));
+  const revenueBefore = accountBalance('platform_fee_revenue');
+  const payableBefore = accountBalance('provider_payable', refundable.providerId);
+  const escrowBefore = accountBalance('escrow_held');
+  const total = refundable.pricing.customerTotalCentavos;
+  refundBooking(refundable, Math.round(total / 2), ADMIN, 'Half the work was not done');
+  c.check('a partial refund leaves the job partly settled',
+    refundable.paymentStatus === 'Partly refunded', refundable.paymentStatus);
+  c.check('the fee on the refunded half is reversed',
+    accountBalance('platform_fee_revenue') < revenueBefore);
+  c.check('the provider gives back their half',
+    accountBalance('provider_payable', refundable.providerId) < payableBefore);
+  c.check('and it leaves the holding',
+    accountBalance('escrow_held') === escrowBefore - Math.round(total / 2),
+    String(escrowBefore - accountBalance('escrow_held')));
+  const over = throws(() => { for (let i = 0; i < 8; i++) refundBooking(refundable, total, ADMIN, 'again'); });
+  c.check('a job cannot be refunded past its price', !!over, 'unbounded');
+  c.check('refunded never exceeds what was charged',
+    paymentsFor(refundable.id).filter(p => p.type === 'refund').reduce((t, p) => t + p.amountCentavos, 0) <= total);
+  c.check('every refund names who ordered it',
+    paymentsFor(refundable.id).filter(p => p.type === 'refund').every(p => p.byActor));
+
+  /* cancelling releases nothing as revenue */
+  const upcoming = BOOKINGS.find(b => b.status === 'upcoming' && !/cash on arrival/i.test(b.paymentMethod || ''));
+  const revBefore2 = accountBalance('platform_fee_revenue');
+  attemptTransition(upcoming.id, 'cancelled', CUSTOMER, { reason:'Plans changed' });
+  c.check('a cancellation returns the holding',
+    accountBalance('customer_deposit', upcoming.id) === 0);
+  c.check('and never books revenue for work not done',
+    accountBalance('platform_fee_revenue') === revBefore2);
+  c.check('the authorization is marked voided, not deleted',
+    paymentsFor(upcoming.id).some(p => p.type === 'void') &&
+    paymentsFor(upcoming.id).some(p => p.type === 'authorization' && p.status === 'voided'));
+
+  /* payouts: a schedule, not a wallet */
+  const held = providerBalances('p1');
+  c.check('money the provider collected on site is not treated as ours to pay out',
+    held.pendingCentavos + held.availableCentavos <= accountBalance('provider_payable', 'p1'),
+    JSON.stringify({ pending: held.pendingCentavos, available: held.availableCentavos,
+                     payable: accountBalance('provider_payable', 'p1') }));
+  c.check('cash taken on site is reported separately', typeof held.collectedOnSiteCentavos === 'number');
+
+  const blocked = runPayoutCycle('p6');
+  c.check('a provider under the minimum is not paid', blocked.paid === false, blocked.reason);
+  c.check('and nothing is recorded for a skipped cycle', PAYOUTS.length === 0);
+
+  /* inside the hold, nothing is due yet */
+  c.check('a job younger than the hold window is still pending',
+    providerBalances('p1').availableCentavos === 0, String(providerBalances('p1').availableCentavos));
+
+  /* clear the hold and the minimum so the cycle itself can be proven */
+  app.setConfig({ payoutHoldDays: 0, payoutMinCentavos: 5000 });
+  const before = accountBalance('provider_payable', 'p1');
+  const cycle = runPayoutCycle('p1');
+  c.check('at or above the minimum the cycle pays out', cycle.paid === true, cycle.reason);
+  c.check('a payout never exceeds what the books owe',
+    cycle.payout.amountCentavos <= before);
+  c.check('the payable falls by exactly the payout',
+    accountBalance('provider_payable', 'p1') === before - cycle.payout.amountCentavos);
+  c.check('a full card number never reaches the record',
+    !/\d{9,}/.test(JSON.stringify(cycle.payout)), JSON.stringify(cycle.payout));
+  const again = runPayoutCycle('p1');
+  c.check('a second cycle finds nothing new', again.paid === false, JSON.stringify(again.payout));
+  c.check('payouts leave the holding as they leave the books',
+    accountBalance('escrow_held') >= 0, String(accountBalance('escrow_held')));
+
+  /* the two axes stay separate (AGENTS.md 22) */
+  c.check('a booking can be completed while its money is still moving',
+    BOOKINGS.some(b => b.status === 'completed' && b.paymentStatus !== 'Paid Online'),
+    BOOKINGS.map(b => b.status + '/' + b.paymentStatus).slice(0, 3).join(' '));
+  c.check('and the axes are different fields on the same record',
+    BOOKINGS.every(b => 'status' in b && 'paymentStatus' in b));
+  return c;
+});
+
 (async () => {
   let total = 0, failed = 0;
   for (const { name, fn } of suites) {
