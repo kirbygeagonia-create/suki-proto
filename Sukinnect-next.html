@@ -1551,6 +1551,133 @@ const PROVIDER_BOOKINGS = [
 // desktop phone mock and let the UI fill the real device screen.
 if (/[?&]app=1(&|$)/.test(location.search) || /SukinnectApp/i.test(navigator.userAgent)) document.body.classList.add('app-mode');
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   DOMAIN KERNEL · part 1 — persistence
+   ═══════════════════════════════════════════════════════════════════════════
+   Nothing between these banners touches the DOM, and nothing here reaches a
+   screen. Records already live in the collections the app mutates; this layer
+   decides only whether they survive a reload, and what happens when storage is
+   not available at all. Screens call down into the kernel; the kernel never
+   calls up into a screen.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Raising this makes an old dump get dropped rather than trusted: a snapshot
+   written by a previous shape of these records is discarded and the seed is used
+   fresh, so a rebuild can never half-load someone's earlier session. */
+const SCHEMA_VERSION = 1;
+const STORE_KEY = 'sukinnect.snapshot.v1';
+
+const Store = (function () {
+  /* A file:// page has an opaque origin, private windows and hardened Safari
+     throw on access, and the WebView can be configured either way. Probe once.
+     Storage is a convenience here, never a requirement for the app to run. */
+  let usable = false;
+  try {
+    localStorage.setItem('__sukinnect_probe__', '1');
+    localStorage.removeItem('__sukinnect_probe__');
+    usable = true;
+  } catch (err) { usable = false; }
+
+  let memory = null;
+
+  return {
+    kind: usable ? 'local-storage' : 'memory',
+    isPersistent: () => usable,
+    read() {
+      try {
+        const raw = usable ? localStorage.getItem(STORE_KEY) : memory;
+        if (!raw) return null;
+        const snap = JSON.parse(raw);
+        return snap && snap.schemaVersion === SCHEMA_VERSION ? snap : null;
+      } catch (err) { return null; }        /* an unreadable dump is no dump */
+    },
+    write(snap) {
+      try {
+        if (usable) localStorage.setItem(STORE_KEY, JSON.stringify(snap));
+        else memory = JSON.stringify(snap);
+        return true;
+      } catch (err) { return false; }        /* quota lost: the session still works */
+    },
+    /* In-memory mode keeps its own dump so a reset can undo it, and so clear()
+       means the same thing in both kinds. */
+    clear() {
+      try { if (usable) localStorage.removeItem(STORE_KEY); else memory = null; } catch (err) {}
+    }
+  };
+})();
+
+function cloneRecords(list) { return JSON.parse(JSON.stringify(list)); }
+
+function replaceContents(target, incoming) {
+  if (!Array.isArray(incoming)) return target;
+  target.length = 0;
+  incoming.forEach(item => target.push(item));
+  return target;
+}
+
+/* A booking's provider crosses JSON as a copy, and a copy is not the record in
+   PROVIDERS: two objects that look alike but update separately is how a demo
+   starts lying about the marketplace. Re-link every booking to the live record.
+   (Step 3 removes the object reference altogether by storing a provider id.) */
+function relinkProviders(bookings, providers) {
+  bookings.forEach(b => {
+    if (!b || !b.provider || !b.provider.id) return;
+    const live = providers.find(p => p.id === b.provider.id);
+    if (live) b.provider = live;
+  });
+  return bookings;
+}
+
+/* Captured before anything is hydrated: the seed is the pristine demo data, so a
+   reset can restore records that were mutated in place. */
+const SEED = {
+  providers: cloneRecords(PROVIDERS),
+  residentBookings: cloneRecords(RESIDENT_BOOKINGS),
+  providerBookings: cloneRecords(PROVIDER_BOOKINGS),
+  notifications: cloneRecords(NOTIFICATIONS)
+};
+
+/* Only records. Which tab is open, which sheet is raised and where the screen
+   was scrolled are not data and are never persisted. */
+function snapshot() {
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    savedAt: new Date().toISOString(),
+    providers: PROVIDERS,
+    residentBookings: RESIDENT_BOOKINGS,
+    providerBookings: PROVIDER_BOOKINGS,
+    notifications: NOTIFICATIONS,
+    profileData: state.profileData,
+    providerProfileData: state.providerProfileData
+  };
+}
+
+function persist() { return Store.write(snapshot()); }
+
+function hydrate() {
+  const snap = Store.read();
+  if (!snap) return { restored: false, kind: Store.kind };
+  replaceContents(PROVIDERS, snap.providers);
+  replaceContents(RESIDENT_BOOKINGS, snap.residentBookings);
+  replaceContents(PROVIDER_BOOKINGS, snap.providerBookings);
+  replaceContents(NOTIFICATIONS, snap.notifications);
+  relinkProviders(RESIDENT_BOOKINGS, PROVIDERS);
+  if (snap.profileData) Object.assign(state.profileData, snap.profileData);
+  if (snap.providerProfileData) Object.assign(state.providerProfileData, snap.providerProfileData);
+  return { restored: true, kind: Store.kind, savedAt: snap.savedAt };
+}
+
+/* Back to the demo data the file shipped with, and forget this device's dump. */
+function restoreSeed() {
+  replaceContents(PROVIDERS, cloneRecords(SEED.providers));
+  replaceContents(RESIDENT_BOOKINGS, cloneRecords(SEED.residentBookings));
+  replaceContents(PROVIDER_BOOKINGS, cloneRecords(SEED.providerBookings));
+  replaceContents(NOTIFICATIONS, cloneRecords(SEED.notifications));
+  relinkProviders(RESIDENT_BOOKINGS, PROVIDERS);
+  Store.clear();
+  return persist();
+}
+
 let state = {
   // Cold launch shows the branded screen once; sign-out goes straight to
   // 'login', so the launch screen is not a destination you can navigate to.
@@ -2317,6 +2444,7 @@ function submitBookingRequest(){
       bg: 'var(--deep-100)',
       bookingId: booking.id
     });
+    persist();                     // the request is a record now; the provider must be able to find it
     state.requestSubmitting = false;
     state.requestDraft = null;
     state.sheet = null;
@@ -2330,6 +2458,7 @@ function cancelBookingRequest(id){
   if(!b || b.status !== 'requested') return;
   b.status = 'cancelled';
   b.cancelReason = 'Cancelled by you while waiting for the provider';
+  persist();
   render();
   showToast('Request withdrawn - the provider is no longer notified');
 }
@@ -2609,7 +2738,7 @@ function loginHTML(){
           ? `<button type="button" class="auth-admin" id="rt-admin-exit">Switch to Resident</button>`
           : `<button type="button" class="auth-admin" id="rt-admin">Admin sign-in</button>`}
       </footer>
-      <p class="auth-note-line">Prototype build 1.1 &middot; sample data only, nothing is stored.</p>
+      <p class="auth-note-line">Prototype build &ldquo;next&rdquo; &middot; demo records, kept ${Store.isPersistent() ? 'on this device only' : 'in memory and lost on reload'}. Sign-in is not an account.</p>
     </div>
   </div>`;
 }
@@ -3417,6 +3546,7 @@ function setBookingRating(bookingId, rating){
   const b = RESIDENT_BOOKINGS.find(x => x.id === bookingId);
   if(!b || b.status !== 'completed' || !rating) return;
   b.myRating = rating;
+  persist();
   render();
   showToast('You rated ' + rating + ' out of 5 - saved with this record');
 }
@@ -3425,6 +3555,7 @@ function changeBookingRating(bookingId){
   const b = RESIDENT_BOOKINGS.find(x => x.id === bookingId);
   if(!b || b.status !== 'completed') return;
   b.myRating = null;
+  persist();
   render();
 }
 
@@ -3728,6 +3859,7 @@ function saveResidentProfile(){
   if(address) state.profileData.address = address.value.trim() || state.profileData.address;
   if(barangay) state.profileData.barangay = barangay.value.trim() || state.profileData.barangay;
   if(emergency) state.profileData.emergencyContact = emergency.value.trim() || state.profileData.emergencyContact;
+  persist();
   state.residentProfileModal = 'saved';
   render();
 }
@@ -4406,6 +4538,7 @@ function answerRequest(bookingId, action){
     state.providerDeclineConfirm = false;
     if(action === 'accept'){
       b.status = 'upcoming';
+      persist();
       showToast('Accepted - ' + b.client + ' is notified and ' + b.date + ', ' + b.time + ' is held for you');
       render();
       // Accepting is what unlocks the door: the screen now carries a live map, so
@@ -4415,6 +4548,7 @@ function answerRequest(bookingId, action){
     }
     b.status = 'cancelled';
     b.cancelReason = 'Declined by you';
+    persist();
     showToast('Declined - ' + b.client + ' can now look for another provider');
     render();
   }, 750);
@@ -4553,6 +4687,7 @@ function saveProviderProfessionalProfile(){
   if(rate){ const parsed = toCentavos(Number(rate.value)); if(Number.isFinite(parsed) && parsed > 0) state.providerProfileData.rateCentavos = parsed; }
   if(radius) state.providerProfileData.serviceRadius = radius.value.trim() || state.providerProfileData.serviceRadius;
   if(hours) state.providerProfileData.workingHours = hours.value.trim() || state.providerProfileData.workingHours;
+  persist();
   state.providerProfileModal = 'saved';
   render();
 }
@@ -4743,6 +4878,7 @@ function bindTabHandlers(){
   }
 }
 
+hydrate();
 render();
 </script>
 </body>
