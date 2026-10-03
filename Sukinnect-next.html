@@ -293,15 +293,19 @@
      thumb target, icon badge top-left and the label bottom-left. The service
      colour is confined to the badge: it is a secondary cue, the brand is not (45). */
   .cat{
-    display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-end;
-    gap:5px; min-height:70px; padding:8px 8px 9px; text-align:left;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:7px; min-height:88px; padding:10px 6px; text-align:center;
     background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md);
     font-size:var(--t-body); font-weight:700; cursor:pointer; color:var(--ink);
+    line-height:1.2;
   }
+  /* The trade colour stays a secondary cue on the badge only; the brand still
+     owns everything around it (45). */
   .cat .badge{
-    width:30px; height:30px; border-radius:9px; flex-shrink:0;
+    width:44px; height:44px; border-radius:14px; flex-shrink:0;
     display:flex; align-items:center; justify-content:center;
   }
+  .cat .badge svg, .cat .badge re-icon{ width:22px; height:22px; }
   /* The concierge is a prototype feature that sharpens discovery; it must not
      outrank search and categories, so it is one row, not a hero (20, 8). */
   .concierge-row{
@@ -544,19 +548,27 @@
   .search-container{display:flex; align-items:center; gap:8px; position:relative;}
   .search-wrapper{
     display:flex; align-items:center; min-height:var(--field-h);
-    background:var(--surface); border:1px solid var(--line);
-    border-radius:var(--r-md); padding:4px 6px 4px 12px; gap:8px; flex:1;
+    background:var(--cloud); border:1px solid transparent;
+    border-radius:var(--r-pill); padding:5px 6px 5px 14px; gap:8px; flex:1;
+    box-shadow:inset 0 0 0 1px var(--border);
+  }
+  /* A filled field that is being typed in lifts onto white and takes the brand
+     ring, so the state is not carried by colour alone (72). */
+  .search-wrapper:focus-within{
+    background:var(--surface); border-color:var(--brand-primary);
+    box-shadow:var(--ring);
   }
   .search-wrapper input{
     border:none; outline:none; font-family:inherit; font-size:var(--t-input); width:100%;
     background:transparent; color:var(--ink);
   }
   .search-btn{
-    background:var(--deep); color:var(--text-on-brand); border:none; border-radius:var(--r-sm);
+    background:var(--grad-cta); color:var(--text-on-brand); border:none; border-radius:var(--r-pill);
     width:var(--tap); height:var(--tap); cursor:pointer; display:flex;
     align-items:center; justify-content:center; flex-shrink:0;
+    box-shadow:0 2px 8px rgba(3,82,174,.28);
   }
-  .search-btn:active{background:var(--deep-700);}
+  .search-btn:active{filter:saturate(1.15) brightness(.94);}
   .filter-icon-btn{
     background:var(--surface); border:1px solid var(--line); border-radius:12px; width:44px; height:44px;
     display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--deep);
@@ -4397,6 +4409,20 @@ function residentHome(){
     completed:'Done - pay and rate it from the booking',
     cancelled: active.cancelReason || 'Closed'
   }[active.status] : '';
+  /* Her own completed jobs, newest provider first, one card per provider. With no
+     history yet the rail falls back to the roster rather than showing an empty
+     shelf — and it says which of the two it is showing. */
+  const repeat = (() => {
+    const done = bookingsForResident().filter(b => b.status === 'completed')
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+    const seen = [];
+    done.forEach(b => {
+      const p = providerOf(b);
+      if (p && !seen.some(r => r.p.id === p.id)) seen.push({ p, last: b });
+    });
+    if (seen.length) return seen.slice(0, 6);
+    return PROVIDERS.slice(0, 6).map(p => ({ p, last: null }));
+  })();
 
   return `
   <div class="topbar">
@@ -4461,13 +4487,15 @@ function residentHome(){
       <span style="color:var(--mist); display:inline-flex;">${ic("arrow-right",14)}</span>
     </button>
 
-    <div class="section-label">Book again</div>
+    <div class="section-label">${repeat.length ? 'Book again' : 'Highly rated nearby'}</div>
     <div class="hscroll" style="display:flex; gap:8px;">
-      ${[PROVIDERS[0],PROVIDERS[2],PROVIDERS[1]].map(p=>`
-        <div class="card" style="min-width:112px; text-align:center; cursor:pointer; margin-bottom:0; padding:11px 8px;" data-provider="${p.id}">
-          <div style="display:flex; justify-content:center; margin-bottom:6px;">${photoAvatar(p, 44)}</div>
-          <div style="font-size:var(--t-body); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.name.split(' ')[0]}</div>
-          <div style="display:flex; align-items:center; justify-content:center; gap:3px; margin-top:3px;">${stars(p.rating,11)}<span style="font-size:var(--t-caption); font-weight:700; color:var(--ink);">${p.rating}</span></div>
+      ${repeat.map(({ p, last }) => `
+        <div class="card" style="min-width:116px; text-align:center; cursor:pointer; margin-bottom:0; padding:12px 8px;" data-provider="${p.id}">
+          <div style="display:flex; justify-content:center; margin-bottom:7px;">${photoAvatar(p, 46)}</div>
+          <div style="font-size:var(--t-body); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(p.name.split(' ')[0])}</div>
+          <div style="font-size:var(--t-caption); color:var(--mist); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(p.service)}</div>
+          <div style="display:flex; align-items:center; justify-content:center; gap:3px; margin-top:4px;">${stars(p.rating,11)}<span style="font-size:var(--t-caption); color:var(--ink-soft); font-weight:700;">${p.rating}</span></div>
+          <div style="font-size:var(--t-caption); margin-top:5px; font-weight:800; color:var(--deep);">${last ? 'last ' + pesoShort(last.amountCentavos) : 'from ' + pesoShort(cheapestListing(p))}</div>
         </div>`).join('')}
     </div>
   </div>`;
