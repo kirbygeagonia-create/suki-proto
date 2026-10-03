@@ -17,12 +17,14 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   'listingById', 'agoText', 'serviceMeta', 'peso', 'pesoShort', 'pesoCompact', 'rateLabel',
   'toCentavos', 'toPesos', 'computeBreakdown', 'breakdownForBooking', 'postEvent', 'settlementLines', 'settlementToProvider', 'freezePricing', 'commissionRateFor', 'CONFIG_DEFAULTS', 'CONFIG_AUDIT',
   'accountBalance', 'ledgerBalance', 'ledgerFor', 'ACCOUNTS', 'LEDGER_EVENTS',
-  'TRANSITIONS', 'attemptTransition', 'transitionAllowed', 'bookingTimeline',
-  'MockGateway', 'authorizeBooking', 'captureBooking', 'voidBooking', 'refundBooking',
-  'settleCashBooking', 'providerBalances', 'runPayoutCycle', 'platformStatement',
+  'TRANSITIONS', 'BOOKING_STATES', 'FINISHED_STATES', 'attemptTransition', 'transitionAllowed',
+  'nextActionFor', 'bookingTimeline', 'label', 'stateHint', 'recordStatusEvent', 'seedStatusHistory',
+  'applyDueTransitions', 'MockGateway', 'authorizeBooking', 'captureBooking', 'voidBooking',
+  'refundBooking', 'settleCashBooking', 'providerBalances', 'runPayoutCycle', 'platformStatement',
   'providerStatement', 'commissionReceivableAgeing', 'SCHEMA_VERSION', 'ROOT_TABS',
   'submitBookingRequest', 'answerRequest', 'moveJobForward', 'openProviderDetail',
-  'render', 'showToast', 'resetDemoData', 'setConfig', 'rateFor', 'LedgerImbalance'];
+  'render', 'showToast', 'resetDemoData', 'setConfig', 'rateFor', 'LedgerImbalance',
+  'CURRENT_CUSTOMER_ID', 'CURRENT_PROVIDER_ID', 'CONFIG_DEFAULTS', 'commissionRateFor'];
 
 function boot({ appMode = false, storage = null } = {}) {
   const src = fs.readFileSync(APP, 'utf8');

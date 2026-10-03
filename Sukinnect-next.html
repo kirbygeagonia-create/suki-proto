@@ -1517,7 +1517,7 @@ const BOOKINGS = [
     amountCentavos:35000, paymentStatus:'Unpaid', arrivalTime:'Awaiting provider',
     barangay:'Poblacion', address:'Blk 5 Lot 2, Bonifacio St., Poblacion',
     lat:6.3652, lng:124.9301, notes:'Wasteful but not overflowing yet.',
-    createdAt:isoMinutesAgo(20), source:'demo'
+    createdAt:isoMinutesAgo(6), source:'demo'
   },
   {
     id:'pb7', customerId:'c8', providerId:'p1',
@@ -1526,7 +1526,7 @@ const BOOKINGS = [
     amountCentavos:40000, paymentStatus:'Unpaid', arrivalTime:'Awaiting provider',
     barangay:'San Isidro', address:'6 Santiago Ave., San Isidro',
     lat:6.3887, lng:124.9463, notes:'Smell reaches the sala by evening.',
-    createdAt:isoMinutesAgo(120), source:'demo'
+    createdAt:isoMinutesAgo(14), source:'demo'
   }
 ];
 
@@ -1678,6 +1678,12 @@ function postEvent(eventType, lines, ctx) {
 }
 
 function ledgerFor(bookingId) { return LEDGER.filter(e => e.bookingId === bookingId); }
+
+/* Settled means an earnings entry exists — not merely that the booking appears in
+   the books at all, because a held job already appears there. */
+function isSettled(booking) {
+  return ledgerFor(booking.id).some(e => e.eventType === 'booking.settled' || e.eventType === 'booking.settled_cash');
+}
 
 /* Debits raise assets and expenses; credits raise liabilities and revenue. */
 function accountBalance(account, scope) {
@@ -1875,8 +1881,15 @@ function seedHistoricalLedger() {
     b.summary = b.summary || listing.title;
     void provider;
   });
-  BOOKINGS.filter(b => b.source === 'demo' && b.status === 'completed' && b.pricing && !ledgerFor(b.id).length)
-    .forEach(b => settleHistoric(b));
+  BOOKINGS.filter(b => b.source === 'demo' && b.pricing &&
+                       ['upcoming', 'ongoing', 'completed'].includes(b.status))
+    .forEach(b => takeHolding(b));
+  BOOKINGS.filter(b => b.source === 'demo' && b.status === 'completed' && b.pricing && !isSettled(b))
+    .forEach(b => settleBooking(b));
+  /* A deposit that outlives its job is money still owed to somebody. Anything
+     that finished without a settlement and without a return is a hole. */
+  BOOKINGS.filter(b => b.source === 'demo' && ['cancelled','expired','no_show'].includes(b.status))
+    .forEach(b => { if (accountBalance('customer_deposit', b.id) > 0) returnHolding(b, 'Demo record closed'); });
 }
 
 /* What the platform owes the provider out of a settled job: their share of the
@@ -1903,7 +1916,30 @@ function settlementLines(booking) {
   return lines;
 }
 
-function settleHistoric(booking) {
+/* Funds the platform is holding for a job it has not delivered yet. Accepting
+   creates the obligation, completing converts it into provider earnings and
+   platform revenue, and cancelling or letting it lapse gives it back. Cash work
+   never passes through here, because no money was ever taken for it. */
+function takeHolding(booking) {
+  if (!booking.pricing) return null;
+  if (/cash on arrival/i.test(booking.paymentMethod || '')) return null;
+  if (ledgerFor(booking.id).some(e => e.eventType === 'payment.authorized')) return null;
+  return postEvent('payment.authorized', [
+    { account:'escrow_held', direction:'debit', amountCentavos: booking.pricing.customerTotalCentavos },
+    { account:'customer_deposit', scope: booking.id, direction:'credit', amountCentavos: booking.pricing.customerTotalCentavos }
+  ], { bookingId: booking.id, note:'Held on acceptance', source: booking.source });
+}
+
+function returnHolding(booking, note) {
+  const held = accountBalance('customer_deposit', booking.id);
+  if (held <= 0) return null;
+  return postEvent('payment.voided', [
+    { account:'customer_deposit', scope: booking.id, direction:'debit', amountCentavos: held },
+    { account:'escrow_held', direction:'credit', amountCentavos: held }
+  ], { bookingId: booking.id, note: note || 'Held money returned', source: booking.source });
+}
+
+function settleBooking(booking) {
   const p = booking.pricing;
   if (/cash on arrival/i.test(booking.paymentMethod || '')) {
     /* The provider collected the cash on site. The platform never held it, so
@@ -1917,6 +1953,356 @@ function settleHistoric(booking) {
     [{ account:'customer_deposit', scope: booking.id, direction:'debit', amountCentavos: p.customerTotalCentavos }]
       .concat(settlementLines(booking)),
     { bookingId: booking.id, at: p.frozenAt, note: 'Released on completion', source: 'demo' });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DOMAIN KERNEL · part 3 — the booking state machine
+   ═══════════════════════════════════════════════════════════════════════════
+   A booking is the most important object in the product, so the rules about what
+   may happen to it belong in one table rather than scattered through nineteen
+   `if (status === …)` comparisons in the markup. Every move names who may make
+   it, what has to be true first, and what money, notification and record it
+   leaves behind.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const BOOKING_STATES = {
+  requested: { label:'Requested',       tone:'quiet',  hint:'Waiting for the provider to answer' },
+  upcoming:  { label:'Accepted',        tone:'held',   hint:'Booked, not started' },
+  en_route:  { label:'On the way',      tone:'active', hint:'The provider has left for you' },
+  arrived:   { label:'Arrived',         tone:'active', hint:'The provider is at the door' },
+  ongoing:   { label:'In progress',     tone:'active', hint:'The work is being done now' },
+  completed: { label:'Completed',       tone:'done',   hint:'Done — the record and the payment stand' },
+  cancelled: { label:'Cancelled',       tone:'gone',   hint:'Closed before the work was delivered' },
+  expired:   { label:'No answer',       tone:'gone',   hint:'The request was never accepted' },
+  no_show:   { label:'No one there',    tone:'gone',   hint:'The provider arrived and no one was home' },
+  disputed:  { label:'Under review',    tone:'alert',  hint:'Evidence is being read; nothing is decided yet' }
+};
+
+/* Terminal states settle. Nothing leaves them except a dispute raised in time. */
+const FINISHED_STATES = ['completed', 'cancelled', 'expired', 'no_show'];
+
+/* One timeline, three uses: the customer's tracking view, the dispute evidence
+   chain, and the administrator's audit. They were three separate inventions,
+   each hand-typed into markup. */
+const STATUS_EVENTS = [];
+let statusEventSeq = 0;
+let statusNoteSeq = 0;
+
+function recordStatusEvent(booking, from, to, actor, note, at) {
+  const entry = { id: 'se' + (++statusEventSeq), bookingId: booking.id, from, to,
+                  actorRole: (actor && actor.role) || 'system', actorId: (actor && actor.id) || null,
+                  note: note || '', at: at || new Date().toISOString() };
+  STATUS_EVENTS.push(entry);
+  return entry;
+}
+
+function bookingTimeline(bookingId) {
+  return STATUS_EVENTS.filter(e => e.bookingId === bookingId)
+    .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+}
+
+function label(status) { return (BOOKING_STATES[status] || { label: status }).label; }
+function stateHint(status) { return (BOOKING_STATES[status] || { hint: '' }).hint; }
+
+class IllegalTransition extends Error {
+  constructor(from, to) {
+    super('a booking cannot go from "' + from + '" to "' + to + '"');
+    this.name = 'IllegalTransition'; this.from = from; this.to = to;
+  }
+}
+class GuardRejected extends Error {
+  constructor(reason) { super(reason); this.name = 'GuardRejected'; this.reason = reason; }
+}
+
+/* ---- guards ---------------------------------------------------------------- */
+function actingAs(actor, roles) { return roles.includes((actor && actor.role) || 'system'); }
+
+function providerIsFreeFrom(booking) {
+  /* One job in progress per person. A solo plumber who accepts two overlapping
+     visits has promised something they cannot deliver, and the marketplace will
+     be judged on the one they missed. */
+  const clash = bookingsForProvider().some(b => b.id !== booking.id &&
+    (b.status === 'ongoing' || b.status === 'en_route' || b.status === 'arrived'));
+  return clash
+    ? { ok:false, reason:'You already have a job in progress. Finish or reschedule that one first.' }
+    : { ok:true };
+}
+
+function canDispute(booking) {
+  const agreedAt = Date.parse(booking.completedAt || (booking.pricing && booking.pricing.frozenAt) || booking.createdAt);
+  return Date.now() <= agreedAt + CONFIG.warrantyDays * 86400000
+    ? { ok:true }
+    : { ok:false, reason:'The warranty window recorded on this job has passed.' };
+}
+
+/* ---- effects --------------------------------------------------------------- */
+function onAccept(booking, actor) {
+  /* Accepting is the moment a request becomes an agreement, so the terms freeze
+     here — what the job costs, what the platform takes, what the provider keeps.
+     From now on the booking carries its own price rather than pointing at a rate
+     table an administrator may change next week. */
+  if (!booking.pricing) {
+    const listing = booking.listingId ? listingById(booking.listingId) : defaultListingFor(booking.providerId);
+    const provider = providerOf(booking);
+    freezePricing(booking, computeBreakdown({
+      baseCentavos: listing ? listing.basePriceCentavos : provider.rateCentavos,
+      categoryId: listing ? listing.categoryId : provider.serviceId,
+      inclusions: []
+    }));
+    booking.listingId = listing ? listing.id : booking.listingId || null;
+    booking.listingTitle = listing ? listing.title : provider.service;
+  }
+  booking.acceptedAt = new Date().toISOString();
+  if (!/cash on arrival/i.test(booking.paymentMethod || '')) {
+    booking.paymentStatus = 'Authorized';               /* held, not earned */
+    takeHolding(booking);
+  }
+  return { notify:{ to:'customer', title:'Booking confirmed',
+                    body: actor.name + ' accepted ' + booking.summary + ' for ' + booking.date + ', ' + booking.time + '.' } };
+}
+
+function onStart(booking) {
+  booking.startedAt = new Date().toISOString();
+  return { notify:{ to:'customer', title:'Work started', body: booking.summary + ' is in progress.' } };
+}
+
+function onArrive(booking) {
+  booking.arrivedAt = new Date().toISOString();
+  return { notify:{ to:'customer', title:'Your provider has arrived',
+                    body: providerOf(booking).name + ' is at ' + (booking.address || 'the address you gave') + '.' } };
+}
+
+function onComplete(booking) {
+  booking.completedAt = new Date().toISOString();
+  booking.confirmedBy = null;            /* the customer still has to say yes */
+  if (isSettled(booking))                /* already converted into earnings */
+    return { notify:{ to:'customer', title:'Service completed', body:'Confirm and rate the job when you are satisfied.' } };
+  settleBooking(booking);
+  return { notify:{ to:'customer', title:'Service completed',
+                    body: booking.summary + ' is marked done. Confirm and rate it when you are satisfied.' } };
+}
+
+/* A late cancellation costs the customer something and pays it to the provider —
+   never to the platform. A marketplace that earns from cancellations has an
+   incentive it should not have. */
+function cancellationFee() { return CONFIG.cancellationFeeAfterAcceptCentavos; }
+
+function compensateProvider(booking, note) {
+  const fee = cancellationFee();
+  if (fee <= 0) return null;
+  return { type:'booking.cancelled_compensated',
+           lines: [{ account:'cancellation_compensation', scope: booking.providerId, direction:'debit', amountCentavos: fee },
+                   { account:'provider_payable', scope: booking.providerId, direction:'credit', amountCentavos: fee }],
+           note };
+}
+
+function onCancel(booking, actor, opts) {
+  const previous = (opts && opts.previousStatus) || booking.status;
+  const late = ['upcoming', 'en_route', 'arrived', 'ongoing'].includes(previous);
+  booking.cancelledBy = (actor && actor.role) || 'system';
+  booking.cancelReason = (opts && opts.reason) ||
+    (booking.cancelledBy === 'provider' ? 'Declined by the provider' : 'Cancelled by the customer');
+  booking.cancellationFeeCentavos = late ? cancellationFee() : 0;
+  returnHolding(booking, 'Cancelled before the work was delivered');
+  const ledger = late ? compensateProvider(booking, 'Late cancellation by ' + booking.cancelledBy) : null;
+  return { ledger,
+    notify:{ to: booking.cancelledBy === 'customer' ? 'provider' : 'customer',
+             title:'Booking cancelled',
+             body: booking.summary + (late && ledger ? ' was cancelled after acceptance; the call-out fee is recorded.' : ' will not go ahead.') } };
+}
+
+function onNoShow(booking) {
+  booking.cancelReason = 'The provider arrived and no one was there';
+  returnHolding(booking, 'The visit was made but the work was not');
+  return { ledger: compensateProvider(booking, 'Call-out made, client not present'),
+           notify:{ to:'customer', title:'No one was there',
+                    body:'The call-out was made and recorded. The visit fee is owed to the provider.' } };
+}
+
+function onExpire(booking) {
+  returnHolding(booking, 'Never accepted, so nothing was owed');
+  booking.cancelReason = 'No provider answered within ' + CONFIG.acceptTtlMinutes + ' minutes';
+  return { notify:{ to:'customer', title:'No answer this time',
+                    body:'Try another match — you were not charged and nothing was booked.' } };
+}
+
+function onDispute(booking, actor, opts) {
+  const held = booking.pricing && !/cash on arrival/i.test(booking.paymentMethod || '')
+    ? settlementToProvider(booking.pricing) : 0;
+  return {
+    ledger: held > 0 ? { type:'dispute.held',
+      lines: [{ account:'provider_payable', scope: booking.providerId, direction:'debit', amountCentavos: held },
+              { account:'dispute_hold', scope: booking.id, direction:'credit', amountCentavos: held }],
+      note:(opts && opts.reason) || 'Case opened' } : null,
+    notify:{ to:'admin', title:'Dispute opened',
+             body:'Case on ' + booking.summary + ' is waiting for evidence. Nothing is decided yet.' }
+  };
+}
+
+function onUphold(booking) {
+  /* Release what the freeze held. This is a decision to hand the money back to
+     the provider and it is entered as one — the freeze is never deleted. */
+  const held = accountBalance('dispute_hold', booking.id);
+  if (held <= 0) return { notify:{ to:'customer', title:'Case closed', body:'The booking stands as completed.' } };
+  return { ledger: { type:'dispute.released',
+      lines: [{ account:'dispute_hold', scope: booking.id, direction:'debit', amountCentavos: held },
+              { account:'provider_payable', scope: booking.providerId, direction:'credit', amountCentavos: held }],
+      note:'Closed in the provider’s favour' },
+    notify:{ to:'customer', title:'Case closed', body:'The booking stands as completed.' } };
+}
+
+function onRefundDue() { return { refundDue:true }; }
+
+/* ---- the table ------------------------------------------------------------- */
+const TRANSITIONS = {
+  requested: {
+    upcoming:  { actors:['provider'],                     effects: onAccept },
+    cancelled: { actors:['customer', 'provider', 'system'], effects: onCancel },
+    expired:   { actors:['system'],                       effects: onExpire }
+  },
+  upcoming: {
+    en_route:  { actors:['provider'],                     effects: null },
+    ongoing:   { actors:['provider'], guard: providerIsFreeFrom, effects: onStart },
+    cancelled: { actors:['customer', 'provider'],         effects: onCancel },
+    disputed:  { actors:['customer', 'admin'], guard: canDispute, effects: onDispute }
+  },
+  en_route: {
+    arrived:   { actors:['provider'],                     effects: onArrive },
+    no_show:   { actors:['provider'],                     effects: onNoShow },
+    cancelled: { actors:['customer'],                     effects: onCancel }
+  },
+  arrived: {
+    ongoing:   { actors:['provider'], guard: providerIsFreeFrom, effects: onStart },
+    no_show:   { actors:['provider'],                     effects: onNoShow }
+  },
+  ongoing: {
+    completed: { actors:['provider', 'customer'],         effects: onComplete },
+    disputed:  { actors:['customer', 'provider', 'admin'], guard: canDispute, effects: onDispute }
+  },
+  completed: {
+    disputed:  { actors:['customer', 'admin'], guard: canDispute, effects: onDispute }
+  },
+  disputed: {
+    /* Resolution is the administrator's, with the money rules beside it; the
+       machine only states which outcomes exist from here. */
+    completed: { actors:['admin'],                        effects: onUphold },
+    cancelled: { actors:['admin'],                        effects: onRefundDue }
+  },
+  cancelled: {}, expired: {}, no_show: {}
+};
+
+/* ---- the only door through -------------------------------------------------- */
+function transitionAllowed(booking, to, actor) {
+  const rules = TRANSITIONS[booking.status];
+  if (!rules || !rules[to])
+    return { ok:false, reason:'A booking that is ' + label(booking.status).toLowerCase() + ' cannot become ' + label(to).toLowerCase() + '.' };
+  if (!actingAs(actor, rules[to].actors))
+    return { ok:false, reason:'Only ' + rules[to].actors.join(' or ') + ' can do that.' };
+  return rules[to].guard ? rules[to].guard(booking, actor) : { ok:true, actors: rules[to].actors };
+}
+
+function nextActionFor(booking, role) {
+  const rules = TRANSITIONS[booking.status] || {};
+  const options = Object.keys(rules).filter(to => actingAs({ role }, rules[to].actors));
+  return options;
+}
+
+function attemptTransition(bookingId, to, actor, opts) {
+  const booking = bookingById(bookingId);
+  if (!booking) throw new Error('no booking ' + bookingId);
+  const from = booking.status;
+  const permission = transitionAllowed(booking, to, actor);
+  if (!permission.ok) throw new GuardRejected(permission.reason);
+
+  /* Effects run before the status moves. If a ledger entry refuses to balance,
+     the status never changes and the two cannot disagree about this job. */
+  const outcome = TRANSITIONS[from][to].effects
+    ? TRANSITIONS[from][to].effects(booking, actor, Object.assign({ previousStatus: from }, opts || {}))
+    : {};
+
+  booking.status = to;
+  booking.statusChangedAt = new Date().toISOString();
+  if (outcome.refundDue) booking.refundDue = true;
+  recordStatusEvent(booking, from, to, actor, (opts && opts.note) || '');
+
+  if (outcome.ledger)
+    postEvent(outcome.ledger.type, outcome.ledger.lines,
+      { bookingId: booking.id, note: outcome.ledger.note, source: booking.source });
+
+  if (outcome.notify) pushStatusNotification(booking, outcome.notify);
+  persist();
+  return booking;
+}
+
+const STATUS_NOTIFY_ICON = {
+  completed:'check-circle', cancelled:'alert-triangle', expired:'clock', no_show:'alert-triangle',
+  arrived:'map-pin', en_route:'map-pin', ongoing:'check', upcoming:'calendar', disputed:'scale'
+};
+
+function pushStatusNotification(booking, note) {
+  if (!note) return;
+  NOTIFICATIONS.unshift({ id:'n-' + booking.id + '-' + (++statusNoteSeq),
+    title: note.title, body: note.body, time:'Just now', unread:true,
+    icon: STATUS_NOTIFY_ICON[booking.status] || 'calendar', bg:'var(--deep-100)', bookingId: booking.id });
+}
+
+/* ---- scheduled moves the clock owes us -------------------------------------- */
+/* There is no server and no cron: a closed tab runs nothing. Due transitions are
+   therefore evaluated whenever the app is opened, and a job that expired an hour
+   ago is expired honestly, with its real timestamp, instead of made to look as
+   though it only just happened. */
+function applyDueTransitions() {
+  const applied = [];
+  const ttl = CONFIG.acceptTtlMinutes * 60000;
+  BOOKINGS.filter(b => b.status === 'requested' && Date.now() - Date.parse(b.createdAt) > ttl)
+    .forEach(b => { attemptTransition(b.id, 'expired', { role:'system' }); applied.push({ id:b.id, moved:'expired' }); });
+
+  const grace = CONFIG.autoCompleteHours * 3600000;
+  BOOKINGS.filter(b => b.status === 'completed' && !b.confirmedBy && b.completedAt &&
+                       Date.now() - Date.parse(b.completedAt) > grace)
+    .forEach(b => { b.confirmedBy = 'auto'; applied.push({ id:b.id, moved:'auto-confirmed' }); });
+  return applied;
+}
+
+/* ---- what the seed owes the machine ---------------------------------------- */
+/* The demo jobs get the timeline they claim on screen. A tracking view that shows
+   "Provider reviewing" as checked must be able to point at the entry that made it
+   checked. */
+function seedStatusHistory() {
+  if (STATUS_EVENTS.length) return false;
+  BOOKINGS.filter(b => b.source === 'demo').forEach(b => {
+    const provider = providerOf(b);
+    const as = { role:'provider', id: provider.id };
+    recordStatusEvent(b, null, 'requested', { role:'customer', id: b.customerId }, 'Request raised', b.createdAt);
+    if (b.status === 'requested') return;
+    const acceptedAt = new Date(Date.parse(b.createdAt) + 9 * 60000).toISOString();
+    if (b.status === 'cancelled' || b.status === 'expired') {
+      recordStatusEvent(b, 'requested', b.status,
+        { role: /declined/i.test(b.cancelReason || '') ? 'provider' : 'customer', id: b.customerId },
+        b.cancelReason || 'Closed', acceptedAt);
+      return;
+    }
+    recordStatusEvent(b, 'requested', 'upcoming', as, 'Accepted', acceptedAt);
+    b.acceptedAt = acceptedAt;
+    if (b.status === 'upcoming') return;
+    b.arrivedAt = new Date(Date.parse(acceptedAt) + 30 * 60000).toISOString();
+    if (b.status === 'en_route') { recordStatusEvent(b, 'upcoming', 'en_route', as, 'On the way', b.arrivedAt); return; }
+    if (b.status === 'ongoing') {
+      recordStatusEvent(b, 'upcoming', 'arrived', as, 'Arrived on site', b.arrivedAt);
+      b.startedAt = new Date(Date.parse(b.arrivedAt) + 5 * 60000).toISOString();
+      recordStatusEvent(b, 'arrived', 'ongoing', as, 'Work started', b.startedAt);
+      return;
+    }
+    recordStatusEvent(b, 'upcoming', 'arrived', as, 'Arrived on site', b.arrivedAt);
+    const startedAt = new Date(Date.parse(b.arrivedAt) + 5 * 60000).toISOString();
+    recordStatusEvent(b, 'arrived', 'ongoing', as, 'Work started', startedAt);
+    b.startedAt = startedAt;
+    b.completedAt = new Date(Date.parse(startedAt) + 40 * 60000).toISOString();
+    recordStatusEvent(b, 'ongoing', 'completed', as, 'Marked complete', b.completedAt);
+    /* A job the demo says was paid for is one the customer confirmed. */
+    b.confirmedBy = /paid/i.test(b.paymentStatus || '') ? 'customer' : null;
+  });
+  return true;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1937,7 +2323,9 @@ function settleHistoric(booking) {
    dropped and the seed is used fresh rather than half-read. */
 /* 3 adds the ledger, the price list and the configuration to the dump: a session
    that booked a job must reload with the money entries that job created. */
-const SCHEMA_VERSION = 3;
+/* 4 adds the status timeline: a tracking view that shows a step as done has to be
+   able to point at the entry that made it done. */
+const SCHEMA_VERSION = 4;
 const STORE_KEY = 'sukinnect.snapshot.v1';
 
 const Store = (function () {
@@ -1996,6 +2384,7 @@ const SEED = {
   customers: cloneRecords(CUSTOMERS),
   listings: cloneRecords(LISTINGS),
   notifications: cloneRecords(NOTIFICATIONS),
+  statusEvents: cloneRecords(STATUS_EVENTS),
   ledger: cloneRecords(LEDGER),
   config: cloneRecords(CONFIG)
 };
@@ -2011,6 +2400,7 @@ function snapshot() {
     customers: CUSTOMERS,
     listings: LISTINGS,
     notifications: NOTIFICATIONS,
+    statusEvents: STATUS_EVENTS,
     ledger: LEDGER,
     config: CONFIG,
     profileData: state.profileData,
@@ -2028,7 +2418,10 @@ function hydrate() {
   replaceContents(CUSTOMERS, snap.customers);
   replaceContents(LISTINGS, snap.listings);
   replaceContents(NOTIFICATIONS, snap.notifications);
+  replaceContents(STATUS_EVENTS, snap.statusEvents);
   replaceContents(LEDGER, snap.ledger);
+  STATUS_EVENTS.forEach(e => { const n = parseInt(String(e.id).replace(/[^0-9]/g, ''), 10);
+                               if (!Number.isNaN(n) && n > statusEventSeq) statusEventSeq = n; });
   if (snap.config) Object.assign(CONFIG, snap.config);
   /* Ledger ids are a sequence, not a timestamp. A restored dump has to raise the
      counter past its own entries or the next event reuses an id already booked. */
@@ -2046,11 +2439,14 @@ function restoreSeed() {
   replaceContents(CUSTOMERS, cloneRecords(SEED.customers));
   replaceContents(LISTINGS, cloneRecords(SEED.listings));
   replaceContents(NOTIFICATIONS, cloneRecords(SEED.notifications));
+  replaceContents(STATUS_EVENTS, []);
+  statusEventSeq = 0;
   replaceContents(LEDGER, []);
   Object.keys(CONFIG).forEach(k => delete CONFIG[k]);
   Object.assign(CONFIG, cloneRecords(CONFIG_DEFAULTS));
   CONFIG_AUDIT.length = 0;
   seedHistoricalLedger();
+  seedStatusHistory();
   Store.clear();
   return persist();
 }
@@ -2848,11 +3244,15 @@ function submitBookingRequest(){
 function cancelBookingRequest(id){
   const b = bookingsForResident().find(x => x.id === id);
   if(!b || b.status !== 'requested') return;
-  b.status = 'cancelled';
-  b.cancelReason = 'Cancelled by you while waiting for the provider';
-  persist();
+  try {
+    attemptTransition(id, 'cancelled', { role:'customer', id: CURRENT_CUSTOMER_ID },
+                      { reason:'Cancelled by you while waiting for the provider' });
+    showToast('Request withdrawn - the provider is no longer notified');
+  } catch (err) {
+    /* A refused move is told in the machine's words, not swallowed. */
+    showToast(err.message, 'error');
+  }
   render();
-  showToast('Request withdrawn - the provider is no longer notified');
 }
 
 function sheetHTML(){
@@ -3922,7 +4322,10 @@ function residentChatRoom(){
 // "ongoing" cannot be green here and white there (AGENTS.md 65, 77). Text stays the
 // primary signal; color is reinforcement only (34).
 function statusColors(status){
-  if(status === 'upcoming')  return {bg:'var(--warning-100)', fg:'var(--warning-ink)'};
+  if(status === 'upcoming' || status === 'en_route' || status === 'arrived')
+    return {bg:'var(--warning-100)', fg:'var(--warning-ink)'};
+  if(status === 'expired' || status === 'no_show')
+    return {bg:'var(--background)', fg:'var(--text-muted)'};
   if(status === 'completed') return {bg:'var(--success-100)', fg:'var(--success-ink)'};
   if(status === 'cancelled') return {bg:'var(--error-100)',   fg:'var(--error-ink)'};
   // Nothing has been agreed yet, so a request does not take the active blue that
@@ -3987,7 +4390,7 @@ function ratingCell(b){
 function residentBookingDetail(){
   const b = bookingsForResident().find(item => item.id === state.selectedBookingId) || bookingsForResident()[0];
   
-  const statusText = b.status.toUpperCase();
+  const statusText = label(b.status).toUpperCase();
 
   return `
   <div style="background:var(--grad-hero); color:#fff; padding:16px 18px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.1);">
@@ -4116,8 +4519,8 @@ function residentBookings(){
     <div class="seg hscroll" style="margin-bottom:16px;">
       <button class="seg-btn ${filter==='all'?'on':''}" onclick="state.bookingFilter='all'; render();">All</button>
       ${waitingCount ? `<button class="seg-btn ${filter==='requested'?'on':''}" onclick="state.bookingFilter='requested'; render();">Requested <span class="seg-count">${waitingCount}</span></button>` : ''}
-      <button class="seg-btn ${filter==='ongoing'?'on':''}" onclick="state.bookingFilter='ongoing'; render();">Ongoing</button>
-      <button class="seg-btn ${filter==='upcoming'?'on':''}" onclick="state.bookingFilter='upcoming'; render();">Upcoming</button>
+      <button class="seg-btn ${filter==='ongoing'?'on':''}" onclick="state.bookingFilter='ongoing'; render();">In progress</button>
+      <button class="seg-btn ${filter==='upcoming'?'on':''}" onclick="state.bookingFilter='upcoming'; render();">Accepted</button>
       <button class="seg-btn ${filter==='completed'?'on':''}" onclick="state.bookingFilter='completed'; render();">Completed</button>
       <button class="seg-btn ${filter==='cancelled'?'on':''}" onclick="state.bookingFilter='cancelled'; render();">Cancelled</button>
     </div>
@@ -4929,8 +5332,9 @@ function answerRequest(bookingId, action){
     state.providerResponding = null;
     state.providerDeclineConfirm = false;
     if(action === 'accept'){
-      b.status = 'upcoming';
-      persist();
+      try {
+        attemptTransition(b.id, 'upcoming', { role:'provider', id: CURRENT_PROVIDER_ID, name: providerOf(b).name });
+      } catch (err) { render(); showToast(err.message, 'error'); return; }
       showToast('Accepted - ' + customerOf(b).name + ' is notified and ' + b.date + ', ' + b.time + ' is held for you');
       render();
       // Accepting is what unlocks the door: the screen now carries a live map, so
@@ -4938,12 +5342,27 @@ function answerRequest(bookingId, action){
       setTimeout(() => initProviderBookingMap(b), 100);
       return;
     }
-    b.status = 'cancelled';
-    b.cancelReason = 'Declined by you';
-    persist();
+    try {
+      attemptTransition(b.id, 'cancelled', { role:'provider', id: CURRENT_PROVIDER_ID },
+                        { reason:'Declined by you' });
+    } catch (err) { render(); showToast(err.message, 'error'); return; }
     showToast('Declined - ' + customerOf(b).name + ' can now look for another provider');
     render();
   }, 750);
+}
+
+/* The provider's forward moves. One function, so a button on a card and a button
+   on the detail screen cannot drift into allowing different things. */
+function providerJobAction(bookingId, to) {
+  const b = findProviderBooking(bookingId);
+  if (!b) return;
+  try {
+    attemptTransition(bookingId, to, { role:'provider', id: CURRENT_PROVIDER_ID, name: providerOf(b).name });
+    showToast(label(to) + ' - ' + customerOf(b).name + ' can see it move');
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+  render();
 }
 
 function requestActionCard(b){
@@ -5030,7 +5449,7 @@ function providerBookingDetail(){
         <div><div style="font-size:16px; font-weight:800;">${esc(booking.summary)}</div><div style="font-size:12px; color:var(--mist);">Client: ${esc(customerOf(booking).name)}</div></div>
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12.5px; line-height:1.45;">
-        <div><div style="color:var(--mist);">Status</div><b style="text-transform:capitalize;">${booking.status}</b></div>
+        <div><div style="color:var(--mist);">Status</div><b style="text-transform:capitalize;">${label(booking.status)}</b></div>
         <div><div style="color:var(--mist);">${isOpen ? 'Requested slot' : 'Schedule'}</div><b>${esc(booking.date)}, ${esc(booking.time)}</b></div>
         <div><div style="color:var(--mist);">${isOpen ? 'Indicative fee' : 'Service fee'}</div><b>${pesoShort(booking.amountCentavos)}</b></div>
         <div><div style="color:var(--mist);">Client phone</div><b ${onJob ? '' : 'style="font-weight:600; color:var(--ink-soft);"'}>${onJob ? esc(customerOf(booking).phone) : 'Withheld'}</b></div>
@@ -5272,6 +5691,8 @@ function bindTabHandlers(){
 
 hydrate();
 seedHistoricalLedger();
+seedStatusHistory();
+applyDueTransitions();
 render();
 </script>
 </body>

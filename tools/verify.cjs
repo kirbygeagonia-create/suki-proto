@@ -213,12 +213,47 @@ suite('ledger', async () => {
   c.check('every ledger event balances', unbalanced.length === 0,
     unbalanced.map(e => e.eventType).join(','));
   c.check('the seed wrote real history', LEDGER.length > 0, String(LEDGER.length));
-  c.check('money only moves on completed work',
-    LEDGER.every(e => { const b = BOOKINGS.find(x => x.id === e.bookingId); return b && b.status === 'completed'; }),
-    LEDGER.filter(e => !e.bookingId).map(e => e.eventType).join(','));
-  c.check('a settlement event is the only kind so far',
-    LEDGER.every(e => e.eventType === 'booking.settled' || e.eventType === 'booking.settled_cash'),
-    LEDGER.map(e => e.eventType).join(','));
+  const KINDS = ['payment.authorized', 'payment.voided', 'booking.settled', 'booking.settled_cash'];
+  c.check('only money movements appear at boot',
+    LEDGER.every(e => KINDS.includes(e.eventType)),
+    LEDGER.map(e => e.eventType).filter(t => !KINDS.includes(t)).join(','));
+  c.check('a holding belongs to an accepted job, never a request',
+    LEDGER.filter(e => e.eventType === 'payment.authorized')
+      .every(e => { const b = BOOKINGS.find(x => x.id === e.bookingId); return b && b.status !== 'requested'; }));
+  c.check('an earning belongs to a completed job only',
+    LEDGER.filter(e => e.eventType === 'booking.settled' || e.eventType === 'booking.settled_cash')
+      .every(e => { const b = BOOKINGS.find(x => x.id === e.bookingId); return b && b.status === 'completed'; }));
+  c.check('no job is settled twice at boot',
+    new Set(LEDGER.filter(e => /^booking\.settled/.test(e.eventType)).map(e => e.bookingId)).size ===
+      LEDGER.filter(e => /^booking\.settled/.test(e.eventType)).length);
+
+  /* A chart of accounts that can go below zero is lying: you cannot hold money you
+     were never given, or owe earnings you never promised. */
+  const negatives = [];
+  Object.keys(ACCOUNTS).forEach(account => {
+    const total = app.accountBalance(account);
+    if (total < 0) negatives.push(account + '=' + total);
+  });
+  BOOKINGS.forEach(b => { const d = app.accountBalance('customer_deposit', b.id); if (d < 0) negatives.push('deposit ' + b.id + '=' + d); });
+  ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'].forEach(p => {
+    const v = app.accountBalance('provider_payable', p); if (v < 0) negatives.push('payable ' + p + '=' + v);
+    const r = app.accountBalance('commission_receivable', p); if (r < 0) negatives.push('receivable ' + p + '=' + r);
+  });
+  c.check('no account reads negative', negatives.length === 0, negatives.join(', '));
+  /* The holding is more than the deposits once jobs complete: the same money now
+     backs what we owe the provider and the fee we have earned, and nothing in this
+     prototype sweeps those out to a bank account of our own. Escrow therefore has
+     to equal all three claims on it, or the books are pretending to hold money
+     that has been promised twice. */
+  const claims = BOOKINGS.reduce((t, b) => t + Math.max(0, app.accountBalance('customer_deposit', b.id)), 0)
+    + ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'].reduce((t, p) => t + app.accountBalance('provider_payable', p), 0)
+    + app.accountBalance('platform_fee_revenue') + app.accountBalance('platform_fixed_fee_revenue')
+    + app.accountBalance('dispute_hold') * -1;
+  c.check('escrow covers exactly the claims on it',
+    app.accountBalance('escrow_held') === claims,
+    app.accountBalance('escrow_held') + ' vs ' + claims);
+  c.check('the fee the platform earned is inside the holding, not outside it',
+    app.accountBalance('platform_fee_revenue') > 0);
 
   /* rejected postings */
   const throws = fn => { try { fn(); return false; } catch (err) { return true; } };
@@ -274,6 +309,166 @@ suite('ledger', async () => {
   c.check('a bad config key is refused rather than silently added',
     throws(() => app.setConfig({ madeUpKey: 1 })), 'accepted');
   c.check('and it created no ledger noise', LEDGER.length === before);
+  return c;
+});
+
+/* ══ 6. the booking state machine ════════════════════════════════════════════ */
+suite('machine', async () => {
+  const c = makeChecker();
+  const app = boot();
+  const { BOOKINGS, BOOKING_STATES, TRANSITIONS, STATUS_EVENTS, LEDGER, NOTIFICATIONS, state, CONFIG,
+          attemptTransition, transitionAllowed, nextActionFor, bookingTimeline, providerOf, customerOf,
+          accountBalance, settlementToProvider, applyDueTransitions, pendingProviderRequests, label } = app;
+
+  const throws = fn => { try { fn(); return null; } catch (err) { return err; } };
+  const revenueAtBoot = accountBalance('platform_fee_revenue');
+  const PROVIDER = { role:'provider', id:'p1', name:'Ramil Odiada' };
+  const CUSTOMER = { role:'customer', id:'c1' };
+  const ADMIN = { role:'admin', id:'a1' };
+
+  /* the table and the vocabulary agree */
+  c.check('every declared state has a place in the table',
+    Object.keys(BOOKING_STATES).every(k => k in TRANSITIONS),
+    Object.keys(BOOKING_STATES).filter(k => !(k in TRANSITIONS)).join(','));
+  c.check('every booking sits in a declared state',
+    BOOKINGS.every(b => b.status in BOOKING_STATES),
+    BOOKINGS.filter(b => !(b.status in BOOKING_STATES)).map(b => b.id + ':' + b.status).join(','));
+
+  /* refused moves */
+  const done = BOOKINGS.find(b => b.status === 'completed');
+  c.check('a completed job cannot go back to accepted',
+    !!throws(() => attemptTransition(done.id, 'upcoming', PROVIDER)), 'allowed');
+  c.check('a customer cannot accept their own request',
+    !!throws(() => attemptTransition('pb6', 'upcoming', CUSTOMER)), 'allowed');
+  c.check('the refusal explains itself',
+    (throws(() => attemptTransition('pb6', 'upcoming', CUSTOMER)) || {}).name === 'GuardRejected');
+  c.check('a cancelled job has no way forward',
+    nextActionFor(BOOKINGS.find(b => b.status === 'cancelled'), 'provider').length === 0);
+  c.check('transitionAllowed answers without throwing',
+    transitionAllowed(done, 'disputed', CUSTOMER).ok === true ||
+    transitionAllowed(done, 'upcoming', PROVIDER).ok === false);
+
+  /* a full walk, on one record */
+  const target = pendingProviderRequests()[0];
+  const payableBefore = accountBalance('provider_payable', 'p1');
+  attemptTransition(target.id, 'upcoming', PROVIDER);
+  c.check('accepting freezes the terms onto the booking', !!target.pricing);
+  c.check('accepting takes the holding, once',
+    LEDGER.filter(e => e.eventType === 'payment.authorized' && e.bookingId === target.id).length === 1);
+  c.check('and the holding is not yet revenue',
+    accountBalance('platform_fee_revenue') === revenueAtBoot);
+  c.check('and the frozen terms add up',
+    target.pricing.commissionCentavos + target.pricing.providerShareCentavos === target.pricing.baseCentavos);
+  attemptTransition(target.id, 'en_route', PROVIDER);
+  attemptTransition(target.id, 'arrived', PROVIDER);
+  const blocked = throws(() => attemptTransition(target.id, 'ongoing', PROVIDER));
+  c.check('a second job cannot start while one is in progress', !!blocked, 'allowed');
+  c.check('and the refusal is the guard’s own words',
+    /already have a job in progress/.test((blocked || {}).message || ''), (blocked || {}).message);
+
+  /* the walk needs a free provider: clear the live job first */
+  const live = BOOKINGS.find(b => b.id !== target.id && b.status === 'ongoing');
+  attemptTransition(live.id, 'completed', PROVIDER);
+  c.check('completing converts the holding into earnings',
+    LEDGER.filter(e => e.bookingId === live.id && /^booking\.settled/.test(e.eventType)).length === 1,
+    LEDGER.filter(e => e.bookingId === live.id).map(e => e.eventType).join(','));
+  const afterLive = throws(() => attemptTransition(target.id, 'ongoing', PROVIDER));
+  c.check('with the live job done the second one may start', afterLive === null, afterLive && afterLive.message);
+  attemptTransition(target.id, 'completed', PROVIDER);
+  c.check('each job settles exactly once',
+    LEDGER.filter(e => /^booking\.settled/.test(e.eventType))
+      .every(e => LEDGER.filter(x => x.bookingId === e.bookingId && /^booking\.settled/.test(x.eventType)).length === 1));
+  c.check('the settled job released its deposit',
+    accountBalance('customer_deposit', target.id) === 0, String(accountBalance('customer_deposit', target.id)));
+  c.check('accepting finally earns the platform its fee',
+    accountBalance('platform_fee_revenue') > revenueAtBoot);
+  c.check('every event still balances after the walk', LEDGER.every(e => {
+    const dr = e.lines.filter(l => l.direction === 'debit').reduce((t, l) => t + l.amountCentavos, 0);
+    const cr = e.lines.filter(l => l.direction === 'credit').reduce((t, l) => t + l.amountCentavos, 0);
+    return dr === cr;
+  }));
+  /* Cash and partner settlements land in different places, and the books have to
+     show that: the provider already holds cash collected on site, so the
+     platform only records the fee it is owed. */
+  const isCash = b => /cash on arrival/i.test(b.paymentMethod || '');
+  const payableDelta = accountBalance('provider_payable', 'p1') - payableBefore;
+  const expectedPayable = (isCash(live) ? 0 : settlementToProvider(live.pricing)) +
+                          (isCash(target) ? 0 : settlementToProvider(target.pricing));
+  c.check('payable rose by the partner-path settlements', payableDelta === expectedPayable,
+    payableDelta + ' vs ' + expectedPayable);
+  const receivableDelta = accountBalance('commission_receivable', 'p1');
+  c.check('a cash-settled job raises a receivable instead',
+    isCash(live) ? receivableDelta >= live.pricing.commissionCentavos : true,
+    String(receivableDelta));
+  c.check('the two paths never mix on one booking',
+    LEDGER.filter(e => e.bookingId === live.id).every(e => e.eventType === 'booking.settled_cash'),
+    LEDGER.filter(e => e.bookingId === live.id).map(e => e.eventType).join(','));
+
+  /* the timeline is the tracking view */
+  const steps = bookingTimeline(target.id);
+  c.check('the walk left one event per move', steps.length >= 5, String(steps.length));
+  c.check('each event starts where the last one ended',
+    steps.every((e, i) => i === 0 || e.from === steps[i - 1].to),
+    steps.map(e => (e.from || '∅') + '→' + e.to).join(', '));
+  c.check('the final event is the current state', steps[steps.length - 1].to === target.status);
+  c.check('each step names who moved it', steps.every(e => e.actorRole));
+  c.check('and each carries a real instant', steps.every(e => !Number.isNaN(Date.parse(e.at))));
+  c.check('the customer was notified along the way',
+    NOTIFICATIONS.some(n => n.bookingId === target.id && n.title === 'Booking confirmed'));
+
+  /* demo history must not claim steps it cannot show */
+  c.check('every demo booking’s timeline reaches its stated status',
+    BOOKINGS.filter(b => b.source === 'demo').every(b => {
+      const t = bookingTimeline(b.id);
+      return t.length && t[t.length - 1].to === b.status;
+    }),
+    BOOKINGS.filter(b => b.source === 'demo')
+      .filter(b => { const t = bookingTimeline(b.id); return !t.length || t[t.length - 1].to !== b.status; })
+      .map(b => b.id).join(','));
+
+  /* dispute: freeze, then release, never erase */
+  const held0 = accountBalance('dispute_hold', target.id);
+  attemptTransition(target.id, 'disputed', CUSTOMER, { reason:'The leak came back two days later' });
+  c.check('opening a case freezes the provider’s share',
+    accountBalance('dispute_hold', target.id) === settlementToProvider(target.pricing),
+    String(accountBalance('dispute_hold', target.id)));
+  c.check('the freeze is an entry, not a deletion', LEDGER.some(e => e.eventType === 'dispute.held'));
+  c.check('nothing was decided by opening it', held0 === 0 && target.refundDue !== true);
+  attemptTransition(target.id, 'completed', ADMIN);
+  c.check('closing in the provider’s favour releases the hold',
+    accountBalance('dispute_hold', target.id) === 0, String(accountBalance('dispute_hold', target.id)));
+  c.check('and the release is its own entry', LEDGER.some(e => e.eventType === 'dispute.released'));
+
+  /* late cancellation pays the provider, not the platform */
+  const fee = CONFIG.cancellationFeeAfterAcceptCentavos;
+  const revenueBefore = accountBalance('platform_fee_revenue');
+  const payableNow = accountBalance('provider_payable', 'p1');
+  const next = BOOKINGS.find(b => b.status === 'upcoming' && b.providerId === 'p1');
+  attemptTransition(next.id, 'cancelled', CUSTOMER);
+  c.check('a late cancellation pays the provider',
+    accountBalance('provider_payable', 'p1') === payableNow + fee,
+    String(accountBalance('provider_payable', 'p1') - payableNow));
+  c.check('and the platform earns nothing from it',
+    accountBalance('platform_fee_revenue') === revenueBefore);
+  c.check('an early withdrawal costs nothing',
+    CONFIG.cancellationFeeBeforeAcceptCentavos === 0);
+
+  /* what the clock owes */
+  const stale = BOOKINGS.find(b => b.status === 'requested');
+  stale.createdAt = new Date(Date.now() - (CONFIG.acceptTtlMinutes + 10) * 60000).toISOString();
+  const expired = applyDueTransitions();
+  c.check('an unanswered request expires on the next open',
+    stale.status === 'expired' && expired.some(m => m.id === stale.id), stale.status);
+  c.check('expiry takes no money', !LEDGER.some(e => e.bookingId === stale.id));
+  c.check('and it tells the customer nothing was charged',
+    NOTIFICATIONS.some(n => n.bookingId === stale.id && /not charged/.test(n.body)));
+  const old = BOOKINGS.find(b => b.status === 'completed' && !b.confirmedBy);
+  if (old) {
+    old.completedAt = new Date(Date.now() - (CONFIG.autoCompleteHours + 2) * 3600000).toISOString();
+    applyDueTransitions();
+    c.check('an unconfirmed completion auto-confirms and says so', old.confirmedBy === 'auto', String(old.confirmedBy));
+  } else c.check('an unconfirmed completion auto-confirms and says so', false, 'no fixture');
+  c.check('label() speaks in words, not in field names', label('upcoming') === 'Accepted' && label('expired') === 'No answer');
   return c;
 });
 
