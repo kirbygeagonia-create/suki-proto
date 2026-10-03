@@ -840,6 +840,41 @@ function adminFinanceHtmlHas(app, needle) {
   } catch (err) { return false; }
 }
 
+/* ══ 10. hygiene that must not regress ═══════════════════════════════════════ */
+suite('hygiene', async () => {
+  const c = makeChecker();
+  const src = require('fs').readFileSync(require('./harness.cjs').APP, 'utf8');
+  const body = src.slice(src.lastIndexOf('<script>') + 8, src.lastIndexOf('</script>'));
+
+  /* a button that reports success without changing anything is the bug class this
+     whole rebuild was asked to remove */
+  const congratulating = (body.match(/onclick="showToast\(([^)]*)\)"[^>]*>/g) || [])
+    .filter(t => /successfully|Accepted|sent|generated/i.test(t));
+  c.check('no control claims success it does not deliver', congratulating.length === 0,
+    congratulating.map(t => t.slice(0, 60)).join(' | '));
+
+  /* the inline icon set is the offline fallback: a missing glyph means an empty
+     square in exactly the situation where it matters most */
+  const defined = new Set((body.match(/^  '?([a-z0-9-]+)'?: \{o:/gm) || [])
+    .map(l => l.replace(/^  '?/, '').replace(/'?: \{o:$/, '')));
+  const asked = new Set((body.match(/\bic\(\s*['"]([a-z0-9-]+)['"]/g) || [])
+    .map(m => m.replace(/.*['"]([a-z0-9-]+)['"]/, '$1')));
+  const missing = [...asked].filter(n => !defined.has(n));
+  c.check('every glyph has a fallback path', missing.length === 0, 'missing: ' + missing.join(','));
+  c.check('the fallback stays small', defined.size <= 40, defined.size + ' entries');
+  c.check('the active tab can still be drawn filled',
+    /ICONS\.home\.f/.test(body) && /ICONS\.calendar\.f/.test(body));
+
+  /* retired markup should stay retired */
+  c.check('no hidden cards are shipped', !/<div class="card" style="display:none;">/.test(body));
+  c.check('a call control dials', (body.match(/href="tel:/g) || []).length >= 2);
+  c.check('the provider map uses the provider it names', !/setView\(\[6\.3665, 124\.9338\], 15\)/.test(body));
+  c.check('no stored-value wallet language survives',
+    !/Secure Balance Wallet|Instant Cash-Out|wallet balance/i.test(body));
+  c.check('nothing pretends a rate is measured', !/\(previously 4%\)|\(previously 4\.8\)/.test(body));
+  return c;
+});
+
 (async () => {
   let total = 0, failed = 0;
   for (const { name, fn } of suites) {
