@@ -30,7 +30,8 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   'CURRENT_CUSTOMER_ID', 'CURRENT_PROVIDER_ID', 'CONFIG_DEFAULTS', 'commissionRateFor',
   'adminCounts', 'intelligenceStats', 'supplyGaps', 'disputeCard', 'statementCard', 'configPanel',
   'resolveCase', 'resolveDispute', 'commitConfig', 'setIntFilter', 'runPayoutNow', 'openDispute',
-  'categorySupply', 'weeklyBookings', 'adminFinanceScreen', 'ageingCard'];
+  'categorySupply', 'weeklyBookings', 'adminFinanceScreen', 'ageingCard',
+  'loginHTML', 'AUTH_ROLE_LABEL', 'DEMO_LOGIN'];
 
 function boot({ appMode = false, storage = null } = {}) {
   const src = fs.readFileSync(APP, 'utf8');

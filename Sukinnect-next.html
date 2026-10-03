@@ -325,158 +325,91 @@
   .mini-steps .st.now{ background:var(--brand-secondary); }
 
 
-  /* Sign-in: the brand owns the top of the first screen and the form rises out
-     of it as a sheet, so the two read as one moment carried on from the splash
-     rather than a page with a form on it (5).
-     The screen is a RIGID column, never a content-sized one: the hero keeps its
-     height and the sheet takes exactly the space that is left, so the white
-     container can never be taller than the phone. Whatever the form needs
-     beyond that scrolls INSIDE the sheet (see .auth-sheet) instead of pushing
-     the white surface past the bottom edge when the role changes (5, 38). */
+  /* Sign-in: one white screen, one centred column, and nothing on it
+     that is not needed to get in — brand mark, the account you are entering as,
+     two fields, one action. The scroll behaviour that keeps the keyboard from
+     burying the form is still here: the sheet is the scroller, and the bottom
+     padding is the gesture-bar inset (5, 38, 73). */
   .auth-screen{
     display:flex; flex-direction:column; height:100%; background:var(--surface);
   }
   /* The browser's default 16px paragraph margins were costing ~80px of dead
-     vertical space on this screen, which is what pushed the form past the fold
-     on a 640pt phone. Spacing here is deliberate, never inherited. */
+     vertical space here, which is what pushed the form past the fold on a 640pt
+     phone. Spacing on this screen is deliberate, never inherited. */
   .auth-screen p{ margin:0; }
-  .auth-hero{
-    position:relative; overflow:hidden; flex:none; text-align:center; color:var(--text-on-brand);
-    padding:calc(var(--sat) + 30px) var(--s-5) 44px;
-    background:var(--grad-brand-hero);
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-  }
-  /* ACCENT GLOW (33): the logo's cyan at low alpha, one layer only. */
-  .auth-hero::after{
-    content:""; position:absolute; top:-104px; left:50%; width:330px; height:330px;
-    margin-left:-165px; border-radius:50%; pointer-events:none;
-    background:radial-gradient(circle, rgba(5,188,196,.30), rgba(5,188,196,0) 66%);
-  }
-  /* Concentric rings at a quiet opacity keep the hero a surface instead of a
-     flat fill. Painted once, no blur, no image: cheap on a low-end WebView. */
-  .auth-hero::before{
-    content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
-    background:repeating-radial-gradient(circle at 50% 30%,
-      rgba(255,255,255,.06) 0 1px, rgba(255,255,255,0) 1px 24px);
-  }
-  .auth-hero > *{ position:relative; z-index:1; }
-  /* The logo file has a white ground, so the SURFACE around it adapts to the
-     brand instead of the mark being altered (35). */
-  .auth-mark{
-    display:flex; align-items:center; justify-content:center; flex:none;
-    width:76px; height:76px; border-radius:18px; background:var(--surface); padding:8px;
-    box-shadow:0 10px 26px rgba(3,0,43,.30);
-  }
-  .auth-mark img{width:100%; height:100%; object-fit:contain; display:block;}
-  .auth-wordmark{
-    font-family:"Fraunces", ui-serif, serif; font-size:26px; font-weight:600;
-    letter-spacing:-.4px; line-height:1.1; margin-top:11px;
-  }
-  .auth-tagline{ font-size:var(--t-body); font-weight:500; opacity:.9; margin-top:4px; }
-  /* The deck's spine, carried over from the splash as one quiet row. */
-  .auth-loop{
-    display:flex; align-items:center; gap:6px; margin-top:12px;
-    font-size:var(--t-caption); font-weight:800; letter-spacing:.13em; opacity:.82;
-  }
-  .auth-loop i{ font-style:normal; color:var(--brand-secondary); }
-  /* The sheet is the only white surface on the screen, so it reads as a card
-     lifted over the brand rather than a background. It is also the form's own
-     scroller: `min-height:0` stops a flex item from being sized by its content,
-     so the sheet is always exactly the height the hero leaves and the form
-     reflows inside it. Switching role or sign-in/register mode can therefore
-     never shrink the white container, jump it, or run its bottom edge past the
-     phone - the one thing that made the Admin role look broken on a short
-     screen (5, 38). */
   .auth-sheet{
-    flex:1; min-height:0; display:flex; flex-direction:column; box-sizing:border-box;
-    margin-top:-20px; padding:18px var(--s-5) 0;
-    background:var(--surface); border-radius:var(--r-sheet) var(--r-sheet) 0 0;
-    box-shadow:0 -14px 34px rgba(3,0,43,.16);
-    overflow-y:auto; overscroll-behavior:none;
+    flex:1; min-height:0; width:100%; max-width:420px; margin:0 auto;
+    box-sizing:border-box; padding:calc(var(--sat) + 34px) var(--s-6) calc(var(--s-6) + var(--sab));
+    overflow-y:auto; overscroll-behavior:none; text-align:center;
     -ms-overflow-style:none; scrollbar-width:none;
   }
-  /* Same scrollbar-free look as the screen and the chip rails (72). */
   .auth-sheet::-webkit-scrollbar{ display:none; width:0; height:0; }
-  .auth-title{
+  /* The logo file has a white ground, so on a white screen it sits directly on
+     the surface — no tile, no border, no treatment. The mark itself is untouched. */
+  .auth-mark{ display:block; width:84px; height:84px; margin:0 auto; }
+  .auth-mark img{ width:100%; height:100%; object-fit:contain; display:block; }
+  .auth-wordmark{
     font-family:"Fraunces", ui-serif, serif; font-size:var(--t-title-lg); font-weight:600;
-    letter-spacing:-.3px; color:var(--ink); line-height:1.15;
+    letter-spacing:-.4px; line-height:1.1; color:var(--ink); margin-top:10px;
   }
-  .auth-sub{ font-size:var(--t-body); color:var(--ink-soft); margin-top:4px; line-height:1.45; }
-  /* Resident and Service Pro are the two people the marketplace exists for, so
-     they are the decision on screen. Admin is an operations role and stays
-     reachable from the footer line instead of competing with them (5). */
+  /* Fields are full width and left-aligned — centring a text field is centring
+     nothing, it just makes the label hard to find. What is centred is the brand,
+     the links, the action and the note. */
+  .auth-form{ margin-top:var(--s-8); text-align:left; }
+  /* Resident and Service Pro are who the marketplace exists for; Admin is the
+     operations console, present as the third option rather than a hidden link. */
   .auth-role{
-    display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:var(--s-4);
+    display:grid; grid-template-columns:repeat(3, 1fr); gap:4px; margin-bottom:var(--s-5);
     padding:3px; background:var(--cloud); border-radius:var(--r-md);
     box-shadow:inset 0 0 0 1px var(--line);
   }
   .auth-role button{
     min-height:var(--tap); border:none; border-radius:calc(var(--r-md) - 3px);
-    background:transparent; font:inherit; font-size:var(--t-body); font-weight:700;
+    background:transparent; font:inherit; font-size:var(--t-caption); font-weight:700;
     color:var(--ink-soft); cursor:pointer;
-    display:flex; align-items:center; justify-content:center; gap:6px;
   }
   /* The pressed option lifts a white chip out of the tray: the state is depth and
      weight, not colour alone (71, 72). */
   .auth-role button[aria-pressed="true"]{
     background:var(--surface); color:var(--deep); box-shadow:var(--shadow-xs);
   }
-  .auth-group{ margin-top:var(--s-5); }
-  .auth-group-name{
-    display:flex; align-items:center; gap:6px; margin-bottom:var(--s-2);
-    font-size:var(--t-caption); font-weight:800; letter-spacing:.1em;
-    text-transform:uppercase; color:var(--mist);
+  .auth-field{ margin-bottom:var(--s-4); }
+  .auth-input-label{
+    display:block; text-align:left; font-size:var(--t-caption); font-weight:700;
+    color:var(--mist); margin-bottom:6px; letter-spacing:.02em;
   }
-  .auth-note{
-    font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5;
-    margin-top:var(--s-2); display:flex; gap:6px; align-items:flex-start;
+  .auth-sheet .input-field{ border-radius:var(--r-md); background:var(--cloud); }
+  .auth-sheet .input-field:focus-within{ background:var(--surface); }
+  .auth-forgot{
+    display:block; width:100%; text-align:center; margin:-6px 0 var(--s-5);
+    font-size:var(--t-body); color:var(--deep); font-weight:700;
+    background:none; border:none; font-family:inherit; cursor:pointer;
+    padding:11px 6px; margin-left:-6px; margin-right:-6px;
   }
-  /* Sticky inside the scroller so the keyboard can never bury the primary
-     action, and it sits straight after the fields rather than sinking away from
-     them - the footer cluster takes the leftover height instead (38, 73). */
-  .auth-action{
-    position:sticky; bottom:0; z-index:2; margin-top:var(--s-4);
-    padding:0 0 calc(var(--s-4) + var(--sab)); background:var(--surface);
+  .auth-divider{
+    display:flex; align-items:center; gap:var(--s-3); margin:var(--s-5) 0 var(--s-4);
+    font-size:var(--t-caption); color:var(--mist);
   }
-  /* The password label line is tall enough for "Forgot?" to be a thumb target
-     without its focus ring reaching into the field below (39). */
-  .auth-group .row{ min-height:var(--tap); }
-  .auth-switch-line{
-    display:flex; align-items:center; justify-content:center; gap:6px;
-    margin-top:auto; padding:14px 0; font-size:var(--t-body); color:var(--ink-soft);
+  .auth-divider::before, .auth-divider::after{
+    content:""; flex:1; height:1px; background:var(--border);
   }
-  .auth-foot{
-    display:flex; align-items:center; justify-content:space-between; gap:var(--s-2);
-    font-size:var(--t-caption); color:var(--mist); line-height:1.4;
+  .auth-alt{
+    display:block; width:100%; text-align:center; background:none; cursor:pointer;
+    font-family:inherit; font-size:var(--t-body); font-weight:700; color:var(--deep);
+    border:1px solid var(--border-strong); border-radius:var(--r-md);
+    min-height:var(--cta-h); padding:13px 16px;
   }
-  .auth-foot .where{ display:inline-flex; align-items:center; gap:4px; }
-  .auth-foot svg{ color:var(--brand-secondary); flex:none; }
-  .auth-admin{
-    background:none; border:none; font:inherit; font-size:var(--t-caption);
-    font-weight:700; color:var(--ink-soft); cursor:pointer; text-decoration:underline;
-    text-underline-offset:3px;
-    /* Same trick as "Forgot?": the hit area is thumb-sized and the negative margin
-       gives the line's height straight back, so the layout is unchanged (39). */
-    padding:11px 6px; margin:-11px -6px;
+  /* The one line of honesty the prototype owes the reader, kept small and last. */
+  .auth-note-line{
+    margin-top:var(--s-6); font-size:var(--t-caption); color:var(--mist);
+    text-align:center; line-height:1.5;
   }
-  .auth-note-line{ margin-top:2px; font-size:var(--t-caption); color:var(--mist); }
-
-  /* Short phones: the hero gives ground to the sheet instead of the form
-     scrolling away. Height-keyed, because a 640pt phone is the same width. */
+  /* Short phones: the column simply scrolls; the form has no fixed hero to give
+     ground to any more. */
   @media (max-height:720px){
-    .auth-hero{ padding:calc(var(--sat) + 12px) var(--s-5) 16px; }
-    .auth-mark{ width:60px; height:60px; padding:6px; border-radius:var(--r-md); }
-    .auth-wordmark{ font-size:var(--t-title); margin-top:9px; }
-    .auth-tagline{ font-size:var(--t-body); }
-    .auth-loop{ margin-top:10px; }
-    .auth-sheet{ margin-top:calc(0px - var(--s-4)); padding-top:var(--s-4); }
-    .auth-role{ margin-top:var(--s-3); }
-    .auth-group{ margin-top:var(--s-3); }
-    .auth-group .row{ min-height:40px; }
-    .auth-sheet{ padding-top:14px; }
-    .auth-switch-line{ padding:10px 0; }
-    .auth-action{ margin-top:var(--s-3); }
-    .auth-action{ margin-top:var(--s-4); }
+    .auth-sheet{ padding-top:calc(var(--sat) + 20px); }
+    .auth-mark{ width:70px; height:70px; }
+    .auth-form{ margin-top:var(--s-6); }
   }
 
   /* Launch screen — the app's first brand moment. Full-bleed hero gradient,
@@ -1023,19 +956,17 @@
     color:var(--deep); font-weight:700; cursor:pointer; text-decoration:underline;
     text-underline-offset:3px;
   }
-  /* "Forgot?" sits on its own label line, so it borrows a thumb-sized hit area
-     from the padding and gives the space back with the negative margin (39). */
-  .row .auth-switch{ padding:11px 6px; margin:0 -6px; }
   /* One inline error style, shared by the sign-in fields and the Concierge;
      .auth-error only carries the tighter spacing the auth form needs. */
   .inline-error{
     display:flex; align-items:center; gap:5px; font-size:var(--t-caption); font-weight:600;
     color:var(--error-ink); margin:6px 0 10px;
   }
-  .auth-error{ margin:-8px 0 12px; }
+  /* one error line style for the whole app; the auth form only tightens the gap */
+  .auth-error{ margin:-8px 0 12px; text-align:left; }
   .input-field.invalid{ border-color:var(--error); background:var(--error-100); }
   #login-btn{
-    width:100%; min-height:var(--cta-h); font-size:var(--t-body-lg);
+    width:100%; min-height:var(--cta-h); font-size:var(--t-body-lg); border-radius:var(--r-md);
     display:flex; align-items:center; justify-content:center; gap:7px; padding:14px 16px;
   }
 
@@ -1080,7 +1011,7 @@
      tappable component carries its own pressed state (7.6). Kept as one list
      rather than a per-component rule so the feel is identical everywhere (11). */
   .concierge-row:active, .job-row:active, .auth-role button:active,
-  .auth-admin:active, .auth-switch:active,
+  .auth-switch:active,
   .btn:active:not(:disabled), .filter-icon-btn:active:not(:disabled), .back-btn:active,
   .seg-btn:active:not(:disabled), .sheet-close:active, .cat:active, .navitem:active,
   .notif-item:active, .result-card:active, .bookrow:active, .filter-option:active,
@@ -4177,108 +4108,86 @@ const AUTH_ROLE_LABEL = { resident:'Resident', provider:'Service Pro', admin:'Ad
 
 function loginHTML(){
   const isRegister = state.authMode === 'register';
-  // null = never touched, so the field is empty; '' = the resident cleared it,
-  // which must stay cleared so the required-field error can appear (49).
+  // null = never touched, so the field shows the role's sample credential;
+  // '' = the resident cleared it, which must stay cleared so the required-field
+  // error can appear (49).
   const demoEmail = DEMO_LOGIN.email[state.role] || DEMO_LOGIN.email.resident;
-  // null = never touched, so the role's sample credential shows; '' = the resident
-  // cleared it, which must stay cleared so the required-field error can appear (49).
   const val = (key) => {
     if (state.auth[key] !== null && state.auth[key] !== undefined) return state.auth[key];
     return { email:demoEmail, pass:DEMO_LOGIN.pass, name:DEMO_LOGIN.name, brgy:DEMO_LOGIN.brgy }[key] || '';
   };
   const err = state.authError || {};
-  const isAdmin = state.role === 'admin';
 
   return `
   <div class="auth-screen">
-    <header class="auth-hero">
-      <span class="auth-mark"><img src="Sukinnect_Logo.png" width="60" height="60" alt="Sukinnect logo"></span>
-      <div class="auth-wordmark">Sukinnect</div>
-      <p class="auth-tagline">Verified local help, one tap away</p>
-      <p class="auth-loop">FIND<i>&middot;</i>REVIEW<i>&middot;</i>BOOK<i>&middot;</i>RECORD</p>
-    </header>
-
     <div class="auth-sheet">
-      <h1 class="auth-title">${isRegister ? 'Create your account' : 'Welcome back'}</h1>
-      <p class="auth-sub">${isRegister
-        ? 'Two minutes now, and help from your own barangay is a tap away.'
-        : 'Demo environment - the credentials below are prefilled for the role above.'}</p>
+      <span class="auth-mark"><img src="Sukinnect_Logo.png" width="84" height="84" alt="Sukinnect logo"></span>
+      <div class="auth-wordmark">Sukinnect</div>
 
-      <div class="auth-role" role="group" aria-label="Account type">
-        <button type="button" id="rt-resident" aria-pressed="${state.role==='resident'}">
-          ${ic("home",16)} Resident
-        </button>
-        <button type="button" id="rt-provider" aria-pressed="${state.role==='provider'}">
-          ${ic("wrench",16)} Service Pro
-        </button>
-      </div>
-      ${isAdmin ? `<p class="auth-group-name" style="margin:8px 0 0;">${ic("shield",12)} Signing in as Admin &middot; operations</p>` : ''}
+      <div class="auth-form">
+        <div class="auth-role" role="group" aria-label="Account type">
+          ${['resident','provider','admin'].map(role =>
+            `<button type="button" id="rt-${role}" aria-pressed="${state.role === role}">${AUTH_ROLE_LABEL[role]}</button>`).join('')}
+        </div>
 
-      <div class="auth-group">
         ${isRegister ? `
-          <p class="auth-group-name">1 &middot; Account</p>
-          <label class="auth-input-label" for="reg-name">Full Name</label>
+        <div class="auth-field">
+          <label class="auth-input-label" for="reg-name">Full name</label>
           <div class="input-field ${err.name ? 'invalid' : ''}">
-            <input id="reg-name" value="${esc(val('name'))}" placeholder="Enter your full name" autocomplete="name" enterkeyhint="next" ${err.name ? 'aria-invalid="true" aria-describedby="err-name"' : ''} oninput="authInput('name', this)">
-            <span style="opacity:0.55; display:inline-flex;">${ic("user",16)}</span>
+            <input id="reg-name" value="${esc(val('name'))}" placeholder="Your full name" autocomplete="name" enterkeyhint="next" ${err.name ? 'aria-invalid="true" aria-describedby="err-name"' : ''} oninput="authInput('name', this)">
+            <span style="opacity:0.55; display:inline-flex;">${ic('user',16)}</span>
           </div>
-          ${err.name ? `<div class="inline-error auth-error" id="err-name">${ic("alert-triangle",13)} ${err.name}</div>` : ''}
-        ` : ''}
+          ${err.name ? `<div class="inline-error auth-error" id="err-name" role="alert">${ic('alert-triangle',13)} ${err.name}</div>` : ''}
+        </div>` : ''}
 
-        <label class="auth-input-label" for="login-email">Email</label>
-        <div class="input-field ${err.email ? 'invalid' : ''}">
-          <input id="login-email" value="${esc(val('email'))}" placeholder="you@example.com" inputmode="email" autocomplete="email" enterkeyhint="next" ${err.email ? 'aria-invalid="true" aria-describedby="err-email"' : ''} oninput="authInput('email', this)">
-          <span style="opacity:0.55; display:inline-flex;">${ic("mail",16)}</span>
+        <div class="auth-field">
+          <label class="auth-input-label" for="login-email">Email</label>
+          <div class="input-field ${err.email ? 'invalid' : ''}">
+            <input id="login-email" value="${esc(val('email'))}" placeholder="you@example.com" inputmode="email" autocomplete="email" enterkeyhint="next" ${err.email ? 'aria-invalid="true" aria-describedby="err-email"' : ''} oninput="authInput('email', this)">
+            <span style="opacity:0.55; display:inline-flex;">${ic('mail',16)}</span>
+          </div>
+          ${err.email ? `<div class="inline-error auth-error" id="err-email" role="alert">${ic('alert-triangle',13)} ${err.email}</div>` : ''}
         </div>
-        ${err.email ? `<div class="inline-error auth-error" id="err-email">${ic("alert-triangle",13)} ${err.email}</div>` : ''}
 
-        <div class="row">
+        <div class="auth-field">
           <label class="auth-input-label" for="login-pass">Password</label>
-          ${!isRegister ? `<button type="button" class="auth-switch" style="font-size:var(--t-caption);" onclick="showToast('Password reset is not part of this prototype.')">Forgot?</button>` : ''}
+          <div class="input-field ${err.pass ? 'invalid' : ''}">
+            <input id="login-pass" type="${state.showPassword ? 'text' : 'password'}" value="${esc(val('pass'))}" placeholder="Your password" autocomplete="${isRegister ? 'new-password' : 'current-password'}" enterkeyhint="${isRegister ? 'next' : 'go'}" ${err.pass ? 'aria-invalid="true" aria-describedby="err-pass"' : ''} oninput="authInput('pass', this)">
+            <button class="addon-btn" id="toggle-pw-btn" type="button" aria-label="${state.showPassword ? 'Hide password' : 'Show password'}" title="${state.showPassword ? 'Hide password' : 'Show password'}" aria-pressed="${state.showPassword}">
+              ${state.showPassword ? ic('eye-off',16) : ic('eye',16)}
+            </button>
+          </div>
+          ${err.pass ? `<div class="inline-error auth-error" id="err-pass" role="alert">${ic('alert-triangle',13)} ${err.pass}</div>` : ''}
         </div>
-        <div class="input-field ${err.pass ? 'invalid' : ''}">
-          <input id="login-pass" type="${state.showPassword ? 'text' : 'password'}" value="${esc(val('pass'))}" placeholder="Enter password" autocomplete="${isRegister ? 'new-password' : 'current-password'}" enterkeyhint="${isRegister ? 'next' : 'go'}" ${err.pass ? 'aria-invalid="true" aria-describedby="err-pass"' : ''} oninput="authInput('pass', this)">
-          <button class="addon-btn" id="toggle-pw-btn" type="button" aria-label="${state.showPassword ? 'Hide password' : 'Show password'}" title="${state.showPassword ? 'Hide password' : 'Show password'}" aria-pressed="${state.showPassword}">
-            ${state.showPassword ? ic('eye-off',16) : ic('eye',16)}
-          </button>
-        </div>
-        ${err.pass ? `<div class="inline-error auth-error" id="err-pass">${ic("alert-triangle",13)} ${err.pass}</div>` : ''}
-      </div>
 
-      ${isRegister ? `
-        <div class="auth-group">
-          <p class="auth-group-name">2 &middot; Location</p>
+        ${isRegister ? `
+        <div class="auth-field">
           <label class="auth-input-label" for="reg-brgy">Barangay</label>
           <div class="input-field ${err.brgy ? 'invalid' : ''}">
             <input id="reg-brgy" value="${esc(val('brgy'))}" placeholder="Which barangay are you in?" autocomplete="address-level2" enterkeyhint="go" ${err.brgy ? 'aria-invalid="true" aria-describedby="err-brgy"' : ''} oninput="authInput('brgy', this)">
-            <span style="opacity:0.55; display:inline-flex;">${ic("map-pin",16)}</span>
+            <span style="opacity:0.55; display:inline-flex;">${ic('map-pin',16)}</span>
           </div>
-          ${err.brgy ? `<div class="inline-error auth-error" id="err-brgy">${ic("alert-triangle",13)} ${err.brgy}</div>` : ''}
-          ${isAdmin ? '' : `<p class="auth-note">${ic(state.role==='provider' ? 'shield' : 'map-pin',13)} ${state.role==='provider'
-            ? 'Provider accounts are reviewed before they appear in the marketplace.'
-            : 'Your barangay decides which nearby providers you are shown.'}</p>`}
+          ${err.brgy ? `<div class="inline-error auth-error" id="err-brgy" role="alert">${ic('alert-triangle',13)} ${err.brgy}</div>` : ''}
         </div>
-      ` : ''}
+        ` : ''}
 
-      <div class="auth-action">
-        <button class="btn" id="login-btn">
-          <span>${isRegister ? 'Create New Account' : 'Sign in as ' + AUTH_ROLE_LABEL[state.role]}</span> ${ic("arrow-right",16)}
+        ${isRegister ? '' : `<button type="button" class="auth-forgot" onclick="showToast('Password reset is not part of this prototype.')">Forgot password?</button>`}
+
+        <div class="auth-field" style="margin-bottom:0;">
+          <button class="btn" id="login-btn">
+            <span>${isRegister ? 'Create account' : 'Log in'}</span> ${ic('arrow-right',16)}
+          </button>
+        </div>
+
+        <div class="auth-divider">${isRegister ? 'or' : 'New here?'}</div>
+
+        <button type="button" class="auth-alt" id="toggle-auth-mode">
+          ${isRegister ? 'I already have an account' : 'Create a new account'}
         </button>
+
+        <p class="auth-note-line">Demo environment · the credentials are prefilled, and nothing is stored
+          ${Store.isPersistent() ? 'beyond this device' : 'beyond this page'}. Sign-in is not an account.</p>
       </div>
-
-      <p class="auth-switch-line">
-        ${isRegister
-          ? 'Already have an account? <button type="button" class="auth-switch" id="toggle-auth-mode">Sign in</button>'
-          : 'New to Sukinnect? <button type="button" class="auth-switch" id="toggle-auth-mode">Create an account</button>'}
-      </p>
-
-      <footer class="auth-foot">
-        <span class="where">${ic("map-pin",12)} Now serving Tupi, South Cotabato</span>
-        ${isAdmin
-          ? `<button type="button" class="auth-admin" id="rt-admin-exit">Switch to Resident</button>`
-          : `<button type="button" class="auth-admin" id="rt-admin">Admin sign-in</button>`}
-      </footer>
-      <p class="auth-note-line">Prototype build &ldquo;next&rdquo; &middot; demo records, kept ${Store.isPersistent() ? 'on this device only' : 'in memory and lost on reload'}. Sign-in is not an account.</p>
     </div>
   </div>`;
 }
@@ -4294,8 +4203,8 @@ function authInput(key, el){
 }
 
 function bindLogin(){
-  // Admin is chosen from the footer line, so the element that swaps the role
-  // differs by state; bind whichever one this render put on screen.
+  // Each role chip exists on every render, so one binder covers all three; the
+  // null guard is for a screen that has not drawn the group at all.
   const pickRole = (id, role) => {
     const node = document.getElementById(id);
     if(node) node.onclick = () => { state.role = role; render(); };
@@ -4303,7 +4212,6 @@ function bindLogin(){
   pickRole('rt-resident', 'resident');
   pickRole('rt-provider', 'provider');
   pickRole('rt-admin', 'admin');
-  pickRole('rt-admin-exit', 'resident');
 
   const toggleAuth = document.getElementById('toggle-auth-mode');
   if(toggleAuth){
@@ -6461,9 +6369,9 @@ function providerProfileHub(){
   const pp = state.providerProfileData;
   const section = state.providerProfileSection;
 const row = (id, title, detail) => settingsRow('providerProfileSection', id, title, detail);
-  const detail = section === 'services' ? listingsPanel(CURRENT_PROVIDER_ID) : section === 'pricing' ? `<div class="card"><b>Pricing &amp; Rates</b><div class="card-body">Starting from <b>${pesoShort(cheapestListing(providerOf({providerId:CURRENT_PROVIDER_ID})))}</b> across ${listingsOf(CURRENT_PROVIDER_ID).length} listed services.<br>Every price is what you charge; the platform fee comes out of it.</div><button class="btn sm" style="margin-top:8px;" onclick="providerProfileAction('pricing')">Edit Pricing</button></div>` : section === 'area' ? `<div class="card"><b>Service Area</b><div class="card-body">Base barangay: <b>${pp.barangay}</b><br>Service radius: <b>${pp.serviceRadius}</b><br><span style="color:var(--success-ink); display:inline-flex; align-items:center; gap:2px;">${ic("check",11)} Poblacion</span><br><span style="color:var(--success-ink); display:inline-flex; align-items:center; gap:2px;">${ic("check",11)} San Isidro</span><br><span style="color:var(--success-ink); display:inline-flex; align-items:center; gap:2px;">${ic("check",11)} Barangay 2</span></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('area')">Change Radius</button></div>` : section === 'hours' ? `<div class="card"><b>Working Hours</b><div class="card-body">Monday - Saturday: <b>${pp.workingHours}</b><br>Sunday: Unavailable</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('hours')">Edit Hours</button></div>` : section === 'dispatch' ? `<div class="card"><b>Emergency Dispatch</b><div class="card-body">Status: <b style="color:var(--success-ink);">${state.providerEmergencyDispatch ? 'Enabled' : 'Disabled'}</b><br>Accept urgent requests outside normal booking flow when available.<br>Emergency radius: 3 km<br>Emergency hours: 6:00 AM - 10:00 PM</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('dispatch')">${state.providerEmergencyDispatch ? 'Disable' : 'Enable'} Dispatch</button></div>` : section === 'credentials' ? `<div class="card"><b>Credentials &amp; Verification</b><div class="card-body">ID Verification - <b style="color:var(--success-ink);">Verified</b><br>TESDA Plumbing NC II - <b style="color:var(--success-ink);">Valid</b><br>NBI Clearance - <b style="color:var(--success-ink);">Valid</b><br>Barangay Clearance - <b style="color:var(--gold-600);">Expires in 23 days</b></div></div>` : section === 'reputation' ? `<div class="card"><b>Reputation</b><div class="statgrid" style="margin-top:10px;"><div class="stat"><div class="num">${providerOf({providerId:CURRENT_PROVIDER_ID}).trustScore}</div><div class="lbl">Trust score</div></div><div class="stat"><div class="num">${providerOf({providerId:CURRENT_PROVIDER_ID}).rating}</div><div class="lbl">Rating</div></div><div class="stat"><div class="num">${completionRate(CURRENT_PROVIDER_ID)}%</div><div class="lbl">Completion</div></div><div class="stat"><div class="num">${cancellationRate(CURRENT_PROVIDER_ID)}%</div><div class="lbl">Cancellation</div></div></div><div style="font-size:12px; color:var(--ink-soft); margin-top:9px;">Trust remains strong because completion and customer ratings are consistently high.</div></div>` : section === 'portfolio' ? `<div class="card"><b>Work Portfolio</b><div style="font-size:12px; margin-top:9px;">${state.providerPortfolio.length ? state.providerPortfolio.map(item=>`${item.service} - ${item.description}`).join('<hr>') : 'No portfolio items added yet.'}</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('portfolio_add')">+ Add Work</button></div>` : section === 'payout' ? `<div class="card"><b>Payout &amp; Earnings</b><div class="card-body">Current payout: <b>GCash (0918***4321)</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('payout')">Manage Payout</button></div>` : section === 'security' ? `<div class="card"><b>Account &amp; Security</b><div class="card-body">Password: <b>••••••••</b><br>PIN: <b>Enabled</b><br>Two-factor authentication: <b style="color:var(--success-ink);">Enabled</b><br>Active sessions: <b>2</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('password')">Change Password</button></div>` : section === 'notifications' ? `<div class="card"><b>Notification Preferences</b>${[['requests','New Service Requests'],['bookings','Booking Updates'],['messages','Customer Messages'],['quotes','Quotation Responses'],['payments','Payment Received'],['opportunities','High Demand Opportunities'],['schedule','Schedule Alerts'],['trust','Trust Score Changes'],['credentials','Credential Expiry'],['reviews','Customer Reviews']].map(([key,label])=>`<label class="row" style="font-size:12px; padding:6px 0;">${label}<input type="checkbox" ${state.providerNotifications[key]?'checked':''} onchange="state.providerNotifications['${key}']=this.checked;"></label>`).join('')}</div>` : section === 'preview' ? `<div class="card"><div style="text-align:center;">${photoAvatar('self', 56)}<div style="font-size:18px; font-weight:800; margin-top:8px;">${pp.name}</div><div style="font-size:12px; color:var(--mist);">${pp.service}</div><div style="margin-top:9px; display:flex; align-items:center; justify-content:center; gap:5px;">${stars(4.9,12)}<span style="font-weight:700;">4.9</span><span style="color:var(--mist);">- 214 completed jobs</span></div><div style="color:var(--success-ink); margin-top:6px;">ID Verified - Top Rated</div><div style="font-size:12px; text-align:left; margin-top:12px;">Service Area: ${pp.barangay} + nearby barangays<br>Starting Rate: ${rateLabel(pp.rateCentavos, pp.rateUnit)}<br>Services: Faucet Repair, Pipe Leak Repair, Drain Cleaning</div></div></div>` : '';
+  const detail = section === 'services' ? listingsPanel(CURRENT_PROVIDER_ID) : section === 'pricing' ? `<div class="card"><b>Pricing &amp; Rates</b><div class="card-body">Starting from <b>${pesoShort(cheapestListing(providerOf({providerId:CURRENT_PROVIDER_ID})))}</b> across ${listingsOf(CURRENT_PROVIDER_ID).length} listed services.<br>Every price is what you charge; the platform fee comes out of it.</div><button class="btn sm" style="margin-top:8px;" onclick="providerProfileAction('pricing')">Edit Pricing</button></div>` : section === 'area' ? `<div class="card"><b>Service Area</b><div class="card-body">Base barangay: <b>${pp.barangay}</b><br>Service radius: <b>${pp.serviceRadius}</b><br><span style="color:var(--success-ink); display:inline-flex; align-items:center; gap:2px;">${ic("check",11)} Poblacion</span><br><span style="color:var(--success-ink); display:inline-flex; align-items:center; gap:2px;">${ic("check",11)} San Isidro</span><br><span style="color:var(--success-ink); display:inline-flex; align-items:center; gap:2px;">${ic("check",11)} Barangay 2</span></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('area')">Change Radius</button></div>` : section === 'hours' ? `<div class="card"><b>Working Hours</b><div class="card-body">Monday - Saturday: <b>${pp.workingHours}</b><br>Sunday: Unavailable</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('hours')">Edit Hours</button></div>` : section === 'dispatch' ? `<div class="card"><b>Emergency Dispatch</b><div class="card-body">Status: <b style="color:var(--success-ink);">${state.providerEmergencyDispatch ? 'Enabled' : 'Disabled'}</b><br>Accept urgent requests outside normal booking flow when available.<br>Emergency radius: 3 km<br>Emergency hours: 6:00 AM - 10:00 PM</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('dispatch')">${state.providerEmergencyDispatch ? 'Disable' : 'Enable'} Dispatch</button></div>` : section === 'credentials' ? `<div class="card"><b>Credentials &amp; Verification</b><div class="card-body">ID Verification - <b style="color:var(--success-ink);">Verified</b><br>TESDA Plumbing NC II - <b style="color:var(--success-ink);">Valid</b><br>NBI Clearance - <b style="color:var(--success-ink);">Valid</b><br>Barangay Clearance - <b style="color:var(--gold-600);">Expires in 23 days</b></div></div>` : section === 'reputation' ? `<div class="card"><b>Reputation</b><div class="statgrid" style="margin-top:10px;"><div class="stat"><div class="num">${providerOf({providerId:CURRENT_PROVIDER_ID}).trustScore}</div><div class="lbl">Trust score</div></div><div class="stat"><div class="num">${providerOf({providerId:CURRENT_PROVIDER_ID}).rating}</div><div class="lbl">Rating</div></div><div class="stat"><div class="num">${completionRate(CURRENT_PROVIDER_ID)}%</div><div class="lbl">Completion</div></div><div class="stat"><div class="num">${cancellationRate(CURRENT_PROVIDER_ID)}%</div><div class="lbl">Cancellation</div></div></div><div style="font-size:12px; color:var(--ink-soft); margin-top:9px;">Trust remains strong because completion and customer ratings are consistently high.</div></div>` : section === 'portfolio' ? `<div class="card"><b>Work Portfolio</b><div style="font-size:12px; margin-top:9px;">${state.providerPortfolio.length ? state.providerPortfolio.map(item=>`${item.service} - ${item.description}`).join('<hr>') : 'No portfolio items added yet.'}</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('portfolio_add')">+ Add Work</button></div>` : section === 'payout' ? `<div class="card"><b>Payout &amp; Earnings</b><div class="card-body">Current payout: <b>GCash (0918***4321)</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('payout')">Manage Payout</button></div>` : section === 'security' ? `<div class="card"><b>Account &amp; Security</b><div class="card-body">Password: <b>••••••••</b><br>PIN: <b>Enabled</b><br>Two-factor authentication: <b style="color:var(--success-ink);">Enabled</b><br>Active sessions: <b>2</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('password')">Change Password</button></div>` : section === 'notifications' ? `<div class="card"><b>Notification Preferences</b>${[['requests','New Service Requests'],['bookings','Booking Updates'],['messages','Customer Messages'],['quotes','Quotation Responses'],['payments','Payment Received'],['opportunities','High Demand Opportunities'],['schedule','Schedule Alerts'],['trust','Trust Score Changes'],['credentials','Credential Expiry'],['reviews','Customer Reviews']].map(([key,label])=>`<label class="row" style="font-size:12px; padding:6px 0;">${label}<input type="checkbox" ${state.providerNotifications[key]?'checked':''} onchange="state.providerNotifications['${key}']=this.checked;"></label>`).join('')}</div>` : section === 'preview' ? `<div class="card"><div style="text-align:center;">${photoAvatar('self', 56)}<div style="font-size:18px; font-weight:800; margin-top:8px;">${pp.name}</div><div style="font-size:12px; color:var(--mist);">${pp.service}</div><div style="margin-top:9px; display:flex; align-items:center; justify-content:center; gap:5px;">${stars(4.9,12)}<span style="font-weight:700;">4.9</span><span style="color:var(--mist);">- 214 completed jobs</span></div><div style="color:var(--success-ink); margin-top:6px;">ID Verified - Top Rated</div><div style="font-size:12px; text-align:left; margin-top:12px;">Service Area: ${pp.barangay} + nearby barangays<br>Starting Rate: ${rateLabel(pp.rateCentavos, pp.rateUnit)}<br>Services: ${listingsOf(CURRENT_PROVIDER_ID).filter(l=>l.isActive).map(l=>l.title).join(', ') || 'none listed yet'}</div></div></div>` : '';
   const modal = state.providerProfileModal;
-  return `<div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><button onclick="state.tab='dashboard'; state.providerProfileSection=null; render();" class="back-btn" aria-label="Back">${ic("chevron-left",18)}</button><div class="title">Provider Profile</div></div></div><div class="pad" style="background:var(--cloud); padding-bottom:40px;"><div class="card" style="text-align:center;">${photoAvatar('self', 56)}<div style="font-size:18px; font-weight:800; margin-top:10px;">${pp.name}</div><div style="font-size:12px; color:var(--mist); margin-top:3px;">${pp.service} - Brgy. ${pp.barangay}</div><div style="display:flex; justify-content:center; gap:6px; margin-top:10px;"><span class="chip">ID Verified</span><span class="chip">Top Rated</span></div><button class="btn sm secondary" style="margin-top:10px;" onclick="providerProfileAction('edit')">Edit Professional Profile</button></div><div class="card"><div class="row"><b class="card-title">Professional status</b><span class="chip">Active</span></div><div style="font-size:12px; line-height:1.8; margin-top:8px;">Availability: <b style="color:var(--success-ink);">${state.providerAvailability}</b><br>Trust Score: <button class="auth-admin" style="font-size:var(--t-body);" onclick="state.providerProfileSection='reputation'; render();">94 / 100</button><br>Credentials: <b style="color:var(--success-ink);">All Valid</b></div></div><div class="card"><div class="row" style="margin-bottom:9px;"><b class="card-title">Contact and service details</b><button class="btn sm secondary" onclick="providerProfileAction('edit')">Edit</button></div><div style="font-size:12px; line-height:1.8;">Email: <b>${pp.email}</b><br>Phone: <b>${pp.phone}</b><br>Rate: <b>${rateLabel(pp.rateCentavos, pp.rateUnit)}</b><br>Service radius: <b>${pp.serviceRadius}</b><br>Working hours: <b>${pp.workingHours}</b><br>Emergency dispatch: <b>${state.providerEmergencyDispatch ? 'Enabled' : 'Disabled'}</b><br>Payout account: <b>GCash (0918***4321)</b></div></div><div class="section-label">SERVICE SETTINGS</div>${row('services','Services Offered','Faucet Repair, Pipe Leak Repair, Drain Cleaning')}${row('pricing','Pricing & Rates',rateLabel(pp.rateCentavos, pp.rateUnit))}${row('area','Service Area',pp.serviceRadius)}${row('hours','Working Hours',pp.workingHours)}${row('dispatch','Emergency Dispatch',state.providerEmergencyDispatch?'Enabled':'Disabled')}<div class="section-label">PROFESSIONAL</div>${row('credentials','Credentials & Verification','ID verified - credential status')}${row('reputation','Reputation & Trust Score','94 / 100 - 4.9 rating')}${row('portfolio','Work Portfolio','Service photos and examples')}${row('preview','Preview Public Profile','See what Residents see')}<div class="section-label">FINANCIAL</div>${row('payout','Payout & Earnings','GCash (0918***4321)') }<div class="section-label">ACCOUNT</div>${row('security','Password & Sign-in','PIN enabled - 2FA enabled')}${row('notifications','Notification Preferences','Service and security alerts')}${section ? `<div style="margin-top:4px;">${detail}</div>` : ''}<button class="btn" style="width:100%; margin-top:12px; background:#fff; color:var(--error-ink); border:1px solid var(--alert); box-shadow:none;" onclick="providerProfileAction('logout')">Log Out</button></div>${modal ? `<div class="modal-layer"><div class="card modal-card"  ><div class="row"><b>${modal==='edit'?'EDIT SERVICE PROFILE':modal==='logout'?'LOG OUT?':modal==='payout'?'PAYOUT ACCOUNT':modal==='dispatch'?'ENABLE EMERGENCY DISPATCH?':modal==='add_service'?((state.listingDraft&&state.listingDraft.id)?'EDIT SERVICE':'NEW SERVICE'):modal==='portfolio_add'?'ADD WORK':'Update'}</b><button aria-label="Close" onclick="state.providerProfileModal=null; render();" style="border:0; background:transparent; font-size:20px;">&times;</button></div>${modal==='edit'?`<label class="form-label">Email (read-only)<input value="${pp.email}" readonly class="form-input-readonly"></label><label class="form-label-8">Phone Number<input id="provider-profile-phone" value="${pp.phone}" class="form-input"></label><label class="form-label-8">Service Rate (peso per unit)<input id="provider-profile-rate" type="number" min="0" step="1" inputmode="numeric" value="${toPesos(pp.rateCentavos)}" class="form-input"></label><label class="form-label-8">Service Radius<input id="provider-profile-radius" value="${pp.serviceRadius}" class="form-input"></label><label class="form-label-8">Working Hours<input id="provider-profile-hours" value="${pp.workingHours}" class="form-input"></label><button class="btn btn-block"   onclick="saveProviderProfessionalProfile()">Save Changes</button>`:modal==='dispatch'?`<div style="font-size:12px; margin-top:12px;">You may receive urgent service requests during selected emergency hours.</div><button class="btn btn-block"   onclick="state.providerEmergencyDispatch=!state.providerEmergencyDispatch; state.providerProfileModal=null; render();">Enable</button>`:modal==='payout'?`<div style="font-size:12px; margin-top:12px;">Current: GCash (0918***4321)<br><br>For security, confirm your password or PIN before changing payout account.</div><button class="btn btn-block"   onclick="state.providerProfileModal='saved'; render();">Continue</button>`:modal==='logout'?`<div style="font-size:12px; margin-top:12px;">Are you sure you want to log out of your Sukinnect provider account?</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm secondary" style="flex:1;" onclick="state.providerProfileModal=null; render();">Cancel</button><button class="btn sm danger" style="flex:1;" onclick="signOut()">Log Out</button></div>`:modal==='add_service'?`<label class="form-label">Service name<input id="listing-title" class="form-input" style="margin-top:6px;" placeholder="e.g. Water heater inspection" value="${esc((state.listingDraft||{}).title||'')}"></label><label class="form-label">Price in pesos<input id="listing-price" type="number" min="100" step="1" inputmode="numeric" class="form-input" style="margin-top:6px;" value="${(state.listingDraft||{}).pricePesos||''}"></label><label class="form-label">Typical duration, minutes<input id="listing-mins" type="number" min="5" step="5" inputmode="numeric" class="form-input" style="margin-top:6px;" value="${(state.listingDraft||{}).durationMin||45}"></label>${state.profileError?`<div class="inline-error" role="alert">${esc(state.profileError)}</div>`:''}<button class="btn btn-block" onclick="commitListingDraft()">Save service</button>`:modal==='portfolio_add'?`<input placeholder="Service" style="width:100%; padding:9px; margin-top:12px;"><textarea placeholder="Description" style="width:100%; min-height:70px; margin-top:8px; padding:9px;"></textarea><button class="btn btn-block"   onclick="state.providerProfileModal='saved'; render();">Save Work</button>`:`<div style="font-size:12px; color:var(--success-ink); margin-top:12px;">Changes saved successfully.</div><button class="btn btn-block"   onclick="state.providerProfileModal=null; render();">Close</button>`}</div></div>`:''}`;
+  return `<div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><button onclick="state.tab='dashboard'; state.providerProfileSection=null; render();" class="back-btn" aria-label="Back">${ic("chevron-left",18)}</button><div class="title">Provider Profile</div></div></div><div class="pad" style="background:var(--cloud); padding-bottom:40px;"><div class="card" style="text-align:center;">${photoAvatar('self', 56)}<div style="font-size:18px; font-weight:800; margin-top:10px;">${pp.name}</div><div style="font-size:12px; color:var(--mist); margin-top:3px;">${pp.service} - Brgy. ${pp.barangay}</div><div style="display:flex; justify-content:center; gap:6px; margin-top:10px;"><span class="chip">ID Verified</span><span class="chip">Top Rated</span></div><button class="btn sm secondary" style="margin-top:10px;" onclick="providerProfileAction('edit')">Edit Professional Profile</button></div><div class="card"><div class="row"><b class="card-title">Professional status</b><span class="chip">Active</span></div><div style="font-size:12px; line-height:1.8; margin-top:8px;">Availability: <b style="color:var(--success-ink);">${state.providerAvailability}</b><br>Trust Score: <button class="auth-switch" style="font-size:var(--t-body);" onclick="state.providerProfileSection='reputation'; render();">${providerOf({providerId:CURRENT_PROVIDER_ID}).trustScore} / 100</button><br>Credentials: <b style="color:var(--success-ink);">All Valid</b></div></div><div class="card"><div class="row" style="margin-bottom:9px;"><b class="card-title">Contact and service details</b><button class="btn sm secondary" onclick="providerProfileAction('edit')">Edit</button></div><div style="font-size:12px; line-height:1.8;">Email: <b>${pp.email}</b><br>Phone: <b>${pp.phone}</b><br>Rate: <b>${rateLabel(pp.rateCentavos, pp.rateUnit)}</b><br>Service radius: <b>${pp.serviceRadius}</b><br>Working hours: <b>${pp.workingHours}</b><br>Emergency dispatch: <b>${state.providerEmergencyDispatch ? 'Enabled' : 'Disabled'}</b><br>Payout account: <b>GCash (0918***4321)</b></div></div><div class="section-label">SERVICE SETTINGS</div>${row('services','Services Offered', listingsOf(CURRENT_PROVIDER_ID).filter(l=>l.isActive).map(l=>l.title).join(', ') || 'Nothing listed yet')}${row('pricing','Pricing & Rates',rateLabel(pp.rateCentavos, pp.rateUnit))}${row('area','Service Area',pp.serviceRadius)}${row('hours','Working Hours',pp.workingHours)}${row('dispatch','Emergency Dispatch',state.providerEmergencyDispatch?'Enabled':'Disabled')}<div class="section-label">PROFESSIONAL</div>${row('credentials','Credentials & Verification','ID verified - credential status')}${row('reputation','Reputation & Trust Score', providerOf({providerId:CURRENT_PROVIDER_ID}).trustScore + ' / 100 · ' + providerOf({providerId:CURRENT_PROVIDER_ID}).rating + ' rating')}${row('portfolio','Work Portfolio','Service photos and examples')}${row('preview','Preview Public Profile','See what Residents see')}<div class="section-label">FINANCIAL</div>${row('payout','Payout & Earnings','GCash (0918***4321)') }<div class="section-label">ACCOUNT</div>${row('security','Password & Sign-in','PIN enabled - 2FA enabled')}${row('notifications','Notification Preferences','Service and security alerts')}${section ? `<div style="margin-top:4px;">${detail}</div>` : ''}<button class="btn" style="width:100%; margin-top:12px; background:#fff; color:var(--error-ink); border:1px solid var(--alert); box-shadow:none;" onclick="providerProfileAction('logout')">Log Out</button></div>${modal ? `<div class="modal-layer"><div class="card modal-card"  ><div class="row"><b>${modal==='edit'?'EDIT SERVICE PROFILE':modal==='logout'?'LOG OUT?':modal==='payout'?'PAYOUT ACCOUNT':modal==='dispatch'?'ENABLE EMERGENCY DISPATCH?':modal==='add_service'?((state.listingDraft&&state.listingDraft.id)?'EDIT SERVICE':'NEW SERVICE'):modal==='portfolio_add'?'ADD WORK':'Update'}</b><button aria-label="Close" onclick="state.providerProfileModal=null; render();" style="border:0; background:transparent; font-size:20px;">&times;</button></div>${modal==='edit'?`<label class="form-label">Email (read-only)<input value="${pp.email}" readonly class="form-input-readonly"></label><label class="form-label-8">Phone Number<input id="provider-profile-phone" value="${pp.phone}" class="form-input"></label><label class="form-label-8">Service Rate (peso per unit)<input id="provider-profile-rate" type="number" min="0" step="1" inputmode="numeric" value="${toPesos(pp.rateCentavos)}" class="form-input"></label><label class="form-label-8">Service Radius<input id="provider-profile-radius" value="${pp.serviceRadius}" class="form-input"></label><label class="form-label-8">Working Hours<input id="provider-profile-hours" value="${pp.workingHours}" class="form-input"></label><button class="btn btn-block"   onclick="saveProviderProfessionalProfile()">Save Changes</button>`:modal==='dispatch'?`<div style="font-size:12px; margin-top:12px;">You may receive urgent service requests during selected emergency hours.</div><button class="btn btn-block"   onclick="state.providerEmergencyDispatch=!state.providerEmergencyDispatch; state.providerProfileModal=null; render();">Enable</button>`:modal==='payout'?`<div style="font-size:12px; margin-top:12px;">Current: GCash (0918***4321)<br><br>For security, confirm your password or PIN before changing payout account.</div><button class="btn btn-block"   onclick="state.providerProfileModal='saved'; render();">Continue</button>`:modal==='logout'?`<div style="font-size:12px; margin-top:12px;">Are you sure you want to log out of your Sukinnect provider account?</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm secondary" style="flex:1;" onclick="state.providerProfileModal=null; render();">Cancel</button><button class="btn sm danger" style="flex:1;" onclick="signOut()">Log Out</button></div>`:modal==='add_service'?`<label class="form-label">Service name<input id="listing-title" class="form-input" style="margin-top:6px;" placeholder="e.g. Water heater inspection" value="${esc((state.listingDraft||{}).title||'')}"></label><label class="form-label">Price in pesos<input id="listing-price" type="number" min="100" step="1" inputmode="numeric" class="form-input" style="margin-top:6px;" value="${(state.listingDraft||{}).pricePesos||''}"></label><label class="form-label">Typical duration, minutes<input id="listing-mins" type="number" min="5" step="5" inputmode="numeric" class="form-input" style="margin-top:6px;" value="${(state.listingDraft||{}).durationMin||45}"></label>${state.profileError?`<div class="inline-error" role="alert">${esc(state.profileError)}</div>`:''}<button class="btn btn-block" onclick="commitListingDraft()">Save service</button>`:modal==='portfolio_add'?`<input placeholder="Service" style="width:100%; padding:9px; margin-top:12px;"><textarea placeholder="Description" style="width:100%; min-height:70px; margin-top:8px; padding:9px;"></textarea><button class="btn btn-block"   onclick="state.providerProfileModal='saved'; render();">Save Work</button>`:`<div style="font-size:12px; color:var(--success-ink); margin-top:12px;">Changes saved successfully.</div><button class="btn btn-block"   onclick="state.providerProfileModal=null; render();">Close</button>`}</div></div>`:''}`;
 }
 
 function bindTabHandlers(){

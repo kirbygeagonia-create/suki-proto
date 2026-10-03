@@ -875,6 +875,65 @@ suite('hygiene', async () => {
   return c;
 });
 
+/* ══ 11. the sign-in screen ═════════════════════════════════════════════════ */
+suite('login', async () => {
+  const c = makeChecker();
+  const app = boot();
+  const { state, loginHTML } = app;
+  const safe = (label, fn) => { try { return fn(); } catch (err) { c.check(label + ' threw', false, err.message); return ''; } };
+
+  state.view = 'login';
+  const screens = [];
+  ['resident', 'provider', 'admin'].forEach(role => {
+    state.role = role;
+    state.authMode = 'login';
+    screens.push(['log in · ' + role, safe(role, () => loginHTML())]);
+    state.authMode = 'register';
+    screens.push(['register · ' + role, safe(role, () => loginHTML())]);
+  });
+
+  const problems = [];
+  const OPEN = /<div\b/g, CLOSE = /<\/div>/g, HOLE = /undefined|NaN|\[object Object\]/;
+  screens.forEach(([name, out]) => {
+    if (!out) { problems.push(name + ' produced nothing'); return; }
+    const o = (out.match(OPEN) || []).length, cl = (out.match(CLOSE) || []).length;
+    if (o !== cl) problems.push(name + ' markup unbalanced ' + o + ' against ' + cl);
+    const hole = out.match(HOLE);
+    if (hole) problems.push(name + ' paints ' + hole[0]);
+    if (!/id="login-email"/.test(out) || !/id="login-pass"/.test(out)) problems.push(name + ' is missing a field');
+    if (!/id="login-btn"/.test(out)) problems.push(name + ' has no primary action');
+  });
+  c.check('every sign-in state renders clean', problems.length === 0, '\n      ' + problems.join('\n      '));
+
+  const one = screens[0][1];
+  const reg = screens[1][1];
+  c.check('all three roles sit on the screen, not one behind a footer link',
+    /id="rt-resident"/.test(one) && /id="rt-provider"/.test(one) && /id="rt-admin"/.test(one));
+  c.check('the official mark is the first thing on it',
+    one.indexOf('Sukinnect_Logo.png') > -1 && one.indexOf('Sukinnect_Logo.png') < one.indexOf('login-email'));
+  /* what was asked off the screen: the pitch, not the product */
+  c.check('no marketing copy is left competing with the form',
+    !/Verified local help|Two minutes now|Now serving Tupi|Welcome back/.test(one));
+  c.check('the FIND-REVIEW-BOOK-RECORD strip is not on the sign-in screen',
+    !/REVIEW.*BOOK/.test(one));
+  c.check('and the prefilled-credentials paragraph is gone',
+    !/prefilled for the role above/.test(one));
+  c.check('the honesty line survives, once and last',
+    (one.match(/not an account/g) || []).length === 1 && /Demo environment/.test(one));
+  c.check('forgot password reads as a link under the field', /class="auth-forgot"/.test(one));
+  c.check('log in is the only primary action',
+    (one.match(/class="btn" id="login-btn"/g) || []).length === 1);
+  c.check('register asks for a name and a barangay, login does not',
+    /id="reg-name"/.test(reg) && /id="reg-brgy"/.test(reg) && !/id="reg-name"/.test(one));
+  c.check('fields carry real labels, not a placeholder alone', /for="login-email"/.test(one));
+  c.check('the password can be shown', /id="toggle-pw-btn"/.test(one));
+  c.check('the sample credential still arrives prefilled for the chosen role',
+    one.indexOf('ana@demo.ph') > -1 && screens[2][1].indexOf('ramil@demo.ph') > -1);
+  c.check('the sheet is the only scroller, so the keyboard cannot bury the action',
+    /class="auth-sheet"/.test(one));
+  return c;
+});
+
 (async () => {
   let total = 0, failed = 0;
   for (const { name, fn } of suites) {
