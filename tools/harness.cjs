@@ -18,12 +18,14 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   'toCentavos', 'toPesos', 'computeBreakdown', 'breakdownForBooking', 'postEvent', 'settlementLines', 'settlementToProvider', 'freezePricing', 'commissionRateFor', 'CONFIG_DEFAULTS', 'CONFIG_AUDIT',
   'accountBalance', 'ledgerBalance', 'ledgerFor', 'ACCOUNTS', 'LEDGER_EVENTS',
   'PAYMENTS', 'PAYOUTS', 'PAYMENT_LABELS', 'paymentsFor', 'recordPayment', 'Gateway',
+  'earningsCard', 'jobActionBar', 'realRequestCard', 'listingsPanel', 'threadsFor',
+  'toggleListing', 'commitListingDraft', 'bookedThisWeek', 'completionRate', 'cancellationRate', 'nextPayoutDate', 'settlementLines',
   'TRANSITIONS', 'BOOKING_STATES', 'FINISHED_STATES', 'attemptTransition', 'transitionAllowed',
   'nextActionFor', 'bookingTimeline', 'label', 'stateHint', 'recordStatusEvent', 'seedStatusHistory',
   'applyDueTransitions', 'MockGateway', 'authorizeBooking', 'captureBooking', 'voidBooking',
   'refundBooking', 'settleCashBooking', 'providerBalances', 'runPayoutCycle', 'platformStatement',
   'providerStatement', 'commissionReceivableAgeing', 'SCHEMA_VERSION', 'ROOT_TABS',
-  'submitBookingRequest', 'answerRequest', 'moveJobForward', 'openProviderDetail',
+  'submitBookingRequest', 'answerRequest', 'providerJobAction', 'openProviderDetail',
   'render', 'showToast', 'resetDemoData', 'setConfig', 'rateFor', 'LedgerImbalance',
   'CURRENT_CUSTOMER_ID', 'CURRENT_PROVIDER_ID', 'CONFIG_DEFAULTS', 'commissionRateFor'];
 

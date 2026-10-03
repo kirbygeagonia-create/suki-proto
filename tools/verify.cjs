@@ -641,6 +641,91 @@ suite('payments', async () => {
   return c;
 });
 
+/* ══ 8. the provider side ─══════════════════════════════════════════════════ */
+suite('provider', async () => {
+  const c = makeChecker();
+  const app = boot();
+  const { state, BOOKINGS, LISTINGS, earningsCard, jobActionBar, realRequestCard, listingsPanel,
+          threadsFor, providerJobAction, toggleListing, commitListingDraft, pendingProviderRequests,
+          bookingsForProvider, bookingsForResident, providerBalances, bookedThisWeek, completionRate,
+          cancellationRate, pesoShort, label, render, _document } = app;
+  state.view = 'app'; state.role = 'provider'; state.tab = 'fsm';
+
+  /* the wallet is gone, and what replaced it says where the money is */
+  const earn = earningsCard('p1');
+  c.check('the earnings card never says wallet', !/wallet/i.test(earn));
+  c.check('and never promises a cash-out', !/cash-?out/i.test(earn));
+  c.check('it reports the hold and the minimum honestly',
+    earn.includes(pesoShort(providerBalances('p1').availableCentavos)) || /Ready to pay out/.test(earn));
+  c.check('cash taken on site is shown as already the provider’s', /Collected on site/.test(earn));
+
+  /* only moves the machine allows */
+  const job = bookingsForProvider().find(b => b.status === 'upcoming');
+  const bar = jobActionBar(job);
+  c.check('the action bar offers the legal next move', /I have arrived|Start the work/.test(bar), bar.slice(0, 60));
+  c.check('and never offers one the table refuses', !/>Accept</.test(bar));
+  const before = BOOKINGS.length;
+  providerJobAction(job.id, 'en_route');
+  c.check('pressing it moves the shared record', job.status === 'en_route', job.status);
+  c.check('without inventing a second record', BOOKINGS.length === before);
+
+  /* the FSM no longer narrates an imaginary queue */
+  const fsm = realRequestCard();
+  const oldest = pendingProviderRequests().slice().sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))[0];
+  c.check('the surge card shows the request that has waited longest',
+    fsm.includes(oldest.summary.slice(0, 12)), oldest.summary);
+  c.check('and counts down from the configured window', /min left to answer/.test(fsm));
+  pendingProviderRequests().forEach(b => { b.status = 'completed'; });
+  c.check('with nothing waiting it says so plainly', /Nothing waiting on you/.test(realRequestCard()));
+
+  /* the price list is data, not prose */
+  const count = LISTINGS.length;
+  listingsPanel('p1');
+  c.check('a listed service can be hidden and shown again', (() => {
+    const l = LISTINGS[0]; const was = l.isActive;
+    toggleListing(l.id); const flipped = l.isActive;
+    toggleListing(l.id); return flipped !== was && l.isActive === was;
+  })());
+  state.providerProfileModal = 'add_service'; state.listingDraft = null; state.profileError = null;
+  _document.getElementById('listing-title').value = 'Emergency pipe burst response';
+  _document.getElementById('listing-price').value = '850';
+  _document.getElementById('listing-mins').value = '90';
+  commitListingDraft();
+  const added = LISTINGS.find(l => l.title === 'Emergency pipe burst response');
+  c.check('adding a service writes a record', !!added && LISTINGS.length === count + 1);
+  c.check('at a whole number of centavos', added && added.basePriceCentavos === 85000, added && String(added.basePriceCentavos));
+  c.check('a price under the floor is refused with a reason on the field', (() => {
+    state.providerProfileModal = 'add_service';
+    state.listingDraft = { id:null, title:'Cheap job', pricePesos:'20', durationMin:'30' };
+    _document.getElementById('listing-title').value = 'Cheap job';
+    _document.getElementById('listing-price').value = '20';
+    _document.getElementById('listing-mins').value = '30';
+    commitListingDraft();
+    return !LISTINGS.some(l => l.title === 'Cheap job') && /at least/.test(state.profileError || '');
+  })(), state.profileError);
+  state.profileError = null;
+
+  /* conversations follow the job, not the demo persona */
+  const providerThreads = threadsFor('provider');
+  const residentThreads = threadsFor('resident');
+  c.check('a provider sees only the clients of their own jobs',
+    providerThreads.length > 0 && providerThreads.every(t => t.kind === 'customer' &&
+      bookingsForProvider().some(b => b.customerId && app.customerOf(b).name === t.name)));
+  c.check('a resident sees only their own providers',
+    residentThreads.length > 0 && residentThreads.every(t => t.kind === 'provider'));
+  c.check('neither thread list is the other role’s inbox',
+    !providerThreads.some(t => residentThreads.some(r => r.name === t.name && r.kind === t.kind)));
+
+  /* dashboard figures come from records */
+  const week = bookedThisWeek('p1');
+  c.check('booked this week matches the jobs in the last seven days',
+    week === bookingsForProvider().filter(b => Date.now() - Date.parse(b.createdAt) < 7 * 86400000)
+             .reduce((t, b) => t + (b.amountCentavos || 0), 0), String(week));
+  c.check('completion and cancellation are complements',
+    completionRate('p1') + cancellationRate('p1') <= 100);
+  return c;
+});
+
 (async () => {
   let total = 0, failed = 0;
   for (const { name, fn } of suites) {

@@ -2614,6 +2614,7 @@ function snapshot() {
     ledger: LEDGER,
     config: CONFIG,
     profileData: state.profileData,
+    providerSettings: { availability: state.providerAvailability, emergencyDispatch: state.providerEmergencyDispatch },
     providerProfileData: state.providerProfileData
   };
 }
@@ -2645,6 +2646,10 @@ function hydrate() {
                         if (!Number.isNaN(n) && n > ledgerSeq) ledgerSeq = n; });
   if (snap.profileData) Object.assign(state.profileData, snap.profileData);
   if (snap.providerProfileData) Object.assign(state.providerProfileData, snap.providerProfileData);
+  if (snap.providerSettings) {
+    state.providerAvailability = snap.providerSettings.availability;
+    state.providerEmergencyDispatch = !!snap.providerSettings.emergencyDispatch;
+  }
   return { restored: true, kind: Store.kind, savedAt: snap.savedAt };
 }
 
@@ -4617,44 +4622,9 @@ function residentProviderDetail(){
 }
 
 function residentMessagesList(){
-  const messageThreads = [
-    {
-      id: 'p1',
-      name: 'Ramil Odiada',
-      service: 'Plumbing Specialist',
-      barangay: 'Poblacion',
-      snippet: 'Hello po! On the way na po ako sa locatio...',
-      time: '10m ago',
-      unread: true
-    },
-    {
-      id: 'p2',
-      name: 'Jerico Salamat',
-      service: 'Electrical Specialist',
-      barangay: 'San Isidro',
-      snippet: 'Fixed our tripping breakers safely. Very knowl...',
-      time: '1h ago',
-      unread: false
-    },
-    {
-      id: 'p3',
-      name: 'Cristy Fernandez',
-      service: 'Cleaning Specialist',
-      barangay: 'Poblacion',
-      snippet: 'Your deep-clean is booked for 9:00 AM po. See you!',
-      time: '1h ago',
-      unread: false
-    },
-    {
-      id: 'p4',
-      name: 'Allan Buenaflor',
-      service: 'Appliance Specialist',
-      barangay: 'Sta. Cruz',
-      snippet: 'Aircon cleaned and refilled na po. Salamat!',
-      time: '1h ago',
-      unread: false
-    }
-  ];
+  /* Threads come from the jobs this account is part of. The provider was reading
+     the resident’s conversations, including ones that were never theirs. */
+  const messageThreads = threadsFor(state.role);
 
   const unreadCount = messageThreads.filter(t => t.unread).length;
   const shownThreads = state.msgFilter === 'unread' ? messageThreads.filter(t => t.unread) : messageThreads;
@@ -4668,16 +4638,16 @@ function residentMessagesList(){
     </div>
 
     ${shownThreads.length === 0 ? emptyState('mail', 'No unread messages', 'You have caught up on every conversation here. Open All to read the full threads.', {id:'msgs-show-all-btn', label:'Show all conversations'}) : shownThreads.map(m => `
-      <div class="card" data-open-chat-id="${m.id}" style="cursor:pointer; padding:14px; margin-bottom:10px; border-radius:14px; border:1px solid var(--line); display:flex; align-items:flex-start; gap:12px; background:#fff;">
+      <div class="card" data-open-chat-id="${m.id}" data-thread-kind="${m.kind}" data-thread-booking="${m.bookingId}" style="cursor:pointer; padding:14px; margin-bottom:10px; border-radius:14px; border:1px solid var(--line); display:flex; align-items:flex-start; gap:12px; background:#fff;">
         ${serviceAvatar(m.id, 44, '')}
         <div style="flex:1; min-width:0;">
           <div class="row" style="margin-bottom:2px;">
-            <span style="font-size:14.5px; font-weight:700; color:var(--ink);">${m.name}</span>
-            <span style="font-size:var(--t-caption); color:var(--mist); font-weight:500;">${m.time}</span>
+            <span style="font-size:14.5px; font-weight:700; color:var(--ink);">${esc(m.name)}</span>
+            <span style="font-size:var(--t-caption); color:var(--mist); font-weight:500;">${esc(m.time)}</span>
           </div>
-          <div style="font-size:var(--t-caption); font-weight:600; color:var(--success-ink); margin-bottom:3px;">${m.service} · Brgy. ${m.barangay}</div>
+          <div style="font-size:var(--t-caption); font-weight:600; color:var(--success-ink); margin-bottom:3px;">${esc(m.service)} · Brgy. ${esc(m.barangay)}</div>
           <div class="row">
-            <span style="font-size:12px; color:var(--mist); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:210px;">${m.snippet}</span>
+            <span style="font-size:12px; color:var(--mist); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:210px;">${esc(m.snippet)}</span>
             ${m.unread ? '<span style="width:8px; height:8px; background:var(--success); border-radius:50%; flex-shrink:0; margin-left:6px;"></span>' : ''}
           </div>
         </div>
@@ -5432,6 +5402,225 @@ const row = (id, title, detail) => settingsRow('adminAccountSection', id, title,
   return `<div class="topbar"><div class="title">Admin account</div></div><div class="pad" style="background:var(--cloud); padding-bottom:40px;"><div class="card" style="text-align:center;">${photoAvatar('admin', 56)}<div style="font-size:18px; font-weight:800; margin-top:10px;">${ap.name}</div><div style="font-size:12px; color:var(--mist); margin-top:3px;">Super Administrator<br>Full Municipal Control</div><button class="btn sm secondary" style="margin-top:12px;" onclick="adminAccountAction('edit')">Edit Profile</button></div><div style="font-size:var(--t-caption); font-weight:800; color:var(--mist); margin:14px 0 7px;">ACCOUNT</div>${row('account','Account Information',ap.email)}${row('role','Role & Access','Super Administrator - Full Municipal Control')}${expanded}<div style="font-size:var(--t-caption); font-weight:800; color:var(--mist); margin:14px 0 7px;">SECURITY</div>${row('security','Security & Sign-in','PIN enabled - 2FA enabled')}${row('sessions','Active Sessions','2 devices signed in')}${row('login_activity','Login Activity','Recent authentication activity')}${expanded}<div style="font-size:var(--t-caption); font-weight:800; color:var(--mist); margin:14px 0 7px;">PREFERENCES</div>${row('notifications','Notifications','Choose which Admin alerts you receive')}${row('preferences','App Preferences','System Default')}${expanded}<div style="font-size:var(--t-caption); font-weight:800; color:var(--mist); margin:14px 0 7px;">ADMINISTRATION</div>${row('activity','My Admin Activity','Review your recent administrative actions')}${expanded}<button class="btn secondary" style="width:100%; margin-top:8px;" onclick="adminAccountAction('lock')">Lock Admin Session</button><button class="btn" style="width:100%; margin-top:8px; background:#fff; color:var(--error-ink); border:1px solid var(--alert); box-shadow:none;" onclick="adminAccountAction('logout')">Log Out</button></div>${modal ? `<div class="modal-layer"><div class="card modal-card"  ><div class="row"><b>${modal==='edit'?'EDIT ADMIN PROFILE':modal==='pin'?'CHANGE SECURITY PIN':modal==='password'?'CHANGE PASSWORD':modal==='twofa'?'TWO-FACTOR AUTHENTICATION':modal==='sessions'?'SIGN OUT THIS DEVICE?':modal==='lock'?'ADMIN SESSION LOCKED':modal==='logout'?'LOG OUT?':'Account update'}</b><button aria-label="Close" onclick="state.adminAccountModal=null; render();" style="border:0; background:transparent; font-size:20px;">&times;</button></div>${modal==='edit'?`<label class="form-label">Display Name<input id="admin-profile-name" value="${ap.name}" class="form-input"></label><label class="form-label-8">Email (read-only)<input value="${ap.email}" readonly class="form-input-readonly"></label><label class="form-label-8">Phone<input id="admin-profile-phone" value="${ap.phone}" class="form-input"></label><label class="form-label-8">Office / Department<input id="admin-profile-office" value="${ap.officeLocation}" class="form-input"></label><button class="btn btn-block"   onclick="saveAdminProfile()">Save Changes</button>`:modal==='pin'?`<input type="password" placeholder="Current PIN" style="width:100%; padding:9px; margin-top:12px;"><input type="password" placeholder="New PIN" style="width:100%; padding:9px; margin-top:8px;"><input type="password" placeholder="Confirm New PIN" style="width:100%; padding:9px; margin-top:8px;"><button class="btn btn-block"   onclick="adminLog('Security PIN updated','Master Administrator','PIN updated'); state.adminAccountModal='saved'; render();">Update PIN</button>`:modal==='password'?`<div style="font-size:var(--t-caption); color:var(--mist); margin:10px 0;">Use at least 8 characters with a number and symbol.</div><input type="password" placeholder="Current Password" style="width:100%; padding:9px;"><input type="password" placeholder="New Password" style="width:100%; padding:9px; margin-top:8px;"><input type="password" placeholder="Confirm New Password" style="width:100%; padding:9px; margin-top:8px;"><button class="btn btn-block"   onclick="adminLog('Password updated','Master Administrator','Password updated'); state.adminAccountModal='saved'; render();">Update Password</button>`:modal==='twofa'?`<div style="font-size:12px; line-height:1.6; margin-top:10px;">Status: <b style="color:var(--success-ink);">Enabled</b><br>Method: Authenticator App<br><span style="color:var(--mist);">Authentication secrets are not displayed in this prototype.</span></div><button class="btn sm secondary" style="margin-top:10px;" onclick="state.adminAccountModal='saved'; render();">Manage 2FA</button>`:modal==='sessions'?`<div style="font-size:12px; line-height:1.6; margin-top:10px;">Android Device - Chrome<br>Last active: 2 hours ago<br><br>This device will need to sign in again to access Sukinnect Administrator.</div><button class="btn btn-block"   onclick="adminLog('Admin session signed out','Android Device','Device removed'); state.adminAccountModal='saved'; render();">Sign Out</button>`:modal==='lock'?`<div style="font-size:12px; margin-top:12px;">Master Administrator<br><br>Enter PIN to continue:</div><input type="password" placeholder="PIN" style="width:100%; padding:9px; margin-top:8px;"><button class="btn btn-block"   onclick="state.adminAccountModal=null; render();">Unlock</button><button class="btn sm secondary" style="width:100%; margin-top:8px;" onclick="adminAccountAction('logout')">Log Out Instead</button>`:modal==='logout'?`<div style="font-size:12px; margin-top:12px;">Are you sure you want to log out of the Sukinnect Administrator account?</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm secondary" style="flex:1;" onclick="state.adminAccountModal=null; render();">Cancel</button><button class="btn sm danger" style="flex:1;" onclick="signOut()">Log Out</button></div>`:`<div style="font-size:12px; color:var(--success-ink); margin-top:12px;">Update saved and recorded in the Audit Log.</div><button class="btn btn-block"   onclick="state.adminAccountModal=null; render();">Close</button>`}</div></div>`:''}`;
 }
 
+/* ── provider-side views built on the kernel ─────────────────────────────── */
+
+/* The forward moves for this job, taken from the machine rather than typed into
+   the card, so a button can only appear when the transition table allows it. */
+function jobActionBar(b) {
+  const options = nextActionFor(b, 'provider');
+  if (!options.length) return '';
+  const VERBS = { en_route:'On the way', arrived:'I have arrived', ongoing:'Start the work',
+                  completed:'Mark complete', no_show:'No one is here', cancelled:'Decline this request' };
+  return `<div class="card" style="border-radius:14px; padding:14px; margin-bottom:14px; border:1px solid var(--line);">
+      <div style="font-size:var(--t-caption); font-weight:800; text-transform:uppercase; color:var(--ink-soft); margin-bottom:10px;">Your next step</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        ${options.filter(o => o !== 'cancelled').map((o, i) => `
+          <button type="button" class="btn ${i === 0 ? '' : 'secondary'}" style="width:100%; border-radius:12px;" onclick="providerJobAction('${b.id}','${o}')">${VERBS[o] || label(o)}</button>`).join('')}
+      </div>
+      <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">
+        ${b.status === 'ongoing'
+          ? 'Marking it complete is what releases the payment and starts the record. The client still confirms it.'
+          : 'The client sees each step the moment you press it.'}
+      </div>
+    </div>`;
+}
+
+/* What the provider has earned, when it is coming, and what they owe us on cash
+   work. This replaces the stored-value wallet the prototype shipped with: there
+   is no balance to spend and no cash-out to press, only an accounting position
+   the platform settles on schedule. */
+function earningsCard(providerId) {
+  const bal = providerBalances(providerId);
+  const st = providerStatement(providerId);
+  const owed = commissionReceivableAgeing().find(r => r.providerId === providerId);
+  return `<div class="card" style="border-radius:14px; padding:14px; margin-bottom:14px;">
+      <div class="row" style="margin-bottom:12px;">
+        <b class="card-title">Earnings and payouts</b>
+        <span class="chip">${esc(CONFIG.payoutSchedule === 'weekly:monday' ? 'Weekly, Monday' : CONFIG.payoutSchedule)}</span>
+      </div>
+      <div class="statgrid" style="margin:0 0 12px;">
+        <div class="stat"><div class="num">${pesoShort(bal.availableCentavos)}</div><div class="lbl">Ready to pay out</div></div>
+        <div class="stat"><div class="num">${pesoShort(bal.pendingCentavos)}</div><div class="lbl">In the ${CONFIG.payoutHoldDays}-day hold</div></div>
+      </div>
+      <div class="row"><span>Collected on site, yours already</span><b>${peso(bal.collectedOnSiteCentavos)}</b></div>
+      <div class="row"><span>Fee owed on those cash jobs</span><b style="color:${bal.commissionOwedCentavos ? 'var(--warning-ink)' : 'var(--ink-soft)'}">${peso(bal.commissionOwedCentavos || 0)}</b></div>
+      <div class="row" style="border-top:1px solid var(--line); padding-top:8px; margin-top:4px;">
+        <span style="font-weight:800; color:var(--ink);">Next payout</span>
+        <b>${bal.availableCentavos >= bal.payoutMinCentavos ? 'Mon, ' + esc(bal.nextPayoutOn.replace(/^[^,]*, /, '')) : 'needs ' + pesoShort(bal.payoutMinCentavos - bal.availableCentavos) + ' more'}</b>
+      </div>
+      <p style="font-size:var(--t-caption); color:var(--mist); line-height:1.55; margin:10px 0 0;">
+        ${bal.disputedCentavos
+          ? peso(bal.disputedCentavos) + ' of this is held while a case is open. Nothing is decided by holding it.'
+          : 'A job becomes payable once the client confirms it and the hold window has passed — long enough for a warranty call to reach you instead of a dispute.'}
+        ${owed ? ' Cash you collected is never paid out again; the fee on it is simply settled against your next transfer.' : ''}
+      </p>
+      ${PAYOUTS.filter(p => p.providerId === providerId).length ? `
+      <div style="margin-top:12px; padding-top:10px; border-top:1px solid var(--line);">
+        <div style="font-size:var(--t-caption); font-weight:800; text-transform:uppercase; color:var(--ink-soft); margin-bottom:6px;">Paid out</div>
+        ${PAYOUTS.filter(p => p.providerId === providerId).slice(0, 4).map(p => `
+          <div class="row" style="font-size:var(--t-caption);"><span>${esc(String(p.createdAt).slice(0, 10))} · ${esc(p.method)} ${esc(p.destination)}</span><b>${peso(p.amountCentavos)}</b></div>`).join('')}
+      </div>` : ''}
+    </div>`;
+}
+
+/* A price list the provider can actually change. */
+function listingsPanel(providerId) {
+  const list = listingsOf(providerId);
+  return `<div class="card" style="border-radius:14px; padding:14px; margin-bottom:14px;">
+      <div class="row" style="margin-bottom:10px;">
+        <b class="card-title">Services and prices</b>
+        <span class="chip">${list.length} listed</span>
+      </div>
+      ${list.length ? list.map(l => `
+        <div class="row" style="padding:9px 0; border-top:1px solid var(--line);">
+          <span style="min-width:0; flex:1;">
+            <span style="display:block; font-size:12.5px; font-weight:700; color:var(--ink);">${esc(l.title)}</span>
+            <span style="display:block; font-size:var(--t-caption); color:var(--mist); margin-top:1px;">${l.durationMin} min · fee to Sukinnect ${pesoShort(Math.round(l.basePriceCentavos * commissionRateFor(l.categoryId)))}</span>
+          </span>
+          <span style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+            <b style="font-size:13px;">${pesoShort(l.basePriceCentavos)}</b>
+            <button type="button" class="chip" style="cursor:pointer;" aria-pressed="${l.isActive}" onclick="toggleListing('${l.id}')">${l.isActive ? 'Active' : 'Hidden'}</button>
+            <button type="button" class="chip" style="cursor:pointer;" onclick="editListing('${l.id}')">Edit</button>
+          </span>
+        </div>`).join('') : `<div style="font-size:var(--t-caption); color:var(--mist);">Nothing listed yet. A provider with no listed job cannot be booked for a price.</div>`}
+      <button type="button" class="btn sm secondary" style="width:100%; margin-top:12px; border-radius:10px;" onclick="providerProfileAction('add_service')">${ic('check', 12)} Add a service</button>
+    </div>`;
+}
+
+function toggleListing(id) {
+  const l = listingById(id);
+  if (!l) return;
+  l.isActive = !l.isActive;
+  persist();
+  render();
+  showToast(l.title + ' is now ' + (l.isActive ? 'bookable' : 'hidden from search'));
+}
+function editListing(id) {
+  const l = listingById(id);
+  if (!l) return;
+  state.listingDraft = { id: l.id, title: l.title, pricePesos: toPesos(l.basePriceCentavos), durationMin: l.durationMin };
+  providerProfileAction('edit_service');
+}
+function saveListingDraft() {
+  const draft = state.listingDraft;
+  if (!draft) return;
+  const title = String(draft.title || '').trim();
+  const price = toCentavos(Number(draft.pricePesos));
+  const mins = Math.round(Number(draft.durationMin) || 0);
+  if (title.length < 3) { state.profileError = 'Give the service a name a client would recognise.'; render(); return; }
+  if (!Number.isFinite(price) || price < 10000) { state.profileError = 'A job price has to be at least ₱100.'; render(); return; }
+  if (mins < 5) { state.profileError = 'Say how long the job takes, in minutes.'; render(); return; }
+  const existing = listingById(draft.id);
+  if (existing) {
+    existing.title = title; existing.basePriceCentavos = price; existing.durationMin = mins;
+  } else {
+    LISTINGS.push({ id: 'l' + (LISTINGS.length + 1), providerId: CURRENT_PROVIDER_ID,
+                    categoryId: providerOf({ providerId: CURRENT_PROVIDER_ID }).serviceId,
+                    title, basePriceCentavos: price, durationMin: mins, isActive: true });
+  }
+  state.listingDraft = null;
+  state.providerProfileModal = 'saved';
+  persist();
+  render();
+  showToast('Saved - ' + title + ' at ' + pesoShort(price));
+}
+
+/* Threads belong to a job, and a job has two sides. The provider was reading the
+   resident's inbox, including conversations that were not theirs. */
+function threadsFor(role) {
+  const mine = role === 'provider' ? bookingsForProvider() : bookingsForResident();
+  const seen = {};
+  mine.forEach(b => {
+    const other = role === 'provider' ? customerOf(b) : providerOf(b);
+    if (!other || seen[other.id]) return;
+    seen[other.id] = {
+      id: other.id,
+      kind: role === 'provider' ? 'customer' : 'provider',
+      name: other.name,
+      service: role === 'provider' ? 'Client' : (other.service || 'Resident'),
+      barangay: b.barangay,
+      snippet: b.request.length > 46 ? b.request.slice(0, 46) + '…' : b.request,
+      time: agoText(b.statusChangedAt || b.createdAt),
+      unread: b.status === 'requested' || b.status === 'ongoing',
+      bookingId: b.id
+    };
+  });
+  return Object.keys(seen).map(k => seen[k]);
+}
+/* ── small provider actions the FSM used to fake with a toast ─────────────── */
+function setProviderAvailable() {
+  state.providerAvailability = 'Available';
+  persist();
+  render();
+  showToast('You are marked available - residents in your area see you now');
+}
+function toggleEmergencyDispatch() {
+  state.providerEmergencyDispatch = !state.providerEmergencyDispatch;
+  persist();
+  render();
+  showToast(state.providerEmergencyDispatch
+    ? 'Emergency dispatch on - urgent pings reach you outside your hours'
+    : 'Emergency dispatch off');
+}
+/* The dashboard's "booked this week" was a typed number. It is now the sum of the
+   jobs actually held for this week. */
+function bookedThisWeek(providerId) {
+  const since = Date.now() - 7 * 86400000;
+  return bookingsForProvider().filter(b => Date.parse(b.createdAt) >= since)
+    .reduce((t, b) => t + (b.amountCentavos || 0), 0);
+}
+function completionRate(providerId) {
+  const closed = bookingsForProvider().filter(b => ['completed', 'cancelled', 'expired', 'no_show'].includes(b.status));
+  if (!closed.length) return 0;
+  return Math.round(closed.filter(b => b.status === 'completed').length / closed.length * 100);
+}
+/* The surge card used to invent "Incoming Request #9021". The provider already has
+   a real queue, so show the one that has waited longest. */
+function realRequestCard() {
+  const waiting = pendingProviderRequests().slice().sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
+  if (!waiting.length) {
+    return `<div class="card">
+      <div style="font-weight:700; font-size:13px; margin-bottom:6px;">Nothing waiting on you</div>
+      <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5;">
+        New requests appear here and in Bookings the moment a resident sends one.
+      </div>
+    </div>`;
+  }
+  const b = waiting[0];
+  const waited = Math.max(0, Math.round((Date.now() - Date.parse(b.createdAt)) / 60000));
+  const left = Math.max(0, CONFIG.acceptTtlMinutes - waited);
+  return `<div class="card">
+      <div class="row" style="margin-bottom:8px;">
+        <div style="font-weight:700; font-size:13px;">Longest wait</div>
+        <span class="chip" style="${left <= 5 ? 'color:var(--error-ink);' : ''}">${left} min left to answer</span>
+      </div>
+      <div style="font-size:12px; color:var(--ink-soft); line-height:1.5;">
+        <b style="color:var(--ink);">${esc(b.summary)}</b> · ${esc(customerOf(b).name)} · Brgy. ${esc(b.barangay)}<br>
+        asked for ${esc(b.date)}, ${esc(b.time)} · indicative ${pesoShort(b.amountCentavos)}
+      </div>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button type="button" class="btn sm" style="flex:1.4; border-radius:10px;" onclick="answerRequest('${b.id}','accept')">Accept</button>
+        <button type="button" class="btn sm secondary" style="flex:1; border-radius:10px;" onclick="openProviderBooking('${b.id}')">See the job</button>
+      </div>
+      <div style="font-size:var(--t-caption); color:var(--mist); margin-top:9px; line-height:1.5;">
+        If nobody answers in ${CONFIG.acceptTtlMinutes} minutes the request lapses and the resident is told to try another match.
+      </div>
+    </div>`;
+}
+function commitListingDraft() {
+  const t = document.getElementById('listing-title'), p = document.getElementById('listing-price'), m = document.getElementById('listing-mins');
+  state.listingDraft = {
+    id: (state.listingDraft || {}).id || null,
+    title: t ? t.value : '', pricePesos: p ? p.value : '', durationMin: m ? m.value : ''
+  };
+  state.profileError = null;
+  saveListingDraft();
+}
+function cancellationRate(providerId) {
+  const closed = bookingsForProvider().filter(b => ['completed', 'cancelled', 'expired', 'no_show'].includes(b.status));
+  if (!closed.length) return 0;
+  return Math.round(closed.filter(b => b.status !== 'completed').length / closed.length * 100);
+}
 function providerDashboard(){
   const providerReviews = PROVIDERS.find(p => p.id === 'p1').reviews || [];
   const positiveReviews = providerReviews.filter(review => review.stars >= 4).length;
@@ -5487,8 +5676,8 @@ function providerDashboard(){
       <div class="card"><div style="font-size:var(--t-body); color:var(--ink-soft);">Nothing is scheduled for today. New requests appear at the top of this screen.</div></div>`}
 
     <div class="statgrid" style="margin:14px 0 4px;">
-      <div class="stat"><div class="num">${pesoShort(toCentavos(4200))}</div><div class="lbl">Booked this week</div></div>
-      <div class="stat"><div class="num">96%</div><div class="lbl">Completion</div></div>
+      <div class="stat"><div class="num">${pesoShort(bookedThisWeek(CURRENT_PROVIDER_ID))}</div><div class="lbl">Booked this week</div></div>
+      <div class="stat"><div class="num">${completionRate(CURRENT_PROVIDER_ID)}%</div><div class="lbl">Completion</div></div>
     </div>
     <div class="demo-note">Sample figures from this prototype, not live earnings.</div>
 
@@ -5582,11 +5771,7 @@ function providerFSM(){
   </div>
   <div class="pad" style="padding-bottom:30px;">
     
-    <div class="card">
-      <div style="font-weight:700; font-size:13px;">Secure Balance Wallet</div>
-      <div style="font-size:22px; font-family:'Fraunces',serif; margin:6px 0; color:var(--deep);">₱3,850 Available</div>
-      <button class="btn sm" style="width:100%;" onclick="showToast('Transferred successfully to GCash!')">Instant Cash-Out ${ic("zap",13)}</button>
-    </div>
+    ${earningsCard(CURRENT_PROVIDER_ID)}
 
     <div class="card" style="background:var(--grad-brand-panel); color:#fff;">
       <div class="row" style="margin-bottom:6px;">
@@ -5597,23 +5782,16 @@ function providerFSM(){
       <div style="font-size:12px; opacity:0.9; line-height:1.4; margin-bottom:12px;">
         Plumbing requests are predicted to increase tonight from 5–8 PM. <b>14 expected requests · 6 available plumbers.</b>
       </div>
-      <button class="btn sm" style="background:#fff; color:var(--deep); width:100%; font-weight:800;" onclick="showToast('Availability successfully set for 5-8 PM!')">
+      <button class="btn sm" style="background:#fff; color:var(--deep); width:100%; font-weight:800;" onclick="setProviderAvailable()">
         [Set Available 5–8 PM]
       </button>
     </div>
 
-    <div class="card">
-      <div style="font-weight:700; font-size:13px; margin-bottom:8px;">Smart Job Acceptance</div>
-      <div style="background:var(--cloud); padding:10px; border-radius:10px; border:1px solid var(--line); font-size:12px; color:var(--ink-soft);">
-        <b>Incoming Request #9021:</b> Kitchen Pipe Rupture (Poblacion)<br>
-        <i>Score: 96% Match · Distance: 0.8 km · Est. ₱450</i>
-        <button class="btn sm" style="width:100%; margin-top:8px;" onclick="showToast('Smart Job Accepted!')">${ic("check",12)} Accept Job Offer</button>
-      </div>
-    </div>
+    ${realRequestCard()}
 
     <div class="card">
       <div style="font-weight:700; font-size:13px; margin-bottom:4px;">Demand Heatmap & Forecasting</div>
-      <div style="font-size:12px; color:var(--mist); margin-bottom:8px;">Predicted volume peaks on Fridays & Saturdays (5PM – 8PM).</div>
+      <div style="font-size:12px; color:var(--mist); margin-bottom:8px;">An illustration from sample activity, not a forecast this prototype computes.</div>
       <div style="background:var(--verified-100); color:var(--success-ink); padding:8px 12px; border-radius:8px; font-size:var(--t-caption); font-weight:700;">
         ${ic("flame",13)} Poblacion Heatmap Status: Very High Density
       </div>
@@ -5622,7 +5800,7 @@ function providerFSM(){
     <div class="card">
       <div class="row" style="margin-bottom:6px;">
         <span style="font-weight:700; font-size:13px;">Dynamic Availability Optimizer</span>
-        <span class="chip" style="cursor:pointer;" onclick="showToast('Availability status toggled!')">Toggle Auto-Status <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--verified);"></span></span>
+        <button type="button" class="chip" style="cursor:pointer;" aria-pressed="${state.providerEmergencyDispatch}" onclick="toggleEmergencyDispatch()">Emergency dispatch ${state.providerEmergencyDispatch ? 'on' : 'off'}</button>
       </div>
       <div style="font-size:var(--t-caption); color:var(--mist);">Suggests when to go Available/Busy based on real-time surge predictions.</div>
     </div>
@@ -5784,8 +5962,8 @@ function providerBookings(){
   <div class="topbar"><div class="hb"><div><div class="title">Bookings</div><div class="sub">${waiting ? waiting + ' request' + (waiting === 1 ? '' : 's') + ' waiting on your answer' : 'Nothing waiting on your answer'}</div></div></div></div>
   <div class="pad" style="background:var(--cloud); padding-bottom:40px;">
     <div class="seg hscroll" style="margin-bottom:16px;">
-      ${['all','requested','ongoing','upcoming','completed','cancelled'].map(status => `
-        <button class="seg-btn ${filter === status ? 'on' : ''}"${status === 'requested' && waiting ? ' aria-label="Requested, ' + waiting + ' waiting for you"' : ''} onclick="state.providerBookingFilter='${status}'; render();">${status[0].toUpperCase() + status.slice(1)}${status === 'requested' && waiting ? ' (' + waiting + ')' : ''}</button>
+      ${['all','requested','upcoming','en_route','arrived','ongoing','completed','cancelled'].map(status => `
+        <button class="seg-btn ${filter === status ? 'on' : ''}"${status === 'requested' && waiting ? ' aria-label="Requested, ' + waiting + ' waiting for you"' : ''} onclick="state.providerBookingFilter='${status}'; render();">${status === 'all' ? 'All' : label(status)}${status === 'requested' && waiting ? ' (' + waiting + ')' : ''}</button>
       `).join('')}
     </div>
     ${filtered.length === 0 ? bookingListEmpty(filter, 'provider') : filtered.map(b => `
@@ -5798,7 +5976,7 @@ function providerBookings(){
               <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${esc(customerOf(b).name)} - ${b.status === 'requested' ? 'asked for ' : ''}${esc(b.date)}, ${esc(b.time)}</div>
             </div>
           </div>
-          <span class="chip" style="font-size:var(--t-caption); text-transform:uppercase; background:${statusColors(b.status).bg}; color:${statusColors(b.status).fg};">${b.status}</span>
+          <span class="chip" style="font-size:var(--t-caption); text-transform:uppercase; background:${statusColors(b.status).bg}; color:${statusColors(b.status).fg};">${esc(label(b.status))}</span>
         </div>
         ${b.status === 'requested' ? `<div style="font-size:var(--t-caption); font-weight:800; text-transform:uppercase; color:var(--deep); display:flex; align-items:center; gap:5px; margin-top:4px;"><span class="wait-dot"></span> Needs your answer</div>` : ''}
         <div style="font-size:13px; font-weight:700; color:var(--ink); margin-top:6px;">${pesoShort(b.amountCentavos)}${b.status === 'requested' ? `<span style="font-size:var(--t-caption); font-weight:600; color:var(--mist);"> indicative</span>` : ''}</div>
@@ -5812,7 +5990,7 @@ function providerBookingDetail(){
   const isOpen = booking.status === 'requested';
   // Only a job this account took is entitled to the client's door and number. A
   // request has no agreement yet and a closed record no longer needs the visit.
-  const onJob = booking.status === 'upcoming' || booking.status === 'ongoing' || booking.status === 'completed';
+  const onJob = ['upcoming', 'en_route', 'arrived', 'ongoing', 'completed'].includes(booking.status);
   return `
   ${screenHeader('Booking details', { back:"state.tab='bookings'; render();", backLabel:'Back to bookings' })}
   <div class="pad" style="background:var(--cloud); padding-bottom:40px;">
@@ -5853,8 +6031,11 @@ function providerBookingDetail(){
 
     <div class="card">
       <div style="font-size:13px; font-weight:800; margin-bottom:6px;">Job notes from ${esc(customerOf(booking).name)}</div>
-      <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.5;">${esc(booking.notes)}</div>
+      <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.5;">${esc(booking.notes || booking.request)}</div>
     </div>
+
+    ${jobActionBar(booking)}
+    ${receiptCard(booking)}
   </div>`;
 }
 
@@ -5881,9 +6062,9 @@ function providerProfileHub(){
   const pp = state.providerProfileData;
   const section = state.providerProfileSection;
 const row = (id, title, detail) => settingsRow('providerProfileSection', id, title, detail);
-  const detail = section === 'services' ? `<div class="card"><b>Services Offered</b><div class="card-body">Faucet Repair - ₱350 - 45-60 min - <b style="color:var(--success-ink);">Active</b><br>Pipe Leak Repair - ₱450 - 60 min - <b style="color:var(--success-ink);">Active</b><br>Drain Cleaning - ₱400 - 45 min - <b style="color:var(--success-ink);">Active</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('add_service')">+ Add Service</button></div>` : section === 'pricing' ? `<div class="card"><b>Pricing &amp; Rates</b><div class="card-body">Call-out fee: <b>${rateLabel(pp.rateCentavos, pp.rateUnit)}</b><br>Hourly rate: Optional<br>Emergency rate: Optional</div><button class="btn sm" style="margin-top:8px;" onclick="providerProfileAction('pricing')">Edit Pricing</button></div>` : section === 'area' ? `<div class="card"><b>Service Area</b><div class="card-body">Base barangay: <b>${pp.barangay}</b><br>Service radius: <b>${pp.serviceRadius}</b><br><span style="color:var(--success-ink); display:inline-flex; align-items:center; gap:2px;">${ic("check",11)} Poblacion</span><br><span style="color:var(--success-ink); display:inline-flex; align-items:center; gap:2px;">${ic("check",11)} San Isidro</span><br><span style="color:var(--success-ink); display:inline-flex; align-items:center; gap:2px;">${ic("check",11)} Barangay 2</span></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('area')">Change Radius</button></div>` : section === 'hours' ? `<div class="card"><b>Working Hours</b><div class="card-body">Monday - Saturday: <b>${pp.workingHours}</b><br>Sunday: Unavailable</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('hours')">Edit Hours</button></div>` : section === 'dispatch' ? `<div class="card"><b>Emergency Dispatch</b><div class="card-body">Status: <b style="color:var(--success-ink);">${state.providerEmergencyDispatch ? 'Enabled' : 'Disabled'}</b><br>Accept urgent requests outside normal booking flow when available.<br>Emergency radius: 3 km<br>Emergency hours: 6:00 AM - 10:00 PM</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('dispatch')">${state.providerEmergencyDispatch ? 'Disable' : 'Enable'} Dispatch</button></div>` : section === 'credentials' ? `<div class="card"><b>Credentials &amp; Verification</b><div class="card-body">ID Verification - <b style="color:var(--success-ink);">Verified</b><br>TESDA Plumbing NC II - <b style="color:var(--success-ink);">Valid</b><br>NBI Clearance - <b style="color:var(--success-ink);">Valid</b><br>Barangay Clearance - <b style="color:var(--gold-600);">Expires in 23 days</b></div></div>` : section === 'reputation' ? `<div class="card"><b>Reputation</b><div class="statgrid" style="margin-top:10px;"><div class="stat"><div class="num">94</div><div class="lbl">Trust score</div></div><div class="stat"><div class="num">4.9</div><div class="lbl">Rating</div></div><div class="stat"><div class="num">96%</div><div class="lbl">Completion</div></div><div class="stat"><div class="num">4%</div><div class="lbl">Cancellation</div></div></div><div style="font-size:12px; color:var(--ink-soft); margin-top:9px;">Trust remains strong because completion and customer ratings are consistently high.</div></div>` : section === 'portfolio' ? `<div class="card"><b>Work Portfolio</b><div style="font-size:12px; margin-top:9px;">${state.providerPortfolio.length ? state.providerPortfolio.map(item=>`${item.service} - ${item.description}`).join('<hr>') : 'No portfolio items added yet.'}</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('portfolio_add')">+ Add Work</button></div>` : section === 'payout' ? `<div class="card"><b>Payout &amp; Earnings</b><div class="card-body">Current payout: <b>GCash (0918***4321)</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('payout')">Manage Payout</button></div>` : section === 'security' ? `<div class="card"><b>Account &amp; Security</b><div class="card-body">Password: <b>••••••••</b><br>PIN: <b>Enabled</b><br>Two-factor authentication: <b style="color:var(--success-ink);">Enabled</b><br>Active sessions: <b>2</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('password')">Change Password</button></div>` : section === 'notifications' ? `<div class="card"><b>Notification Preferences</b>${[['requests','New Service Requests'],['bookings','Booking Updates'],['messages','Customer Messages'],['quotes','Quotation Responses'],['payments','Payment Received'],['opportunities','High Demand Opportunities'],['schedule','Schedule Alerts'],['trust','Trust Score Changes'],['credentials','Credential Expiry'],['reviews','Customer Reviews']].map(([key,label])=>`<label class="row" style="font-size:12px; padding:6px 0;">${label}<input type="checkbox" ${state.providerNotifications[key]?'checked':''} onchange="state.providerNotifications['${key}']=this.checked;"></label>`).join('')}</div>` : section === 'preview' ? `<div class="card"><div style="text-align:center;">${photoAvatar('self', 56)}<div style="font-size:18px; font-weight:800; margin-top:8px;">${pp.name}</div><div style="font-size:12px; color:var(--mist);">${pp.service}</div><div style="margin-top:9px; display:flex; align-items:center; justify-content:center; gap:5px;">${stars(4.9,12)}<span style="font-weight:700;">4.9</span><span style="color:var(--mist);">- 214 completed jobs</span></div><div style="color:var(--success-ink); margin-top:6px;">ID Verified - Top Rated</div><div style="font-size:12px; text-align:left; margin-top:12px;">Service Area: ${pp.barangay} + nearby barangays<br>Starting Rate: ${rateLabel(pp.rateCentavos, pp.rateUnit)}<br>Services: Faucet Repair, Pipe Leak Repair, Drain Cleaning</div></div></div>` : '';
+  const detail = section === 'services' ? listingsPanel(CURRENT_PROVIDER_ID) : section === 'pricing' ? `<div class="card"><b>Pricing &amp; Rates</b><div class="card-body">Starting from <b>${pesoShort(cheapestListing(providerOf({providerId:CURRENT_PROVIDER_ID})))}</b> across ${listingsOf(CURRENT_PROVIDER_ID).length} listed services.<br>Every price is what you charge; the platform fee comes out of it.</div><button class="btn sm" style="margin-top:8px;" onclick="providerProfileAction('pricing')">Edit Pricing</button></div>` : section === 'area' ? `<div class="card"><b>Service Area</b><div class="card-body">Base barangay: <b>${pp.barangay}</b><br>Service radius: <b>${pp.serviceRadius}</b><br><span style="color:var(--success-ink); display:inline-flex; align-items:center; gap:2px;">${ic("check",11)} Poblacion</span><br><span style="color:var(--success-ink); display:inline-flex; align-items:center; gap:2px;">${ic("check",11)} San Isidro</span><br><span style="color:var(--success-ink); display:inline-flex; align-items:center; gap:2px;">${ic("check",11)} Barangay 2</span></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('area')">Change Radius</button></div>` : section === 'hours' ? `<div class="card"><b>Working Hours</b><div class="card-body">Monday - Saturday: <b>${pp.workingHours}</b><br>Sunday: Unavailable</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('hours')">Edit Hours</button></div>` : section === 'dispatch' ? `<div class="card"><b>Emergency Dispatch</b><div class="card-body">Status: <b style="color:var(--success-ink);">${state.providerEmergencyDispatch ? 'Enabled' : 'Disabled'}</b><br>Accept urgent requests outside normal booking flow when available.<br>Emergency radius: 3 km<br>Emergency hours: 6:00 AM - 10:00 PM</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('dispatch')">${state.providerEmergencyDispatch ? 'Disable' : 'Enable'} Dispatch</button></div>` : section === 'credentials' ? `<div class="card"><b>Credentials &amp; Verification</b><div class="card-body">ID Verification - <b style="color:var(--success-ink);">Verified</b><br>TESDA Plumbing NC II - <b style="color:var(--success-ink);">Valid</b><br>NBI Clearance - <b style="color:var(--success-ink);">Valid</b><br>Barangay Clearance - <b style="color:var(--gold-600);">Expires in 23 days</b></div></div>` : section === 'reputation' ? `<div class="card"><b>Reputation</b><div class="statgrid" style="margin-top:10px;"><div class="stat"><div class="num">${providerOf({providerId:CURRENT_PROVIDER_ID}).trustScore}</div><div class="lbl">Trust score</div></div><div class="stat"><div class="num">${providerOf({providerId:CURRENT_PROVIDER_ID}).rating}</div><div class="lbl">Rating</div></div><div class="stat"><div class="num">${completionRate(CURRENT_PROVIDER_ID)}%</div><div class="lbl">Completion</div></div><div class="stat"><div class="num">${cancellationRate(CURRENT_PROVIDER_ID)}%</div><div class="lbl">Cancellation</div></div></div><div style="font-size:12px; color:var(--ink-soft); margin-top:9px;">Trust remains strong because completion and customer ratings are consistently high.</div></div>` : section === 'portfolio' ? `<div class="card"><b>Work Portfolio</b><div style="font-size:12px; margin-top:9px;">${state.providerPortfolio.length ? state.providerPortfolio.map(item=>`${item.service} - ${item.description}`).join('<hr>') : 'No portfolio items added yet.'}</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('portfolio_add')">+ Add Work</button></div>` : section === 'payout' ? `<div class="card"><b>Payout &amp; Earnings</b><div class="card-body">Current payout: <b>GCash (0918***4321)</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('payout')">Manage Payout</button></div>` : section === 'security' ? `<div class="card"><b>Account &amp; Security</b><div class="card-body">Password: <b>••••••••</b><br>PIN: <b>Enabled</b><br>Two-factor authentication: <b style="color:var(--success-ink);">Enabled</b><br>Active sessions: <b>2</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('password')">Change Password</button></div>` : section === 'notifications' ? `<div class="card"><b>Notification Preferences</b>${[['requests','New Service Requests'],['bookings','Booking Updates'],['messages','Customer Messages'],['quotes','Quotation Responses'],['payments','Payment Received'],['opportunities','High Demand Opportunities'],['schedule','Schedule Alerts'],['trust','Trust Score Changes'],['credentials','Credential Expiry'],['reviews','Customer Reviews']].map(([key,label])=>`<label class="row" style="font-size:12px; padding:6px 0;">${label}<input type="checkbox" ${state.providerNotifications[key]?'checked':''} onchange="state.providerNotifications['${key}']=this.checked;"></label>`).join('')}</div>` : section === 'preview' ? `<div class="card"><div style="text-align:center;">${photoAvatar('self', 56)}<div style="font-size:18px; font-weight:800; margin-top:8px;">${pp.name}</div><div style="font-size:12px; color:var(--mist);">${pp.service}</div><div style="margin-top:9px; display:flex; align-items:center; justify-content:center; gap:5px;">${stars(4.9,12)}<span style="font-weight:700;">4.9</span><span style="color:var(--mist);">- 214 completed jobs</span></div><div style="color:var(--success-ink); margin-top:6px;">ID Verified - Top Rated</div><div style="font-size:12px; text-align:left; margin-top:12px;">Service Area: ${pp.barangay} + nearby barangays<br>Starting Rate: ${rateLabel(pp.rateCentavos, pp.rateUnit)}<br>Services: Faucet Repair, Pipe Leak Repair, Drain Cleaning</div></div></div>` : '';
   const modal = state.providerProfileModal;
-  return `<div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><button onclick="state.tab='dashboard'; state.providerProfileSection=null; render();" class="back-btn" aria-label="Back">${ic("chevron-left",18)}</button><div class="title">Provider Profile</div></div></div><div class="pad" style="background:var(--cloud); padding-bottom:40px;"><div class="card" style="text-align:center;">${photoAvatar('self', 56)}<div style="font-size:18px; font-weight:800; margin-top:10px;">${pp.name}</div><div style="font-size:12px; color:var(--mist); margin-top:3px;">${pp.service} - Brgy. ${pp.barangay}</div><div style="display:flex; justify-content:center; gap:6px; margin-top:10px;"><span class="chip">ID Verified</span><span class="chip">Top Rated</span></div><button class="btn sm secondary" style="margin-top:10px;" onclick="providerProfileAction('edit')">Edit Professional Profile</button></div><div class="card"><div class="row"><b class="card-title">Professional status</b><span class="chip">Active</span></div><div style="font-size:12px; line-height:1.8; margin-top:8px;">Availability: <b style="color:var(--success-ink);">${state.providerAvailability}</b><br>Trust Score: <button class="auth-admin" style="font-size:var(--t-body);" onclick="state.providerProfileSection='reputation'; render();">94 / 100</button><br>Credentials: <b style="color:var(--success-ink);">All Valid</b></div></div><div class="card"><div class="row" style="margin-bottom:9px;"><b class="card-title">Contact and service details</b><button class="btn sm secondary" onclick="providerProfileAction('edit')">Edit</button></div><div style="font-size:12px; line-height:1.8;">Email: <b>${pp.email}</b><br>Phone: <b>${pp.phone}</b><br>Rate: <b>${rateLabel(pp.rateCentavos, pp.rateUnit)}</b><br>Service radius: <b>${pp.serviceRadius}</b><br>Working hours: <b>${pp.workingHours}</b><br>Emergency dispatch: <b>${state.providerEmergencyDispatch ? 'Enabled' : 'Disabled'}</b><br>Payout account: <b>GCash (0918***4321)</b></div></div><div class="section-label">SERVICE SETTINGS</div>${row('services','Services Offered','Faucet Repair, Pipe Leak Repair, Drain Cleaning')}${row('pricing','Pricing & Rates',rateLabel(pp.rateCentavos, pp.rateUnit))}${row('area','Service Area',pp.serviceRadius)}${row('hours','Working Hours',pp.workingHours)}${row('dispatch','Emergency Dispatch',state.providerEmergencyDispatch?'Enabled':'Disabled')}<div class="section-label">PROFESSIONAL</div>${row('credentials','Credentials & Verification','ID verified - credential status')}${row('reputation','Reputation & Trust Score','94 / 100 - 4.9 rating')}${row('portfolio','Work Portfolio','Service photos and examples')}${row('preview','Preview Public Profile','See what Residents see')}<div class="section-label">FINANCIAL</div>${row('payout','Payout & Earnings','GCash (0918***4321)') }<div class="section-label">ACCOUNT</div>${row('security','Password & Sign-in','PIN enabled - 2FA enabled')}${row('notifications','Notification Preferences','Service and security alerts')}${section ? `<div style="margin-top:4px;">${detail}</div>` : ''}<button class="btn" style="width:100%; margin-top:12px; background:#fff; color:var(--error-ink); border:1px solid var(--alert); box-shadow:none;" onclick="providerProfileAction('logout')">Log Out</button></div>${modal ? `<div class="modal-layer"><div class="card modal-card"  ><div class="row"><b>${modal==='edit'?'EDIT SERVICE PROFILE':modal==='logout'?'LOG OUT?':modal==='payout'?'PAYOUT ACCOUNT':modal==='dispatch'?'ENABLE EMERGENCY DISPATCH?':modal==='add_service'?'ADD SERVICE':modal==='portfolio_add'?'ADD WORK':'Update'}</b><button aria-label="Close" onclick="state.providerProfileModal=null; render();" style="border:0; background:transparent; font-size:20px;">&times;</button></div>${modal==='edit'?`<label class="form-label">Email (read-only)<input value="${pp.email}" readonly class="form-input-readonly"></label><label class="form-label-8">Phone Number<input id="provider-profile-phone" value="${pp.phone}" class="form-input"></label><label class="form-label-8">Service Rate (peso per unit)<input id="provider-profile-rate" type="number" min="0" step="1" inputmode="numeric" value="${toPesos(pp.rateCentavos)}" class="form-input"></label><label class="form-label-8">Service Radius<input id="provider-profile-radius" value="${pp.serviceRadius}" class="form-input"></label><label class="form-label-8">Working Hours<input id="provider-profile-hours" value="${pp.workingHours}" class="form-input"></label><button class="btn btn-block"   onclick="saveProviderProfessionalProfile()">Save Changes</button>`:modal==='dispatch'?`<div style="font-size:12px; margin-top:12px;">You may receive urgent service requests during selected emergency hours.</div><button class="btn btn-block"   onclick="state.providerEmergencyDispatch=!state.providerEmergencyDispatch; state.providerProfileModal=null; render();">Enable</button>`:modal==='payout'?`<div style="font-size:12px; margin-top:12px;">Current: GCash (0918***4321)<br><br>For security, confirm your password or PIN before changing payout account.</div><button class="btn btn-block"   onclick="state.providerProfileModal='saved'; render();">Continue</button>`:modal==='logout'?`<div style="font-size:12px; margin-top:12px;">Are you sure you want to log out of your Sukinnect provider account?</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm secondary" style="flex:1;" onclick="state.providerProfileModal=null; render();">Cancel</button><button class="btn sm danger" style="flex:1;" onclick="signOut()">Log Out</button></div>`:modal==='add_service'?`<input placeholder="Service name" style="width:100%; padding:9px; margin-top:12px;"><button class="btn btn-block"   onclick="state.providerProfileModal='saved'; render();">Save Service</button>`:modal==='portfolio_add'?`<input placeholder="Service" style="width:100%; padding:9px; margin-top:12px;"><textarea placeholder="Description" style="width:100%; min-height:70px; margin-top:8px; padding:9px;"></textarea><button class="btn btn-block"   onclick="state.providerProfileModal='saved'; render();">Save Work</button>`:`<div style="font-size:12px; color:var(--success-ink); margin-top:12px;">Changes saved successfully.</div><button class="btn btn-block"   onclick="state.providerProfileModal=null; render();">Close</button>`}</div></div>`:''}`;
+  return `<div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><button onclick="state.tab='dashboard'; state.providerProfileSection=null; render();" class="back-btn" aria-label="Back">${ic("chevron-left",18)}</button><div class="title">Provider Profile</div></div></div><div class="pad" style="background:var(--cloud); padding-bottom:40px;"><div class="card" style="text-align:center;">${photoAvatar('self', 56)}<div style="font-size:18px; font-weight:800; margin-top:10px;">${pp.name}</div><div style="font-size:12px; color:var(--mist); margin-top:3px;">${pp.service} - Brgy. ${pp.barangay}</div><div style="display:flex; justify-content:center; gap:6px; margin-top:10px;"><span class="chip">ID Verified</span><span class="chip">Top Rated</span></div><button class="btn sm secondary" style="margin-top:10px;" onclick="providerProfileAction('edit')">Edit Professional Profile</button></div><div class="card"><div class="row"><b class="card-title">Professional status</b><span class="chip">Active</span></div><div style="font-size:12px; line-height:1.8; margin-top:8px;">Availability: <b style="color:var(--success-ink);">${state.providerAvailability}</b><br>Trust Score: <button class="auth-admin" style="font-size:var(--t-body);" onclick="state.providerProfileSection='reputation'; render();">94 / 100</button><br>Credentials: <b style="color:var(--success-ink);">All Valid</b></div></div><div class="card"><div class="row" style="margin-bottom:9px;"><b class="card-title">Contact and service details</b><button class="btn sm secondary" onclick="providerProfileAction('edit')">Edit</button></div><div style="font-size:12px; line-height:1.8;">Email: <b>${pp.email}</b><br>Phone: <b>${pp.phone}</b><br>Rate: <b>${rateLabel(pp.rateCentavos, pp.rateUnit)}</b><br>Service radius: <b>${pp.serviceRadius}</b><br>Working hours: <b>${pp.workingHours}</b><br>Emergency dispatch: <b>${state.providerEmergencyDispatch ? 'Enabled' : 'Disabled'}</b><br>Payout account: <b>GCash (0918***4321)</b></div></div><div class="section-label">SERVICE SETTINGS</div>${row('services','Services Offered','Faucet Repair, Pipe Leak Repair, Drain Cleaning')}${row('pricing','Pricing & Rates',rateLabel(pp.rateCentavos, pp.rateUnit))}${row('area','Service Area',pp.serviceRadius)}${row('hours','Working Hours',pp.workingHours)}${row('dispatch','Emergency Dispatch',state.providerEmergencyDispatch?'Enabled':'Disabled')}<div class="section-label">PROFESSIONAL</div>${row('credentials','Credentials & Verification','ID verified - credential status')}${row('reputation','Reputation & Trust Score','94 / 100 - 4.9 rating')}${row('portfolio','Work Portfolio','Service photos and examples')}${row('preview','Preview Public Profile','See what Residents see')}<div class="section-label">FINANCIAL</div>${row('payout','Payout & Earnings','GCash (0918***4321)') }<div class="section-label">ACCOUNT</div>${row('security','Password & Sign-in','PIN enabled - 2FA enabled')}${row('notifications','Notification Preferences','Service and security alerts')}${section ? `<div style="margin-top:4px;">${detail}</div>` : ''}<button class="btn" style="width:100%; margin-top:12px; background:#fff; color:var(--error-ink); border:1px solid var(--alert); box-shadow:none;" onclick="providerProfileAction('logout')">Log Out</button></div>${modal ? `<div class="modal-layer"><div class="card modal-card"  ><div class="row"><b>${modal==='edit'?'EDIT SERVICE PROFILE':modal==='logout'?'LOG OUT?':modal==='payout'?'PAYOUT ACCOUNT':modal==='dispatch'?'ENABLE EMERGENCY DISPATCH?':modal==='add_service'?((state.listingDraft&&state.listingDraft.id)?'EDIT SERVICE':'NEW SERVICE'):modal==='portfolio_add'?'ADD WORK':'Update'}</b><button aria-label="Close" onclick="state.providerProfileModal=null; render();" style="border:0; background:transparent; font-size:20px;">&times;</button></div>${modal==='edit'?`<label class="form-label">Email (read-only)<input value="${pp.email}" readonly class="form-input-readonly"></label><label class="form-label-8">Phone Number<input id="provider-profile-phone" value="${pp.phone}" class="form-input"></label><label class="form-label-8">Service Rate (peso per unit)<input id="provider-profile-rate" type="number" min="0" step="1" inputmode="numeric" value="${toPesos(pp.rateCentavos)}" class="form-input"></label><label class="form-label-8">Service Radius<input id="provider-profile-radius" value="${pp.serviceRadius}" class="form-input"></label><label class="form-label-8">Working Hours<input id="provider-profile-hours" value="${pp.workingHours}" class="form-input"></label><button class="btn btn-block"   onclick="saveProviderProfessionalProfile()">Save Changes</button>`:modal==='dispatch'?`<div style="font-size:12px; margin-top:12px;">You may receive urgent service requests during selected emergency hours.</div><button class="btn btn-block"   onclick="state.providerEmergencyDispatch=!state.providerEmergencyDispatch; state.providerProfileModal=null; render();">Enable</button>`:modal==='payout'?`<div style="font-size:12px; margin-top:12px;">Current: GCash (0918***4321)<br><br>For security, confirm your password or PIN before changing payout account.</div><button class="btn btn-block"   onclick="state.providerProfileModal='saved'; render();">Continue</button>`:modal==='logout'?`<div style="font-size:12px; margin-top:12px;">Are you sure you want to log out of your Sukinnect provider account?</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm secondary" style="flex:1;" onclick="state.providerProfileModal=null; render();">Cancel</button><button class="btn sm danger" style="flex:1;" onclick="signOut()">Log Out</button></div>`:modal==='add_service'?`<label class="form-label">Service name<input id="listing-title" class="form-input" style="margin-top:6px;" placeholder="e.g. Water heater inspection" value="${esc((state.listingDraft||{}).title||'')}"></label><label class="form-label">Price in pesos<input id="listing-price" type="number" min="100" step="1" inputmode="numeric" class="form-input" style="margin-top:6px;" value="${(state.listingDraft||{}).pricePesos||''}"></label><label class="form-label">Typical duration, minutes<input id="listing-mins" type="number" min="5" step="5" inputmode="numeric" class="form-input" style="margin-top:6px;" value="${(state.listingDraft||{}).durationMin||45}"></label>${state.profileError?`<div class="inline-error" role="alert">${esc(state.profileError)}</div>`:''}<button class="btn btn-block" onclick="commitListingDraft()">Save service</button>`:modal==='portfolio_add'?`<input placeholder="Service" style="width:100%; padding:9px; margin-top:12px;"><textarea placeholder="Description" style="width:100%; min-height:70px; margin-top:8px; padding:9px;"></textarea><button class="btn btn-block"   onclick="state.providerProfileModal='saved'; render();">Save Work</button>`:`<div style="font-size:12px; color:var(--success-ink); margin-top:12px;">Changes saved successfully.</div><button class="btn btn-block"   onclick="state.providerProfileModal=null; render();">Close</button>`}</div></div>`:''}`;
 }
 
 function bindTabHandlers(){
@@ -5972,6 +6153,12 @@ function bindTabHandlers(){
   document.querySelectorAll('[data-open-chat-id]').forEach(el => {
     el.onclick = () => {
       const pid = el.dataset.openChatId;
+      if (el.dataset.threadKind === 'customer') {
+        /* Chat is a resident-side screen in this prototype. A provider reads and
+           answers the job itself, which is where the coordination actually lives. */
+        openProviderBooking(el.dataset.threadBooking);
+        return;
+      }
       state.activeChatProvider = PROVIDERS.find(p => p.id === pid) || PROVIDERS[0];
       state.isChatOpen = true;
       render();
