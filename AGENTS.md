@@ -1168,28 +1168,37 @@ measured value from section 30:
 --surface-elevated       #FFFFFF with elevation shadow
 --text-primary           #03002B
 --text-secondary         #4C5B88   the deck's only declared slate
---text-muted             OPEN - must be lighter than #4C5B88 but still pass 4.5:1 on #FFFFFF
+--text-muted             #5F6E92   5.1:1 on white, 4.7:1 on --background, lighter than secondary
 --border                 #E7EDFF
 --success                keep existing green #1f8a5f (semantic, not brand)
 --warning                keep existing amber #ffb800 / #fff3cd (semantic, not brand)
 --error                  keep existing red #d64545 (semantic, not brand)
 --info                   #0E4DFF
 
-Two tokens are deliberately left unresolved rather than invented:
+CURRENT STATE OF THE CODE, re-measured. The passages below previously described an
+older build and were wrong in ways that would have sent the next reader the wrong
+scope, so they are replaced rather than left to be re-derived:
 
---text-muted: the deck declares no mid-tone suitable for muted text. Deriving a tint
-is a design decision, and a too-light value would violate section 72 (contrast).
+Sukinnect.html now has ONE :root block, 1,138 var() usages against 106 hard-coded
+hex values (37 distinct, over half of them plain #fff), and the legacy teal and
+gold values survive only as documented aliases (--ink, --deep, --gold, --verified)
+so existing call sites resolve to the new palette. The two tokens that were listed
+as deliberately unresolved have since been decided, with the reasoning in code
+comments next to each:
 
-Service-specific colors (section 45): the deck declares no per-category palette.
-These need an explicit decision, not a guess.
+--text-muted: derived as #5F6E92, measured against both surfaces it ships on,
+because a value too light to pass section 72 is worse than no value.
 
-CURRENT STATE OF THE CODE, measured, so the scope is understood before starting:
+Service-specific colors (section 45): a per-trade palette now exists as
+SERVICE_THEME — one hue per trade, ink at 4.5:1 or better on its own tint and on
+--background, with delivery moved to the logo's cyan family so it no longer reads
+identical to plumbing. It stays a secondary cue: brand blue still owns navigation,
+CTAs and brand surfaces.
 
-Sukinnect.html has TWO separate :root{} blocks (a duplicated color system, which
-section 65 forbids), 574 var() usages competing with 372 hard-coded hex values
-across 65 distinct codes. The most-repeated literals are legacy teal #0f3d3e (27),
-#093030 (20), #145050 (11) and gold #ffb800 (9). Consolidating to a single :root
-and routing the hard-coded values through tokens is part of this work.
+The commission rate is NOT a color token and does not belong in this list. It is
+platform configuration with a value of its own per the deck's worked example
+(10%), editable by an administrator, audited when changed, and frozen onto each
+booking when the provider accepts.
 
 Do not scatter raw color codes throughout the file.
 

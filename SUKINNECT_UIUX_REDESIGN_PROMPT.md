@@ -31,6 +31,14 @@ Success looks like: someone opens it and thinks *"this is an app"*, not *"this i
 
 ## 2. AUDIT: WHAT I OBSERVED IN THE CURRENT BUILD
 
+> **Status: this audit has been worked through and is out of date.** Do not re-apply
+> it as a task list. The missing viewport meta, the absent `theme-color`, the
+> `env(safe-area-inset-*)` padding, the sub-12px type, the 16px input size, the
+> concierge outranking search, the chart-titled dashboard cards and the flat login
+> brand are all fixed in the current build. What is described below is the state
+> this document was written against, kept for the reasoning behind the decisions.
+> To see what is true now, read the file and run `node tools/verify.cjs`.
+
 Findings from rendering the current file at 430×900 in app mode. Verify them yourself, then fix them.
 
 ### Login screen (the main complaint)
