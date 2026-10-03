@@ -3270,7 +3270,7 @@ function openBookingRequest(){
   const p = state.selectedProvider;
   if(!p) return;
   const carried = state.conciergeAnalyzed && state.conciergeServiceId === p.serviceId ? state.conciergeInput : '';
-  state.requestDraft = { service: carried, dayIdx:0, timeIdx:1, addrIdx:0, payIdx:0 };
+  state.requestDraft = { service: carried, listingIdx:0, dayIdx:0, timeIdx:1, addrIdx:0, payIdx:0, asap:false };
   state.requestError = null;
   openSheet('bookingRequest');
 }
@@ -3299,6 +3299,199 @@ function isCashPayment(method){
   return /cash on arrival/i.test(method || '');
 }
 
+/* Which job on this provider's list the resident is asking for, and what it costs
+   under today's configuration. Nothing here is stored yet: the terms freeze when
+   the provider accepts, not before. */
+function draftListing(p, d) {
+  const list = listingsOf(p.id);
+  if (!list.length) return null;
+  return list[Math.min(d.listingIdx || 0, list.length - 1)];
+}
+function draftBreakdown(p, d) {
+  const listing = draftListing(p, d);
+  return computeBreakdown({
+    baseCentavos: listing ? listing.basePriceCentavos : p.rateCentavos,
+    categoryId: listing ? listing.categoryId : p.serviceId,
+    inclusions: []
+  });
+}
+/* A provider offers several jobs at several prices; "from ₱X" is the honest
+   headline until the resident says which one they want. */
+function cheapestListing(p) {
+  const list = listingsOf(p.id);
+  if (!list.length) return p.rateCentavos;
+  return list.reduce((min, l) => Math.min(min, l.basePriceCentavos), list[0].basePriceCentavos);
+}
+function toggleRequestAsap() {
+  state.requestDraft.asap = !state.requestDraft.asap;
+  render();
+}
+function listingRail(p, d) {
+  const list = listingsOf(p.id);
+  if (list.length < 2) return '';
+  return `<div class="sheet-group">
+        <div class="sheet-label">Which job</div>
+        <div class="hscroll req-rail">
+          ${list.map((l, i) => requestPick((d.listingIdx || 0) === i, esc(l.title) + ' · ' + pesoShort(l.basePriceCentavos), `pickRequest('listingIdx',${i})`)).join('')}
+        </div>
+      </div>`;
+}
+/* Every line the resident is being asked to agree to, and where the money goes. */
+function termsCard(p, d, pay, cash) {
+  const b = draftBreakdown(p, d);
+  const listing = draftListing(p, d);
+  return `<div class="row"><span>${esc(listing ? listing.title : p.service)}</span><b>${peso(b.baseCentavos)}</b></div>
+          <div class="row"><span>Sukinnect service fee</span><b class="mut">nothing added to your total</b></div>
+          <div class="row" style="border-top:1px solid var(--line); padding-top:8px; margin-top:4px;">
+            <span style="font-weight:800; color:var(--ink);">You pay</span>
+            <b style="font-size:15px;">${peso(b.customerTotalCentavos)}</b>
+          </div>
+          <div class="row"><span class="mut">${esc(listing ? listing.title : p.service)} goes to ${esc(p.name.split(' ')[0])}</span><b class="mut">${peso(b.providerShareCentavos)}</b></div>
+          <p>
+            This is a starting price, not a final quote &mdash; the provider confirms the scope
+            with you before any work begins${b.passThroughCentavos ? ', and parts are charged at cost' : ''}.
+            ${cash
+              ? 'You settle in cash when the work is done, and the provider records it here.'
+              : 'Pay with ' + esc(pay) + ' once the provider confirms the scope and price.'}
+            Our fee comes out of the provider's share, which is why the amount above matches
+            the amount on their card.
+          </p>`;
+}
+/* The tracking view reads the events the machine wrote, so a step cannot look
+   finished unless something actually finished it. */
+function timelineRows(b) {
+  const steps = bookingTimeline(b.id);
+  if (!steps.length) return `<div style="color:var(--mist);">${ic('clock', 12)} Request recorded</div>`;
+  return steps.map((e, i) => {
+    const last = i === steps.length - 1;
+    const when = agoText(e.at);
+    return last
+      ? `<div style="font-weight:700; color:var(--deep); display:flex; align-items:center; gap:4px;">${ic('clock', 12)} ${label(e.to)} <span style="color:var(--mist); font-weight:600;">&middot; ${when}</span></div>`
+      : `<div style="display:flex; align-items:center; gap:4px;">${ic('check', 12)} ${label(e.to)} <span style="color:var(--mist);">&middot; ${when}</span></div>`;
+  }).join('');
+}
+/* What walking away costs, told before the button rather than after. */
+function cancelWarning(b) {
+  const late = b.status !== 'requested';
+  const fee = late ? CONFIG.cancellationFeeAfterAcceptCentavos : CONFIG.cancellationFeeBeforeAcceptCentavos;
+  return `<div style="font-size:var(--t-caption); color:${fee ? 'var(--warning-ink)' : 'var(--mist)'}; line-height:1.5;">
+    ${fee
+      ? ic('alert-triangle', 12) + ' Cancelling now costs ' + peso(fee) + ', paid to ' + esc(providerOf(b).name.split(' ')[0]) + ' for the visit they held or made.'
+      : 'Withdrawing now costs you nothing — nothing has been agreed and nothing has been charged.'}
+  </div>`;
+}
+function cancelRow(b) {
+  if (['completed', 'cancelled', 'expired', 'no_show', 'disputed'].includes(b.status)) return '';
+  const late = b.status !== 'requested';
+  return `<div style="margin-top:12px;">
+        ${cancelWarning(b)}
+        <button type="button" class="btn sm ${late ? 'secondary' : 'danger'}" style="width:100%; margin-top:10px; border-radius:10px;" onclick="cancelBookingRequest('${b.id}')">
+          ${late ? 'Cancel this booking' : 'Withdraw this request'}
+        </button>
+      </div>`;
+}
+/* The record the product promises: what was agreed, what it cost, what happened
+   to the money. Built from the frozen pricing and the payment rows, never typed. */
+function receiptCard(b) {
+  const p = b.pricing;
+  if (!p) return '';
+  const rows = paymentsFor(b.id);
+  const cash = /cash on arrival/i.test(b.paymentMethod || '');
+  return `<div class="card" style="border-radius:14px; padding:14px; margin-bottom:14px;">
+      <div class="row" style="margin-bottom:10px;">
+        <b class="card-title">Payment record</b>
+        <span class="chip">${esc(b.paymentStatus || 'Unpaid')}</span>
+      </div>
+      <div class="row"><span>${esc(b.listingTitle || b.summary)}</span><b>${peso(p.baseCentavos)}</b></div>
+      ${p.inclusions.map(i => `<div class="row"><span>${esc(i.label)} <span class="mut">at cost</span></span><b>${peso(i.amountCentavos)}</b></div>`).join('')}
+      ${p.fixedFeeCentavos ? `<div class="row"><span>Booking fee</span><b>${peso(p.fixedFeeCentavos)}</b></div>` : ''}
+      ${p.taxCentavos ? `<div class="row"><span>VAT on the platform fee</span><b>${peso(p.taxCentavos)}</b></div>` : ''}
+      <div class="row" style="border-top:1px solid var(--line); padding-top:8px; margin-top:4px;">
+        <span style="font-weight:800; color:var(--ink);">Total</span><b style="font-size:15px;">${peso(p.customerTotalCentavos)}</b>
+      </div>
+      <div class="row"><span class="mut">${esc(providerOf(b).name.split(' ')[0])} keeps</span><b class="mut">${peso(p.providerShareCentavos)}</b></div>
+      <div class="row"><span class="mut">Sukinnect fee, from their share</span><b class="mut">${peso(p.commissionCentavos)} at ${Math.round(p.commissionRate * 100)}%</b></div>
+      ${rows.length ? `<div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--line); font-size:var(--t-caption); color:var(--mist); line-height:1.7;">
+        ${rows.map(r => `<div>${esc(String(r.at).slice(11, 16))} &middot; ${esc(r.type)} ${peso(r.amountCentavos)} &middot; <b style="color:var(--ink-soft);">${esc(r.status)}</b>${cash && r.type === 'collection' ? ' &middot; handed over on site' : ''}</div>`).join('')}
+      </div>` : ''}
+      ${b.confirmedBy === 'auto' ? `<div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px;">Confirmed automatically ${CONFIG.autoCompleteHours} hours after the provider marked it done.</div>` : ''}
+    </div>`;
+}
+function rebookProvider(providerId) {
+  openProviderDetail(providerId, 'booking_detail');
+  setTimeout(() => openBookingRequest(), 60);
+}
+
+/* One card for every state, built from the events. The old screen had two
+   hand-typed journey lists and nothing at all for the states between them, so a
+   booking could be shown as "upcoming" with no idea what happens next. */
+function statusCard(b) {
+  const steps = timelineRows(b);
+  const first = esc(providerOf(b).name.split(' ')[0]);
+
+  if (b.status === 'requested') {
+    return `<div style="background:var(--background); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:14px;">
+          <div class="row" style="margin-bottom:10px;">
+            <span style="font-size:var(--t-caption); font-weight:800; text-transform:uppercase; color:var(--ink-soft); display:flex; align-items:center; gap:5px;">
+              <span class="wait-dot"></span> Waiting for ${first} to accept
+            </span>
+            <span style="font-size:var(--t-caption); color:var(--mist);">No charge yet</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--ink-soft);">
+            ${steps}
+          </div>
+          <p style="font-size:var(--t-caption); color:var(--mist); line-height:1.5; margin:10px 0 0;">
+            Nothing is charged yet, and no time is fixed until the provider accepts. They can also
+            decline &mdash; you can then try another match. A request left unanswered for
+            ${CONFIG.acceptTtlMinutes} minutes lapses on its own.
+          </p>
+          ${cancelRow(b)}
+        </div>`;
+  }
+
+  if (b.status === 'disputed') {
+    return `<div class="card" style="border:1px solid var(--warning); border-radius:14px; padding:14px; margin-bottom:14px;">
+          <div style="font-size:13px; font-weight:800; color:var(--warning-ink); display:flex; align-items:center; gap:5px;">${ic('scale', 13)} Under review</div>
+          <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:6px;">
+            The evidence on this job is being read. Any payment to ${first} is held while the case is
+            open, and nothing here has decided who was at fault.
+          </div>
+        </div>`;
+  }
+
+  if (b.status === 'completed' || b.status === 'cancelled' || b.status === 'expired' || b.status === 'no_show') {
+    return `<div class="card" style="border-radius:14px; padding:14px; margin-bottom:14px;">
+          <div class="row" style="margin-bottom:10px;">
+            <span style="font-size:var(--t-caption); font-weight:800; text-transform:uppercase; color:var(--ink-soft);">${label(b.status)}</span>
+            <span style="font-size:var(--t-caption); color:var(--mist);">${esc(b.paymentStatus || 'Unpaid')}</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--ink-soft);">
+            ${steps}
+          </div>
+          ${b.cancelReason ? `<div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">${esc(b.cancelReason)}.</div>` : ''}
+          ${b.disputeId ? `<div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px;">A case was raised on this job and has since been closed.</div>` : ''}
+        </div>`;
+  }
+
+  /* accepted and on the way: what is happening, and what happens next */
+  const live = b.status === 'en_route' || b.status === 'arrived' || b.status === 'ongoing';
+  const next = ({ upcoming:'The provider confirms and starts out',
+                  en_route:'The provider arrives',
+                  arrived:'Work begins',
+                  ongoing:'Completion, then your confirmation and the record' })[b.status] || '';
+  return `<div class="card" style="border-radius:14px; padding:14px; margin-bottom:14px; ${live ? 'border:1px solid var(--success); background:var(--success-100);' : ''}">
+          <div class="row" style="margin-bottom:10px;">
+            <span style="font-size:var(--t-caption); font-weight:800; text-transform:uppercase; color:${live ? 'var(--success-ink)' : 'var(--ink-soft)'}; display:flex; align-items:center; gap:5px;">
+              ${live ? '<span class="live-dot"></span>' : ic('calendar', 12)} ${label(b.status)}
+            </span>
+            <span style="font-size:12px; font-weight:700; color:var(--brand-primary);">${b.eta ? 'ETA: ' + esc(b.eta) : esc(b.arrivalTime || '')}</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--ink-soft);">
+            ${steps}
+          </div>
+          ${next ? `<div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px;">Next: ${next}.</div>` : ''}
+        </div>`;
+}
 function bookingRequestSheet(){
   const p = state.selectedProvider;
   if(!p) return '';
@@ -3325,7 +3518,7 @@ function bookingRequestSheet(){
             <div style="font-size:13.5px; font-weight:700; color:var(--ink);">${esc(p.name)}</div>
             <div style="font-size:var(--t-caption); color:var(--mist); margin-top:1px;">${esc(p.service)} &middot; Barangay ${esc(p.barangay)} &middot; ${p.distanceKm} km away</div>
           </div>
-          <span class="chip" style="background:var(--background); color:var(--ink-soft); box-shadow:inset 0 0 0 1px var(--line);">Arrives ~${p.availabilityMin} min</span>
+          <span class="chip" style="background:var(--background); color:var(--ink-soft); box-shadow:inset 0 0 0 1px var(--line);">~${p.availabilityMin} min &middot; from ${pesoShort(cheapestListing(p))}</span>
         </div>
       </div>
 
@@ -3335,22 +3528,28 @@ function bookingRequestSheet(){
         ${state.requestError ? `<div class="inline-error" id="request-error" role="alert">${ic("alert-triangle",12)} ${state.requestError}</div>` : ''}
       </div>
 
+      ${listingRail(p, d)}
       <div class="sheet-group">
-        <div class="sheet-label">Day</div>
+        <div class="sheet-label">When</div>
         <div class="hscroll req-rail">
-          ${days.map((day, i) => requestPick(d.dayIdx === i, day.label + (day.label === day.date ? '' : ' &middot; ' + day.date), `pickRequest('dayIdx',${i})`)).join('')}
+          ${requestPick(!!d.asap, 'As soon as possible', 'toggleRequestAsap()')}
+          ${days.map((day, i) => requestPick(!d.asap && d.dayIdx === i, day.label + (day.label === day.date ? '' : ' · ' + day.date), `pickRequest('dayIdx',${i})`)).join('')}
         </div>
       </div>
 
-      <div class="sheet-group">
+      ${d.asap
+        ? `<div class="sheet-group"><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; padding:10px 12px; background:var(--background); border:1px solid var(--line); border-radius:12px;">${ic('clock', 12)} ${esc(p.name.split(' ')[0])} is shown as able to start in about ${p.availabilityMin} minutes. A time is agreed with you before anyone comes.</div></div>`
+        : `<div class="sheet-group">
         <div class="sheet-label">Preferred time</div>
         <div class="hscroll req-rail">
           ${REQUEST_TIMES.map((t, i) => requestPick(d.timeIdx === i, t, `pickRequest('timeIdx',${i})`)).join('')}
         </div>
-      </div>
+      </div>`}
+
 
       <div class="sheet-group">
         <div class="sheet-label">Service address</div>
+
         <div class="req-addr">
           ${addrs.map((a, i) => requestPick(d.addrIdx === i, ic('map-pin',12) + ' ' + esc(a), `pickRequest('addrIdx',${i})`)).join('')}
         </div>
@@ -3365,14 +3564,7 @@ function bookingRequestSheet(){
 
       <div class="sheet-group">
         <div class="req-terms">
-          <div class="row"><span>Indicative rate</span><b>${pesoShort(p.rateCentavos)} <span class="mut">/ ${esc(p.rateUnit)}</span></b></div>
-          <p>
-            The rate is what this provider charges as a starting point, not a final quote.
-            ${cash
-              ? 'You settle in cash when the work is done, and the provider records it here.'
-              : 'Pay with ' + esc(pay) + ' once the provider confirms the scope and price.'}
-            The booking and its record stay in Sukinnect either way.
-          </p>
+          ${termsCard(p, d, pay, cash)}
         </div>
       </div>
     </div>
@@ -3413,33 +3605,36 @@ function submitBookingRequest(){
     const pays = requestPayments();
     const pay = pays[d.payIdx] || pays[0];
     const me = customerOf({ customerId: CURRENT_CUSTOMER_ID });
+    const listing = draftListing(p, d);
+    const indicative = draftBreakdown(p, d);
     const booking = {
       id: 'b' + (++bookingSeq),
-      /* One record, two views. The resident reads it by customerId and this
-         provider reads the very same object by providerId — nothing is copied,
-         which is what makes an accept on one side true on the other. */
+      /* One record, two views: the resident reads it by customerId, this provider
+         reads the same object by providerId. Nothing is copied. */
       customerId: CURRENT_CUSTOMER_ID,
       providerId: p.id,
-      listingId: (defaultListingFor(p.id) || {}).id || null,
-      summary: serviceMeta(p.serviceId).label + ' requested',
+      listingId: listing ? listing.id : null,
+      listingTitle: listing ? listing.title : p.service,
+      summary: listing ? listing.title : serviceMeta(p.serviceId).label + ' requested',
       request: text,
-      date: days[d.dayIdx].date,
-      time: REQUEST_TIMES[d.timeIdx],
+      date: d.asap ? 'As soon as possible' : days[d.dayIdx].date,
+      time: d.asap ? 'Next available' : REQUEST_TIMES[d.timeIdx],
+      eta: d.asap ? p.availabilityMin + ' mins' : null,
       status: 'requested',
-      amountCentavos: p.rateCentavos,
+      /* Indicative, not agreed. The terms freeze when the provider accepts. */
+      amountCentavos: indicative.customerTotalCentavos,
       barangay: me.barangay,
       lat: me.lat,
       lng: me.lng,
       notes: '',
       createdAt: new Date().toISOString(),
-      /* Records this session created are not sample data. The distinction is
-         what lets a screen say "demo" without disowning a real action. */
       source: 'live',
       arrivalTime: 'Awaiting provider',
       paymentStatus: isCashPayment(pay) ? 'Pending (Cash on Arrival)' : 'Unpaid',
       paymentMethod: pay,
       address: (state.profileData.savedAddresses || [state.profileData.address])[d.addrIdx]
     };
+
     BOOKINGS.unshift(booking);
     NOTIFICATIONS.unshift({
       id: 'n' + booking.id,
@@ -4294,7 +4489,7 @@ function residentResults(){
                 ${ic("map-pin",12)} ${p.distanceKm} km · Brgy. ${esc(p.barangay)} · arrives ~${p.availabilityMin} min
               </div>
               <div style="font-size:var(--t-body); margin-top:5px;">
-                <b>from ${pesoShort(p.rateCentavos)}</b>
+                <b>from ${pesoShort(cheapestListing(p))}</b>
                 <span style="color:var(--mist); font-size:var(--t-caption);">${esc(p.rateUnit)} · estimate</span>
               </div>
             </div>
@@ -4413,7 +4608,7 @@ function residentProviderDetail(){
   <div class="book-bar" style="background:#fff; border-top:1px solid var(--line); padding:12px 18px; display:flex; align-items:center; justify-content:space-between; position:sticky; bottom:0; z-index:20;">
     <div>
       <div style="font-size:var(--t-caption); color:var(--mist); font-weight:600;">Indicative rate</div>
-      <div style="font-size:16px; font-weight:800; color:var(--deep);">${pesoShort(p.rateCentavos)} <span style="font-size:var(--t-caption); font-weight:500; color:var(--mist);">/ ${esc(p.rateUnit)}</span></div>
+      <div style="font-size:16px; font-weight:800; color:var(--deep);">${pesoShort(cheapestListing(p))} <span style="font-size:var(--t-caption); font-weight:500; color:var(--mist);">starting, per job</span></div>
     </div>
     <button class="btn" style="background:var(--brand-primary); color:#fff; border-radius:12px; padding:11px 20px; font-weight:700; font-size:13.5px; cursor:pointer;" onclick="openBookingRequest()">
       Book Appointment
@@ -4637,49 +4832,8 @@ function residentBookingDetail(){
         <button class="btn sm secondary" style="background:#fff; border:1px solid var(--line); border-radius:10px; font-weight:700; color:var(--ink); padding:7px 12px; box-shadow:none;" onclick="openBookingProvider('${b.id}')">View Profile</button>
       </div>
 
-      ${b.status === 'requested' ? `
-        <div style="background:var(--background); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:14px;">
-          <div class="row" style="margin-bottom:10px;">
-            <span style="font-size:var(--t-caption); font-weight:800; text-transform:uppercase; color:var(--ink-soft); display:flex; align-items:center; gap:5px;">
-              <span class="wait-dot"></span> Waiting for ${esc(providerOf(b).name.split(' ')[0])} to accept
-            </span>
-            <span style="font-size:var(--t-caption); color:var(--mist);">No charge yet</span>
-          </div>
-          <div style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--ink-soft);">
-            <div style="font-weight:700; color:var(--deep);">${ic('check',12)} Request sent</div>
-            <div style="font-weight:700; color:var(--deep); display:flex; align-items:center; gap:4px;">${ic('clock',12)} Provider reviewing the job</div>
-            <div style="color:var(--mist);">○ Accepted &middot; you will be notified</div>
-            <div style="color:var(--mist);">○ Provider arrives &middot; ${b.arrivalTime === 'Awaiting provider' ? 'time confirmed on acceptance' : esc(b.arrivalTime)}</div>
-            <div style="color:var(--mist);">○ Work completed &middot; payment and record</div>
-          </div>
-          <p style="font-size:var(--t-caption); color:var(--mist); line-height:1.5; margin:10px 0 0;">
-            Nothing is charged yet, and no time is fixed until the provider accepts. They can also decline - you can then try another match.
-          </p>
-          <button type="button" class="btn sm danger" style="width:100%; margin-top:12px; border-radius:10px;" onclick="cancelBookingRequest('${b.id}')">Withdraw this request</button>
-        </div>
-      ` : ''}
-      ${b.status === 'ongoing' ? `
-        <div style="background:var(--success-100); border-radius:14px; padding:14px; margin-bottom:14px; border:1px solid var(--border);">
-          <div class="row" style="margin-bottom:10px;">
-            <span style="font-size:var(--t-caption); font-weight:800; text-transform:uppercase; color:var(--success-ink); display:flex; align-items:center; gap:4px;">
-              <span class="live-dot"></span> LIVE STATUS JOURNEY
-            </span>
-            <span style="font-size:12px; font-weight:700; color:var(--brand-primary);">ETA: ${b.eta}</span>
-          </div>
-          <div style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--ink-soft);">
-            <div>${ic("check",12)} Request Sent</div>
-            <div>${ic("check",12)} Provider Reviewing</div>
-            <div>${ic("check",12)} Booking Accepted</div>
-            <div>${ic("check",12)} Provider Preparing</div>
-            <div style="font-weight:700; color:var(--brand-primary); display:flex; align-items:center; gap:4px;">
-              <span style="color:var(--error-ink); display:inline-flex;">${ic("map-pin",12)}</span> On the Way (Active Step)
-            </div>
-            <div style="color:var(--ink-soft);">○ Arrived</div>
-            <div style="color:var(--ink-soft);">○ Service Started</div>
-            <div style="color:var(--ink-soft);">○ Service Completed</div>
-          </div>
-        </div>
-      ` : ''}
+      ${statusCard(b)}
+
 
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; background:var(--background); padding:12px; border-radius:12px; font-size:12px; margin-bottom:14px;">
         <div>
@@ -4701,6 +4855,7 @@ function residentBookingDetail(){
         </div>
       </div>
 
+      ${receiptCard(b)}
       ${ratingBlock(b)}
 
       <div style="display:flex; gap:10px; margin-bottom: ${b.status === 'completed' ? '12px' : '0'};">
@@ -4713,7 +4868,7 @@ function residentBookingDetail(){
       </div>
 
       ${b.status === 'completed' ? `
-        <button class="btn" style="width:100%; border-radius:14px; padding:14px; font-size:14px; display:flex; align-items:center; justify-content:center; gap:6px;" onclick="showToast('Re-booking ${providerOf(b).name} for ${b.request}...')">
+        <button class="btn" style="width:100%; border-radius:14px; padding:14px; font-size:14px; display:flex; align-items:center; justify-content:center; gap:6px;" onclick="rebookProvider('${providerOf(b).id}')">
           ${ic("refresh-cw",13)} Book Again (${pesoShort(b.amountCentavos)})
         </button>
       ` : ''}

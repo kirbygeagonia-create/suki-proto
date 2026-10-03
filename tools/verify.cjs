@@ -143,7 +143,15 @@ suite('screens', async () => {
       render();
       const html = app._document.getElementById('screen').innerHTML;
       const bad = html.match(/undefined|NaN|\[object Object\]/);
-      if (bad) broken.push(label() + '  paints ' + bad[0]);
+      if (bad) { broken.push(label() + '  paints ' + bad[0]); return; }
+      /* Unbalanced markup renders, but the sheet or card that lost its opening
+         tag silently stops being a group — a structure bug no text check sees. */
+      const open = (html.match(/<div\b/g) || []).length;
+      const close = (html.match(/<\/div>/g) || []).length;
+      if (open !== close) broken.push(label() + '  markup unbalanced: ' + open + ' <div> against ' + close + ' </div>');
+      const ob = (html.match(/<button\b/g) || []).length;
+      const cb = (html.match(/<\/button>/g) || []).length;
+      if (ob !== cb) broken.push(label() + '  buttons unbalanced: ' + ob + ' against ' + cb);
     } catch (err) { broken.push(label() + '  throws ' + err.message); }
   }
   const SCREENS = [['resident', 'home'], ['resident', 'bookings'], ['resident', 'messages'],
@@ -174,6 +182,34 @@ suite('screens', async () => {
   visit(() => { state.role = 'admin'; state.tab = 'admin_verifications'; base(); state.adminProviderCategory = 'pending'; });
   visit(() => { state.role = 'admin'; state.tab = 'admin_verifications'; base(); state.adminProviderCategory = 'credentials'; });
   visit(() => { state.role = 'admin'; state.tab = 'admin_disputes'; base(); state.adminWarrantyShown = true; });
+
+  /* the booking sheet paints into its own layer, so it needs its own pass: a
+     group that lost its opening tag still looks like a sheet until you tap it */
+  const sheets = [];
+  [['plumbing', 0], ['plumbing', 1], ['delivery', 0], ['tutoring', 0]].forEach(([svc, idx]) => {
+    const provider = app.PROVIDERS.find(p => p.serviceId === svc);
+    sheets.push([provider.name + ' sheet', () => {
+      state.role = 'resident'; state.tab = 'provider_detail'; base();
+      state.selectedProvider = provider;
+      state.requestDraft = { service: 'A test request long enough', listingIdx: idx, dayIdx: 0, timeIdx: 1, addrIdx: 0, payIdx: 0, asap: idx === 1 };
+      state.sheet = 'bookingRequest';
+    }]);
+  });
+  sheets.push(['filter sheet', () => {
+    state.role = 'resident'; state.tab = 'results'; base();
+    state.searchQuery = 'leak'; state.sheet = 'providerFilters';
+  }]);
+  for (const [name, setup] of sheets) {
+    setup();
+    try {
+      app.render();
+      const html = app._document.getElementById('sheet-root').innerHTML;
+      const o = (html.match(/<div\b/g) || []).length, cl = (html.match(/<\/div>/g) || []).length;
+      if (o !== cl) broken.push(name + '  markup unbalanced: ' + o + ' <div> against ' + cl + ' </div>');
+      if (/undefined|NaN|\[object Object\]/.test(html)) broken.push(name + '  paints a hole');
+    } catch (err) { broken.push(name + '  throws ' + err.message); }
+  }
+  state.sheet = null;
   c.check('every screen renders clean', broken.length === 0, '\n      ' + broken.join('\n      '));
   return c;
 });

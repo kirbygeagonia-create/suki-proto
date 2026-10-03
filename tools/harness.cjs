@@ -44,7 +44,7 @@ function boot({ appMode = false, storage = null } = {}) {
       get firstChild() { return el.children[0] || null; },
       get childNodes() { return el.children; },
       classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
-      querySelector: () => null,
+      querySelector: (sel) => fakeEl(el.id + ' >> ' + sel),
       querySelectorAll: () => [],
       addEventListener() {}, removeEventListener() {}, focus() {}, setSelectionRange() {},
       appendChild(c) { el.children.push(c); return c; },
