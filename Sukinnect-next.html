@@ -1355,197 +1355,188 @@ const NOTIFICATIONS = [
   {id:'n4', title:'Service Completed', body:'Jerico Salamat completed electrical service. Please leave a rating!', time:'Aug 21', unread:false, icon:'star', bg:'var(--warning-100)', bookingId:'b6'}
 ];
 
-const RESIDENT_BOOKINGS = [
-  {
-    id:'b1', 
-    provider:PROVIDERS[0], 
-    service:'Kitchen faucet keeps leaking', 
-    date:'Sat, Sep 12', 
-    time:'2:30 PM', 
-    status:'ongoing', 
-    amountCentavos:36500, 
-    eta:'15 mins', 
-    arrivalTime:'2:45 PM', 
-    paymentStatus:'Pending (Cash on Arrival)'
-  },
-  {
-    id:'b2', 
-    provider:PROVIDERS[1], 
-    service:'Breaker kept tripping in the sala', 
-    date:'Sat, Sep 12', 
-    time:'4:00 PM', 
-    status:'upcoming', 
-    amountCentavos:41500, 
-    arrivalTime:'4:00 PM', 
-    paymentStatus:'Unpaid'
-  },
-  {
-    id:'b3', 
-    provider:PROVIDERS[2], 
-    service:'Full house deep clean', 
-    date:'Aug 30', 
-    time:'9:00 AM', 
-    status:'completed', 
-    amountCentavos:51500, 
-    arrivalTime:'Completed', 
-    paymentStatus:'Paid Online', 
-    myRating:5
-  },
-  {
-    id:'b6',
-    provider:PROVIDERS[1],
-    service:'Rewired the flooded outdoor junction box',
-    date:'Aug 21',
-    time:'10:00 AM',
-    status:'completed',
-    amountCentavos:48000,
-    arrivalTime:'Completed',
-    paymentStatus:'Paid Online'
-  },
-  {
-    id:'b4', 
-    provider:PROVIDERS[5], 
-    service:'Grocery pickup from the market', 
-    date:'Aug 14', 
-    time:'11:00 AM', 
-    status:'completed', 
-    amountCentavos:7500, 
-    arrivalTime:'Completed', 
-    paymentStatus:'Paid Online', 
-    myRating:4
-  },
-  {
-    id:'b5', 
-    provider:PROVIDERS[3], 
-    service:'Refrigerator not cooling', 
-    date:'Aug 5', 
-    time:'1:00 PM', 
-    status:'cancelled', 
-    amountCentavos:31500, 
-    arrivalTime:'Cancelled', 
-    paymentStatus:'Cancelled'
-  },
+/* ---- people who ask for work ---------------------------------------------
+   The resident signed in is Ana (CURRENT_CUSTOMER_ID); the rest are the clients
+   this provider's demo jobs belong to. A booking references a customer by id and
+   the phone lives here, so a provider can be shown the number only when the job
+   is actually theirs to see.
+   ------------------------------------------------------------------------- */
+const CUSTOMERS = [
+  { id:'c1', name:'Ana Dela Cruz',  barangay:'Poblacion',  phone:'+63 912 345 6789', lat:6.3671, lng:124.9331 },
+  { id:'c2', name:'Nena Corpuz',    barangay:'Poblacion',  phone:'+63 917 555 0192', lat:6.3675, lng:124.9340 },
+  { id:'c3', name:'Boy Ramos',      barangay:'Poblacion',  phone:'+63 918 444 9281', lat:6.3685, lng:124.9345 },
+  { id:'c4', name:'Grace Lim',      barangay:'Barangay 4', phone:'+63 922 333 1199', lat:6.3550, lng:124.9210 },
+  { id:'c5', name:'Danilo Garcia',  barangay:'Poblacion',  phone:'+63 919 222 3344', lat:6.3660, lng:124.9320 },
+  { id:'c6', name:'Marites Santos', barangay:'San Isidro', phone:'+63 920 111 2233', lat:6.3900, lng:124.9500 },
+  { id:'c7', name:'Libby Tan',      barangay:'Poblacion',  phone:'+63 917 222 8830', lat:6.3652, lng:124.9301 },
+  { id:'c8', name:'Rogelio Delfin', barangay:'San Isidro', phone:'+63 921 777 4402', lat:6.3887, lng:124.9463 }
 ];
 
-const PROVIDER_BOOKINGS = [
+const CURRENT_CUSTOMER_ID = 'c1';   // the resident this prototype signs in as
+const CURRENT_PROVIDER_ID = 'p1';   // the service pro it signs in as (Ramil Odiada)
+
+/* Demo bookings are dated against the day they are opened, so a job meant to
+   read as upcoming does not expire into a fixed September the moment the file is
+   shown to anyone. date/time stay human labels until the state machine owns
+   real timestamps (step 5); receivedAt becomes a derived string from createdAt. */
+function dayLabel(offsetDays){
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offsetDays);
+  return d.toLocaleDateString('en-PH', { weekday:'short', month:'short', day:'numeric' });
+}
+function isoMinutesAgo(minutes){ return new Date(Date.now() - minutes * 60000).toISOString(); }
+function agoText(iso){
+  if(!iso) return 'just now';
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso)) / 60000));
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + ' minute' + (mins === 1 ? '' : 's') + ' ago';
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return hours + ' hour' + (hours === 1 ? '' : 's') + ' ago';
+  const days = Math.round(hours / 24);
+  return days + ' day' + (days === 1 ? '' : 's') + ' ago';
+}
+
+/* ═══ ONE BOOKING ═══════════════════════════════════════════════════════════
+   The resident's job and the provider's job were two arrays that never met, so
+   a request raised in one never arrived in the other. Every field below belongs
+   to the job itself; each role reads the same record and derives its own view
+   from customerId / providerId. providerOf() and customerOf() do the joining -
+   no record carries a copy of another object any more.
+   ═════════════════════════════════════════════════════════════════════════ */
+const BOOKINGS = [
   {
-    id: 'pb1',
-    title: 'Fix kitchen sink leak',
-    client: 'Nena Corpuz',
-    barangay: 'Poblacion',
-    time: '10:00 AM',
-    date: 'Today, Sep 10',
-    amountCentavos: 36500,
-    status: 'upcoming',
-    initials: 'NC',
-    address: 'Blk 2 Lot 8, Mabini St., Poblacion',
-    lat: 6.3671,
-    lng: 124.9331,
-    phone: '+63 917 555 0192',
-    notes: 'Kitchen sink is leaking continuously from the pipe joint underneath.'
+    id:'b1', customerId:'c1', providerId:'p1',
+    summary:'Kitchen faucet leak', request:'Kitchen faucet keeps leaking',
+    date:dayLabel(0), time:'2:30 PM', status:'ongoing',
+    amountCentavos:36500, paymentStatus:'Pending (Cash on Arrival)',
+    paymentMethod:'Cash on Arrival', eta:'15 mins', arrivalTime:'2:45 PM',
+    barangay:'Poblacion', address:'Blk 4 Lot 12, Rizal St., Poblacion',
+    lat:6.3671, lng:124.9331, notes:'Faucet body drips even when fully closed.',
+    createdAt:isoMinutesAgo(210), source:'demo'
   },
   {
-    id: 'pb2',
-    title: 'Water heater check',
-    client: 'Boy Ramos',
-    barangay: 'Poblacion',
-    time: '2:00 PM',
-    date: 'Today, Sep 10',
-    amountCentavos: 42000,
-    status: 'upcoming',
-    initials: 'BR',
-    address: 'Unit 4B, Poblacion Commercial Complex',
-    lat: 6.3685,
-    lng: 124.9345,
-    phone: '+63 918 444 9281',
-    notes: 'Water heater is not reaching desired warm temperature.'
+    id:'b2', customerId:'c1', providerId:'p2',
+    summary:'Breaker keeps tripping', request:'Breaker kept tripping in the sala',
+    date:dayLabel(1), time:'4:00 PM', status:'upcoming',
+    amountCentavos:41500, paymentStatus:'Unpaid', paymentMethod:'GCash (0912***6789)',
+    arrivalTime:'4:00 PM',
+    barangay:'Poblacion', address:'Blk 4 Lot 12, Rizal St., Poblacion',
+    lat:6.3671, lng:124.9331, notes:'Trips when the air-con and kettle run together.',
+    createdAt:isoMinutesAgo(1500), source:'demo'
   },
   {
-    id: 'pb3',
-    title: 'Clogged bathroom drain',
-    client: 'Grace Lim',
-    barangay: 'Barangay 4',
-    time: 'Yesterday',
-    date: 'Sep 9',
-    amountCentavos: 35000,
-    status: 'completed',
-    initials: 'GL',
-    address: '12 Orchid St., Barangay 4',
-    lat: 6.3550,
-    lng: 124.9210,
-    phone: '+63 922 333 1199',
-    notes: 'Bathroom floor drain completely cleared and sanitized.'
+    id:'b3', customerId:'c1', providerId:'p3',
+    summary:'Full house deep clean', request:'Full house deep clean',
+    date:'Aug 30', time:'9:00 AM', status:'completed',
+    amountCentavos:51500, paymentStatus:'Paid Online', paymentMethod:'GCash (0912***6789)',
+    arrivalTime:'Completed', myRating:5,
+    barangay:'Poblacion', address:'Blk 4 Lot 12, Rizal St., Poblacion',
+    lat:6.3671, lng:124.9331, notes:'Two bedrooms, sala and kitchen.',
+    createdAt:isoMinutesAgo(60 * 24 * 34), source:'demo'
   },
   {
-    id: 'pb4',
-    title: 'Emergency main valve repair',
-    client: 'Danilo Garcia',
-    barangay: 'Poblacion',
-    time: '11:30 AM',
-    date: 'Today, Sep 10',
-    amountCentavos: 50000,
-    status: 'ongoing',
-    initials: 'DG',
-    address: 'Lot 3 Block 1, Rizal Ave., Poblacion',
-    lat: 6.3660,
-    lng: 124.9320,
-    phone: '+63 919 222 3344',
-    notes: 'Main water valve ruptured near garage entrance.'
+    id:'b6', customerId:'c1', providerId:'p2',
+    summary:'Rewire flooded junction box', request:'Rewired the flooded outdoor junction box',
+    date:'Aug 21', time:'10:00 AM', status:'completed',
+    amountCentavos:48000, paymentStatus:'Paid Online', paymentMethod:'GCash (0912***6789)',
+    arrivalTime:'Completed',
+    barangay:'Poblacion', address:'Blk 4 Lot 12, Rizal St., Poblacion',
+    lat:6.3671, lng:124.9331, notes:'Outdoor box took rainwater during the storm.',
+    createdAt:isoMinutesAgo(60 * 24 * 43), source:'demo'
   },
   {
-    id: 'pb5',
-    title: 'Shower handle replacement',
-    client: 'Marites Santos',
-    barangay: 'San Isidro',
-    time: 'Cancelled',
-    date: 'Aug 28',
-    amountCentavos: 28000,
-    status: 'cancelled',
-    initials: 'MS',
-    address: '45 Sampaguita St., San Isidro',
-    lat: 6.3900,
-    lng: 124.9500,
-    phone: '+63 920 111 2233',
-    notes: 'Client cancelled due to schedule conflict.'
-  },
-  // Sample inbox for the provider. These are the counterpart to the resident's
-  // "Waiting for them to accept": a request carries no agreed day, fee or ETA
-  // until this account answers it.
-  {
-    id: 'pb6',
-    title: 'Bathroom tap will not shut off',
-    client: 'Libby Tan',
-    barangay: 'Poblacion',
-    time: '9:00 AM',
-    date: 'Tomorrow, Sep 11',
-    amountCentavos: 35000,
-    status: 'requested',
-    initials: 'LT',
-    address: 'Blk 5 Lot 2, Bonifacio St., Poblacion',
-    lat: 6.3652,
-    lng: 124.9301,
-    phone: '+63 917 222 8830',
-    notes: 'The tap in the small bathroom keeps running after I turn it off. Nothing is overflowing yet, but it has run all night twice this week.',
-    receivedAt: '20 minutes ago'
+    id:'b4', customerId:'c1', providerId:'p6',
+    summary:'Grocery pickup', request:'Grocery pickup from the market',
+    date:'Aug 14', time:'11:00 AM', status:'completed',
+    amountCentavos:7500, paymentStatus:'Paid Online', paymentMethod:'Cash on Arrival',
+    arrivalTime:'Completed', myRating:4,
+    barangay:'Poblacion', address:'Blk 4 Lot 12, Rizal St., Poblacion',
+    lat:6.3671, lng:124.9331, notes:'Market list, one trip.',
+    createdAt:isoMinutesAgo(60 * 24 * 50), source:'demo'
   },
   {
-    id: 'pb7',
-    title: 'Kitchen drain backs up when the sink runs',
-    client: 'Rogelio Delfin',
-    barangay: 'San Isidro',
-    time: '2:00 PM',
-    date: 'Saturday, Sep 12',
-    amountCentavos: 40000,
-    status: 'requested',
-    initials: 'RD',
-    address: '6 Santiago Ave., San Isidro',
-    lat: 6.3887,
-    lng: 124.9463,
-    phone: '+63 921 777 4402',
-    notes: 'Water comes back up through the floor drain whenever the kitchen sink is full. Most days after dinner.',
-    receivedAt: '2 hours ago'
+    id:'b5', customerId:'c1', providerId:'p4',
+    summary:'Refrigerator not cooling', request:'Refrigerator not cooling',
+    date:'Aug 5', time:'1:00 PM', status:'cancelled',
+    amountCentavos:31500, paymentStatus:'Cancelled', paymentMethod:'GCash (0912***6789)',
+    arrivalTime:'Cancelled', cancelReason:'Provider could not make the slot',
+    barangay:'Poblacion', address:'Blk 4 Lot 12, Rizal St., Poblacion',
+    lat:6.3671, lng:124.9331, notes:'',
+    createdAt:isoMinutesAgo(60 * 24 * 59), source:'demo'
+  },
+  {
+    id:'pb1', customerId:'c2', providerId:'p1',
+    summary:'Fix kitchen sink leak', request:'Kitchen sink is leaking continuously from the pipe joint underneath.',
+    date:dayLabel(0), time:'6:00 PM', status:'upcoming',
+    amountCentavos:36500, paymentStatus:'Unpaid',
+    barangay:'Poblacion', address:'Blk 2 Lot 8, Mabini St., Poblacion',
+    lat:6.3671, lng:124.9331, notes:'Joint underneath the sink.',
+    createdAt:isoMinutesAgo(300), source:'demo'
+  },
+  {
+    id:'pb2', customerId:'c3', providerId:'p1',
+    summary:'Water heater check', request:'Water heater is not reaching desired warm temperature.',
+    date:dayLabel(1), time:'2:00 PM', status:'upcoming',
+    amountCentavos:42000, paymentStatus:'Unpaid',
+    barangay:'Poblacion', address:'Unit 4B, Poblacion Commercial Complex',
+    lat:6.3685, lng:124.9345, notes:'Tank unit, about six years old.',
+    createdAt:isoMinutesAgo(600), source:'demo'
+  },
+  {
+    id:'pb3', customerId:'c4', providerId:'p1',
+    summary:'Clogged bathroom drain', request:'Bathroom floor drain completely cleared and sanitized.',
+    date:'Yesterday', time:'9:00 AM', status:'completed',
+    amountCentavos:35000, paymentStatus:'Paid Online', arrivalTime:'Completed',
+    barangay:'Barangay 4', address:'12 Orchid St., Barangay 4',
+    lat:6.3550, lng:124.9210, notes:'Slow drain behind the toilet.',
+    createdAt:isoMinutesAgo(60 * 26), source:'demo'
+  },
+  {
+    id:'pb4', customerId:'c5', providerId:'p1',
+    summary:'Main valve repair', request:'Main water valve ruptured near garage entrance.',
+    date:dayLabel(1), time:'10:30 AM', status:'upcoming',
+    amountCentavos:50000, paymentStatus:'Unpaid',
+    barangay:'Poblacion', address:'Lot 3 Block 1, Rizal Ave., Poblacion',
+    lat:6.3660, lng:124.9320, notes:'Water meter is off, awaiting the repair.',
+    createdAt:isoMinutesAgo(180), source:'demo'
+  },
+  {
+    id:'pb5', customerId:'c6', providerId:'p1',
+    summary:'Shower handle replacement', request:'Shower handle snapped off inside the fitting.',
+    date:'Aug 28', time:'Cancelled', status:'cancelled',
+    amountCentavos:28000, paymentStatus:'Cancelled', arrivalTime:'Cancelled',
+    cancelReason:'Client cancelled due to schedule conflict',
+    barangay:'San Isidro', address:'45 Sampaguita St., San Isidro',
+    lat:6.3900, lng:124.9500, notes:'',
+    createdAt:isoMinutesAgo(60 * 24 * 36), source:'demo'
+  },
+  {
+    id:'pb6', customerId:'c7', providerId:'p1',
+    summary:'Bathroom tap will not shut off', request:'The tap in the small bathroom keeps running after I turn it off. Nothing is overflowing yet, but it has run all night twice this week.',
+    date:dayLabel(1), time:'9:00 AM', status:'requested',
+    amountCentavos:35000, paymentStatus:'Unpaid', arrivalTime:'Awaiting provider',
+    barangay:'Poblacion', address:'Blk 5 Lot 2, Bonifacio St., Poblacion',
+    lat:6.3652, lng:124.9301, notes:'Wasteful but not overflowing yet.',
+    createdAt:isoMinutesAgo(20), source:'demo'
+  },
+  {
+    id:'pb7', customerId:'c8', providerId:'p1',
+    summary:'Kitchen drain backs up', request:'Water comes back up through the floor drain whenever the kitchen sink is full. Most days after dinner.',
+    date:dayLabel(2), time:'2:00 PM', status:'requested',
+    amountCentavos:40000, paymentStatus:'Unpaid', arrivalTime:'Awaiting provider',
+    barangay:'San Isidro', address:'6 Santiago Ave., San Isidro',
+    lat:6.3887, lng:124.9463, notes:'Smell reaches the sala by evening.',
+    createdAt:isoMinutesAgo(120), source:'demo'
   }
 ];
+
+function bookingById(id){ return BOOKINGS.find(b => b.id === id) || null; }
+function providerOf(booking){ return PROVIDERS.find(p => p.id === booking.providerId) || PROVIDERS[0]; }
+function customerOf(booking){ return CUSTOMERS.find(c => c.id === booking.customerId) || null; }
+/* The two role views the app used to keep as separate tables. Same objects, so
+   an action taken on one side is immediately true on the other. */
+function bookingsForResident(){ return BOOKINGS.filter(b => b.customerId === CURRENT_CUSTOMER_ID); }
+function bookingsForProvider(){ return BOOKINGS.filter(b => b.providerId === CURRENT_PROVIDER_ID); }
 
 // Sukinnect app mode — the APK loads this page with ?app=1: drop the
 // desktop phone mock and let the UI fill the real device screen.
@@ -1564,7 +1555,10 @@ if (/[?&]app=1(&|$)/.test(location.search) || /SukinnectApp/i.test(navigator.use
 /* Raising this makes an old dump get dropped rather than trusted: a snapshot
    written by a previous shape of these records is discarded and the seed is used
    fresh, so a rebuild can never half-load someone's earlier session. */
-const SCHEMA_VERSION = 1;
+/* Raised to 2 by step 3: the dump used to carry two parallel booking arrays. A
+   snapshot of that shape cannot be reconciled with one shared table, so it is
+   dropped and the seed is used fresh rather than half-read. */
+const SCHEMA_VERSION = 2;
 const STORE_KEY = 'sukinnect.snapshot.v1';
 
 const Store = (function () {
@@ -1615,25 +1609,12 @@ function replaceContents(target, incoming) {
   return target;
 }
 
-/* A booking's provider crosses JSON as a copy, and a copy is not the record in
-   PROVIDERS: two objects that look alike but update separately is how a demo
-   starts lying about the marketplace. Re-link every booking to the live record.
-   (Step 3 removes the object reference altogether by storing a provider id.) */
-function relinkProviders(bookings, providers) {
-  bookings.forEach(b => {
-    if (!b || !b.provider || !b.provider.id) return;
-    const live = providers.find(p => p.id === b.provider.id);
-    if (live) b.provider = live;
-  });
-  return bookings;
-}
-
 /* Captured before anything is hydrated: the seed is the pristine demo data, so a
    reset can restore records that were mutated in place. */
 const SEED = {
   providers: cloneRecords(PROVIDERS),
-  residentBookings: cloneRecords(RESIDENT_BOOKINGS),
-  providerBookings: cloneRecords(PROVIDER_BOOKINGS),
+  bookings: cloneRecords(BOOKINGS),
+  customers: cloneRecords(CUSTOMERS),
   notifications: cloneRecords(NOTIFICATIONS)
 };
 
@@ -1644,8 +1625,8 @@ function snapshot() {
     schemaVersion: SCHEMA_VERSION,
     savedAt: new Date().toISOString(),
     providers: PROVIDERS,
-    residentBookings: RESIDENT_BOOKINGS,
-    providerBookings: PROVIDER_BOOKINGS,
+    bookings: BOOKINGS,
+    customers: CUSTOMERS,
     notifications: NOTIFICATIONS,
     profileData: state.profileData,
     providerProfileData: state.providerProfileData
@@ -1658,10 +1639,9 @@ function hydrate() {
   const snap = Store.read();
   if (!snap) return { restored: false, kind: Store.kind };
   replaceContents(PROVIDERS, snap.providers);
-  replaceContents(RESIDENT_BOOKINGS, snap.residentBookings);
-  replaceContents(PROVIDER_BOOKINGS, snap.providerBookings);
+  replaceContents(BOOKINGS, snap.bookings);
+  replaceContents(CUSTOMERS, snap.customers);
   replaceContents(NOTIFICATIONS, snap.notifications);
-  relinkProviders(RESIDENT_BOOKINGS, PROVIDERS);
   if (snap.profileData) Object.assign(state.profileData, snap.profileData);
   if (snap.providerProfileData) Object.assign(state.providerProfileData, snap.providerProfileData);
   return { restored: true, kind: Store.kind, savedAt: snap.savedAt };
@@ -1670,10 +1650,9 @@ function hydrate() {
 /* Back to the demo data the file shipped with, and forget this device's dump. */
 function restoreSeed() {
   replaceContents(PROVIDERS, cloneRecords(SEED.providers));
-  replaceContents(RESIDENT_BOOKINGS, cloneRecords(SEED.residentBookings));
-  replaceContents(PROVIDER_BOOKINGS, cloneRecords(SEED.providerBookings));
+  replaceContents(BOOKINGS, cloneRecords(SEED.bookings));
+  replaceContents(CUSTOMERS, cloneRecords(SEED.customers));
   replaceContents(NOTIFICATIONS, cloneRecords(SEED.notifications));
-  relinkProviders(RESIDENT_BOOKINGS, PROVIDERS);
   Store.clear();
   return persist();
 }
@@ -2151,7 +2130,7 @@ function openBookingDetail(bookingId){
 // a reference to something no longer there cannot strand the tap.
 function notificationRoute(n){
   if(n.bookingId){
-    const b = RESIDENT_BOOKINGS.find(x => x.id === n.bookingId);
+    const b = bookingById(n.bookingId);
     if(b) return { kind:'booking', id:b.id, label: b.status === 'completed' && !b.myRating ? 'booking to rate' : 'booking' };
   }
   if(n.providerId && PROVIDERS.some(p => p.id === n.providerId)){
@@ -2268,8 +2247,8 @@ function openProviderDetail(providerId, fromTab){
 }
 
 function openBookingProvider(bookingId){
-  const b = RESIDENT_BOOKINGS.find(x => x.id === bookingId);
-  if(b) openProviderDetail(b.provider.id, 'booking_detail');
+  const b = bookingsForResident().find(x => x.id === bookingId);
+  if(b) openProviderDetail(providerOf(b).id, 'booking_detail');
 }
 
 // The Concierge already heard what is wrong. When it sorted to the same trade as
@@ -2420,20 +2399,34 @@ function submitBookingRequest(){
     const days = requestDays();
     const pays = requestPayments();
     const pay = pays[d.payIdx] || pays[0];
+    const me = customerOf({ customerId: CURRENT_CUSTOMER_ID });
     const booking = {
       id: 'b' + (++bookingSeq),
-      provider: p,
-      service: text,
+      /* One record, two views. The resident reads it by customerId and this
+         provider reads the very same object by providerId — nothing is copied,
+         which is what makes an accept on one side true on the other. */
+      customerId: CURRENT_CUSTOMER_ID,
+      providerId: p.id,
+      summary: serviceMeta(p.serviceId).label + ' requested',
+      request: text,
       date: days[d.dayIdx].date,
       time: REQUEST_TIMES[d.timeIdx],
       status: 'requested',
       amountCentavos: p.rateCentavos,
+      barangay: me.barangay,
+      lat: me.lat,
+      lng: me.lng,
+      notes: '',
+      createdAt: new Date().toISOString(),
+      /* Records this session created are not sample data. The distinction is
+         what lets a screen say "demo" without disowning a real action. */
+      source: 'live',
       arrivalTime: 'Awaiting provider',
       paymentStatus: isCashPayment(pay) ? 'Pending (Cash on Arrival)' : 'Unpaid',
       paymentMethod: pay,
       address: (state.profileData.savedAddresses || [state.profileData.address])[d.addrIdx]
     };
-    RESIDENT_BOOKINGS.unshift(booking);
+    BOOKINGS.unshift(booking);
     NOTIFICATIONS.unshift({
       id: 'n' + booking.id,
       title: 'Request sent to ' + p.name,
@@ -2454,7 +2447,7 @@ function submitBookingRequest(){
 }
 
 function cancelBookingRequest(id){
-  const b = RESIDENT_BOOKINGS.find(x => x.id === id);
+  const b = bookingsForResident().find(x => x.id === id);
   if(!b || b.status !== 'requested') return;
   b.status = 'cancelled';
   b.cancelReason = 'Cancelled by you while waiting for the provider';
@@ -2929,8 +2922,8 @@ function adminTabHTML(){
 
 function residentHome(){
   // A live job on the doorstep outranks a request still waiting for an answer.
-  const active = RESIDENT_BOOKINGS.find(b => b.status === 'ongoing' || b.status === 'upcoming')
-              || RESIDENT_BOOKINGS.find(b => b.status === 'requested');
+  const active = bookingsForResident().find(b => b.status === 'ongoing' || b.status === 'upcoming')
+              || bookingsForResident().find(b => b.status === 'requested');
   const hasUnread = NOTIFICATIONS.some(n=>n.unread);
   // Only the four states this prototype really has. Saying what happens next is
   // the point of the stepper, not the decoration (21).
@@ -2981,10 +2974,10 @@ function residentHome(){
     <div class="card" data-booking="${active.id}" style="cursor:pointer; padding:11px 13px;">
       <div class="row" style="align-items:flex-start; gap:10px;">
         <div style="display:flex; gap:10px; align-items:center; min-width:0;">
-          ${photoAvatar(active.provider, 36)}
+          ${photoAvatar(providerOf(active), 36)}
           <div style="min-width:0;">
-            <div style="font-weight:700; font-size:var(--t-body-lg);">${esc(active.service)}</div>
-            <div style="font-size:var(--t-caption); color:var(--mist); margin-top:1px;">${active.provider.name} · ${active.date}, ${active.time}</div>
+            <div style="font-weight:700; font-size:var(--t-body-lg);">${esc(active.request)}</div>
+            <div style="font-size:var(--t-caption); color:var(--mist); margin-top:1px;">${providerOf(active).name} · ${active.date}, ${active.time}</div>
           </div>
         </div>
         <span class="chip status-${active.status}" style="flex-shrink:0;">${active.status}</span>
@@ -3543,7 +3536,7 @@ function statusColors(status){
 // The rating belongs to this record. This prototype stores it on the booking and
 // does not claim it moved the provider's public average.
 function setBookingRating(bookingId, rating){
-  const b = RESIDENT_BOOKINGS.find(x => x.id === bookingId);
+  const b = bookingsForResident().find(x => x.id === bookingId);
   if(!b || b.status !== 'completed' || !rating) return;
   b.myRating = rating;
   persist();
@@ -3552,7 +3545,7 @@ function setBookingRating(bookingId, rating){
 }
 
 function changeBookingRating(bookingId){
-  const b = RESIDENT_BOOKINGS.find(x => x.id === bookingId);
+  const b = bookingsForResident().find(x => x.id === bookingId);
   if(!b || b.status !== 'completed') return;
   b.myRating = null;
   persist();
@@ -3561,7 +3554,7 @@ function changeBookingRating(bookingId){
 
 function ratingBlock(b){
   if(b.status !== 'completed') return '';
-  const first = esc(b.provider.name.split(' ')[0]);
+  const first = esc(providerOf(b).name.split(' ')[0]);
   if(b.myRating){
     return `
       <div class="card" style="border-radius:14px; padding:14px; margin-bottom:14px; border:1px solid var(--line); background:#fff;">
@@ -3593,7 +3586,7 @@ function ratingCell(b){
 }
 
 function residentBookingDetail(){
-  const b = RESIDENT_BOOKINGS.find(item => item.id === state.selectedBookingId) || RESIDENT_BOOKINGS[0];
+  const b = bookingsForResident().find(item => item.id === state.selectedBookingId) || bookingsForResident()[0];
   
   const statusText = b.status.toUpperCase();
 
@@ -3609,15 +3602,15 @@ function residentBookingDetail(){
   <div class="pad" style="background:var(--cloud); padding-bottom:30px;">
     
     <div class="card" style="border-radius:18px; padding:16px; background:#fff; border:1px solid var(--line); margin-bottom:12px;">
-      <div style="font-size:17px; font-weight:700; color:var(--ink);">${b.service}</div>
+      <div style="font-size:17px; font-weight:700; color:var(--ink);">${b.request}</div>
       <div style="font-size:12px; color:var(--mist); margin-top:2px; margin-bottom:14px;">${b.status === 'requested' ? 'Requested for' : 'Scheduled'}: <b style="color:var(--ink);">${b.date}, ${b.time}</b></div>
 
       <div style="background:var(--background); border:1px solid var(--line); border-radius:14px; padding:12px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;">
         <div style="display:flex; gap:12px; align-items:center;">
-          ${serviceAvatar(b.provider, 42, '')}
+          ${serviceAvatar(providerOf(b), 42, '')}
           <div>
-            <div style="font-size:14.5px; font-weight:700; color:var(--ink);">${b.provider.name}</div>
-            <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${b.provider.service} · Barangay ${b.provider.barangay}</div>
+            <div style="font-size:14.5px; font-weight:700; color:var(--ink);">${providerOf(b).name}</div>
+            <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${providerOf(b).service} · Barangay ${providerOf(b).barangay}</div>
           </div>
         </div>
         <button class="btn sm secondary" style="background:#fff; border:1px solid var(--line); border-radius:10px; font-weight:700; color:var(--ink); padding:7px 12px; box-shadow:none;" onclick="openBookingProvider('${b.id}')">View Profile</button>
@@ -3627,7 +3620,7 @@ function residentBookingDetail(){
         <div style="background:var(--background); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:14px;">
           <div class="row" style="margin-bottom:10px;">
             <span style="font-size:var(--t-caption); font-weight:800; text-transform:uppercase; color:var(--ink-soft); display:flex; align-items:center; gap:5px;">
-              <span class="wait-dot"></span> Waiting for ${esc(b.provider.name.split(' ')[0])} to accept
+              <span class="wait-dot"></span> Waiting for ${esc(providerOf(b).name.split(' ')[0])} to accept
             </span>
             <span style="font-size:var(--t-caption); color:var(--mist);">No charge yet</span>
           </div>
@@ -3690,16 +3683,16 @@ function residentBookingDetail(){
       ${ratingBlock(b)}
 
       <div style="display:flex; gap:10px; margin-bottom: ${b.status === 'completed' ? '12px' : '0'};">
-        <button class="btn secondary" style="flex:1; background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px; font-size:13px; font-weight:700; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.04);" data-chat-booking-provider-id="${b.provider.id}">
+        <button class="btn secondary" style="flex:1; background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px; font-size:13px; font-weight:700; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.04);" data-chat-booking-provider-id="${providerOf(b).id}">
           ${ic("chat",14)} Chat Pro
         </button>
-        <button class="btn secondary" style="flex:1; background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px; font-size:13px; font-weight:700; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.04);" onclick="showToast('Calling ${b.provider.name}...')">
+        <button class="btn secondary" style="flex:1; background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px; font-size:13px; font-weight:700; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.04);" onclick="showToast('Calling ${providerOf(b).name}...')">
           ${ic("phone",14)} Call Pro
         </button>
       </div>
 
       ${b.status === 'completed' ? `
-        <button class="btn" style="width:100%; border-radius:14px; padding:14px; font-size:14px; display:flex; align-items:center; justify-content:center; gap:6px;" onclick="showToast('Re-booking ${b.provider.name} for ${b.service}...')">
+        <button class="btn" style="width:100%; border-radius:14px; padding:14px; font-size:14px; display:flex; align-items:center; justify-content:center; gap:6px;" onclick="showToast('Re-booking ${providerOf(b).name} for ${b.request}...')">
           ${ic("refresh-cw",13)} Book Again (${pesoShort(b.amountCentavos)})
         </button>
       ` : ''}
@@ -3710,8 +3703,8 @@ function residentBookingDetail(){
 
 function residentBookings(){
   const filter = state.bookingFilter || 'all';
-  const waitingCount = RESIDENT_BOOKINGS.filter(b => b.status === 'requested').length;
-  const filtered = RESIDENT_BOOKINGS.filter(b => {
+  const waitingCount = bookingsForResident().filter(b => b.status === 'requested').length;
+  const filtered = bookingsForResident().filter(b => {
     if(filter === 'all') return true;
     return b.status === filter;
   });
@@ -3739,10 +3732,10 @@ function residentBookings(){
         <div class="card" onclick="openBookingDetail('${b.id}')" style="cursor:pointer; border-radius:14px; padding:14px; margin-bottom:12px; border:1px solid var(--line); background:#fff;">
           <div class="row" style="align-items:flex-start; margin-bottom:8px;">
             <div style="display:flex; gap:12px; align-items:center;">
-              ${serviceAvatar(b.provider, 40, '')}
+              ${serviceAvatar(providerOf(b), 40, '')}
               <div>
-                <div style="font-size:14.5px; font-weight:700; color:var(--ink); line-height:1.3; max-width:190px;">${b.service}</div>
-                <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${b.provider.name} · ${b.date}, ${b.time}</div>
+                <div style="font-size:14.5px; font-weight:700; color:var(--ink); line-height:1.3; max-width:190px;">${b.request}</div>
+                <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${providerOf(b).name} · ${b.date}, ${b.time}</div>
               </div>
             </div>
             <span style="background:${sc.bg}; color:${sc.fg}; font-size:var(--t-caption); font-weight:800; padding:3px 9px; border-radius:999px; text-transform:uppercase; letter-spacing:0.5px;">
@@ -4273,7 +4266,7 @@ function providerDashboard(){
   const neutralPercent = Math.round(neutralReviews / reviewTotal * 100);
   const negativePercent = 100 - positivePercent - neutralPercent;
   const waiting = pendingProviderRequests();
-  const today = PROVIDER_BOOKINGS.filter(b => b.status === 'upcoming' || b.status === 'ongoing');
+  const today = bookingsForProvider().filter(b => b.status === 'upcoming' || b.status === 'ongoing');
   return `
   <div class="topbar">
     <div style="display:flex; align-items:center; gap:10px;">
@@ -4295,10 +4288,10 @@ function providerDashboard(){
         <span class="wait-dot" style="margin-top:4px;"></span>
       </div>
       ${waiting.map(b => `
-        <button type="button" data-provider-booking-id="${b.id}" aria-label="Open request from ${esc(b.client)}" style="width:100%; text-align:left; background:var(--background); border:1px solid var(--line); border-radius:10px; padding:10px 11px; margin-top:9px; cursor:pointer; font:inherit; color:var(--ink); display:flex; align-items:center; gap:8px;">
+        <button type="button" data-provider-booking-id="${b.id}" aria-label="Open request from ${esc(customerOf(b).name)}" style="width:100%; text-align:left; background:var(--background); border:1px solid var(--line); border-radius:10px; padding:10px 11px; margin-top:9px; cursor:pointer; font:inherit; color:var(--ink); display:flex; align-items:center; gap:8px;">
           <span style="flex:1;">
-            <span style="display:block; font-size:12.5px; font-weight:700;">${esc(b.title)}</span>
-            <span style="display:block; font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${esc(b.client)} · Brgy. ${esc(b.barangay)} · received ${esc(b.receivedAt || 'just now')}</span>
+            <span style="display:block; font-size:12.5px; font-weight:700;">${esc(b.summary)}</span>
+            <span style="display:block; font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${esc(customerOf(b).name)} · Brgy. ${esc(b.barangay)} · received ${agoText(b.createdAt)}</span>
           </span>
           <span style="font-size:12px; font-weight:800;">${pesoShort(b.amountCentavos)}</span>
           <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',13)}</span>
@@ -4307,11 +4300,11 @@ function providerDashboard(){
 
     <h3 style="font-size:var(--t-body); margin:0 0 8px;">Today</h3>
     ${today.length ? today.slice(0,3).map(b => `
-      <button type="button" class="job-row" data-provider-booking-id="${b.id}" aria-label="Open ${esc(b.title)} at ${esc(b.time)}">
+      <button type="button" class="job-row" data-provider-booking-id="${b.id}" aria-label="Open ${esc(b.summary)} at ${esc(b.time)}">
         <span class="jr-time">${esc(b.time)}</span>
         <span style="min-width:0; flex:1;">
-          <span class="jr-t">${esc(b.title)}</span>
-          <span class="jr-s">${esc(b.client)} · Brgy. ${esc(b.barangay)} · ${esc(b.status === 'ongoing' ? 'in progress now' : 'scheduled today')}</span>
+          <span class="jr-t">${esc(b.summary)}</span>
+          <span class="jr-s">${esc(customerOf(b).name)} · Brgy. ${esc(b.barangay)} · ${esc(b.status === 'ongoing' ? 'in progress now' : 'scheduled today')}</span>
         </span>
         <span style="color:var(--mist); display:inline-flex; flex-shrink:0;">${ic('arrow-right',14)}</span>
       </button>`).join('') : `
@@ -4496,7 +4489,7 @@ function providerFSM(){
 // until this account answers it. One source for the queue, so the nav badge,
 // the rail and the dashboard cannot disagree about how many are waiting.
 function pendingProviderRequests(){
-  return PROVIDER_BOOKINGS.filter(b => b.status === 'requested');
+  return bookingsForProvider().filter(b => b.status === 'requested');
 }
 
 // The pin marks the client's door, so it only mounts for a job this account
@@ -4510,7 +4503,7 @@ function initProviderBookingMap(booking){
 }
 
 function findProviderBooking(bookingId){
-  return PROVIDER_BOOKINGS.find(b => b.id === bookingId) || null;
+  return bookingsForProvider().find(b => b.id === bookingId) || null;
 }
 
 // One entry point for the provider's booking screen so the map set-up and the
@@ -4539,7 +4532,7 @@ function answerRequest(bookingId, action){
     if(action === 'accept'){
       b.status = 'upcoming';
       persist();
-      showToast('Accepted - ' + b.client + ' is notified and ' + b.date + ', ' + b.time + ' is held for you');
+      showToast('Accepted - ' + customerOf(b).name + ' is notified and ' + b.date + ', ' + b.time + ' is held for you');
       render();
       // Accepting is what unlocks the door: the screen now carries a live map, so
       // it has to be mounted for the booking that just appeared in the DOM.
@@ -4549,7 +4542,7 @@ function answerRequest(bookingId, action){
     b.status = 'cancelled';
     b.cancelReason = 'Declined by you';
     persist();
-    showToast('Declined - ' + b.client + ' can now look for another provider');
+    showToast('Declined - ' + customerOf(b).name + ' can now look for another provider');
     render();
   }, 750);
 }
@@ -4561,7 +4554,7 @@ function requestActionCard(b){
     return `
     <div class="card" style="border:1px solid var(--alert); border-radius:14px; padding:14px; margin-bottom:14px; background:var(--alert-100);">
       <div style="font-size:13px; font-weight:800; color:var(--error-ink);">Decline this request?</div>
-      <div style="font-size:12px; color:var(--ink-soft); line-height:1.5; margin-top:5px;">${esc(b.client)} will be told you could not take it and can look for another provider. This does not remove the record.</div>
+      <div style="font-size:12px; color:var(--ink-soft); line-height:1.5; margin-top:5px;">${esc(customerOf(b).name)} will be told you could not take it and can look for another provider. This does not remove the record.</div>
       <div style="display:flex; gap:8px; margin-top:12px;">
         <button type="button" class="btn sm secondary" style="flex:1; border-radius:10px;" id="keep-request-btn" ${busy ? 'disabled' : ''}>Keep it</button>
         <button type="button" class="btn danger" style="flex:1.2; border-radius:10px;" id="confirm-decline-btn" ${busy ? 'disabled' : ''}>${busyAction === 'decline' ? `<span class="spinner"></span> Declining&hellip;` : 'Yes, decline'}</button>
@@ -4578,7 +4571,7 @@ function requestActionCard(b){
         <span class="wait-dot" style="margin-top:4px;"></span>
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; font-size:12px; padding:10px; background:var(--background); border-radius:10px;">
-        <div><span style="color:var(--mist); font-size:var(--t-caption);">Received</span><br><b>${esc(b.receivedAt || 'Just now')}</b></div>
+        <div><span style="color:var(--mist); font-size:var(--t-caption);">Received</span><br><b>${agoText(b.createdAt)}</b></div>
         <div><span style="color:var(--mist); font-size:var(--t-caption);">Requested for</span><br><b>${esc(b.date)}, ${esc(b.time)}</b></div>
         <div><span style="color:var(--mist); font-size:var(--t-caption);">Client is in</span><br><b>Brgy. ${esc(b.barangay)}</b></div>
         <div><span style="color:var(--mist); font-size:var(--t-caption);">Indicative fee</span><br><b>${pesoShort(b.amountCentavos)}</b></div>
@@ -4594,7 +4587,7 @@ function requestActionCard(b){
 function providerBookings(){
   const filter = state.providerBookingFilter || 'all';
   const waiting = pendingProviderRequests().length;
-  const filtered = PROVIDER_BOOKINGS.filter(b => filter === 'all' || b.status === filter);
+  const filtered = bookingsForProvider().filter(b => filter === 'all' || b.status === filter);
   return `
   <div class="topbar"><div class="hb"><div><div class="title">Bookings</div><div class="sub">${waiting ? waiting + ' request' + (waiting === 1 ? '' : 's') + ' waiting on your answer' : 'Nothing waiting on your answer'}</div></div></div></div>
   <div class="pad" style="background:var(--cloud); padding-bottom:40px;">
@@ -4607,10 +4600,10 @@ function providerBookings(){
       <div class="card" data-provider-booking-id="${b.id}" style="cursor:pointer; border-radius:14px; padding:14px; margin-bottom:12px; border:1px solid var(--line); background:#fff;">
         <div class="row" style="align-items:flex-start; margin-bottom:8px;">
           <div style="display:flex; gap:12px; align-items:center;">
-            <img class="img-avatar" src="${photoFor(b.id)}" alt="${esc(b.client)}" style="width:40px; height:40px;">
+            <img class="img-avatar" src="${photoFor(b.id)}" alt="${esc(customerOf(b).name)}" style="width:40px; height:40px;">
             <div>
-              <div style="font-size:14.5px; font-weight:700; color:var(--ink); line-height:1.3;">${esc(b.title)}</div>
-              <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${esc(b.client)} - ${b.status === 'requested' ? 'asked for ' : ''}${esc(b.date)}, ${esc(b.time)}</div>
+              <div style="font-size:14.5px; font-weight:700; color:var(--ink); line-height:1.3;">${esc(b.summary)}</div>
+              <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${esc(customerOf(b).name)} - ${b.status === 'requested' ? 'asked for ' : ''}${esc(b.date)}, ${esc(b.time)}</div>
             </div>
           </div>
           <span class="chip" style="font-size:var(--t-caption); text-transform:uppercase; background:${statusColors(b.status).bg}; color:${statusColors(b.status).fg};">${b.status}</span>
@@ -4623,7 +4616,7 @@ function providerBookings(){
 }
 
 function providerBookingDetail(){
-  const booking = findProviderBooking(state.selectedProviderBookingId) || PROVIDER_BOOKINGS[0];
+  const booking = findProviderBooking(state.selectedProviderBookingId) || bookingsForProvider()[0];
   const isOpen = booking.status === 'requested';
   // Only a job this account took is entitled to the client's door and number. A
   // request has no agreement yet and a closed record no longer needs the visit.
@@ -4634,14 +4627,14 @@ function providerBookingDetail(){
     ${isOpen ? requestActionCard(booking) : ''}
     <div class="card">
       <div style="display:flex; gap:12px; align-items:center; margin-bottom:14px;">
-        <img class="img-avatar" src="${photoFor(booking.id)}" alt="${esc(booking.client)}" style="width:44px; height:44px;">
-        <div><div style="font-size:16px; font-weight:800;">${esc(booking.title)}</div><div style="font-size:12px; color:var(--mist);">Client: ${esc(booking.client)}</div></div>
+        <img class="img-avatar" src="${photoFor(booking.id)}" alt="${esc(customerOf(booking).name)}" style="width:44px; height:44px;">
+        <div><div style="font-size:16px; font-weight:800;">${esc(booking.summary)}</div><div style="font-size:12px; color:var(--mist);">Client: ${esc(customerOf(booking).name)}</div></div>
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12.5px; line-height:1.45;">
         <div><div style="color:var(--mist);">Status</div><b style="text-transform:capitalize;">${booking.status}</b></div>
         <div><div style="color:var(--mist);">${isOpen ? 'Requested slot' : 'Schedule'}</div><b>${esc(booking.date)}, ${esc(booking.time)}</b></div>
         <div><div style="color:var(--mist);">${isOpen ? 'Indicative fee' : 'Service fee'}</div><b>${pesoShort(booking.amountCentavos)}</b></div>
-        <div><div style="color:var(--mist);">Client phone</div><b ${onJob ? '' : 'style="font-weight:600; color:var(--ink-soft);"'}>${onJob ? esc(booking.phone) : 'Withheld'}</b></div>
+        <div><div style="color:var(--mist);">Client phone</div><b ${onJob ? '' : 'style="font-weight:600; color:var(--ink-soft);"'}>${onJob ? esc(customerOf(booking).phone) : 'Withheld'}</b></div>
       </div>
       ${isOpen ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:12px; padding-top:10px; border-top:1px solid var(--line);">The client was shown your starting rate. They have not been charged and no time is fixed until you accept.</div>` : ''}
       ${booking.cancelReason ? `<div style="font-size:var(--t-caption); color:var(--error-ink); margin-top:10px;">${esc(booking.cancelReason)}.</div>` : ''}
@@ -4652,7 +4645,7 @@ function providerBookingDetail(){
       ${onJob ? `
         <div style="font-size:12.5px; color:var(--ink-soft); margin-bottom:10px;">${esc(booking.address)}</div>
         <div id="provider-booking-map" style="height:220px; border-radius:12px; border:1px solid var(--line); width:100%; overflow:hidden;"></div>
-        <div style="font-size:var(--t-caption); color:var(--mist); margin-top:7px;">Pinned address for ${esc(booking.client)}. Drag to explore the map and zoom for directions.</div>
+        <div style="font-size:var(--t-caption); color:var(--mist); margin-top:7px;">Pinned address for ${esc(customerOf(booking).name)}. Drag to explore the map and zoom for directions.</div>
       ` : `
         <div style="display:flex; gap:10px; align-items:flex-start; padding:12px; background:var(--background); border:1px solid var(--line); border-radius:12px;">
           <span style="color:var(--deep); flex-shrink:0; margin-top:1px;">${ic('lock',16)}</span>
@@ -4667,7 +4660,7 @@ function providerBookingDetail(){
     </div>
 
     <div class="card">
-      <div style="font-size:13px; font-weight:800; margin-bottom:6px;">Job notes from ${esc(booking.client)}</div>
+      <div style="font-size:13px; font-weight:800; margin-bottom:6px;">Job notes from ${esc(customerOf(booking).name)}</div>
       <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.5;">${esc(booking.notes)}</div>
     </div>
   </div>`;
