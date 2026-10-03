@@ -1448,7 +1448,7 @@ const BOOKINGS = [
     id:'b4', customerId:'c1', providerId:'p6',
     summary:'Grocery pickup', request:'Grocery pickup from the market',
     date:'Aug 14', time:'11:00 AM', status:'completed',
-    amountCentavos:7500, paymentStatus:'Paid Online', paymentMethod:'Cash on Arrival',
+    amountCentavos:7500, paymentStatus:'Paid Online', paymentMethod:'GCash (0912***6789)',
     arrivalTime:'Completed', myRating:4,
     barangay:'Poblacion', address:'Blk 4 Lot 12, Rizal St., Poblacion',
     lat:6.3671, lng:124.9331, notes:'Market list, one trip.',
@@ -1543,6 +1543,383 @@ function bookingsForProvider(){ return BOOKINGS.filter(b => b.providerId === CUR
 if (/[?&]app=1(&|$)/.test(location.search) || /SukinnectApp/i.test(navigator.userAgent)) document.body.classList.add('app-mode');
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   DOMAIN KERNEL · part 2 — catalogue, configuration, ledger, pricing
+   ═══════════════════════════════════════════════════════════════════════════
+   A provider is a menu of priced jobs, not one number bolted to a person, and
+   money is only real here once something can be recorded about it. Nothing in
+   this section reads the DOM.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* A plumber charges different money for a tap washer and a burst pipe. The
+   profile screen used to print three services as a sentence while the model held
+   one rate, so discovery, booking and earnings all keyed off a person rather
+   than the job actually agreed. */
+const LISTINGS = [
+  { id:'l1',  providerId:'p1', categoryId:'plumbing',   title:'Faucet repair',           basePriceCentavos:35000, durationMin:45,  isActive:true },
+  { id:'l2',  providerId:'p1', categoryId:'plumbing',   title:'Pipe leak repair',        basePriceCentavos:45000, durationMin:60,  isActive:true },
+  { id:'l3',  providerId:'p1', categoryId:'plumbing',   title:'Drain cleaning',          basePriceCentavos:40000, durationMin:45,  isActive:true },
+  { id:'l4',  providerId:'p2', categoryId:'electrical', title:'Breaker diagnosis',       basePriceCentavos:40000, durationMin:40,  isActive:true },
+  { id:'l5',  providerId:'p2', categoryId:'electrical', title:'Rewire a junction box',   basePriceCentavos:48000, durationMin:90,  isActive:true },
+  { id:'l6',  providerId:'p3', categoryId:'cleaning',   title:'Full house deep clean',   basePriceCentavos:50000, durationMin:180, isActive:true },
+  { id:'l7',  providerId:'p3', categoryId:'cleaning',   title:'Regular home cleaning',   basePriceCentavos:35000, durationMin:120, isActive:true },
+  { id:'l8',  providerId:'p4', categoryId:'appliance',  title:'Appliance diagnostic',    basePriceCentavos:30000, durationMin:30,  isActive:true },
+  { id:'l9',  providerId:'p4', categoryId:'appliance',  title:'Refrigerator repair',     basePriceCentavos:60000, durationMin:90,  isActive:true },
+  { id:'l10', providerId:'p5', categoryId:'tutoring',   title:'Math tutoring, per hour', basePriceCentavos:25000, durationMin:60,  isActive:true },
+  { id:'l11', providerId:'p6', categoryId:'delivery',   title:'Parcel trip, base fare',  basePriceCentavos:6000,  durationMin:20,  isActive:true }
+];
+function listingsOf(providerId) { return LISTINGS.filter(l => l.providerId === providerId); }
+function listingById(id) { return LISTINGS.find(l => l.id === id) || null; }
+function defaultListingFor(providerId) { return listingsOf(providerId).find(l => l.isActive) || null; }
+
+/* ---- platform configuration -------------------------------------------------
+   Every figure the deck offers as a pilot assumption lives here, editable, and
+   none of it is typed into a screen. The deck says launch monetization must not
+   be assumed, so the default carries its worked example (₱800 × 10 %) and the
+   admin UI labels it an assumption rather than a rate in force. VAT is 0 because
+   VAT registration in the Philippines turns on roughly ₱3M of gross sales, which
+   this marketplace has not reached: modelling the field is honest, setting a rate
+   would be inventing a compliance position.
+   --------------------------------------------------------------------------- */
+const CONFIG_DEFAULTS = {
+  commissionRateDefault: 0.10,
+  commissionRateByCategory: {},          /* per-category overrides, set by admin */
+  fixedFeeCentavos: 0,                   /* booking or processing fee, ₱0 at pilot */
+  taxRate: 0,                            /* applies to the platform fee only */
+  cancellationFeeBeforeAcceptCentavos: 0,
+  cancellationFeeAfterAcceptCentavos: 5000,
+  payoutMinCentavos: 50000,
+  payoutHoldDays: 7,
+  payoutSchedule: 'weekly:monday',
+  acceptTtlMinutes: 30,
+  autoCompleteHours: 24,
+  warrantyDays: 7
+};
+let CONFIG = Object.assign({}, CONFIG_DEFAULTS);
+const CONFIG_AUDIT = [];
+
+function setConfig(patch, actor) {
+  const changed = [];
+  Object.keys(patch).forEach(key => {
+    if (!(key in CONFIG_DEFAULTS)) throw new Error('unknown configuration key: ' + key);
+    if (CONFIG[key] === patch[key]) return;
+    const entry = { key, from: CONFIG[key], to: patch[key],
+                    at: new Date().toISOString(), actor: (actor && actor.role) || 'admin' };
+    /* A rate change alters the money on jobs that have not been booked yet, so
+       the change itself is a record. History is never rewritten to match. */
+    CONFIG_AUDIT.push(entry);
+    changed.push(entry);
+    CONFIG[key] = patch[key];
+  });
+  persist();
+  return changed;
+}
+
+/* ---- the accounts ------------------------------------------------------------
+   Eight leaves: enough to tell the truth about this marketplace, small enough to
+   hold in your head. There is deliberately no resident-side balance — money a
+   customer has paid is an obligation to deliver or refund, never a number they
+   can spend (AGENTS.md 23).
+   --------------------------------------------------------------------------- */
+const ACCOUNTS = {
+  escrow_held:                { kind: 'asset',     scope: null,       label: 'Funds held by the payment partner' },
+  commission_receivable:      { kind: 'asset',     scope: 'provider', label: 'Commission owed by cash-settled providers' },
+  customer_deposit:           { kind: 'liability', scope: 'booking',  label: 'Paid for a job not yet delivered' },
+  provider_payable:           { kind: 'liability', scope: 'provider', label: 'Earnings owed to a provider' },
+  dispute_hold:               { kind: 'liability', scope: 'booking',  label: 'Frozen while a case is open' },
+  tax_payable:                { kind: 'liability', scope: null,       label: 'Output tax owed on platform fees' },
+  platform_fee_revenue:       { kind: 'revenue',   scope: null,       label: 'Commission on completed work' },
+  platform_fixed_fee_revenue: { kind: 'revenue',   scope: null,       label: 'Booking and processing fees' },
+  cancellation_compensation:  { kind: 'expense',   scope: 'provider', label: 'Paid to a provider for a late cancellation' }
+};
+
+const LEDGER = [];
+let ledgerSeq = 0;
+
+class LedgerImbalance extends Error {
+  constructor(eventType, debits, credits) {
+    super('ledger event "' + eventType + '" does not balance: debits ' + debits + ' against credits ' + credits);
+    this.name = 'LedgerImbalance';
+    this.eventType = eventType; this.debits = debits; this.credits = credits;
+  }
+}
+
+function assertBalanced(lines, eventType) {
+  let debits = 0, credits = 0;
+  lines.forEach(l => {
+    if (!ACCOUNTS[l.account]) throw new Error('unknown ledger account: ' + l.account);
+    if (!Number.isInteger(l.amountCentavos) || l.amountCentavos <= 0)
+      throw new Error('a ledger line must be a positive whole number of centavos: ' + JSON.stringify(l));
+    if (l.direction === 'debit') debits += l.amountCentavos;
+    else if (l.direction === 'credit') credits += l.amountCentavos;
+    else throw new Error('a ledger line needs direction debit or credit: ' + JSON.stringify(l));
+  });
+  if (debits !== credits) throw new LedgerImbalance(eventType, debits, credits);
+  return debits;
+}
+
+/* The only way money enters the books. An event that does not balance throws
+   before the caller has moved a status, so a half-posted transaction cannot
+   exist: the failure is loud now, not a figure that quietly disagrees later. */
+function postEvent(eventType, lines, ctx) {
+  const total = assertBalanced(lines, eventType);
+  const event = {
+    id: 'e' + (++ledgerSeq),
+    eventType,
+    bookingId: (ctx && ctx.bookingId) || null,
+    at: (ctx && ctx.at) || new Date().toISOString(),
+    note: (ctx && ctx.note) || '',
+    source: (ctx && ctx.source) || 'live',
+    totalCentavos: total,
+    lines: lines.map(l => ({ account: l.account, scope: l.scope || null,
+                             direction: l.direction, amountCentavos: l.amountCentavos }))
+  };
+  LEDGER.push(event);
+  return event;
+}
+
+function ledgerFor(bookingId) { return LEDGER.filter(e => e.bookingId === bookingId); }
+
+/* Debits raise assets and expenses; credits raise liabilities and revenue. */
+function accountBalance(account, scope) {
+  const def = ACCOUNTS[account];
+  if (!def) throw new Error('unknown ledger account: ' + account);
+  let debit = 0, credit = 0;
+  LEDGER.forEach(event => event.lines.forEach(l => {
+    if (l.account !== account) return;
+    if (scope !== undefined && l.scope !== scope) return;
+    if (l.direction === 'debit') debit += l.amountCentavos; else credit += l.amountCentavos;
+  }));
+  return (def.kind === 'asset' || def.kind === 'expense') ? debit - credit : credit - debit;
+}
+
+/* ---- pricing -----------------------------------------------------------------
+   Two rules decide the shape of this function.
+   · Parts and materials are money the provider spent, not service the platform
+     matched. Commissioning them would take a cut of hardware twice — once out of
+     the provider's margin, once out of the customer's bill.
+   · The fee comes out of the provider's share, so the customer's total is the
+     price the provider published. Nothing is hidden and nothing appears at the
+     till that was not on the card (AGENTS.md 24).
+   --------------------------------------------------------------------------- */
+function commissionRateFor(categoryId) {
+  const override = CONFIG.commissionRateByCategory[categoryId];
+  return (typeof override === 'number' && override >= 0 && override < 1)
+    ? override : CONFIG.commissionRateDefault;
+}
+
+function computeBreakdown(opts) {
+  const base = Math.round(opts.baseCentavos);
+  const inclusions = opts.inclusions || [];
+  const passThrough = inclusions.reduce((sum, i) => sum + Math.round(i.amountCentavos), 0);
+  const rate = opts.commissionRate !== undefined ? opts.commissionRate : commissionRateFor(opts.categoryId);
+  const commission = Math.round(base * rate);
+  const fixedFee = Math.round(opts.fixedFeeCentavos !== undefined ? opts.fixedFeeCentavos : CONFIG.fixedFeeCentavos);
+  const tax = Math.round((commission + fixedFee) * CONFIG.taxRate);
+  return {
+    baseCentavos: base,
+    inclusions: inclusions.map(i => ({ label: i.label, amountCentavos: Math.round(i.amountCentavos) })),
+    passThroughCentavos: passThrough,
+    commissionRate: rate,
+    commissionCentavos: commission,
+    fixedFeeCentavos: fixedFee,
+    taxCentavos: tax,
+    providerShareCentavos: base - commission,
+    customerTotalCentavos: base + passThrough + fixedFee + tax,
+    platformRevenueCentavos: commission + fixedFee
+  };
+}
+
+/* A booking keeps the terms that were agreed, not a live pointer into a rate
+   table. Rates change under the admin console; a completed job's money must never
+   be recomputed from today's configuration or its receipt and the ledger part
+   ways from each other. */
+function freezePricing(booking, breakdown) {
+  booking.pricing = Object.assign({ frozenAt: new Date().toISOString() }, breakdown);
+  booking.amountCentavos = breakdown.customerTotalCentavos;
+  return booking.pricing;
+}
+function pricingOf(booking) { return booking.pricing || null; }
+
+/* What a screen prints as the price of a job: the agreed total once terms are
+   frozen, the provider's starting rate while they are still only indicative. */
+function rateFor(booking) {
+  const p = pricingOf(booking);
+  if (p) return p.customerTotalCentavos;
+  const provider = providerOf(booking);
+  return provider ? provider.rateCentavos : booking.amountCentavos;
+}
+
+/* ---- statements read the ledger, nothing else ─────────────────────────────── */
+function platformStatement(range) {
+  const from = range && range.from ? Date.parse(range.from) : 0;
+  const to = range && range.to ? Date.parse(range.to) : Infinity;
+  const events = LEDGER.filter(e => { const t = Date.parse(e.at); return t >= from && t <= to; });
+  let commission = 0, reversed = 0, fees = 0, gross = 0, settled = 0, tax = 0;
+  events.forEach(e => {
+    e.lines.forEach(l => {
+      if (l.account === 'platform_fee_revenue') {
+        if (l.direction === 'credit') commission += l.amountCentavos; else reversed += l.amountCentavos;
+      }
+      if (l.account === 'platform_fixed_fee_revenue' && l.direction === 'credit') fees += l.amountCentavos;
+      if (l.account === 'tax_payable' && l.direction === 'credit') tax += l.amountCentavos;
+    });
+    if (e.eventType === 'booking.settled' || e.eventType === 'booking.settled_cash') {
+      const b = bookingById(e.bookingId);
+      if (b && b.pricing) { gross += b.pricing.baseCentavos; settled += 1; }
+    }
+  });
+  return {
+    grossServicesCentavos: gross,
+    commissionEarnedCentavos: commission - reversed,
+    fixedFeesCentavos: fees,
+    refundsReversedCentavos: reversed,
+    taxCollectedCentavos: tax,
+    netRevenueCentavos: commission - reversed + fees,
+    owedByCashProvidersCentavos: accountBalance('commission_receivable'),
+    settledBookings: settled,
+    from: (range && range.from) || null,
+    to: (range && range.to) || null
+  };
+}
+
+function nextPayoutDate() {
+  const d = new Date();
+  d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7));      /* the next Monday */
+  return d.toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function providerBalances(providerId) {
+  const hold = CONFIG.payoutHoldDays * 86400000;
+  const now = Date.now();
+  const settled = BOOKINGS.filter(b => b.providerId === providerId && b.status === 'completed' && b.pricing);
+  let pending = 0, available = 0, disputed = 0;
+  settled.forEach(b => {
+    const share = settlementToProvider(b.pricing);
+    if (b.status === 'disputed') { disputed += share; return; }
+    if (Date.parse(b.pricing.frozenAt || b.createdAt) + hold <= now) available += share; else pending += share;
+  });
+  return {
+    pendingCentavos: pending,
+    availableCentavos: available,
+    disputedCentavos: disputed,
+    lifetimeEarnedCentavos: settled.reduce((t, b) => t + settlementToProvider(b.pricing), 0),
+    commissionOwedCentavos: accountBalance('commission_receivable', providerId),
+    payoutMinCentavos: CONFIG.payoutMinCentavos,
+    nextPayoutOn: nextPayoutDate()
+  };
+}
+
+function providerStatement(providerId) {
+  const jobs = BOOKINGS.filter(b => b.providerId === providerId && b.status === 'completed' && b.pricing);
+  const gross = jobs.reduce((t, b) => t + b.pricing.baseCentavos, 0);
+  const commission = jobs.reduce((t, b) => t + b.pricing.commissionCentavos, 0);
+  return {
+    completedJobs: jobs.length,
+    grossServicesCentavos: gross,
+    commissionCentavos: commission,
+    /* Held on the provider's behalf, never earned by the platform. */
+    partsCollectedCentavos: jobs.reduce((t, b) => t + b.pricing.passThroughCentavos, 0),
+    netServiceEarnedCentavos: gross - commission,
+    balances: providerBalances(providerId)
+  };
+}
+
+function commissionReceivableAgeing() {
+  const byProvider = {};
+  BOOKINGS.filter(b => b.status === 'completed' && b.pricing && /cash on arrival/i.test(b.paymentMethod || ''))
+    .forEach(b => {
+      const key = b.providerId;
+      byProvider[key] = byProvider[key] || { providerId: key, owedCentavos: 0, jobs: 0, oldest: b.createdAt };
+      byProvider[key].owedCentavos += b.pricing.commissionCentavos;
+      byProvider[key].jobs += 1;
+      if (Date.parse(b.createdAt) < Date.parse(byProvider[key].oldest)) byProvider[key].oldest = b.createdAt;
+    });
+  return Object.keys(byProvider).map(k => byProvider[k]);
+}
+
+/* The demo jobs, priced against the listing that would have sold them. Written
+   as a table rather than inferred from the amounts: an inference would invent a
+   parts charge that nobody agreed, and the point of this step is that every peso
+   on screen has a line behind it. */
+const DEMO_PRICING = {
+  b1:  { listingId:'l1',  partsCentavos:1500 },   /* faucet repair + a washer set */
+  b2:  { listingId:'l4',  partsCentavos:1500 },
+  b3:  { listingId:'l6',  partsCentavos:1500 },
+  b6:  { listingId:'l5',  partsCentavos:0    },
+  b4:  { listingId:'l11', partsCentavos:1500 },
+  pb1: { listingId:'l1',  partsCentavos:1500 },
+  pb2: { listingId:'l3',  partsCentavos:2000 },
+  pb3: { listingId:'l1',  partsCentavos:0    },
+  pb4: { listingId:'l2',  partsCentavos:5000 }
+};
+
+/* Accepted jobs carry frozen terms; only completed ones move money. A request
+   still waiting for an answer has no price agreed at all, which is exactly what
+   both screens tell the user. */
+function seedHistoricalLedger() {
+  BOOKINGS.filter(b => b.source === 'demo' && DEMO_PRICING[b.id] && !b.pricing).forEach(b => {
+    const spec = DEMO_PRICING[b.id];
+    const listing = listingById(spec.listingId);
+    if (!listing) return;
+    const provider = providerOf(b);
+    b.listingId = listing.id;
+    b.pricing = Object.assign({ frozenAt: b.createdAt, commissionRate: commissionRateFor(listing.categoryId) },
+      computeBreakdown({
+        baseCentavos: listing.basePriceCentavos,
+        categoryId: listing.categoryId,
+        inclusions: spec.partsCentavos ? [{ label:'Parts and materials', amountCentavos: spec.partsCentavos }] : []
+      }));
+    b.amountCentavos = b.pricing.customerTotalCentavos;
+    if (!b.paymentMethod)
+      b.paymentMethod = /paid online/i.test(b.paymentStatus || '') ? 'GCash (0912***6789)' : 'Cash on Arrival';
+    b.summary = b.summary || listing.title;
+    void provider;
+  });
+  BOOKINGS.filter(b => b.source === 'demo' && b.status === 'completed' && b.pricing && !ledgerFor(b.id).length)
+    .forEach(b => settleHistoric(b));
+}
+
+/* What the platform owes the provider out of a settled job: their share of the
+   service, plus every peso of parts the customer was charged for. Parts are
+   collected on the provider's behalf — keeping them would be taking a second cut
+   of hardware, and dropping them is what made the seed fail to balance. */
+function settlementToProvider(pricing) {
+  return pricing.providerShareCentavos + pricing.passThroughCentavos;
+}
+
+/* The credit side of a settlement, built once so the historic seed and a live
+   capture cannot drift apart. Zero-value lines are left out rather than written
+   as ₱0.00, which assertBalanced rightly refuses. */
+function settlementLines(booking) {
+  const p = booking.pricing;
+  const lines = [
+    { account:'provider_payable', scope: booking.providerId, direction:'credit', amountCentavos: settlementToProvider(p) },
+    { account:'platform_fee_revenue', direction:'credit', amountCentavos: p.commissionCentavos }
+  ];
+  if (p.fixedFeeCentavos > 0)
+    lines.push({ account:'platform_fixed_fee_revenue', direction:'credit', amountCentavos: p.fixedFeeCentavos });
+  if (p.taxCentavos > 0)
+    lines.push({ account:'tax_payable', direction:'credit', amountCentavos: p.taxCentavos });
+  return lines;
+}
+
+function settleHistoric(booking) {
+  const p = booking.pricing;
+  if (/cash on arrival/i.test(booking.paymentMethod || '')) {
+    /* The provider collected the cash on site. The platform never held it, so
+       there is no asset to move — only a fee the provider now owes. */
+    return postEvent('booking.settled_cash', [
+      { account:'commission_receivable', scope: booking.providerId, direction:'debit', amountCentavos: p.commissionCentavos },
+      { account:'platform_fee_revenue', direction:'credit', amountCentavos: p.commissionCentavos }
+    ], { bookingId: booking.id, at: p.frozenAt, note: 'Cash settled on site', source: 'demo' });
+  }
+  return postEvent('booking.settled',
+    [{ account:'customer_deposit', scope: booking.id, direction:'debit', amountCentavos: p.customerTotalCentavos }]
+      .concat(settlementLines(booking)),
+    { bookingId: booking.id, at: p.frozenAt, note: 'Released on completion', source: 'demo' });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    DOMAIN KERNEL · part 1 — persistence
    ═══════════════════════════════════════════════════════════════════════════
    Nothing between these banners touches the DOM, and nothing here reaches a
@@ -1558,7 +1935,9 @@ if (/[?&]app=1(&|$)/.test(location.search) || /SukinnectApp/i.test(navigator.use
 /* Raised to 2 by step 3: the dump used to carry two parallel booking arrays. A
    snapshot of that shape cannot be reconciled with one shared table, so it is
    dropped and the seed is used fresh rather than half-read. */
-const SCHEMA_VERSION = 2;
+/* 3 adds the ledger, the price list and the configuration to the dump: a session
+   that booked a job must reload with the money entries that job created. */
+const SCHEMA_VERSION = 3;
 const STORE_KEY = 'sukinnect.snapshot.v1';
 
 const Store = (function () {
@@ -1615,7 +1994,10 @@ const SEED = {
   providers: cloneRecords(PROVIDERS),
   bookings: cloneRecords(BOOKINGS),
   customers: cloneRecords(CUSTOMERS),
-  notifications: cloneRecords(NOTIFICATIONS)
+  listings: cloneRecords(LISTINGS),
+  notifications: cloneRecords(NOTIFICATIONS),
+  ledger: cloneRecords(LEDGER),
+  config: cloneRecords(CONFIG)
 };
 
 /* Only records. Which tab is open, which sheet is raised and where the screen
@@ -1627,7 +2009,10 @@ function snapshot() {
     providers: PROVIDERS,
     bookings: BOOKINGS,
     customers: CUSTOMERS,
+    listings: LISTINGS,
     notifications: NOTIFICATIONS,
+    ledger: LEDGER,
+    config: CONFIG,
     profileData: state.profileData,
     providerProfileData: state.providerProfileData
   };
@@ -1641,7 +2026,14 @@ function hydrate() {
   replaceContents(PROVIDERS, snap.providers);
   replaceContents(BOOKINGS, snap.bookings);
   replaceContents(CUSTOMERS, snap.customers);
+  replaceContents(LISTINGS, snap.listings);
   replaceContents(NOTIFICATIONS, snap.notifications);
+  replaceContents(LEDGER, snap.ledger);
+  if (snap.config) Object.assign(CONFIG, snap.config);
+  /* Ledger ids are a sequence, not a timestamp. A restored dump has to raise the
+     counter past its own entries or the next event reuses an id already booked. */
+  LEDGER.forEach(e => { const n = parseInt(String(e.id).replace(/[^0-9]/g, ''), 10);
+                        if (!Number.isNaN(n) && n > ledgerSeq) ledgerSeq = n; });
   if (snap.profileData) Object.assign(state.profileData, snap.profileData);
   if (snap.providerProfileData) Object.assign(state.providerProfileData, snap.providerProfileData);
   return { restored: true, kind: Store.kind, savedAt: snap.savedAt };
@@ -1652,7 +2044,13 @@ function restoreSeed() {
   replaceContents(PROVIDERS, cloneRecords(SEED.providers));
   replaceContents(BOOKINGS, cloneRecords(SEED.bookings));
   replaceContents(CUSTOMERS, cloneRecords(SEED.customers));
+  replaceContents(LISTINGS, cloneRecords(SEED.listings));
   replaceContents(NOTIFICATIONS, cloneRecords(SEED.notifications));
+  replaceContents(LEDGER, []);
+  Object.keys(CONFIG).forEach(k => delete CONFIG[k]);
+  Object.assign(CONFIG, cloneRecords(CONFIG_DEFAULTS));
+  CONFIG_AUDIT.length = 0;
+  seedHistoricalLedger();
   Store.clear();
   return persist();
 }
@@ -2407,6 +2805,7 @@ function submitBookingRequest(){
          which is what makes an accept on one side true on the other. */
       customerId: CURRENT_CUSTOMER_ID,
       providerId: p.id,
+      listingId: (defaultListingFor(p.id) || {}).id || null,
       summary: serviceMeta(p.serviceId).label + ' requested',
       request: text,
       date: days[d.dayIdx].date,
@@ -4872,6 +5271,7 @@ function bindTabHandlers(){
 }
 
 hydrate();
+seedHistoricalLedger();
 render();
 </script>
 </body>

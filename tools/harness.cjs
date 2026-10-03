@@ -1,0 +1,124 @@
+/* Shared test harness for the Sukinnect rebuild.
+   Boots the real application script out of Sukinnect-next.html against a minimal
+   fake DOM, so the kernel can be driven in Node exactly as the phone drives it in
+   the browser — no duplicated copy of the logic, no browser required. */
+const fs = require('fs');
+const path = require('path');
+
+const APP = path.join(__dirname, '..', 'Sukinnect-next.html');
+
+/* The kernel grows a few exports every step. Names are pulled through a local
+   eval so a suite can ask for what it needs and gets undefined for what has not
+   landed yet, instead of the whole harness failing to boot over one symbol. */
+const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATIONS', 'LEDGER',
+  'PAYMENTS', 'STATUS_EVENTS', 'PAYOUTS', 'DISPUTES', 'CONFIG', 'state', 'Store', 'snapshot',
+  'hydrate', 'persist', 'restoreSeed', 'bookingsForResident', 'bookingsForProvider',
+  'pendingProviderRequests', 'bookingById', 'providerOf', 'customerOf', 'listingsOf',
+  'listingById', 'agoText', 'serviceMeta', 'peso', 'pesoShort', 'pesoCompact', 'rateLabel',
+  'toCentavos', 'toPesos', 'computeBreakdown', 'breakdownForBooking', 'postEvent', 'settlementLines', 'settlementToProvider', 'freezePricing', 'commissionRateFor', 'CONFIG_DEFAULTS', 'CONFIG_AUDIT',
+  'accountBalance', 'ledgerBalance', 'ledgerFor', 'ACCOUNTS', 'LEDGER_EVENTS',
+  'TRANSITIONS', 'attemptTransition', 'transitionAllowed', 'bookingTimeline',
+  'MockGateway', 'authorizeBooking', 'captureBooking', 'voidBooking', 'refundBooking',
+  'settleCashBooking', 'providerBalances', 'runPayoutCycle', 'platformStatement',
+  'providerStatement', 'commissionReceivableAgeing', 'SCHEMA_VERSION', 'ROOT_TABS',
+  'submitBookingRequest', 'answerRequest', 'moveJobForward', 'openProviderDetail',
+  'render', 'showToast', 'resetDemoData', 'setConfig', 'rateFor', 'LedgerImbalance'];
+
+function boot({ appMode = false, storage = null } = {}) {
+  const src = fs.readFileSync(APP, 'utf8');
+  const body = src.slice(src.lastIndexOf('<script>') + '<script>'.length, src.lastIndexOf('</script>'));
+
+  const els = new Map();
+  let nonce = 0;
+  function fakeEl(id) {
+    if (els.has(id)) return els.get(id);
+    const el = {
+      id, value: '', textContent: '', innerHTML: '', scrollTop: 0, scrollHeight: 0,
+      style: {}, dataset: {}, disabled: false, children: [], className: '',
+      /* firstChild and children have to behave like a real tree: the app trims
+         toasts with "while (children.length > 2) removeChild(firstChild)", and a
+         stub that never actually removes anything is an infinite loop. */
+      get firstChild() { return el.children[0] || null; },
+      get childNodes() { return el.children; },
+      classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
+      querySelector: () => null,
+      querySelectorAll: () => [],
+      addEventListener() {}, removeEventListener() {}, focus() {}, setSelectionRange() {},
+      appendChild(c) { el.children.push(c); return c; },
+      remove() {},
+      removeChild(c) { const i = el.children.indexOf(c); if (i >= 0) el.children.splice(i, 1); return c; },
+      getBoundingClientRect: () => ({ top: 0, left: 0, width: 0, height: 0 }),
+      closest: () => null,
+      setAttribute(k, v) { el[k] = v; }, getAttribute(k) { return el[k] == null ? null : el[k]; },
+      removeAttribute(k) { delete el[k]; },
+      insertAdjacentHTML() {}, scrollTo() {}, scrollIntoView() {}, click() {}, blur() {},
+      contains: () => false
+    };
+    els.set(id, el);
+    return el;
+  }
+
+  const document = {
+    body: { classList: { add() {}, remove() {}, toggle() {} } },
+    documentElement: { style: {}, classList: { add() {}, remove() {} } },
+    getElementById: (id) => (id ? fakeEl(id) : null),
+    querySelector: () => null,
+    querySelectorAll: () => [],
+    createElement: () => fakeEl('created-' + ++nonce),
+    addEventListener() {}
+  };
+  const window = { customElements: null, addEventListener() {}, matchMedia: () => ({ matches: false, addEventListener() {} }) };
+  const location = { search: appMode ? '?app=1' : '' };
+  const navigator = { userAgent: 'node-test' };
+  class Image { set src(v) { this._src = v; } get src() { return this._src; } }
+  const chain = () => {
+    const o = {};
+    ['setView', 'addTo', 'bindPopup', 'openPopup', 'setZoom', 'on', 'flyTo', 'remove', 'invalidateSize']
+      .forEach(m => { o[m] = () => o; });
+    return o;
+  };
+  const L = { map: chain, tileLayer: chain, marker: chain };
+
+  if (storage) globalThis.localStorage = storage;
+  else delete globalThis.localStorage;
+
+  const ctx = new Function('window', 'document', 'location', 'navigator', 'L', 'Image', 'console',
+    body + `
+    const out = {};
+    const names = ${JSON.stringify(EXPORTS)};
+    names.forEach(name => { try { out[name] = eval(name); } catch (err) { out[name] = undefined; } });
+    return out;`
+  )(window, document, location, navigator, L, Image, { log() {}, warn() {}, error() {} });
+
+  ctx._document = document;
+  ctx._els = els;
+  ctx._source = src;
+  return ctx;
+}
+
+function fakeStorage() {
+  const m = new Map();
+  return {
+    getItem: k => (m.has(k) ? m.get(k) : null),
+    setItem: (k, v) => m.set(k, String(v)),
+    removeItem: k => m.delete(k),
+    _map: m
+  };
+}
+
+/* Small assertion reporter shared by every suite. */
+function makeChecker() {
+  const results = [];
+  const api = {
+    check(label, cond, extra) {
+      results.push({ label, ok: !!cond, extra });
+      console.log(`${cond ? 'PASS' : 'FAIL'}  ${label}${cond ? '' : '   ' + (extra || '')}`);
+      return !!cond;
+    },
+    failures() { return results.filter(r => !r.ok); },
+    total() { return results.length; }
+  };
+  return api;
+}
+
+module.exports = { boot, fakeStorage, makeChecker, APP, EXPORTS };
