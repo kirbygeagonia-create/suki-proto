@@ -907,8 +907,14 @@ suite('login', async () => {
 
   const one = screens[0][1];
   const reg = screens[1][1];
-  c.check('all three roles sit on the screen, not one behind a footer link',
-    /id="rt-resident"/.test(one) && /id="rt-provider"/.test(one) && /id="rt-admin"/.test(one));
+  /* Admin is an operations console, so it is not offered on the sign-in screen —
+     but it must stay reachable through the create-account flow, not vanish. */
+  c.check('sign-in offers the two roles a marketplace is for',
+    /id="rt-resident"/.test(one) && /id="rt-provider"/.test(one) && !/id="rt-admin"/.test(one));
+  c.check('create account carries all three, including Admin',
+    /id="rt-admin"/.test(reg) && /aria-label="Create an account as"/.test(reg));
+  c.check('each role chip carries the glyph of where it leads',
+    (one.match(/id="rt-resident"[^>]*>[\s\S]{0,80}?(<svg|<re-icon)/) || []).length === 2);
   c.check('the official mark is the first thing on it',
     one.indexOf('Sukinnect_Logo.png') > -1 && one.indexOf('Sukinnect_Logo.png') < one.indexOf('login-email'));
   /* what was asked off the screen: the pitch, not the product */
@@ -918,8 +924,12 @@ suite('login', async () => {
     !/REVIEW.*BOOK/.test(one));
   c.check('and the prefilled-credentials paragraph is gone',
     !/prefilled for the role above/.test(one));
-  c.check('the honesty line survives, once and last',
-    (one.match(/not an account/g) || []).length === 1 && /Demo environment/.test(one));
+  /* The disclaimer left the form, so the honesty has to live where it is
+     actionable — the message shown at the moment the claim is made. */
+  c.check('no disclaimer paragraph competes with the fields',
+    !/auth-note-line|not an account|Demo environment/.test(one));
+  c.check('and the sign-in still says the account is not stored',
+    /this account is not stored/.test(app._source));
   c.check('forgot password reads as a link under the field', /class="auth-forgot"/.test(one));
   c.check('log in is the only primary action',
     (one.match(/class="btn" id="login-btn"/g) || []).length === 1);

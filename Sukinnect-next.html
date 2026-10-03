@@ -363,11 +363,17 @@
     padding:3px; background:var(--cloud); border-radius:var(--r-md);
     box-shadow:inset 0 0 0 1px var(--line);
   }
+  /* Two roles on sign-in, three when an account is being created — Admin is an
+     operations console, not a person looking for a plumber, so it does not share
+     the first screen with them. */
+  .auth-role.two{ grid-template-columns:1fr 1fr; }
   .auth-role button{
     min-height:var(--tap); border:none; border-radius:calc(var(--r-md) - 3px);
     background:transparent; font:inherit; font-size:var(--t-caption); font-weight:700;
-    color:var(--ink-soft); cursor:pointer;
+    color:var(--ink-soft); cursor:pointer; min-width:0; white-space:nowrap;
+    display:flex; align-items:center; justify-content:center; gap:5px;
   }
+  .auth-role button svg, .auth-role button re-icon{ flex:none; opacity:.8; }
   /* The pressed option lifts a white chip out of the tray: the state is depth and
      weight, not colour alone (71, 72). */
   .auth-role button[aria-pressed="true"]{
@@ -398,11 +404,6 @@
     font-family:inherit; font-size:var(--t-body); font-weight:700; color:var(--deep);
     border:1px solid var(--border-strong); border-radius:var(--r-md);
     min-height:var(--cta-h); padding:13px 16px;
-  }
-  /* The one line of honesty the prototype owes the reader, kept small and last. */
-  .auth-note-line{
-    margin-top:var(--s-6); font-size:var(--t-caption); color:var(--mist);
-    text-align:center; line-height:1.5;
   }
   /* Short phones: the column simply scrolls; the form has no fixed hero to give
      ground to any more. */
@@ -4105,6 +4106,9 @@ const DEMO_LOGIN = {
 };
 
 const AUTH_ROLE_LABEL = { resident:'Resident', provider:'Service Pro', admin:'Admin' };
+/* Same glyphs the bottom navigation uses, so a role looks like the place it
+   takes you. wrench and shield resolve through REICON_MAP to gear and shield2. */
+const AUTH_ROLE_ICON = { resident:'home', provider:'wrench', admin:'shield' };
 
 function loginHTML(){
   const isRegister = state.authMode === 'register';
@@ -4125,9 +4129,9 @@ function loginHTML(){
       <div class="auth-wordmark">Sukinnect</div>
 
       <div class="auth-form">
-        <div class="auth-role" role="group" aria-label="Account type">
-          ${['resident','provider','admin'].map(role =>
-            `<button type="button" id="rt-${role}" aria-pressed="${state.role === role}">${AUTH_ROLE_LABEL[role]}</button>`).join('')}
+        <div class="auth-role ${isRegister ? '' : 'two'}" role="group" aria-label="${isRegister ? 'Create an account as' : 'Sign in as'}">
+          ${['resident','provider'].concat(isRegister ? ['admin'] : []).map(role =>
+            `<button type="button" id="rt-${role}" aria-pressed="${state.role === role}">${ic(AUTH_ROLE_ICON[role],15)} ${AUTH_ROLE_LABEL[role]}</button>`).join('')}
         </div>
 
         ${isRegister ? `
@@ -4185,8 +4189,6 @@ function loginHTML(){
           ${isRegister ? 'I already have an account' : 'Create a new account'}
         </button>
 
-        <p class="auth-note-line">Demo environment · the credentials are prefilled, and nothing is stored
-          ${Store.isPersistent() ? 'beyond this device' : 'beyond this page'}. Sign-in is not an account.</p>
       </div>
     </div>
   </div>`;
@@ -4216,7 +4218,11 @@ function bindLogin(){
   const toggleAuth = document.getElementById('toggle-auth-mode');
   if(toggleAuth){
     toggleAuth.onclick = () => {
-      state.authMode = state.authMode === 'login' ? 'register' : 'login';
+      const toRegister = state.authMode !== 'register';
+      state.authMode = toRegister ? 'register' : 'login';
+      /* Admin exists only in the create-account flow, so switching back to sign-in
+         with that role picked would leave every chip unpressed. */
+      if (!toRegister && state.role === 'admin') state.role = 'resident';
       render();
     };
   }
