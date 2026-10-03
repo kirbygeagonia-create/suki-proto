@@ -329,21 +329,26 @@
   .mini-steps .st.now{ background:var(--brand-secondary); }
 
 
-  /* Sign-in: one white screen, one centred column, and nothing on it
-     that is not needed to get in — brand mark, the account you are entering as,
-     two fields, one action. The scroll behaviour that keeps the keyboard from
-     burying the form is still here: the sheet is the scroller, and the bottom
-     padding is the gesture-bar inset (5, 38, 73). */
+  /* Sign-in: the soft brand gradient, and one card floated in the middle of it.
+     Nothing on the card that is not needed to get in — brand mark, the account
+     you are entering as, two fields, one action. */
   .auth-screen{
-    display:flex; flex-direction:column; height:100%; background:var(--surface);
+    display:flex; height:100%; box-sizing:border-box; overflow:hidden;
+    padding:calc(var(--s-5) + var(--sat)) var(--s-4) calc(var(--s-5) + var(--sab));
+    background:var(--grad-brand-soft);
   }
   /* The browser's default 16px paragraph margins were costing ~80px of dead
      vertical space here, which is what pushed the form past the fold on a 640pt
      phone. Spacing on this screen is deliberate, never inherited. */
   .auth-screen p{ margin:0; }
+  /* The card is the scroller, not the page: an Android keyboard can rise over
+     the gradient without burying the action, and `margin:auto` keeps the card
+     optically centred even when it is too tall to centre (5, 38, 73). */
   .auth-sheet{
-    flex:1; min-height:0; width:100%; max-width:420px; margin:0 auto;
-    box-sizing:border-box; padding:calc(var(--sat) + 34px) var(--s-6) calc(var(--s-6) + var(--sab));
+    margin:auto; width:100%; max-width:392px; max-height:100%;
+    box-sizing:border-box; padding:26px var(--s-5) 22px;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--r-lg); box-shadow:var(--shadow-md);
     overflow-y:auto; overscroll-behavior:none; text-align:center;
     -ms-overflow-style:none; scrollbar-width:none;
   }
@@ -360,17 +365,33 @@
      nothing, it just makes the label hard to find. What is centred is the brand,
      the links, the action and the note. */
   .auth-form{ margin-top:var(--s-8); text-align:left; }
-  /* Resident and Service Pro are who the marketplace exists for; Admin is the
-     operations console, present as the third option rather than a hidden link. */
+  /* Resident and Service Pro are the two roles the marketplace exists for, so
+     they are the only two choices on the card. Admin is an operations console,
+     not a person looking for a plumber: it is reached from a quiet line at the
+     foot of the create-account card, never as a third chip. */
   .auth-role{
-    display:grid; grid-template-columns:repeat(3, 1fr); gap:4px; margin-bottom:var(--s-5);
+    display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:var(--s-5);
     padding:3px; background:var(--cloud); border-radius:var(--r-md);
     box-shadow:inset 0 0 0 1px var(--line);
   }
-  /* Two roles on sign-in, three when an account is being created — Admin is an
-     operations console, not a person looking for a plumber, so it does not share
-     the first screen with them. */
-  .auth-role.two{ grid-template-columns:1fr 1fr; }
+  /* Once Admin is entered the tray is replaced by what that route actually is —
+     a tag naming it and one way back out. Two chips with neither pressed would
+     read as a broken control (40, 71). */
+  .auth-admin-bar{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    margin-bottom:var(--s-5); padding:4px 4px 4px 12px;
+    background:var(--cloud); border-radius:var(--r-md);
+    box-shadow:inset 0 0 0 1px var(--line);
+    font-size:var(--t-caption); font-weight:700; color:var(--ink-soft);
+    text-align:left;
+  }
+  .auth-admin-bar > span{ display:inline-flex; align-items:center; gap:6px; min-width:0; }
+  .auth-admin-bar button{
+    flex:none; min-height:var(--tap); padding:0 12px; border:none;
+    border-radius:calc(var(--r-md) - 4px); background:var(--surface);
+    box-shadow:var(--shadow-xs); font:inherit; font-size:var(--t-caption);
+    font-weight:700; color:var(--deep); cursor:pointer;
+  }
   .auth-role button{
     min-height:var(--tap); border:none; border-radius:calc(var(--r-md) - 3px);
     background:transparent; font:inherit; font-size:var(--t-caption); font-weight:700;
@@ -409,10 +430,21 @@
     border:1px solid var(--border-strong); border-radius:var(--r-md);
     min-height:var(--cta-h); padding:13px 16px;
   }
-  /* Short phones: the column simply scrolls; the form has no fixed hero to give
-     ground to any more. */
+  /* Admin lives here: a line at the foot of the create-account card, styled as
+     quiet text so it never competes with the action above it, but full width and
+     a tap tall so it is still comfortable to hit (39, 72). */
+  .auth-admin-link{
+    display:flex; align-items:center; justify-content:center; gap:6px; width:100%;
+    min-height:var(--tap); margin-top:var(--s-4); border:none; background:none;
+    font-family:inherit; font-size:var(--t-caption); font-weight:700;
+    color:var(--mist); cursor:pointer; text-decoration:underline;
+    text-underline-offset:3px;
+  }
+  /* Short phones: the card tightens first, then scrolls. It never outgrows the
+     viewport, so the action below the fold is inside a scroller, not off-screen. */
   @media (max-height:720px){
-    .auth-sheet{ padding-top:calc(var(--sat) + 20px); }
+    .auth-screen{ padding:calc(var(--s-4) + var(--sat)) var(--s-4) calc(var(--s-4) + var(--sab)); }
+    .auth-sheet{ padding-top:20px; padding-bottom:18px; }
     .auth-mark{ width:70px; height:70px; }
     .auth-form{ margin-top:var(--s-6); }
   }
@@ -4123,7 +4155,11 @@ const AUTH_ROLE_LABEL = { resident:'Resident', provider:'Service Pro', admin:'Ad
 const AUTH_ROLE_ICON = { resident:'home', provider:'wrench', admin:'shield' };
 
 function loginHTML(){
-  const isRegister = state.authMode === 'register';
+  /* Admin is a route into the operations console, not a kind of account, so on
+     that route the card renders sign-in fields whatever mode was left behind —
+     and offers no half-built "create an account as Admin" form. */
+  const isAdmin = state.role === 'admin';
+  const isRegister = !isAdmin && state.authMode === 'register';
   // null = never touched, so the field shows the role's sample credential;
   // '' = the resident cleared it, which must stay cleared so the required-field
   // error can appear (49).
@@ -4141,10 +4177,15 @@ function loginHTML(){
       <div class="auth-wordmark">Sukinnect</div>
 
       <div class="auth-form">
-        <div class="auth-role ${isRegister ? '' : 'two'}" role="group" aria-label="${isRegister ? 'Create an account as' : 'Sign in as'}">
-          ${['resident','provider'].concat(isRegister ? ['admin'] : []).map(role =>
+        ${isAdmin ? `
+        <div class="auth-admin-bar">
+          <span>${ic(AUTH_ROLE_ICON.admin,14)} Signing in as Admin</span>
+          <button type="button" id="rt-admin-exit">Switch to Resident</button>
+        </div>` : `
+        <div class="auth-role" role="group" aria-label="Sign in as">
+          ${['resident','provider'].map(role =>
             `<button type="button" id="rt-${role}" aria-pressed="${state.role === role}">${ic(AUTH_ROLE_ICON[role],15)} ${AUTH_ROLE_LABEL[role]}</button>`).join('')}
-        </div>
+        </div>`}
 
         ${isRegister ? `
         <div class="auth-field">
@@ -4195,11 +4236,14 @@ function loginHTML(){
           </button>
         </div>
 
+        ${isAdmin ? '' : `
         <div class="auth-divider">${isRegister ? 'or' : 'New here?'}</div>
 
         <button type="button" class="auth-alt" id="toggle-auth-mode">
           ${isRegister ? 'I already have an account' : 'Create a new account'}
-        </button>
+        </button>`}
+
+        ${isRegister ? `<button type="button" class="auth-admin-link" id="rt-admin">${ic('shield',12)} Admin sign in</button>` : ''}
 
       </div>
     </div>
@@ -4217,24 +4261,30 @@ function authInput(key, el){
 }
 
 function bindLogin(){
-  // Each role chip exists on every render, so one binder covers all three; the
-  // null guard is for a screen that has not drawn the group at all.
+  // Both chips are drawn on every non-admin render, so one binder covers them;
+  // the null guard is for a screen that has not drawn the group at all.
   const pickRole = (id, role) => {
     const node = document.getElementById(id);
     if(node) node.onclick = () => { state.role = role; render(); };
   };
   pickRole('rt-resident', 'resident');
   pickRole('rt-provider', 'provider');
-  pickRole('rt-admin', 'admin');
+
+  /* The console is entered from the foot of the create-account card and left by
+     the tag on it — two deliberate moves, not a third role choice. */
+  const adminIn = document.getElementById('rt-admin');
+  if(adminIn){
+    adminIn.onclick = () => { state.role = 'admin'; state.authMode = 'login'; render(); };
+  }
+  const adminOut = document.getElementById('rt-admin-exit');
+  if(adminOut){
+    adminOut.onclick = () => { state.role = 'resident'; render(); };
+  }
 
   const toggleAuth = document.getElementById('toggle-auth-mode');
   if(toggleAuth){
     toggleAuth.onclick = () => {
-      const toRegister = state.authMode !== 'register';
-      state.authMode = toRegister ? 'register' : 'login';
-      /* Admin exists only in the create-account flow, so switching back to sign-in
-         with that role picked would leave every chip unpressed. */
-      if (!toRegister && state.role === 'admin') state.role = 'resident';
+      state.authMode = state.authMode === 'register' ? 'login' : 'register';
       render();
     };
   }
@@ -4260,7 +4310,9 @@ function submitAuth(){
   const btn = document.getElementById('login-btn');
   if(!btn || btn.dataset.busy) return;
   const value = (id) => { const node = document.getElementById(id); return node ? node.value.trim() : ''; };
-  const isRegister = state.authMode === 'register';
+  // Must agree with loginHTML(): the Admin route never draws the name and
+  // barangay fields, so it must never demand them either.
+  const isRegister = state.role !== 'admin' && state.authMode === 'register';
   const errors = {};
   if (!value('login-email')) errors.email = 'Enter your email to continue.';
   if (!value('login-pass')) errors.pass = 'Enter your password.';

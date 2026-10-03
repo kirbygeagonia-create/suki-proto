@@ -907,12 +907,28 @@ suite('login', async () => {
 
   const one = screens[0][1];
   const reg = screens[1][1];
-  /* Admin is an operations console, so it is not offered on the sign-in screen —
-     but it must stay reachable through the create-account flow, not vanish. */
+  const adminLog = screens[4][1];
+  const adminReg = screens[5][1];
+  const css = app._source;
+  /* Admin is an operations console, not a person looking for a plumber, so it is
+     never a chip. It is reached by one quiet link at the foot of the account
+     creation card, and once entered it says what it is and offers the way back. */
   c.check('sign-in offers the two roles a marketplace is for',
     /id="rt-resident"/.test(one) && /id="rt-provider"/.test(one) && !/id="rt-admin"/.test(one));
-  c.check('create account carries all three, including Admin',
-    /id="rt-admin"/.test(reg) && /aria-label="Create an account as"/.test(reg));
+  c.check('create account keeps those two chips and hides Admin in a foot link',
+    /id="rt-resident"/.test(reg) && /id="rt-provider"/.test(reg)
+    && /class="auth-admin-link" id="rt-admin"/.test(reg));
+  c.check('the Admin route names itself and gives one way back out',
+    /Signing in as Admin/.test(adminLog) && /id="rt-admin-exit"/.test(adminLog)
+    && !/id="rt-resident"/.test(adminLog));
+  c.check('and the Admin card has no control that cannot be answered',
+    !/id="toggle-auth-mode"/.test(adminLog) && !/id="reg-name"/.test(adminReg));
+  c.check('the form sits in one centred card on the brand gradient',
+    /\.auth-screen\{[\s\S]{0,260}?background:var\(--grad-brand-soft\)/.test(css)
+    && /\.auth-sheet\{[\s\S]{0,400}?box-shadow:var\(--shadow-md\)/.test(css));
+  c.check('the card never outgrows the viewport, so the keyboard has room',
+    /\.auth-sheet\{[\s\S]{0,400}?max-height:100%/.test(css)
+    && /\.auth-screen\{[\s\S]{0,260}?overflow:hidden/.test(css));
   c.check('each role chip carries the glyph of where it leads',
     (one.match(/id="rt-resident"[^>]*>[\s\S]{0,80}?(<svg|<re-icon)/) || []).length === 2);
   c.check('the official mark is the first thing on it',
