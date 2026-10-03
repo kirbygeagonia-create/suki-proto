@@ -249,16 +249,19 @@ suite('ledger', async () => {
   c.check('every ledger event balances', unbalanced.length === 0,
     unbalanced.map(e => e.eventType).join(','));
   c.check('the seed wrote real history', LEDGER.length > 0, String(LEDGER.length));
-  const KINDS = ['payment.authorized', 'payment.voided', 'booking.settled', 'booking.settled_cash'];
+  const KINDS = ['payment.authorized', 'payment.voided', 'booking.settled', 'booking.settled_cash', 'dispute.held'];
   c.check('only money movements appear at boot',
     LEDGER.every(e => KINDS.includes(e.eventType)),
     LEDGER.map(e => e.eventType).filter(t => !KINDS.includes(t)).join(','));
   c.check('a holding belongs to an accepted job, never a request',
     LEDGER.filter(e => e.eventType === 'payment.authorized')
       .every(e => { const b = BOOKINGS.find(x => x.id === e.bookingId); return b && b.status !== 'requested'; }));
-  c.check('an earning belongs to a completed job only',
+  c.check('an earning belongs to work that finished, or a case about it',
     LEDGER.filter(e => e.eventType === 'booking.settled' || e.eventType === 'booking.settled_cash')
-      .every(e => { const b = BOOKINGS.find(x => x.id === e.bookingId); return b && b.status === 'completed'; }));
+      .every(e => { const b = BOOKINGS.find(x => x.id === e.bookingId); return b && (b.status === 'completed' || b.status === 'disputed'); }));
+  c.check('a case held against an earning does not erase the earning',
+    LEDGER.filter(e => e.eventType === 'dispute.held')
+      .every(e => { const b = BOOKINGS.find(x => x.id === e.bookingId); return b && b.status === 'disputed'; }));
   c.check('no job is settled twice at boot',
     new Set(LEDGER.filter(e => /^booking\.settled/.test(e.eventType)).map(e => e.bookingId)).size ===
       LEDGER.filter(e => /^booking\.settled/.test(e.eventType)).length);
@@ -284,7 +287,8 @@ suite('ledger', async () => {
   const claims = BOOKINGS.reduce((t, b) => t + Math.max(0, app.accountBalance('customer_deposit', b.id)), 0)
     + ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'].reduce((t, p) => t + app.accountBalance('provider_payable', p), 0)
     + app.accountBalance('platform_fee_revenue') + app.accountBalance('platform_fixed_fee_revenue')
-    + app.accountBalance('dispute_hold') * -1;
+    /* a held case is still a claim on the same money, just not yet for anyone */
+    + app.accountBalance('dispute_hold');
   c.check('escrow covers exactly the claims on it',
     app.accountBalance('escrow_held') === claims,
     app.accountBalance('escrow_held') + ' vs ' + claims);
@@ -725,6 +729,116 @@ suite('provider', async () => {
     completionRate('p1') + cancellationRate('p1') <= 100);
   return c;
 });
+
+/* ══ 9. the money console ─══════════════════════════════════════════════════ */
+suite('admin', async () => {
+  const c = makeChecker();
+  const app = boot();
+  const { state, BOOKINGS, DISPUTES, LEDGER, CONFIG, CONFIG_AUDIT, LISTINGS,
+          platformStatement, statementCard, configPanel, disputeCard, adminCounts, intelligenceStats,
+          supplyGaps, setConfig, commitConfig, resolveCase, resolveDispute, resetDemoData,
+          accountBalance, paymentsFor, peso, pesoCompact, render, _document, label } = app;
+  const el = id => _document.getElementById(id);
+
+  /* the card and the ledger agree */
+  const st = platformStatement();
+  const card = statementCard();
+  c.check('the statement card prints the ledger’s own number', card.includes(peso(st.commissionEarnedCentavos)));
+  c.check('and the compact tile agrees with it', adminFinanceHtmlHas(app, pesoCompact(st.grossServicesCentavos)) || card.includes(peso(st.grossServicesCentavos)));
+
+  /* no typed fortune tellers left on the console */
+  state.view = 'app'; state.role = 'admin'; state.tab = 'admin_dashboard'; state.adminScreen = 'overview';
+  app.render();
+  const dash = _document.getElementById('screen').innerHTML;
+  c.check('the dashboard no longer quotes an invented month', !/42,800|48,200|42\.8k/.test(dash));
+  c.check('and no longer splits revenue that was never earned', !/Revenue allocation|Community programs/.test(dash));
+
+  /* configuration is editable, audited, and does not rewrite history */
+  const before = CONFIG.commissionRateDefault;
+  const frozenJob = BOOKINGS.find(b => b.pricing);
+  const frozenRate = frozenJob.pricing.commissionRate;
+  el('cfg-commissionRateDefault').value = '18';
+  el('cfg-taxRate').value = '12';
+  el('cfg-payoutMinCentavos').value = '250';
+  el('cfgcat-plumbing').value = '25';
+  commitConfig();
+  c.check('a saved rate takes effect', CONFIG.commissionRateDefault === 0.18, String(CONFIG.commissionRateDefault));
+  c.check('a VAT setting is recorded, not assumed silently', CONFIG.taxRate === 0.12, String(CONFIG.taxRate));
+  c.check('a per-category override is stored separately', CONFIG.commissionRateByCategory.plumbing === 0.25);
+  c.check('the change is written to a log', CONFIG_AUDIT.length >= 3 && CONFIG_AUDIT[0].actor === 'admin');
+  c.check('and the job booked earlier keeps the rate it agreed', frozenJob.pricing.commissionRate === frozenRate);
+  const withTax = app.computeBreakdown({ baseCentavos: 100000, categoryId: 'plumbing' });
+  c.check('a new job pays the category rate', withTax.commissionCentavos === 25000, String(withTax.commissionCentavos));
+  c.check('and VAT now appears, on the platform fee only',
+    withTax.taxCentavos === Math.round((25000 + CONFIG.fixedFeeCentavos) * 0.12), String(withTax.taxCentavos));
+  c.check('the split still reconciles with tax on',
+    withTax.providerShareCentavos + withTax.commissionCentavos + withTax.passThroughCentavos + withTax.fixedFeeCentavos + withTax.taxCentavos
+      === withTax.customerTotalCentavos);
+  c.check('a negative rate is refused', (() => {
+    el('cfg-commissionRateDefault').value = '-5'; commitConfig();
+    return CONFIG.commissionRateDefault === 0.18;
+  })());
+  setConfig({ commissionRateDefault: before, taxRate: 0, commissionRateByCategory: {} }, { role: 'admin' });
+
+  /* disputes: read the evidence, then move the money */
+  const d = DISPUTES[0];
+  const b = BOOKINGS.find(x => x.id === d.bookingId);
+  c.check('a case is tied to a real job', !!b && !!b.pricing);
+  c.check('and to the money that job produced', d.amountInClaimCentavos === b.pricing.customerTotalCentavos);
+  c.check('the freeze is on the books', accountBalance('dispute_hold', b.id) > 0);
+  c.check('the case card shows evidence rather than a verdict', (() => {
+    const html = disputeCard(d);
+    return /Evidence timeline/.test(html) && !/found guilty|at fault/i.test(html);
+  })());
+  const heldBefore = accountBalance('dispute_hold', b.id);
+  const revenueBefore = accountBalance('platform_fee_revenue');
+  resolveCase(d.id, 'refunded');
+  c.check('refunding releases the freeze', accountBalance('dispute_hold', b.id) === 0, String(accountBalance('dispute_hold', b.id)));
+  c.check('it reverses our own fee', accountBalance('platform_fee_revenue') === revenueBefore - Math.round(heldBefore * b.pricing.commissionRate / (1 - b.pricing.commissionRate)),
+    String(revenueBefore - accountBalance('platform_fee_revenue')));
+  c.check('it leaves a refund row on the job', paymentsFor(b.id).some(p => p.type === 'refund'));
+  c.check('the case is closed and says how', d.status.indexOf('refunded') > 0, d.status);
+  c.check('closing it twice is refused', (() => { try { resolveDispute(d.id, 'upheld'); return false; } catch (err) { return /already closed/.test(err.message); } })());
+  c.check('the booking records the outcome', b.status === 'cancelled' && b.paymentStatus === 'Refunded', b.status + '/' + b.paymentStatus);
+  c.check('every event still balances after a refund', LEDGER.every(e => {
+    const dr = e.lines.filter(l => l.direction === 'debit').reduce((t, l) => t + l.amountCentavos, 0);
+    const cr = e.lines.filter(l => l.direction === 'credit').reduce((t, l) => t + l.amountCentavos, 0);
+    return dr === cr;
+  }));
+  c.check('no account went negative under the console',
+    Object.keys(app.ACCOUNTS).every(k => accountBalance(k) >= 0),
+    Object.keys(app.ACCOUNTS).filter(k => accountBalance(k) < 0).join(','));
+
+  /* counts and filters */
+  const k = adminCounts();
+  c.check('the console counts what is actually there',
+    k.verified === app.PROVIDERS.length && k.liveCases === DISPUTES.filter(x => x.status === 'under review').length);
+  const allTime = intelligenceStats({ days: 0, category: 'all' });
+  const month = intelligenceStats({ days: 30, category: 'all' });
+  const plumbed = intelligenceStats({ days: 0, category: 'plumbing' });
+  c.check('all time is never smaller than a window', allTime.bookings >= month.bookings);
+  c.check('a category filter cannot show other work',
+    plumbed.byCategory.every(r => r.id === 'plumbing'), plumbed.byCategory.map(r => r.id).join(','));
+  c.check('gaps only name categories with demand and thin cover',
+    supplyGaps({ category: 'all' }).every(g => g.demand > 0 && g.supply <= 1));
+
+  /* the reset control */
+  const jobsBefore = BOOKINGS.length;
+  resetDemoData();
+  c.check('restoring the sample records clears the case and the money',
+    DISPUTES.length === 1 && DISPUTES[0].status === 'under review' && BOOKINGS.length === jobsBefore);
+  c.check('and the reopened job is back to being disputed',
+    BOOKINGS.some(x => x.status === 'disputed'));
+  return c;
+});
+
+function adminFinanceHtmlHas(app, needle) {
+  try {
+    app.state.view = 'app'; app.state.role = 'admin'; app.state.tab = 'admin_dashboard';
+    app.state.adminScreen = 'finance'; app.render();
+    return app._document.getElementById('screen').innerHTML.includes(needle);
+  } catch (err) { return false; }
+}
 
 (async () => {
   let total = 0, failed = 0;

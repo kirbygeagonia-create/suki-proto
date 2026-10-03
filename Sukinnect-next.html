@@ -2510,6 +2510,320 @@ function accountBalanceFor(booking) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   DOMAIN KERNEL · part 5 — disputes, the money console, and configuration
+   ═══════════════════════════════════════════════════════════════════════════
+   A dispute exists to hold money and gather evidence while a person reads both.
+   It is not a verdict, and the screen says so.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const DISPUTES = [];
+let disputeSeq = 0;
+
+function openDispute(bookingId, actor, reason) {
+  const b = bookingById(bookingId);
+  if (!b) throw new Error('no booking ' + bookingId);
+  const d = {
+    id: 'DS-' + new Date().getFullYear() + '-' + String(++disputeSeq).padStart(4, '0'),
+    bookingId, openedBy: (actor && actor.role) || 'customer', reason,
+    amountInClaimCentavos: b.pricing ? b.pricing.customerTotalCentavos : b.amountCentavos,
+    status: 'under review',
+    openedAt: new Date().toISOString(),
+    evidence: bookingTimeline(bookingId).map(e => ({ at: e.at, text: label(e.to) + (e.note ? ' — ' + e.note : '') })),
+    resolution: null, resolvedAt: null
+  };
+  DISPUTES.push(d);
+  b.disputeId = d.id;
+  attemptTransition(bookingId, 'disputed', actor, { reason });
+  persist();
+  return d;
+}
+
+/* Three outcomes, each with its own money movement. "Upheld" here means the
+   provider keeps what is theirs; "refunded" moves money back out of the holding
+   and off our own earned fee. */
+function resolveDispute(disputeId, outcome, actor, note) {
+  const d = DISPUTES.find(x => x.id === disputeId);
+  if (!d) throw new Error('no dispute ' + disputeId);
+  if (d.status !== 'under review') throw new GuardRejected('this case was already closed as ' + d.status.toLowerCase() + '.');
+  const b = bookingById(d.bookingId);
+  if (outcome === 'upheld') {
+    attemptTransition(b.id, 'completed', { role: 'admin', id: actor && actor.id });
+    d.status = 'closed — the booking stands';
+  } else if (outcome === 'partial') {
+    const half = Math.round((note && note.amountCentavos) || d.amountInClaimCentavos / 2);
+    attemptTransition(b.id, 'cancelled', { role: 'admin', id: actor && actor.id }, { refundCentavos: half, reason: note && note.reason });
+    d.status = 'closed — partly refunded';
+  } else if (outcome === 'refunded') {
+    attemptTransition(b.id, 'cancelled', { role: 'admin', id: actor && actor.id },
+                      { refundCentavos: d.amountInClaimCentavos, reason: note && note.reason });
+    d.status = 'closed — refunded';
+  } else throw new Error('unknown dispute outcome: ' + outcome);
+  d.resolution = (note && note.reason) || '';
+  d.resolvedAt = new Date().toISOString();
+  adminLog('Dispute ' + d.status.split('—')[1].trim(), 'Case ' + d.id, 'Both parties notified');
+  persist();
+  return d;
+}
+
+function seedDemoDispute() {
+  if (DISPUTES.length) return false;
+  /* Tied to a real record so the numbers on this screen are the numbers in the
+     books: the job exists, was completed, and is inside the warranty window. */
+  const b = BOOKINGS.find(x => x.source === 'demo' && x.status === 'completed' && x.pricing && x.providerId === 'p2');
+  if (!b) return false;
+  b.confirmedBy = 'customer';
+  const d = {
+    id: 'DS-2026-0001', bookingId: b.id, openedBy: 'customer',
+    reason: 'The same fault came back three days after the repair.',
+    amountInClaimCentavos: b.pricing.customerTotalCentavos,
+    status: 'under review', openedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
+    evidence: bookingTimeline(b.id).map(e => ({ at: e.at, text: label(e.to) + (e.note ? ' — ' + e.note : '') })),
+    resolution: null, resolvedAt: null
+  };
+  DISPUTES.push(d);
+  b.disputeId = d.id;
+  disputeSeq = 1;
+  /* The freeze is a real entry, not a caption on the screen. */
+  const held = settlementToProvider(b.pricing);
+  postEvent('dispute.held', [
+    { account: 'provider_payable', scope: b.providerId, direction: 'debit', amountCentavos: held },
+    { account: 'dispute_hold', scope: b.id, direction: 'credit', amountCentavos: held }
+  ], { bookingId: b.id, note: d.reason, source: 'demo' });
+  b.status = 'disputed';
+  recordStatusEvent(b, 'completed', 'disputed', { role: 'customer', id: b.customerId }, d.reason, d.openedAt);
+  return true;
+}
+
+/* ---- figures the console derives instead of typing ──────────────────────── */
+function adminCounts() {
+  const verified = PROVIDERS.length;                       /* the demo roster is verified */
+  const open = BOOKINGS.filter(b => !FINISHED_STATES.includes(b.status) && b.status !== 'disputed').length;
+  const pendingVerification = 3;                            /* applicants in the queue */
+  const liveCases = DISPUTES.filter(d => d.status === 'under review').length;
+  const expiringSoon = 5;
+  return { verified, open, pendingVerification, liveCases, expiringSoon };
+}
+function weeklyBookings() {
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const now = new Date();
+  return days.map((name, i) => {
+    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (6 - i));
+    const same = b => new Date(b.createdAt).toDateString() === day.toDateString();
+    return {
+      name,
+      completed: BOOKINGS.filter(b => b.status === 'completed' && same(b)).length,
+      open: BOOKINGS.filter(b => !FINISHED_STATES.includes(b.status) && same(b)).length
+    };
+  });
+}
+function categorySupply() {
+  return SERVICES.map(cat => {
+    const supply = PROVIDERS.filter(p => p.serviceId === cat.id).length;
+    const demand = BOOKINGS.filter(b => providerOf(b).serviceId === cat.id).length;
+    return { id: cat.id, label: cat.label, supply, demand };
+  });
+}
+
+/* ---- the money console ──────────────────────────────────────────────────── */
+function statementCard() {
+  const st = platformStatement();
+  const all = BOOKINGS.filter(b => b.status === 'completed' && b.pricing);
+  const cashJobs = all.filter(b => /cash on arrival/i.test(b.paymentMethod || ''));
+  return `<div class="card" style="border-radius:14px; padding:14px; margin-bottom:14px;">
+      <div class="row" style="margin-bottom:12px;">
+        <b class="card-title">Platform statement</b>
+        <span class="chip">From the ledger</span>
+      </div>
+      <div class="row"><span>Services sold, completed jobs</span><b>${peso(st.grossServicesCentavos)}</b></div>
+      <div class="row"><span>Commission earned at ${Math.round(CONFIG.commissionRateDefault * 100)}%</span><b>${peso(st.commissionEarnedCentavos)}</b></div>
+      <div class="row"><span>Booking and processing fees</span><b>${peso(st.fixedFeesCentavos)}</b></div>
+      <div class="row"><span>Reversed by refunds</span><b style="color:var(--error-ink)">${st.refundsReversedCentavos ? '−' + peso(st.refundsReversedCentavos) : peso(0)}</b></div>
+      <div class="row" style="border-top:1px solid var(--line); padding-top:8px; margin-top:4px;">
+        <span style="font-weight:800; color:var(--ink);">Net platform revenue</span><b style="font-size:15px;">${peso(st.netRevenueCentavos)}</b></div>
+      <div class="row"><span class="mut">Collected from ${all.length - cashJobs.length} partner-paid job${all.length - cashJobs.length === 1 ? '' : 's'}</span><b class="mut">${peso(st.grossServicesCentavos - cashJobs.reduce((t, b) => t + b.pricing.customerTotalCentavos, 0))}</b></div>
+      <p style="font-size:var(--t-caption); color:var(--mist); line-height:1.55; margin:10px 0 0;">
+        Every line above is a sum over ledger entries, so it can be traced to the job that produced
+        it. ${st.owedByCashProvidersCentavos ? '₱' + Math.round(st.owedByCashProvidersCentavos / 100) + ' of the fee is on cash jobs the provider collected directly — billed, not held.' : ''}
+      </p>
+    </div>`;
+}
+function ageingCard() {
+  const rows = commissionReceivableAgeing();
+  if (!rows.length) return '';
+  return `<div class="card" style="border-radius:14px; padding:14px; margin-bottom:14px;">
+      <div class="row" style="margin-bottom:10px;"><b class="card-title">Commission owed on cash jobs</b><span class="chip">Unbilled</span></div>
+      ${rows.map(r => `
+        <div class="row" style="padding:8px 0; border-top:1px solid var(--line);">
+          <span style="min-width:0; flex:1;">
+            <span style="display:block; font-size:12.5px; font-weight:700;">${esc(providerOf({ providerId: r.providerId }).name)}</span>
+            <span style="display:block; font-size:var(--t-caption); color:var(--mist); margin-top:1px;">${r.jobs} job${r.jobs === 1 ? '' : 's'} · oldest ${esc(agoText(r.oldest))}</span>
+          </span>
+          <b style="color:var(--warning-ink);">${peso(r.owedCentavos)}</b>
+        </div>`).join('')}
+      <p style="font-size:var(--t-caption); color:var(--mist); line-height:1.5; margin:10px 0 0;">
+        The customer paid this provider directly. Sukinnect never held it, so the fee is a claim on the
+        next transfer rather than money already taken.
+      </p>
+    </div>`;
+}
+function configPanel() {
+  const fields = [
+    ['commissionRateDefault', 'Commission on completed work', 'percent'],
+    ['fixedFeeCentavos', 'Booking fee charged to the customer', 'peso'],
+    ['taxRate', 'VAT on the platform fee', 'percent'],
+    ['cancellationFeeAfterAcceptCentavos', 'Late cancellation fee, paid to the provider', 'peso'],
+    ['payoutMinCentavos', 'Minimum payout', 'peso'],
+    ['payoutHoldDays', 'Days before earnings become payable', 'days'],
+    ['acceptTtlMinutes', 'Minutes a request waits before it lapses', 'minutes'],
+    ['autoCompleteHours', 'Hours before an unconfirmed job auto-confirms', 'hours'],
+    ['warrantyDays', 'Warranty window for raising a case', 'days']
+  ];
+  return `<div class="card" style="border-radius:14px; padding:14px; margin-bottom:14px;">
+      <div class="row" style="margin-bottom:10px;"><b class="card-title">Fees and settlement</b><span class="chip">Pilot assumptions</span></div>
+      <p style="font-size:var(--t-caption); color:var(--mist); line-height:1.55; margin:0 0 12px;">
+        These are the deck's planning figures, not rates in force — the deck says launch monetization must
+        not be assumed and take rates are validated per category during the pilot.
+      </p>
+      ${fields.map(([key, label2, kind]) => `
+        <label class="form-label" style="display:block; margin-bottom:10px;">${label2}
+          <input id="cfg-${key}" class="form-input" style="margin-top:5px;" type="number" inputmode="decimal"
+                 min="0" step="${kind === 'percent' ? '1' : '1'}"
+                 value="${kind === 'percent' ? Math.round(CONFIG[key] * 100) : kind === 'peso' ? toPesos(CONFIG[key]) : CONFIG[key]}">
+          <span style="font-size:var(--t-caption); color:var(--mist);">${kind === 'percent' ? 'percent' : kind === 'peso' ? 'peso' : kind}</span>
+        </label>`).join('')}
+      <div class="row" style="padding:10px 0; border-top:1px solid var(--line);">
+        <span style="font-size:var(--t-caption); color:var(--ink-soft); flex:1;">Per category, if it differs from the default</span>
+        <span class="chip">${Object.keys(CONFIG.commissionRateByCategory).length ? Object.keys(CONFIG.commissionRateByCategory).length + ' set' : 'none set'}</span>
+      </div>
+      ${SERVICES.map(cat => `
+        <div class="row" style="padding:7px 0;">
+          <span style="font-size:12.5px;">${esc(cat.label)}</span>
+          <span style="display:flex; align-items:center; gap:6px;">
+            <input id="cfgcat-${cat.id}" type="number" min="0" max="40" step="1" inputmode="numeric"
+                   style="width:62px; padding:6px 8px; border:1px solid var(--line); border-radius:8px; font:inherit; font-size:var(--t-caption); text-align:right;"
+                   value="${CONFIG.commissionRateByCategory[cat.id] !== undefined ? Math.round(CONFIG.commissionRateByCategory[cat.id] * 100) : ''}"
+                   placeholder="${Math.round(CONFIG.commissionRateDefault * 100)}">
+            <span style="font-size:var(--t-caption); color:var(--mist);">%</span>
+          </span>
+        </div>`).join('')}
+      <button type="button" class="btn" style="width:100%; margin-top:12px; border-radius:12px;" onclick="commitConfig()">Save changes</button>
+      <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">
+        Saved rates apply to bookings made after the change. Jobs already accepted keep the terms frozen
+        when the provider accepted them.
+      </div>
+      ${CONFIG_AUDIT.length ? `
+        <div style="margin-top:12px; padding-top:10px; border-top:1px solid var(--line);">
+          <div style="font-size:var(--t-caption); font-weight:800; text-transform:uppercase; color:var(--ink-soft); margin-bottom:6px;">Change log</div>
+          ${CONFIG_AUDIT.slice(-6).reverse().map(a => `
+            <div style="font-size:var(--t-caption); color:var(--mist); line-height:1.6;">${esc(String(a.at).slice(0, 16).replace('T', ' '))} · ${esc(a.actor)} set ${esc(a.key)} ${esc(fmtCfg(a.from))} → ${esc(fmtCfg(a.to))}</div>`).join('')}
+        </div>` : ''}
+    </div>`;
+}
+function fmtCfg(v) {
+  if (typeof v !== 'number') return String(v);
+  if (v < 1 && v > 0) return Math.round(v * 100) + '%';
+  if (Number.isInteger(v) && v >= 1000) return pesoShort(v);
+  return String(v);
+}
+function commitConfig() {
+  const patch = {};
+  const read = (id, fn) => { const el = document.getElementById(id); if (el && el.value !== '' && el.value != null) patch[id] = fn(Number(el.value)); };
+  const KEYS = {
+    'cfg-commissionRateDefault': v => v / 100,
+    'cfg-fixedFeeCentavos': v => Math.round(v * 100),
+    'cfg-taxRate': v => v / 100,
+    'cfg-cancellationFeeAfterAcceptCentavos': v => Math.round(v * 100),
+    'cfg-payoutMinCentavos': v => Math.round(v * 100),
+    'cfg-payoutHoldDays': v => Math.round(v),
+    'cfg-acceptTtlMinutes': v => Math.round(v),
+    'cfg-autoCompleteHours': v => Math.round(v),
+    'cfg-warrantyDays': v => Math.round(v)
+  };
+  const bad = [];
+  Object.keys(KEYS).forEach(id => {
+    const el = document.getElementById(id);
+    if (!el || el.value === '') return;
+    const n = Number(el.value);
+    if (!Number.isFinite(n) || n < 0) { bad.push(id.replace('cfg-', '')); return; }
+    if (id.endsWith('commissionRateDefault') && n > 40) { bad.push('commission cannot exceed 40% here'); return; }
+    patch[id] = KEYS[id](n);
+  });
+  const catPatch = {};
+  SERVICES.forEach(cat => {
+    const el = document.getElementById('cfgcat-' + cat.id);
+    if (el && el.value !== '') {
+      const n = Number(el.value);
+      if (Number.isFinite(n) && n >= 0 && n <= 40) catPatch[cat.id] = n / 100;
+    }
+  });
+  if (bad.length) { showToast('Check ' + bad.join(', ') + ' — a rate cannot be negative.', 'error'); return; }
+  const clean = {};
+  Object.keys(KEYS).forEach(id => { if (patch[id] !== undefined) clean[id.replace('cfg-', '')] = patch[id]; });
+  if (Object.keys(catPatch).length) clean.commissionRateByCategory = Object.assign({}, CONFIG.commissionRateByCategory, catPatch);
+  const changed = setConfig(clean, { role: 'admin' });
+  render();
+  showToast(changed.length ? changed.length + ' setting' + (changed.length === 1 ? '' : 's') + ' changed, and recorded' : 'Nothing changed');
+}
+
+/* ---- the case screen ────────────────────────────────────────────────────── */
+function disputeCard(d) {
+  const b = bookingById(d.bookingId);
+  const p = providerOf(b), cust = customerOf(b);
+  const held = accountBalance('dispute_hold', b.id);
+  const open = d.status === 'under review';
+  return `<div class="card" style="border-radius:14px; padding:14px; margin-bottom:14px;">
+      <div class="row" style="margin-bottom:8px;">
+        <b class="card-title">Case ${esc(d.id)}</b>
+        <span class="chip" style="${open ? 'color:var(--warning-ink);' : 'color:var(--success-ink);'}">${open ? 'Under review' : esc(d.status)}</span>
+      </div>
+      <div style="font-size:12.5px; line-height:1.6; color:var(--ink-soft);">
+        ${esc(cust.name)} against ${esc(p.name)}<br>
+        ${esc(b.summary)} · ${esc(b.date)} · ${peso(d.amountInClaimCentavos)}<br>
+        Opened ${esc(agoText(d.openedAt))} by the ${esc(d.openedBy)}
+      </div>
+      <div style="margin-top:10px; padding:10px 12px; background:var(--background); border-radius:12px; font-size:var(--t-caption); color:var(--ink-soft); line-height:1.55;">
+        <b>${esc(d.reason)}</b>
+      </div>
+      <details style="margin-top:10px;" ${open ? '' : 'open'}>
+        <summary style="font-size:var(--t-body); font-weight:800; cursor:pointer; min-height:var(--tap); display:flex; align-items:center;">Evidence timeline</summary>
+        <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.8; margin-top:8px;">
+          ${d.evidence.map(e => `<div>${esc(String(e.at).slice(5, 16).replace('T', ' '))} · ${esc(e.text)}</div>`).join('')}
+          <div>${esc(String(d.openedAt).slice(5, 16).replace('T', ' '))} · Case opened</div>
+        </div>
+      </details>
+      ${open && held > 0 ? `<div style="margin-top:10px; font-size:var(--t-caption); color:var(--warning-ink); line-height:1.5;">
+        ${ic('lock', 12)} ${peso(held)} owed to ${esc(p.name.split(' ')[0])} is held while this is read. Holding it is not a finding against them.</div>` : ''}
+      ${open ? `
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
+          <button type="button" class="btn sm secondary" style="border-radius:10px;" onclick="resolveCase('${d.id}','upheld')">Close — the booking stands</button>
+          <button type="button" class="btn sm secondary" style="border-radius:10px;" onclick="resolveCase('${d.id}','partial')">Close — refund part of it</button>
+          <button type="button" class="btn sm danger" style="border-radius:10px;" onclick="resolveCase('${d.id}','refunded')">Close — refund the customer</button>
+        </div>
+        <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">
+          A refund takes money back out of the holding, the provider's share and our own fee, pro rata to
+          what was refunded. Nothing here decides fault by wording alone — read the evidence first.
+        </div>` : `
+        <div style="font-size:var(--t-caption); color:var(--success-ink); margin-top:10px;">${esc(d.status)} · ${esc(agoText(d.resolvedAt))}</div>`}
+    </div>`;
+}
+function resolveCase(disputeId, outcome) {
+  try {
+    const d = resolveDispute(disputeId, outcome, { role: 'admin' },
+      outcome === 'refunded' ? { reason: 'The fault was not resolved' } :
+      outcome === 'partial' ? { reason: 'Part of the work was not delivered' } : { reason: 'Evidence supports the completed work' });
+    showToast('Case ' + d.id + ' ' + d.status.toLowerCase());
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+  render();
+}
+function resetDemoData() {
+  restoreSeed();
+  render();
+  showToast('Demo data restored — this device’s records are back to the sample set');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    DOMAIN KERNEL · part 1 — persistence
    ═══════════════════════════════════════════════════════════════════════════
    Nothing between these banners touches the DOM, and nothing here reaches a
@@ -2531,7 +2845,8 @@ function accountBalanceFor(booking) {
    able to point at the entry that made it done. */
 /* 5 adds payment records and payouts: the money axis of a job has to survive a
    reload exactly like the service axis does. */
-const SCHEMA_VERSION = 5;
+/* 6 adds dispute cases, which carry their own claim amount and outcome. */
+const SCHEMA_VERSION = 6;
 const STORE_KEY = 'sukinnect.snapshot.v1';
 
 const Store = (function () {
@@ -2590,6 +2905,7 @@ const SEED = {
   customers: cloneRecords(CUSTOMERS),
   listings: cloneRecords(LISTINGS),
   notifications: cloneRecords(NOTIFICATIONS),
+  disputes: cloneRecords(DISPUTES),
   payments: cloneRecords(PAYMENTS),
   payouts: cloneRecords(PAYOUTS),
   statusEvents: cloneRecords(STATUS_EVENTS),
@@ -2608,6 +2924,7 @@ function snapshot() {
     customers: CUSTOMERS,
     listings: LISTINGS,
     notifications: NOTIFICATIONS,
+    disputes: DISPUTES,
     payments: PAYMENTS,
     payouts: PAYOUTS,
     statusEvents: STATUS_EVENTS,
@@ -2629,6 +2946,8 @@ function hydrate() {
   replaceContents(CUSTOMERS, snap.customers);
   replaceContents(LISTINGS, snap.listings);
   replaceContents(NOTIFICATIONS, snap.notifications);
+  replaceContents(DISPUTES, snap.disputes);
+  DISPUTES.forEach(d => { const n = parseInt(String(d.id).split('-').pop(), 10); if (!Number.isNaN(n) && n > disputeSeq) disputeSeq = n; });
   replaceContents(PAYMENTS, snap.payments);
   replaceContents(PAYOUTS, snap.payouts);
   replaceContents(STATUS_EVENTS, snap.statusEvents);
@@ -2660,6 +2979,8 @@ function restoreSeed() {
   replaceContents(CUSTOMERS, cloneRecords(SEED.customers));
   replaceContents(LISTINGS, cloneRecords(SEED.listings));
   replaceContents(NOTIFICATIONS, cloneRecords(SEED.notifications));
+  replaceContents(DISPUTES, []);
+  disputeSeq = 0;
   replaceContents(PAYMENTS, []);
   replaceContents(PAYOUTS, []);
   paymentSeq = 0; payoutSeq = 0;
@@ -2671,6 +2992,7 @@ function restoreSeed() {
   CONFIG_AUDIT.length = 0;
   seedHistoricalLedger();
   seedStatusHistory();
+  seedDemoDispute();
   Store.clear();
   return persist();
 }
@@ -2777,6 +3099,7 @@ let state = {
   adminVerifiedPerformance:'all',
   adminVerifiedCredential:'all',
   adminVerifiedAccount:'all',
+  adminIntFilters:{ days:30, category:'all' },
   adminVerifiedSort:'newest',
   adminPendingSort:'newest',
   adminDocRequests: [],
@@ -3074,6 +3397,8 @@ function activeFilterCount(){
   const f = state.providerFilters || {};
   return (f.serviceId ? 1 : 0) + (f.barangay ? 1 : 0) + (f.maxWait ? 1 : 0);
 }
+
+function repaintOnly(){ render(); }
 
 function openSheet(name){ state.sheet = name; render(); }
 function closeSheet(){ state.sheet = null; render(); }
@@ -4128,7 +4453,7 @@ function providerTabHTML(){
 }
 
 function adminTabHTML(){
-  if(state.tab==='admin_dashboard') return state.adminScreen === 'intelligence' ? adminMarketplaceIntelligence() : state.adminScreen === 'trust' ? adminTrustSafety() : state.adminScreen === 'audit' ? adminAuditLog() : adminDashboard();
+  if(state.tab==='admin_dashboard') return state.adminScreen === 'finance' ? adminFinanceScreen() : state.adminScreen === 'intelligence' ? adminMarketplaceIntelligence() : state.adminScreen === 'trust' ? adminTrustSafety() : state.adminScreen === 'audit' ? adminAuditLog() : adminDashboard();
   if(state.tab==='admin_verifications') return adminVerifications();
   if(state.tab==='verification_review') return providerVerificationReview();
   if(state.tab==='admin_provider_profile') return adminProviderManagementProfile();
@@ -5049,10 +5374,11 @@ function adminDashboard(){
 
     <h3 style="font-size:var(--t-body); margin:20px 0 8px;">This week</h3>
     <div class="statgrid">
-      <button type="button" class="stat" onclick="state.tab='admin_verifications'; state.adminProviderCategory='verified'; render();"><div class="num">24</div><div class="lbl">Active providers</div></button>
-      <button type="button" class="stat" onclick="state.tab='admin_disputes'; render();"><div class="num">18</div><div class="lbl">Open bookings</div></button>
-      <button type="button" class="stat" onclick="state.tab='admin_verifications'; state.adminProviderCategory='pending'; render();"><div class="num">6</div><div class="lbl">Pending verifications</div></button>
-      <button type="button" class="stat" onclick="state.tab='admin_disputes'; render();"><div class="num">3</div><div class="lbl">Help desk cases</div></button>
+${(() => { const k = adminCounts(); return `
+      <button type="button" class="stat" onclick="state.tab='admin_verifications'; state.adminProviderCategory='verified'; render();"><div class="num">${k.verified}</div><div class="lbl">Verified providers, demo roster</div></button>
+      <button type="button" class="stat" onclick="state.tab='admin_disputes'; render();"><div class="num">${k.open}</div><div class="lbl">Live bookings</div></button>
+      <button type="button" class="stat" onclick="state.tab='admin_verifications'; state.adminProviderCategory='pending'; render();"><div class="num">${k.pendingVerification}</div><div class="lbl">Applications to review</div></button>
+      <button type="button" class="stat" onclick="state.tab='admin_disputes'; render();"><div class="num">${k.liveCases}</div><div class="lbl">Cases open</div></button>`; })()}
     </div>
     <div style="font-size:var(--t-caption); color:var(--mist); margin:6px 0 4px;">Sample marketplace figures, not live counts.</div>
 
@@ -5078,6 +5404,11 @@ function adminDashboard(){
     <button type="button" class="job-row" onclick="state.tab='admin_disputes'; render();">
       <span class="jr-ic">${ic("scale",16)}</span>
       <span style="min-width:0; flex:1;"><span class="jr-t">Disputes</span><span class="jr-s">Cases, timelines and supporting evidence</span></span>
+      <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',14)}</span>
+    </button>
+    <button type="button" class="job-row" onclick="state.adminScreen='finance'; render();">
+      <span class="jr-ic">${ic("credit-card",16)}</span>
+      <span style="min-width:0; flex:1;"><span class="jr-t">Money</span><span class="jr-s">Commission, payouts, fees and refunds</span></span>
       <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',14)}</span>
     </button>
     <button type="button" class="job-row" onclick="state.adminScreen='audit'; render();">
@@ -5106,39 +5437,61 @@ function adminDashboard(){
       </div>
     </div>
     <div class="card">
-      <div class="row" style="margin-bottom:10px;"><b class="card-title">Financial analytics</b><span class="chip">Forecast</span></div>
-      <div style="font-size:var(--t-caption); color:var(--mist); margin-bottom:8px;">Marketplace revenue trend and projected monthly collections</div>
-      <div style="height:118px; display:flex; align-items:flex-end; gap:7px; border-bottom:1px solid var(--line); padding:0 6px 20px;">
-        ${[['Apr',48,false],['May',58,false],['Jun',54,false],['Jul',70,false],['Aug',78,false],['Sep',88,true]].map(([month,height,forecast]) => `
-          <div style="height:100%; flex:1; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; position:relative;">
-            <div title="${month} revenue${forecast ? ' forecast' : ''}" style="width:100%; max-width:30px; height:${height}%; background:${forecast ? 'var(--brand-tint)' : 'var(--brand-primary)'}; border-radius:5px 5px 0 0; ${forecast ? 'border-top:2px dashed var(--brand-primary);' : ''}"></div>
-            <span style="position:absolute; bottom:-18px; font-size:var(--t-caption); color:var(--mist);">${month}</span>
-          </div>
-        `).join('')}
-      </div>
-      <div style="display:flex; gap:14px; margin-top:12px; font-size:var(--t-caption); color:var(--mist);"><span><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--brand-primary); vertical-align:-1px;"></span> Recorded</span><span><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--brand-tint); border-top:2px dashed var(--brand-primary); vertical-align:-1px;"></span> Projected, not collected</span></div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; font-size:12px;"><div><span style="color:var(--mist);">This month</span><br><b>₱42,800</b></div><div><span style="color:var(--mist);">Next-month forecast</span><br><b style="color:var(--success-ink);">₱48,200 (+13%)</b></div></div>
+      <div class="row" style="margin-bottom:10px;"><b class="card-title">What the marketplace earned</b><span class="chip">From the ledger</span></div>
+      ${(() => { const st = platformStatement(); return `
+      <div class="row"><span>Commission earned on completed work</span><b>${peso(st.commissionEarnedCentavos)}</b></div>
+      <div class="row"><span>Owed on jobs paid on site</span><b style="color:var(--warning-ink)">${peso(st.owedByCashProvidersCentavos)}</b></div>
+      <div class="row"><span>Refunds reversed against revenue</span><b>${peso(st.refundsReversedCentavos)}</b></div>
+      <div class="row" style="border-top:1px solid var(--line); padding-top:8px; margin-top:4px;">
+        <span style="font-weight:800; color:var(--ink);">Net revenue</span><b style="font-size:15px;">${peso(st.netRevenueCentavos)}</b></div>
+      <button type="button" class="btn sm secondary" style="width:100%; margin-top:12px; border-radius:10px;" onclick="state.adminScreen='finance'; render();">Open the money console</button>`; })()}
+      <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">Each line is a sum over ledger entries, so it can be traced to the job behind it.</div>
     </div>
     <div class="card">
-      <div class="row" style="margin-bottom:10px;"><b class="card-title">Revenue allocation</b><span class="chip">Current month</span></div>
-      <div style="display:flex; align-items:center; gap:18px;">
-        <div style="width:94px; height:94px; border-radius:50%; background:conic-gradient(var(--brand-navy) 0 52%, var(--brand-primary) 52% 82%, var(--brand-tint) 82% 100%); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><div style="width:56px; height:56px; border-radius:50%; background:var(--surface); display:flex; align-items:center; justify-content:center; text-align:center; font-size:var(--t-caption); color:var(--mist);">₱42.8k<br>total</div></div>
-        <div style="display:flex; flex-direction:column; gap:7px; font-size:var(--t-caption); color:var(--ink-soft);"><div><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--brand-navy); vertical-align:-1px;"></span> Provider payouts <b>52%</b></div><div><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--brand-primary); vertical-align:-1px;"></span> Operations <b>30%</b></div><div><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--brand-tint); vertical-align:-1px;"></span> Community programs <b>18%</b></div></div>
+      <div class="row" style="margin-bottom:10px;"><b class="card-title">Sample activity this week</b><span class="chip">Demo bookings</span></div>
+      <div style="height:112px; display:flex; align-items:flex-end; gap:6px; border-bottom:1px solid var(--line); padding:0 4px 18px;">
+        ${(() => { const days = weeklyBookings(); const max = Math.max(1, ...days.map(d => d.completed + d.open)); return days.map(d => `
+          <div style="height:100%; flex:1; display:flex; align-items:flex-end; gap:2px; position:relative; max-width:34px;">
+            <div title="${d.name}: ${d.completed} completed" style="height:${Math.round(d.completed / max * 100)}%; flex:1; background:var(--verified); border-radius:4px 4px 0 0;"></div>
+            <div title="${d.name}: ${d.open} still open" style="height:${Math.round(d.open / max * 100)}%; flex:1; background:var(--brand-tint); border-radius:4px 4px 0 0;"></div>
+            <span style="position:absolute; bottom:-18px; left:50%; transform:translateX(-50%); font-size:var(--t-caption); color:var(--mist);">${d.name}</span>
+          </div>`).join(''); })()}
       </div>
+      <div style="display:flex; gap:14px; margin-top:8px; font-size:var(--t-caption); color:var(--mist);"><span><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--verified); vertical-align:-1px;"></span> Completed</span><span><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--brand-tint); vertical-align:-1px;"></span> Open</span></div>
+      <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">Counted from the demo bookings on this device — not marketplace volume.</div>
     </div>
-    <div class="card" style="display:none;">
-      <div style="font-size:13px; font-weight:800; margin-bottom:8px;">Operations today</div>
-      <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.55;">Monitor provider verification, active service bookings, and community support cases from the navigation below.</div>
-    </div>
-    <div class="card" style="display:none;">
-      <div style="font-size:13px; font-weight:800; margin-bottom:8px;">System status</div>
-      <div style="display:flex; flex-direction:column; gap:8px; font-size:12.5px;">
-        <div class="row"><span style="color:var(--mist);">Marketplace</span><b style="color:var(--success-ink);">Operational</b></div>
-        <div class="row"><span style="color:var(--mist);">ID verification queue</span><b>6 pending</b></div>
-        <div class="row"><span style="color:var(--mist);">Support response time</span><b>Under 15 min</b></div>
-      </div>
+    <div class="card">
+      <div class="row" style="margin-bottom:10px;"><b class="card-title">Supply against demand</b><span class="chip">Demo roster</span></div>
+      ${categorySupply().map(cat => `<div class="row" style="padding:6px 0; font-size:12.5px;"><span>${esc(cat.label)}</span><b>${cat.supply} provider${cat.supply === 1 ? '' : 's'} · ${cat.demand} job${cat.demand === 1 ? '' : 's'}</b></div>`).join('')}
+      <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">A category with demand and thin supply is where the pilot needs to recruit first.</div>
     </div>
   </div>`;
+}
+
+function adminFinanceScreen() {
+  return `
+  ${screenHeader('Money', { back:"state.adminScreen='overview'; render();", backLabel:'Back to the console', sub:'What the marketplace earned, and what it owes' })}
+  <div class="pad" style="background:var(--cloud); padding-bottom:40px;">
+    ${statementCard()}
+    ${ageingCard()}
+    ${configPanel()}
+    <div class="card" style="border-radius:14px; padding:14px;">
+      <div style="font-size:13px; font-weight:800; margin-bottom:8px;">This device</div>
+      <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.6;">
+        Records live in ${Store.isPersistent() ? 'this browser’s local storage — nothing leaves the device' : 'memory only, because this browser refuses storage for a file:// page — a reload restores the sample set'}.
+        There is no server in this prototype, so no figure here is a live marketplace count.
+      </div>
+      <button type="button" class="btn sm secondary" style="width:100%; margin-top:12px; border-radius:10px;" onclick="runPayoutNow()">Run this week’s payouts</button>
+      <button type="button" class="btn sm secondary" style="width:100%; margin-top:8px; border-radius:10px;" onclick="resetDemoData()">Restore the sample records</button>
+    </div>
+  </div>`;
+}
+function runPayoutNow() {
+  const paid = PROVIDERS.map(p => runPayoutCycle(p.id)).filter(r => r.paid);
+  showToast(paid.length
+    ? paid.length + ' payout' + (paid.length === 1 ? '' : 's') + ' recorded, ' + pesoShort(paid.reduce((t, r) => t + r.payout.amountCentavos, 0))
+    : 'Nobody has reached the payout minimum yet');
+  render();
 }
 
 function adminLog(action, subject, result){
@@ -5182,19 +5535,76 @@ function flagAccountReview(id, name){
   showToast('Flagged for review - recorded in the audit log');
 }
 
-function adminMarketplaceIntelligence(){
-  const sent = state.adminAlertState.opportunity;
+function adminMarketplaceIntelligence(){  const f = state.adminIntFilters;
+  const st = intelligenceStats(f);
+  const gaps = supplyGaps(f);
   return `
-  <div class="topbar"><div><div class="title" style="font-size:18px;">Marketplace Intelligence</div><div class="sub">What is happening across Sukinnect</div></div><button class="btn sm" style="background:rgba(255,255,255,0.12); color:#fff; box-shadow:none;" onclick="state.adminScreen='overview'; render();">Back</button></div>
+  ${screenHeader('Marketplace intelligence', { back:"state.adminScreen='overview'; render();", backLabel:'Back to the console', sub:'Where bookings and providers do not line up' })}
   <div class="pad" style="background:var(--cloud); padding-bottom:40px;">
-    <div style="display:flex; gap:6px; margin-bottom:12px;"><button class="btn sm secondary">This Month</button><button class="btn sm secondary">All Services</button><button class="btn sm secondary">All Barangays</button></div>
-    <div class="statgrid"><div class="stat"><div class="num">₱248.5k</div><div class="lbl">GMV <span style="color:var(--success-ink);">+12%</span></div></div><div class="stat"><div class="num">428</div><div class="lbl">Bookings <span style="color:var(--success-ink);">+8%</span></div></div><div class="stat"><div class="num">94%</div><div class="lbl">Completion rate</div></div><div class="stat"><div class="num">23</div><div class="lbl">Unfulfilled requests</div></div><div class="stat"><div class="num">84</div><div class="lbl">Verified providers</div></div><div class="stat"><div class="num">6</div><div class="lbl">Open disputes</div></div></div>
-    <div class="card"><div class="row"><b class="card-title">Marketplace insights</b><span class="chip">Data - Insight - Action</span></div><div style="font-size:12px; line-height:1.55; margin-top:10px;"><b>What happened:</b> Plumbing requests increased 24% this week.<br><b>Why it matters:</b> Only 6 verified plumbers were available at peak periods.<br><b>Impact:</b> 11 customer requests were not fulfilled.<br><b>Recommended action:</b> Encourage qualified plumbers to become available during evening peaks.</div><button class="btn sm btn-block" style="margin-top:10px;" onclick="state.adminScreen='intelligence'; document.getElementById('supply-gap')?.scrollIntoView();">View Supply Gap</button></div>
-    <div id="supply-gap" class="card"><div class="row"><b class="card-title">Supply-demand gaps</b><span class="chip badge-alert">High supply gap</span></div><div style="margin-top:8px; font-size:12px; line-height:1.55;"><b>Electrical Services - San Isidro</b><br>38 customer requests - 7 available electricians<br>12 unfulfilled requests - Average wait: 1h 34m<br><span style="color:var(--gold-600);">Estimated shortage: 4-6 providers</span></div><div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:8px;">Demand significantly exceeded available provider capacity during peak hours.</div><div style="display:flex; gap:6px; margin-top:10px;"><button class="btn sm secondary" style="flex:1;" onclick="state.tab='admin_verifications'; state.adminProviderCategory='verified'; render();">View Providers</button><button class="btn sm" style="flex:1;" onclick="state.adminAlertState.opportunity=true; adminLog('Provider opportunity sent','Electrical - San Isidro','12 providers notified'); render();">${sent ? 'Opportunity Sent' : 'Send Opportunity'}</button></div></div>
-    <div class="card"><div class="row"><b class="card-title">Service quality map</b><span class="chip">Overall quality</span></div><div style="display:flex; gap:6px; margin:10px 0; flex-wrap:wrap;"><button class="btn sm secondary">Ratings</button><button class="btn sm secondary">Complaints</button><button class="btn sm secondary">Cancellations</button><button class="btn sm secondary">Completion</button></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;"><div style="background:var(--verified-100); padding:10px; border-radius:9px;"><b>Poblacion</b><br><span style="font-size:var(--t-caption);">Good - Rating 4.8<br>Completion 96%<br>Complaints 3</span></div><div style="background:var(--warning-100); padding:10px; border-radius:9px;"><b>San Isidro</b><br><span style="font-size:var(--t-caption);">Needs attention - Rating 4.3<br>Completion 84%<br>Complaints 11</span></div></div></div>
-    <div class="card"><div class="row"><b class="card-title">Provider capacity forecast</b><span class="chip badge-gold">Projected</span></div><div style="font-size:12px; line-height:1.55; margin-top:8px;"><b>Saturday - Poblacion - Plumbing</b><br>Predicted requests: 32<br>Estimated capacity: 21 requests<br>Projected gap: 11 requests<br>Currently available: 6 providers<br><b style="color:var(--gold-600);">Recommended additional availability: approximately 4 providers</b></div></div>
-    <div class="card"><div class="row"><b class="card-title">What-if marketplace simulator</b><span class="chip">Scenario estimate</span></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; font-size:var(--t-caption);"><label>Service<select style="width:100%; padding:7px; margin-top:3px;"><option>Plumbing</option><option>Electrical</option></select></label><label>Barangay<select style="width:100%; padding:7px; margin-top:3px;"><option>Poblacion</option><option>San Isidro</option></select></label></div><button class="btn btn-block" style="margin-top:10px;" onclick="state.adminSimulation=true; render();">Run Simulation</button>${state.adminSimulation ? `<div style="background:var(--deep-100); padding:10px; border-radius:8px; margin-top:10px; font-size:12px; line-height:1.6;">Current average wait: 52 minutes<br>Projected average wait: <b>31 minutes</b><br>Current fulfillment: 82% - Projected: <b>94%</b><br>Current unfulfilled: 11 - Projected: <b>3</b><br><span style="font-size:var(--t-caption);">This is a prototype scenario estimate, not a guaranteed outcome.</span></div>` : ''}</div>
+    <div class="seg hscroll" style="margin-bottom:12px;">
+      ${[[7,'7 days'],[30,'30 days'],[0,'All time']].map(([days,name]) => `<button class="seg-btn ${f.days === days ? 'on' : ''}" onclick="setIntFilter('days',${days})">${name}</button>`).join('')}
+    </div>
+    <div class="hscroll req-rail" style="margin-bottom:14px;">
+      <button type="button" class="pick ${f.category === 'all' ? 'on' : ''}" onclick="setIntFilter('category','all')">All services</button>
+      ${SERVICES.map(cat => `<button type="button" class="pick ${f.category === cat.id ? 'on' : ''}" onclick="setIntFilter('category','${cat.id}')">${esc(cat.label)}</button>`).join('')}
+    </div>
+    <div class="statgrid" style="margin:0 0 14px;">
+      <div class="stat"><div class="num">${pesoCompact(st.grossCentavos)}</div><div class="lbl">Services sold</div></div>
+      <div class="stat"><div class="num">${st.bookings}</div><div class="lbl">Bookings</div></div>
+      <div class="stat"><div class="num">${st.completed}</div><div class="lbl">Completed</div></div>
+      <div class="stat"><div class="num">${st.completionRate}%</div><div class="lbl">Completion</div></div>
+    </div>
+    <div class="card" style="border-radius:14px; padding:14px; margin-bottom:14px;">
+      <div class="row" style="margin-bottom:10px;"><b class="card-title">Where the work went</b><span class="chip">${f.days ? f.days + ' days' : 'all time'}</span></div>
+      ${st.byCategory.length ? st.byCategory.map(row => `
+        <div style="margin-bottom:9px;">
+          <div class="row" style="font-size:var(--t-caption);"><span>${esc(row.label)}</span><b>${row.jobs} job${row.jobs === 1 ? '' : 's'} · ${pesoShort(row.centavos)}</b></div>
+          <div style="height:7px; margin-top:4px; background:var(--line); border-radius:999px; overflow:hidden;"><div style="width:${Math.round(row.centavos / Math.max(1, st.grossCentavos) * 100)}%; height:100%; background:var(--brand-primary); border-radius:999px;"></div></div>
+        </div>`).join('') : `<div style="font-size:var(--t-caption); color:var(--mist);">Nothing matches this window and service yet. Widen the filter.</div>`}
+    </div>
+    <div class="card" style="border-radius:14px; padding:14px;">
+      <div class="row" style="margin-bottom:8px;"><b class="card-title">Supply gaps</b><span class="chip">Demand without cover</span></div>
+      ${gaps.length ? gaps.map(g => `
+        <div class="row" style="padding:8px 0; border-top:1px solid var(--line); font-size:12.5px;">
+          <span style="flex:1; min-width:0;"><b>${esc(g.label)}</b><br><span style="color:var(--mist); font-size:var(--t-caption);">${g.demand} job${g.demand === 1 ? '' : 's'} against ${g.supply} provider${g.supply === 1 ? '' : 's'}</span></span>
+          <span class="chip" style="color:var(--warning-ink);">recruit here</span>
+        </div>`).join('') : `<div style="font-size:var(--t-caption); color:var(--mist);">Every category with demand has more than one provider on the demo roster.</div>`}
+      <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">
+        Computed from the demo roster and demo bookings on this device. A real gap needs live demand, which
+        the pilot has not measured — this is the shape of the report, not its evidence.
+      </div>
+    </div>
   </div>`;
+}
+function setIntFilter(key, value) {
+  state.adminIntFilters[key] = value;
+  repaintOnly();
+}
+function intelligenceStats(f) {
+  const since = f.days ? Date.now() - f.days * 86400000 : 0;
+  const inWindow = BOOKINGS.filter(b => Date.parse(b.createdAt) >= since &&
+    (f.category === 'all' || providerOf(b).serviceId === f.category));
+  const completed = inWindow.filter(b => b.status === 'completed');
+  const closed = inWindow.filter(b => FINISHED_STATES.includes(b.status) && b.status !== 'disputed');
+  const byCategory = SERVICES.map(cat => {
+    const rows = completed.filter(b => providerOf(b).serviceId === cat.id);
+    return { id: cat.id, label: cat.label, jobs: rows.length,
+             centavos: rows.reduce((t, b) => t + (b.pricing ? b.pricing.baseCentavos : b.amountCentavos), 0) };
+  }).filter(r => r.jobs).sort((a, b) => b.centavos - a.centavos);
+  return {
+    grossCentavos: byCategory.reduce((t, r) => t + r.centavos, 0),
+    bookings: inWindow.length,
+    completed: completed.length,
+    completionRate: closed.length ? Math.round(completed.length / closed.length * 100) : 0,
+    byCategory
+  };
+}
+function supplyGaps(f) {
+  return SERVICES.filter(cat => f.category === 'all' || cat.id === f.category).map(cat => ({
+    id: cat.id, label: cat.label,
+    supply: PROVIDERS.filter(p => p.serviceId === cat.id).length,
+    demand: BOOKINGS.filter(b => providerOf(b).serviceId === cat.id).length
+  })).filter(r => r.demand > 0 && r.supply <= 1);
 }
 
 function adminTrustSafety(){
@@ -5299,16 +5709,14 @@ function adminVerifications(){
   </div>`;
 }
 
-function adminDisputes(){
-  const responseRequested = state.adminAlertState.providerResponse;
+function adminDisputes(){  const open = DISPUTES.filter(d => d.status === 'under review');
+  const closed = DISPUTES.filter(d => d.status !== 'under review');
   return `
-  <div class="topbar"><div class="title">Disputes</div></div>
+  <div class="topbar"><div class="hb"><div><div class="title">Help desk</div><div class="sub">${open.length} reading, ${closed.length} closed</div></div></div></div>
   <div class="pad" style="background:var(--cloud); padding-bottom:40px;">
-    <div class="card"><div class="row"><b class="card-title">Dispute case #LS-2026-0148</b><span class="chip badge-gold">Under Review</span></div><div style="font-size:12px; line-height:1.6; margin-top:9px;">Customer: Ana D.<br>Provider: Ramil O.<br>Service: Plumbing Repair<br>Amount: ₱850<br>Priority: Normal</div></div>
-    <div class="card"><b class="card-title">Case summary</b><div style="font-size:12px; color:var(--ink-soft); line-height:1.55; margin-top:8px;">The customer confirmed completion and payment was released. Two days later, the customer reported that the leak had returned within the service warranty period.</div><div style="font-size:12px; margin-top:9px; color:var(--success-ink);">${ic("check",12)} Provider arrival recorded<br>${ic("check",12)} Before and after evidence available<br>${ic("check",12)} Customer confirmed completion<br>${ic("check",12)} Payment released</div></div>
-    <details class="card"><summary style="font-size:var(--t-body); font-weight:800; cursor:pointer; min-height:var(--tap); display:flex; align-items:center;">Evidence timeline</summary><div style="font-size:var(--t-caption); line-height:1.8; margin-top:10px;">Sep 12, 2:00 PM - Booking started<br>Sep 12, 2:14 PM - Provider arrived<br>Sep 12, 2:19 PM - Before-service photo uploaded<br>Sep 12, 3:06 PM - Service marked complete<br>Sep 12, 3:11 PM - Payment released<br>Sep 14, 10:45 AM - Dispute submitted</div></details>
-    <div class="card"><b class="card-title">Recommended next step</b><div style="font-size:12px; color:var(--ink-soft); margin-top:7px;">Review warranty eligibility and request the provider response. This summary supports review and does not determine fault.</div><div style="display:flex; gap:6px; margin-top:10px;"><button class="btn sm secondary" style="flex:1;" onclick="state.adminWarrantyShown=!state.adminWarrantyShown; render();" aria-expanded="${!!state.adminWarrantyShown}">${state.adminWarrantyShown ? 'Hide warranty record' : 'Review warranty'}</button><button class="btn sm" style="flex:1;" onclick="state.adminAlertState.providerResponse=true; adminLog('Provider response requested','Case #LS-2026-0148','Provider notified'); render();">${responseRequested ? 'Response Requested' : 'Request Provider Response'}</button></div></div>
-${state.adminWarrantyShown ? `<div class="card"><b class="card-title">Warranty record</b><div style="font-size:12px; line-height:1.8; margin-top:8px;">Service completed September 12, 2026<br>Warranty stated to run until September 19, 2026<br>Dispute raised September 14 - inside the warranty window<br>Same fault reported as the completed job: leak returned</div><div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:8px;">Eligibility is a question for the administrator and the provider; nothing here decides it.</div></div>` : ''}
+    ${open.map(disputeCard).join('')}
+    ${closed.length ? `<h3 style="font-size:var(--t-body); margin:20px 0 8px;">Closed</h3>${closed.map(disputeCard).join('')}` : ''}
+    ${DISPUTES.length ? '' : emptyState('scale', 'Nothing to review', 'A case is raised against a completed booking. When one exists, its timeline, the money held and the outcomes appear here.', { id:'helpdesk-roster-btn', label:'Look at the roster' })}
   </div>`;
 }
 
@@ -6253,6 +6661,7 @@ function bindTabHandlers(){
 hydrate();
 seedHistoricalLedger();
 seedStatusHistory();
+seedDemoDispute();
 applyDueTransitions();
 render();
 </script>
