@@ -1,0 +1,48 @@
+[
+ {
+  "name": "booking-detail",
+  "small": [],
+  "unlabelled": [],
+  "truncated": [],
+  "previews": [],
+  "offScale": [],
+  "contrast": [],
+  "overlaps": [],
+  "stretched": [],
+  "vendor": [],
+  "mapEscape": [],
+  "hOverflow": 0,
+  "usedSizes": [
+   12,
+   13,
+   14,
+   15,
+   16,
+   17,
+   20
+  ]
+ },
+ {
+  "name": "booking-tracking",
+  "small": [],
+  "unlabelled": [],
+  "truncated": [],
+  "previews": [],
+  "offScale": [],
+  "contrast": [],
+  "overlaps": [],
+  "stretched": [],
+  "vendor": [],
+  "mapEscape": [],
+  "hOverflow": 0,
+  "usedSizes": [
+   12,
+   13,
+   14,
+   15,
+   16,
+   17,
+   20
+  ]
+ }
+]

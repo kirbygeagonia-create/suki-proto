@@ -4603,7 +4603,13 @@ function statusCard(b) {
             <span style="font-size:var(--t-caption); font-weight:800; text-transform:uppercase; color:${live ? 'var(--success-ink)' : 'var(--ink-soft)'}; display:flex; align-items:center; gap:5px;">
               ${live ? '<span class="live-dot"></span>' : ic('calendar', 12)} ${label(b.status)}
             </span>
-            <span style="font-size:var(--t-caption); font-weight:700; color:var(--brand-primary);">${b.eta ? 'ETA: ' + esc(b.eta) : esc(b.arrivalTime || '')}</span>
+            <!-- An ETA is a promise about a journey still happening. This rendered
+                 it for arrived and in-progress jobs too, so a job three hours into
+                 the work still read "ETA: 15 mins" beside its own timeline saying
+                 the provider had arrived. -->
+            ${b.status === 'en_route' && b.eta ? `<span style="font-size:var(--t-caption); font-weight:700; color:var(--brand-primary);">ETA: ${esc(b.eta)}</span>`
+              : b.status === 'arrived' && b.arrivalTime ? `<span style="font-size:var(--t-caption); font-weight:700; color:var(--brand-primary);">At the door · ${esc(b.arrivalTime)}</span>`
+              : ''}
           </div>
           <div style="display:flex; flex-direction:column; gap:6px; font-size:var(--t-caption); color:var(--ink-soft);">
             ${steps}
@@ -6002,6 +6008,12 @@ function residentBookingDetail(){
       <div style="font-size:var(--t-lead); font-weight:700; color:var(--ink);">${b.request}</div>
       <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px; margin-bottom:14px;">${b.status === 'requested' ? 'Requested for' : 'Scheduled'}: <b style="color:var(--ink);">${b.date}, ${b.time}</b></div>
 
+      <!-- Status first, then who. The card used to open with the provider and
+           their "View Profile" button, pushing the one thing that answers "what is
+           happening to me, and what do I do" below the fold of the card, and its
+           own action (withdraw a request) below that. -->
+      ${statusCard(b)}
+
       <div style="background:var(--background); border:1px solid var(--line); border-radius:14px; padding:12px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;">
         <div style="display:flex; gap:12px; align-items:center;">
           ${serviceAvatar(providerOf(b), 42, '')}
@@ -6013,19 +6025,14 @@ function residentBookingDetail(){
         <button class="btn sm secondary" style="background:var(--surface); border:1px solid var(--line); border-radius:10px; font-weight:700; color:var(--ink); padding:7px 12px; box-shadow:none;" onclick="openBookingProvider('${b.id}')">View Profile</button>
       </div>
 
-      ${statusCard(b)}
-
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; background:var(--background); padding:12px; border-radius:12px; font-size:var(--t-caption); margin-bottom:14px;">
-        <!-- Arrival only means something once the provider is actually moving.
-             Before that it repeats the scheduled time sitting at the top of this
-             same card, which is how one screen came to state 4:00 PM twice. -->
         <!-- Arrival only means something once the provider is actually moving.
              Before that it repeats the scheduled time sitting at the top of this
              same card, which is how one screen came to state 4:00 PM twice. The
              cell is dropped rather than filled with the status, which the card
              directly above already carries. -->
         ${['en_route','arrived','ongoing','completed'].includes(b.status) ? `<div>
-          <span style="color:var(--mist); font-size:var(--t-caption);">Arrived / arriving:</span><br>
+          <span style="color:var(--mist); font-size:var(--t-caption);">${b.status === 'en_route' ? 'Arriving:' : 'Arrived:'}</span><br>
           <b style="font-size:var(--t-body-sm); color:var(--ink);">${b.arrivalTime}</b>
         </div>` : ''}
         <div>

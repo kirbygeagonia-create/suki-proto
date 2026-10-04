@@ -1,0 +1,75 @@
+{
+  "generatedAt": "2026-10-04T18:55:17.493Z",
+  "viewport": {
+    "width": 390,
+    "height": 844,
+    "dpr": 2
+  },
+  "appMode": true,
+  "url": "file:///C:/Users/ADMIN/OneDrive/Desktop/Sukinnect/Suki-proto/Sukinnect-next.html?app=1",
+  "screens": [
+    {
+      "name": "booking-detail",
+      "shows": "Payment record",
+      "sheet": "-",
+      "where": "app/resident:booking_detail",
+      "file": ".shotsE\\booking-detail.png",
+      "overflow": 228,
+      "viewport": "390x844",
+      "audit": {
+        "small": [],
+        "unlabelled": [],
+        "truncated": [],
+        "previews": [],
+        "offScale": [],
+        "contrast": [],
+        "overlaps": [],
+        "stretched": [],
+        "vendor": [],
+        "mapEscape": [],
+        "hOverflow": 0,
+        "usedSizes": [
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          20
+        ]
+      }
+    },
+    {
+      "name": "booking-tracking",
+      "shows": "Payment record",
+      "sheet": "-",
+      "where": "app/resident:booking_detail",
+      "file": ".shotsE\\booking-tracking.png",
+      "overflow": 316,
+      "viewport": "390x844",
+      "audit": {
+        "small": [],
+        "unlabelled": [],
+        "truncated": [],
+        "previews": [],
+        "offScale": [],
+        "contrast": [],
+        "overlaps": [],
+        "stretched": [],
+        "vendor": [],
+        "mapEscape": [],
+        "hOverflow": 0,
+        "usedSizes": [
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          20
+        ]
+      }
+    }
+  ],
+  "consoleErrors": []
+}
