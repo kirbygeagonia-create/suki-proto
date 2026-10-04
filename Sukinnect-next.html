@@ -1133,6 +1133,54 @@
   .hscroll{ overflow-x:auto; -ms-overflow-style:none; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
   .hscroll::-webkit-scrollbar{ display:none; width:0; height:0; }
   .screen{ overflow-x:hidden; }
+  /* A thread is rows on one side or the other, and the bubble is the only thing
+     that says who spoke — so it carries the tint, the radius and the time. The
+     inline styles these replaced were written twice, once for the demo bubbles and
+     once in JavaScript for whatever you typed. */
+  /* The room's header is the one brand-gradient surface in messaging: it says who
+     you are talking to, and nothing else competes with the thread below it. */
+  .chat-head{
+    background:var(--grad-hero); color:#fff; padding:16px 18px;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    border-bottom:1px solid rgba(255,255,255,.1);
+  }
+  .chat-head-name{ font-family:"Fraunces", ui-serif, serif; font-size:var(--t-body-lg); font-weight:600; line-height:1.2; }
+  .chat-head-sub{
+    font-size:var(--t-caption); color:var(--brand-tint); font-weight:600; margin-top:2px;
+    display:flex; align-items:center; gap:3px;
+  }
+  .chat-head-tag{
+    background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.32); color:#fff;
+    font-size:var(--t-caption); font-weight:700; padding:4px 10px; border-radius:var(--r-pill);
+    white-space:nowrap; flex-shrink:0;
+  }
+  .chat-list{
+    display:flex; flex-direction:column; gap:12px; overflow-y:auto; flex:1;
+    padding:16px 16px 78px; overscroll-behavior:none;
+    -ms-overflow-style:none; scrollbar-width:none;
+  }
+  .chat-list::-webkit-scrollbar{ display:none; width:0; height:0; }
+  .chat-day{ text-align:center; font-size:var(--t-caption); color:var(--mist); font-weight:600; }
+  .chat-row{ display:flex; gap:10px; align-items:flex-start; }
+  .chat-out{ justify-content:flex-end; }
+  .chat-in{ justify-content:flex-start; }
+  .chat-avatar{ flex:none; margin-top:2px; }
+  .chat-bubble{
+    max-width:76%; padding:12px 14px; font-size:var(--t-body); line-height:1.45;
+    border-radius:var(--r-md); overflow-wrap:anywhere; animation:riseIn .28s ease both;
+  }
+  .chat-bubble-in{
+    background:var(--surface); border:1px solid var(--line); color:var(--ink);
+    border-top-left-radius:4px; box-shadow:var(--shadow-xs);
+  }
+  .chat-bubble-out{
+    background:var(--deep); color:#fff; border-top-right-radius:4px; box-shadow:var(--shadow-sm);
+  }
+  .chat-when{ display:block; margin-top:4px; font-size:var(--t-caption); font-weight:600; opacity:.72; }
+  .chat-empty{
+    text-align:center; color:var(--mist); font-size:var(--t-caption);
+    padding:24px 12px; line-height:1.6;
+  }
   #chat-msg-list{ overflow-x:hidden; }
   ::-webkit-scrollbar{ width:9px; height:9px; }
   ::-webkit-scrollbar-thumb{ background:var(--brand-tint); border-radius:99px; border:2px solid transparent; background-clip:content-box; }
@@ -2307,7 +2355,13 @@ function attemptTransition(bookingId, to, actor, opts) {
     postEvent(outcome.ledger.type, outcome.ledger.lines,
       { bookingId: booking.id, note: outcome.ledger.note, source: booking.source });
 
-  if (outcome.notify) pushStatusNotification(booking, outcome.notify);
+  if (outcome.notify) {
+    pushStatusNotification(booking, outcome.notify);
+    /* The thread tells the same story the notification does, from the side that
+       acted. Two accounts of one move is how a chat and a tracking view come to
+       disagree about what happened. */
+    pushThreadMessage(booking, outcome.notify.to, actor, outcome.notify.body);
+  }
   persist();
   return booking;
 }
@@ -2648,6 +2702,58 @@ function onRefund(booking, actor, opts) {
 
 const DISPUTES = [];
 let disputeSeq = 0;
+/* ── messages are records, not painted bubbles ────────────────────────────────
+   A thread belongs to the two people and the job behind it, so both sides read
+   the same rows and what you type is stored rather than appended to the screen
+   and lost on the next render. The demo threads are the status timeline told in
+   the first person — nothing is invented that the record does not say. (26, 77) */
+const MESSAGES = [];
+let messageSeq = 0;
+
+function threadKeyOf(customerId, providerId){ return 't-' + customerId + '-' + providerId; }
+function threadKeyFor(booking){ return threadKeyOf(booking.customerId, booking.providerId); }
+function threadMessages(key){
+  return MESSAGES.filter(m => m.thread === key)
+    .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+}
+function lastMessageIn(key){ const l = threadMessages(key); return l.length ? l[l.length - 1] : null; }
+
+function appendMessage(thread, bookingId, from, text, at){
+  const m = { id:'m' + (++messageSeq), thread, bookingId: bookingId || null,
+              from, text, at: at || new Date().toISOString() };
+  MESSAGES.push(m);
+  return m;
+}
+
+function postMessage(booking, from, text, at){
+  return appendMessage(threadKeyFor(booking), booking.id, from, text, at);
+}
+
+/* Each move says what it is, to the person who did not make it. The same sentence
+   the notification carries, so a thread and a notification cannot disagree. */
+function pushThreadMessage(booking, to, actor, note){
+  const other = to === 'customer' ? 'provider' : 'customer';
+  if (actor && actor.role === other) postMessage(booking, other, note);
+}
+
+function seedMessages() {
+  if (MESSAGES.length) return false;
+  BOOKINGS.filter(b => b.source === 'demo').forEach(b => {
+    postMessage(b, 'customer', b.request || b.summary, b.createdAt);
+    bookingTimeline(b.id).forEach(e => {
+      if (e.to === 'requested' || e.from === e.to) return;
+      const who = e.actorRole === 'provider' ? 'provider' : (e.actorRole === 'customer' ? 'customer' : null);
+      if (!who) return;
+      /* "Accepted — Accepted" is what telling the same story twice sounds like. The
+         note is only worth appending when it says more than the move did. */
+      const name = label(e.to);
+      const extra = e.note && e.note.toLowerCase() !== name.toLowerCase() ? ' — ' + e.note : '';
+      postMessage(b, who, name + extra, e.at);
+    });
+  });
+  return true;
+}
+
 
 function openDispute(bookingId, actor, reason) {
   const b = bookingById(bookingId);
@@ -2987,7 +3093,7 @@ function resetDemoData() {
 /* 5 adds payment records and payouts: the money axis of a job has to survive a
    reload exactly like the service axis does. */
 /* 6 adds dispute cases, which carry their own claim amount and outcome. */
-const SCHEMA_VERSION = 7;
+const SCHEMA_VERSION = 8;
 const STORE_KEY = 'sukinnect.snapshot.v1';
 
 const Store = (function () {
@@ -3050,6 +3156,7 @@ const SEED = {
   payments: cloneRecords(PAYMENTS),
   payouts: cloneRecords(PAYOUTS),
   statusEvents: cloneRecords(STATUS_EVENTS),
+  messages: cloneRecords(MESSAGES),
   ledger: cloneRecords(LEDGER),
   config: cloneRecords(CONFIG)
 };
@@ -3069,6 +3176,7 @@ function snapshot() {
     payments: PAYMENTS,
     payouts: PAYOUTS,
     statusEvents: STATUS_EVENTS,
+    messages: MESSAGES,
     ledger: LEDGER,
     config: CONFIG,
     /* The change log travels with the values it describes. A console that shows a
@@ -3108,6 +3216,9 @@ function hydrate() {
   replaceContents(PAYMENTS, snap.payments);
   replaceContents(PAYOUTS, snap.payouts);
   replaceContents(STATUS_EVENTS, snap.statusEvents);
+  if (snap.messages) replaceContents(MESSAGES, snap.messages);
+  MESSAGES.forEach(m => { const n = parseInt(String(m.id).replace(/[^0-9]/g, ''), 10);
+                          if (!Number.isNaN(n) && n > messageSeq) messageSeq = n; });
   PAYMENTS.forEach(p => { const n = parseInt(String(p.id).replace(/[^0-9]/g, ''), 10);
                           if (!Number.isNaN(n) && n > paymentSeq) paymentSeq = n; });
   PAYOUTS.forEach(p => { const n = parseInt(String(p.id).replace(/[^0-9]/g, ''), 10);
@@ -3149,12 +3260,15 @@ function restoreSeed() {
   paymentSeq = 0; payoutSeq = 0;
   replaceContents(STATUS_EVENTS, []);
   statusEventSeq = 0;
+  replaceContents(MESSAGES, []);
+  messageSeq = 0;
   replaceContents(LEDGER, []);
   Object.keys(CONFIG).forEach(k => delete CONFIG[k]);
   Object.assign(CONFIG, cloneRecords(CONFIG_DEFAULTS));
   CONFIG_AUDIT.length = 0;
   seedHistoricalLedger();
   seedStatusHistory();
+  seedMessages();
   seedDemoDispute();
   Store.clear();
   return persist();
@@ -3189,6 +3303,14 @@ let state = {
   // sheet clears it, so a stale case form cannot be submitted against another job.
   caseBookingId:null,
   activeChatProvider:null,
+  /* Which pair the room is about. A provider answering c4 must not be shown
+     c1's conversation, and the old room assumed the demo customer for everyone. */
+  activeChatCounterpart:null,
+  activeChatProviderId:null,
+  activeChatCustomerId:null,
+  activeChatBookingId:null,
+  // Per-thread read markers: the unread dot means messages, not job status.
+  threadRead:{},
   isChatOpen:false,
   conciergePhotoAttached: false,
   conciergePhotoName: '',
@@ -3478,21 +3600,23 @@ function showToast(message, kind){
   }, 2600);
 }
 
+/* What you type is a record, not a painted bubble: it survives the next render,
+   it shows up in the other side's thread list, and it is what the thread is
+   about. The old version appended a node to the screen and congratulated the
+   reader with "Message sent" while storing nothing anywhere. */
 function sendChatMessage(){
   const input = document.getElementById('chat-input');
-  const list = document.getElementById('chat-msg-list');
   const text = (input && input.value ? input.value : '').trim();
   if(!text){ showToast('Type a message first'); return; }
-  const wrap = document.createElement('div');
-  wrap.style.cssText = 'display:flex; justify-content:flex-end;';
-  const bubble = document.createElement('div');
-  bubble.style.cssText = 'font-size:13px; background:var(--grad-brand-panel); color:#fff; padding:12px 14px; border-radius:14px 4px 14px 14px; max-width:76%; line-height:1.45; box-shadow:0 2px 5px rgba(0,0,0,0.04); animation:riseIn .28s ease both;';
-  bubble.textContent = text;
-  wrap.appendChild(bubble);
-  list.appendChild(wrap);
-  input.value = '';
-  list.scrollTop = list.scrollHeight;
-  showToast('Message sent');
+  const side = state.role === 'provider' ? 'provider' : 'customer';
+  appendMessage(currentThreadKey(), state.activeChatBookingId, side, text);
+  markThreadRead();
+  render();
+  const list = document.getElementById('chat-msg-list');
+  if (list) list.scrollTop = list.scrollHeight;
+  const again = document.getElementById('chat-input');
+  if (again) again.focus();
+  showToast('Sent');
 }
 
 // Anything that came from the user is echoed back into the interface, so it
@@ -4222,6 +4346,9 @@ function submitBookingRequest(){
     };
 
     BOOKINGS.unshift(booking);
+    /* The request itself opens the thread. Nobody replies on the provider's
+       behalf: the answer arrives when they actually accept. */
+    postMessage(booking, 'customer', booking.request);
     NOTIFICATIONS.unshift({
       id: 'n' + booking.id,
       title: 'Request sent to ' + p.name,
@@ -5271,41 +5398,94 @@ function residentMessagesList(){
   </div>`;
 }
 
+/* Which pair the open room is about — read from state, because a provider
+   answering one customer must not be shown another customer's thread. */
+function currentThreadKey(){
+  const other = state.activeChatCounterpart || state.activeChatProvider || PROVIDERS[0];
+  const customer = state.activeChatCustomerId || CURRENT_CUSTOMER_ID;
+  const provider = other.serviceId ? other.id : (state.activeChatProviderId || (PROVIDERS[0]||{}).id);
+  return threadKeyOf(customer, provider);
+}
+
+function markThreadRead(){
+  const read = Object.assign({}, state.threadRead);
+  read[currentThreadKey()] = Date.now();
+  state.threadRead = read;
+}
+
+function closeChatRoom(){
+  state.isChatOpen = false;
+  state.activeChatCounterpart = null;
+  render();
+}
+
+/* One way into the room for every entry point, so the thread, the job it belongs
+   to and the read marker can never be set three different ways. Either side can
+   open it: coordination happens on the job, but the conversation lives here. */
+function openChatThread(counterpartId, bookingId){
+  const b = bookingId ? bookingById(bookingId) : null;
+  const other = PROVIDERS.find(x => x.id === counterpartId) || CUSTOMERS.find(c => c.id === counterpartId);
+  if (!other) return;
+  const providerRecord = other.serviceId ? other : (b ? PROVIDERS.find(p => p.id === b.providerId) : null);
+  state.activeChatCounterpart = other;
+  state.activeChatProvider = providerRecord || PROVIDERS[0];
+  state.activeChatProviderId = providerRecord ? providerRecord.id : null;
+  state.activeChatBookingId = b ? b.id : null;
+  state.activeChatCustomerId = b ? b.customerId : (other.serviceId ? CURRENT_CUSTOMER_ID : other.id);
+  state.tab = 'messages';
+  state.isChatOpen = true;
+  markThreadRead();
+  render();
+}
+
+/* Alignment says who spoke; the text is escaped because it came from typing. */
+function chatBubble(m, other){
+  const mine = m.from === (state.role === 'provider' ? 'provider' : 'customer');
+  return `<div class="chat-row ${mine ? 'chat-out' : 'chat-in'}">
+      ${mine ? '' : `<span class="chat-avatar">${other && other.serviceId ? serviceAvatar(other, 34) : photoAvatar('customer', 34)}</span>`}
+      <div class="chat-bubble ${mine ? 'chat-bubble-out' : 'chat-bubble-in'}">${esc(m.text)}
+        <span class="chat-when">${esc(agoText(m.at))}</span></div>
+    </div>`;
+}
+
 function residentChatRoom(){
-  const activeChat = state.activeChatProvider || PROVIDERS[0];
-  const activeChatService = serviceMeta(activeChat.serviceId);
-  const firstName = activeChat.name.split(' ')[0];
+  /* The room belongs to whichever pair is talking. It assumed a provider on the
+     other end, which is right for a resident and wrong for the provider answering
+     the same thread — so the counterpart is whatever record opened it. */
+  const activeChat = state.activeChatCounterpart || state.activeChatProvider || PROVIDERS[0];
+  const isPro = !!activeChat.serviceId;
+  const activeChatService = isPro ? serviceMeta(activeChat.serviceId) : null;
+  const firstName = String(activeChat.name || '').split(' ')[0];
   return `
-  <div style="background:var(--grad-hero); color:#fff; padding:16px 18px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.1);">
-    <div style="display:flex; align-items:center; gap:12px;">
-      <button onclick="state.isChatOpen=false; render();" class="back-btn">${ic("chevron-left",18)}</button>
-      ${serviceAvatar(activeChat, 38, '')}
-      <div>
-        <div style="font-family:'Fraunces',serif; font-size:16px; font-weight:600; line-height:1.2;">${activeChat.name}</div>
-        <div style="font-size:var(--t-caption); color:var(--brand-tint); font-weight:600; margin-top:2px; display:flex; align-items:center; gap:3px;">
-          ${ic(activeChatService.icon,12)} Verified ${activeChat.service} Specialist
+  <div class="chat-head">
+    <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+      <button type="button" onclick="closeChatRoom()" class="back-btn" aria-label="Back to messages">${ic("chevron-left",18)}</button>
+      ${isPro ? serviceAvatar(activeChat, 38, '') : photoAvatar('customer', 38)}
+      <div style="min-width:0;">
+        <div class="chat-head-name">${esc(activeChat.name)}</div>
+        <div class="chat-head-sub">
+          ${isPro ? ic(activeChatService.icon,12) + ' Verified ' + esc(activeChat.service) + ' specialist'
+                  : ic('user',12) + ' Client · ' + esc(activeChat.barangay || 'no barangay on file')}
         </div>
       </div>
     </div>
-    <span style="background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.32); color:#fff; font-size:var(--t-caption); font-weight:700; padding:4px 10px; border-radius:999px; white-space:nowrap;">Brgy. ${activeChat.barangay} &middot; ${activeChat.distanceKm} km</span>
+    <span class="chat-head-tag">${isPro ? 'Brgy. ' + esc(activeChat.barangay) + ' &middot; ' + activeChat.distanceKm + ' km'
+                                        : esc(firstName ? firstName + '’s job' : 'this job')}</span>
   </div>
 
   <div style="background:var(--cloud); display:flex; flex-direction:column; height:100%; min-height:0; position:relative;">
-    <div id="chat-msg-list" style="display:flex; flex-direction:column; gap:14px; overflow-y:auto; padding:16px; flex:1; padding-bottom:70px;">
-      <div style="text-align:center; font-size:var(--t-caption); color:var(--mist); margin:2px 0; font-weight:500;">Today</div>
-      
-      <div style="display:flex; gap:10px; align-items:flex-start;">
-        ${serviceAvatar(activeChat, 34, ' margin-top:2px;')}
-        <div style="font-size:13px; background:#fff; padding:12px 14px; border-radius:4px 14px 14px 14px; max-width:76%; border:1px solid var(--line); color:var(--ink); line-height:1.45; box-shadow:0 2px 5px rgba(0,0,0,0.02);">
-          Hello po! On the way na po ako para maayos ang plumbing issue. Arrived in ~15 mins!
-        </div>
-      </div>
-
-      <div style="display:flex; justify-content:flex-end;">
-        <div style="font-size:13px; background:var(--brand-navy); color:#fff; padding:12px 14px; border-radius:14px 4px 14px 14px; max-width:76%; line-height:1.45; box-shadow:0 2px 5px rgba(0,0,0,0.04);">
-          Sige po, ingat! Nandito lang po ako sa bahay.
-        </div>
-      </div>
+    <div id="chat-msg-list" class="chat-list">
+      ${(() => {
+        const rows = threadMessages(currentThreadKey());
+        if (!rows.length)
+          return `<div class="chat-empty">Nothing has been said on this job yet. The first line usually describes what needs fixing.</div>`;
+        let day = '';
+        return rows.map(m => {
+          const d = new Date(m.at).toLocaleDateString('en-PH', { weekday:'long', month:'short', day:'numeric' });
+          const head = d !== day ? `<div class="chat-day">${day = d}</div>` : '';
+          return head + chatBubble(m, activeChat);
+        }).join('');
+      })()}
     </div>
 
     <div style="position:sticky; bottom:0; flex-shrink:0; background:#fff; border-top:1px solid var(--line); padding:10px 16px; display:flex; align-items:center; gap:10px; z-index:10; box-shadow:0 -4px 12px rgba(0,0,0,0.06);">
@@ -5537,6 +5717,10 @@ function clearProfileModals(){
   // overlays and sub-screens that are not the current tab
   state.isChatOpen = false;
   state.activeChatProvider = null;
+  state.activeChatCounterpart = null;
+  state.activeChatProviderId = null;
+  state.activeChatCustomerId = null;
+  state.activeChatBookingId = null;
   state.selectedProvider = null;
   state.selectedProviderBookingId = null;
   state.selectedVerificationId = null;
@@ -6240,15 +6424,26 @@ function threadsFor(role) {
   mine.forEach(b => {
     const other = role === 'provider' ? customerOf(b) : providerOf(b);
     if (!other || seen[other.id]) return;
+    const key = threadKeyOf(b.customerId, b.providerId);
+    const messages = threadMessages(key);
+    const mineSide = role === 'provider' ? 'provider' : 'customer';
+    const readAt = (state.threadRead || {})[key];
+    /* Unread is about messages, not about a job's status. The list used to claim
+       an unread dot because a booking was "ongoing", which had nothing to do with
+       anyone having written anything. */
+    const unseen = messages.filter(m => m.from !== mineSide && (!readAt || Date.parse(m.at) > readAt));
+    const last = messages.length ? messages[messages.length - 1] : null;
+    const shown = last || { text: b.request || b.summary, at: b.statusChangedAt || b.createdAt };
     seen[other.id] = {
       id: other.id,
       kind: role === 'provider' ? 'customer' : 'provider',
       name: other.name,
       service: role === 'provider' ? 'Client' : (other.service || 'Resident'),
       barangay: b.barangay,
-      snippet: b.request.length > 46 ? b.request.slice(0, 46) + '…' : b.request,
-      time: agoText(b.statusChangedAt || b.createdAt),
-      unread: b.status === 'requested' || b.status === 'ongoing',
+      snippet: shown.text.length > 46 ? shown.text.slice(0, 46) + '…' : shown.text,
+      time: agoText(shown.at),
+      unread: unseen.length > 0,
+      unseen: unseen.length,
       bookingId: b.id
     };
   });
@@ -6813,39 +7008,16 @@ function bindTabHandlers(){
 
   const chatProBtn = document.querySelector('[data-chat-booking-provider-id]');
   if(chatProBtn){
-    chatProBtn.onclick = () => {
-      const pid = chatProBtn.dataset.chatBookingProviderId;
-      state.activeChatProvider = PROVIDERS.find(p => p.id === pid) || PROVIDERS[0];
-      state.tab = 'messages';
-      state.isChatOpen = true;
-      render();
-    };
+    chatProBtn.onclick = () => openChatThread(chatProBtn.dataset.chatBookingProviderId, state.selectedBookingId);
   }
 
   const chatInquiriesBtn = document.querySelector('[data-chat-provider-id]');
   if(chatInquiriesBtn){
-    chatInquiriesBtn.onclick = () => {
-      const pid = chatInquiriesBtn.dataset.chatProviderId;
-      state.activeChatProvider = PROVIDERS.find(p => p.id === pid) || PROVIDERS[2];
-      state.tab = 'messages';
-      state.isChatOpen = true;
-      render();
-    };
+    chatInquiriesBtn.onclick = () => openChatThread(chatInquiriesBtn.dataset.chatProviderId, state.selectedProviderBookingId);
   }
 
   document.querySelectorAll('[data-open-chat-id]').forEach(el => {
-    el.onclick = () => {
-      const pid = el.dataset.openChatId;
-      if (el.dataset.threadKind === 'customer') {
-        /* Chat is a resident-side screen in this prototype. A provider reads and
-           answers the job itself, which is where the coordination actually lives. */
-        openProviderBooking(el.dataset.threadBooking);
-        return;
-      }
-      state.activeChatProvider = PROVIDERS.find(p => p.id === pid) || PROVIDERS[0];
-      state.isChatOpen = true;
-      render();
-    };
+    el.onclick = () => openChatThread(el.dataset.openChatId, el.dataset.threadBooking);
   });
 
   const conciergeAnalyzeBtn = document.getElementById('concierge-analyze-btn');
@@ -6936,6 +7108,7 @@ function bindTabHandlers(){
 hydrate();
 seedHistoricalLedger();
 seedStatusHistory();
+seedMessages();
 seedDemoDispute();
 applyDueTransitions();
 render();
