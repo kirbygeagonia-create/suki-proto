@@ -384,6 +384,12 @@
   .cat .ca-twinkle{ animation:caTwinkle 2.2s ease-in-out infinite; }
   .cat .ca-sway{ animation:caSway 2.4s ease-in-out infinite; }
   .cat .ca-slide{ animation:caSlide 1.8s ease-in-out infinite; }
+  /* The one switch for all of the above: CATEGORY_MOTION in the script, rendered as
+     data-motion on the grid. It removes animation-name rather than pausing, so the
+     still state is each part's own resting drawing and not whatever frame a paused
+     loop happened to stop on — several of them begin at opacity:0 and would simply
+     vanish. The app's global prefers-reduced-motion rule still wins either way. */
+  .catgrid:not([data-motion="on"]) .art svg *{ animation-name:none; }
   /* The concierge is a prototype feature that sharpens discovery; it must not
      outrank search and categories, so it is one row, not a hero (20, 8). */
   .concierge-row{
@@ -1447,6 +1453,11 @@ const SERVICES = [
   {id:'cleaning',label:'Cleaning',icon:'bubbles'},{id:'tutoring',label:'Tutoring',icon:'book'},
   {id:'appliance',label:'Appliance',icon:'plug'},{id:'delivery',label:'Delivery',icon:'package'},
 ];
+
+/* The single switch for the category scenes. Static is the default: six loops
+   running at once drew the eye away from the labels beneath them. Set this to
+   true and every part of the artwork starts moving again — no other edit needed. */
+const CATEGORY_MOTION = false;
 
 // Every trade gets its own icon AND its own tint. Read from SERVICES so a
 // plumber can never be drawn with an electrician's bolt, on any screen.
@@ -5238,7 +5249,7 @@ function residentHome(){
     </div>
 
     <div class="section-label" style="margin-top:16px;">Browse by service</div>
-    <div class="catgrid">
+    <div class="catgrid" data-motion="${CATEGORY_MOTION ? 'on' : 'off'}">
       ${SERVICES.map(s=>{ const m = serviceMeta(s.id); return `<button type="button" class="cat" data-service="${s.id}"><span class="art" style="background-color:${m.bg}; color:${m.fg};">${catArt(s.id)}</span><span>${esc(s.label)}</span></button>`; }).join('')}
     </div>
 
