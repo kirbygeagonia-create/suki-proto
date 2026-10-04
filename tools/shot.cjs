@@ -56,7 +56,7 @@ const PROBE = flag('probe', '');
    what a real browser actually laid out.
    -------------------------------------------------------------------------------- */
 const AUDIT_JS = `(function(){
-  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], contrast: [], overlaps: [], stretched: [], vendor: [], hOverflow: 0 };
+  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], contrast: [], overlaps: [], stretched: [], vendor: [], mapEscape: [], hOverflow: 0 };
   const vw = document.documentElement.clientWidth;
   out.hOverflow = document.documentElement.scrollWidth - vw;
   const TAP = 44;
@@ -258,6 +258,20 @@ const AUDIT_JS = `(function(){
     const natural = el.naturalWidth / el.naturalHeight, drawn = r.width / r.height;
     if (Math.abs(natural - drawn) / natural > 0.04)
       out.stretched.push({ src: (el.getAttribute('src')||'').slice(0,26), natural: Math.round(natural*100)/100, drawn: Math.round(drawn*100)/100 });
+  });
+  /* mountMap() marks every map with .map-mount so Leaflet's absolutely placed panes
+     have a frame to resolve against. Leaflet does set that position itself, but
+     only asynchronously — late enough that the first second of a map's life painted
+     its tiles across the card above (seen in a real screenshot). Checking the mark
+     rather than the computed position keeps the test deterministic: waiting for the
+     page to heal itself hides exactly the window that a person sees. */
+  document.querySelectorAll('.leaflet-container').forEach(el => {
+    const cr = el.getBoundingClientRect();
+    if (!cr.width || !cr.height) return;
+    if (!el.classList.contains('map-mount'))
+      out.mapEscape.push({ what: el.id || '(unnamed)', why: 'mounted without .map-mount' });
+    else if (getComputedStyle(el).position === 'static')
+      out.mapEscape.push({ what: el.id || '(unnamed)', why: '.map-mount is not positioning the frame' });
   });
   return out;
 })()`;
@@ -610,6 +624,7 @@ async function main() {
     tally(over, 'content sitting under the bottom nav', r => r.screen + ' "' + r.what + '" by ' + r.underBy + 'px');
     tally(unl, 'clickable things with no accessible name', r => r.screen + '  ' + r.unlabelled);
     tally(str, 'images drawn out of proportion', r => r.screen + '  ' + r.src + ' natural ' + r.natural + ' drawn ' + r.drawn);
+    tally(flat('mapEscape'), 'map panes painted outside their own frame', r => r.screen + '  ' + r.what + ' — ' + r.why);
     const vend = flat('vendor');
     console.log('\nvendor-owned controls excluded (Leaflet attribution + markers, not ours to resize): ' +
       vend.length + (vend.length ? '  e.g. ' + [...new Set(vend.map(r => r.what || 'unlabelled <img>'))].slice(0, 4).join(' | ') : ''));
