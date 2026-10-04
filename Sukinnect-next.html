@@ -5317,14 +5317,13 @@ function residentHome(){
       </div>
     </div>
 
-    <div class="section-label" style="margin-top:16px;">Browse by service</div>
-    <div class="catgrid">
-      ${SERVICES.map(s=>{ const m = serviceMeta(s.id); return `<button type="button" class="cat" data-service="${s.id}"><span class="art" data-cat-art="${s.id}" style="background-color:${m.bg}; color:${m.fg};">${catArt(s.id)}</span><span>${esc(s.label)}</span></button>`; }).join('')}
-    </div>
-
+    <!-- A job in motion is the reason the app was opened, so it sits above the
+         browsing rather than below it: the category grid is for finding someone
+         new, and it should not push the plumber who is already on the way off the
+         first screen. With nothing live the grid simply moves up into its place. -->
     ${active? `
     <div class="section-label">Active booking</div>
-    <div class="card" data-booking="${active.id}" style="cursor:pointer; padding:11px 13px;">
+    <div class="card card-lg" data-booking="${active.id}" style="cursor:pointer; padding:12px 13px;">
       <div class="row" style="align-items:flex-start; gap:10px;">
         <div style="display:flex; gap:10px; align-items:center; min-width:0;">
           ${photoAvatar(providerOf(active), 36)}
@@ -5343,6 +5342,11 @@ function residentHome(){
         ${(() => { const paid = ['captured', 'collected'].includes(active.payStatus); const c = statusColors(paid ? 'completed' : 'requested'); return `<span class="chip" style="background:${c.bg}; color:${c.fg}; flex-shrink:0;">${esc(payStatusLabel(active))}</span>`; })()}
       </div>
     </div>` : ''}
+
+    <div class="section-label" style="margin-top:16px;">Browse by service</div>
+    <div class="catgrid">
+      ${SERVICES.map(s=>{ const m = serviceMeta(s.id); return `<button type="button" class="cat" data-service="${s.id}"><span class="art" data-cat-art="${s.id}" style="background-color:${m.bg}; color:${m.fg};">${catArt(s.id)}</span><span>${esc(s.label)}</span></button>`; }).join('')}
+    </div>
 
     <button type="button" class="concierge-row" id="open-concierge-btn" style="margin-top:18px;">
       <span class="cr-ic">${ic("lightbulb",15)}</span>
