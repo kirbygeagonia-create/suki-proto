@@ -31,7 +31,14 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   'adminCounts', 'intelligenceStats', 'supplyGaps', 'disputeCard', 'statementCard', 'configPanel',
   'resolveCase', 'resolveDispute', 'commitConfig', 'setIntFilter', 'runPayoutNow', 'openDispute',
   'categorySupply', 'weeklyBookings', 'adminFinanceScreen', 'ageingCard',
-  'loginHTML', 'AUTH_ROLE_LABEL', 'DEMO_LOGIN'];
+  'loginHTML', 'AUTH_ROLE_LABEL', 'DEMO_LOGIN',
+  /* Added after the audit: the guards, the money readers and the case door were
+     unreachable from the suite, which is exactly how a severed entry point could
+     render beautifully and still pass every check. */
+  'canDispute', 'creditedFor', 'isCashJob', 'payStatusLabel', 'payMethodLabel',
+  'refundableCentavos', 'refundLines', 'postedCredits', 'notificationRoute',
+  'openDispute', 'openCaseSheet', 'submitCase', 'raiseCaseSheet', 'caseDoor', 'caseActor',
+  'PAY_METHODS', 'PAYMENT_LABELS', 'TRANSITIONS', 'providerIsFreeToAccept'];
 
 function boot({ appMode = false, storage = null } = {}) {
   const src = fs.readFileSync(APP, 'utf8');

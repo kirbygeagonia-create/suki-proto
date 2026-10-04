@@ -283,15 +283,18 @@ suite('ledger', async () => {
      backs what we owe the provider and the fee we have earned, and nothing in this
      prototype sweeps those out to a bank account of our own. Escrow therefore has
      to equal all three claims on it, or the books are pretending to hold money
-     that has been promised twice. */
+     that has been promised twice.
+     A cash job adds the fourth term: its fee is earned but never collected, so it
+     is backed by the receivable rather than by the holding. Stated without that
+     term, the identity fails on any roster that contains cash work. */
+  const assets = app.accountBalance('escrow_held') + app.accountBalance('commission_receivable');
   const claims = BOOKINGS.reduce((t, b) => t + Math.max(0, app.accountBalance('customer_deposit', b.id)), 0)
     + ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'].reduce((t, p) => t + app.accountBalance('provider_payable', p), 0)
     + app.accountBalance('platform_fee_revenue') + app.accountBalance('platform_fixed_fee_revenue')
     /* a held case is still a claim on the same money, just not yet for anyone */
     + app.accountBalance('dispute_hold');
-  c.check('escrow covers exactly the claims on it',
-    app.accountBalance('escrow_held') === claims,
-    app.accountBalance('escrow_held') + ' vs ' + claims);
+  c.check('the holding plus the cash receivable covers exactly the claims on it',
+    assets === claims, assets + ' vs ' + claims);
   c.check('the fee the platform earned is inside the holding, not outside it',
     app.accountBalance('platform_fee_revenue') > 0);
 
@@ -336,7 +339,7 @@ suite('ledger', async () => {
     bal.pendingCentavos + bal.availableCentavos >= 0 && typeof bal.nextPayoutOn === 'string');
   const payable = accountBalance('provider_payable', 'p1');
   const owed = BOOKINGS.filter(b => b.providerId === 'p1' && b.status === 'completed' && b.pricing &&
-    !/cash on arrival/i.test(b.paymentMethod || ''))
+    b.payMethod !== 'cash')
     .reduce((t, b) => t + settlementToProvider(b.pricing), 0);
   c.check('provider payable balance matches the settlements recorded',
     payable === owed, payable + ' vs ' + owed);
@@ -430,7 +433,7 @@ suite('machine', async () => {
   /* Cash and partner settlements land in different places, and the books have to
      show that: the provider already holds cash collected on site, so the
      platform only records the fee it is owed. */
-  const isCash = b => /cash on arrival/i.test(b.paymentMethod || '');
+  const isCash = b => b.payMethod === 'cash';
   const payableDelta = accountBalance('provider_payable', 'p1') - payableBefore;
   const expectedPayable = (isCash(live) ? 0 : settlementToProvider(live.pricing)) +
                           (isCash(target) ? 0 : settlementToProvider(target.pricing));
@@ -541,19 +544,19 @@ suite('payments', async () => {
     PAYMENTS.every(p => BOOKINGS.some(b => b.id === p.bookingId)));
 
   /* a partner job: held, then released */
-  const partner = pendingProviderRequests().find(b => !/cash/i.test((b.paymentMethod || 'Cash on Arrival'))) ||
+  const partner = pendingProviderRequests().find(b => b.payMethod !== 'cash') ||
                   BOOKINGS.find(b => b.status === 'requested');
-  if (partner.paymentMethod === undefined || !partner.paymentMethod) partner.paymentMethod = 'GCash (0912***6789)';
+  if (!partner.payMethod) partner.payMethod = 'gcash';
   attemptTransition(partner.id, 'upcoming', PROVIDER);
   const auth = paymentsFor(partner.id).find(p => p.type === 'authorization');
   c.check('accepting records an authorization', !!auth);
   c.check('held money is labelled held, not paid',
-    partner.paymentStatus === 'Held, not yet paid', partner.paymentStatus);
+    partner.payStatus === 'authorized', partner.payStatus);
   c.check('a holding is not revenue',
     LEDGER.filter(e => e.bookingId === partner.id).every(e => e.eventType !== 'booking.settled'));
 
   /* a cash job never creates a holding */
-  const cash = BOOKINGS.find(b => b.status === 'ongoing' && /cash on arrival/i.test(b.paymentMethod || ''));
+  const cash = BOOKINGS.find(b => b.status === 'ongoing' && b.payMethod === 'cash');
   c.check('a cash job has no authorization row',
     !paymentsFor(cash.id).some(p => p.type === 'authorization'));
 
@@ -563,21 +566,21 @@ suite('payments', async () => {
   c.check('a cash completion records a collection, not a capture',
     !!paymentsFor(cash.id).find(p => p.type === 'collection'));
   c.check('and it says the money was paid on site',
-    cash.paymentStatus === 'Paid on Site', cash.paymentStatus);
+    cash.payStatus === 'collected', cash.payStatus);
   c.check('the platform is owed the fee rather than holding it',
     accountBalance('commission_receivable', 'p1') >= cash.pricing.commissionCentavos,
     String(accountBalance('commission_receivable', 'p1')));
 
   /* refunds */
   const refundable = BOOKINGS.find(b => b.status === 'completed' && b.pricing &&
-                                       !/cash on arrival/i.test(b.paymentMethod || ''));
+                                       b.payMethod !== 'cash');
   const revenueBefore = accountBalance('platform_fee_revenue');
   const payableBefore = accountBalance('provider_payable', refundable.providerId);
   const escrowBefore = accountBalance('escrow_held');
   const total = refundable.pricing.customerTotalCentavos;
   refundBooking(refundable, Math.round(total / 2), ADMIN, 'Half the work was not done');
   c.check('a partial refund leaves the job partly settled',
-    refundable.paymentStatus === 'Partly refunded', refundable.paymentStatus);
+    refundable.payStatus === 'partially_refunded', refundable.payStatus);
   c.check('the fee on the refunded half is reversed',
     accountBalance('platform_fee_revenue') < revenueBefore);
   c.check('the provider gives back their half',
@@ -593,7 +596,7 @@ suite('payments', async () => {
     paymentsFor(refundable.id).filter(p => p.type === 'refund').every(p => p.byActor));
 
   /* cancelling releases nothing as revenue */
-  const upcoming = BOOKINGS.find(b => b.status === 'upcoming' && !/cash on arrival/i.test(b.paymentMethod || ''));
+  const upcoming = BOOKINGS.find(b => b.status === 'upcoming' && b.payMethod !== 'cash');
   const revBefore2 = accountBalance('platform_fee_revenue');
   attemptTransition(upcoming.id, 'cancelled', CUSTOMER, { reason:'Plans changed' });
   c.check('a cancellation returns the holding',
@@ -638,10 +641,10 @@ suite('payments', async () => {
 
   /* the two axes stay separate (AGENTS.md 22) */
   c.check('a booking can be completed while its money is still moving',
-    BOOKINGS.some(b => b.status === 'completed' && b.paymentStatus !== 'Paid Online'),
-    BOOKINGS.map(b => b.status + '/' + b.paymentStatus).slice(0, 3).join(' '));
+    BOOKINGS.some(b => b.status === 'completed' && b.payStatus !== 'captured'),
+    BOOKINGS.map(b => b.status + '/' + b.payStatus).slice(0, 3).join(' '));
   c.check('and the axes are different fields on the same record',
-    BOOKINGS.every(b => 'status' in b && 'paymentStatus' in b));
+    BOOKINGS.every(b => 'status' in b && 'payStatus' in b));
   return c;
 });
 
@@ -799,7 +802,7 @@ suite('admin', async () => {
   c.check('it leaves a refund row on the job', paymentsFor(b.id).some(p => p.type === 'refund'));
   c.check('the case is closed and says how', d.status.indexOf('refunded') > 0, d.status);
   c.check('closing it twice is refused', (() => { try { resolveDispute(d.id, 'upheld'); return false; } catch (err) { return /already closed/.test(err.message); } })());
-  c.check('the booking records the outcome', b.status === 'cancelled' && b.paymentStatus === 'Refunded', b.status + '/' + b.paymentStatus);
+  c.check('the booking records the outcome', b.status === 'cancelled' && b.payStatus === 'refunded', b.status + '/' + b.payStatus);
   c.check('every event still balances after a refund', LEDGER.every(e => {
     const dr = e.lines.filter(l => l.direction === 'debit').reduce((t, l) => t + l.amountCentavos, 0);
     const cr = e.lines.filter(l => l.direction === 'credit').reduce((t, l) => t + l.amountCentavos, 0);

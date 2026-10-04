@@ -328,7 +328,6 @@
   .mini-steps .st.on{ background:var(--grad-accent); }
   .mini-steps .st.now{ background:var(--brand-secondary); }
 
-
   /* Sign-in: the soft brand gradient, and one card floated in the middle of it.
      Nothing on the card that is not needed to get in — brand mark, the account
      you are entering as, two fields, one action. */
@@ -639,6 +638,34 @@
   }
   /* The handle has to be visible against white to read as draggable, so it uses
      the strong border tone rather than the near-white default line. */
+  /* A case is a claim that work went wrong, not an alarm: the neutral surface
+     carries the note, warning colour only once a window has actually closed, and
+     the control is full width and a tap tall so it is never a stray link (34, 39, 49). */
+  .case-note{
+    display:flex; align-items:flex-start; gap:8px; margin:12px 0 0; padding:11px 12px;
+    border:1px solid var(--line); border-radius:var(--r-md); background:var(--cloud);
+    font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; text-align:left;
+  }
+  .case-note svg, .case-note re-icon{ flex:none; margin-top:1px; opacity:.75; }
+  .case-note-live{ border-color:var(--warning); color:var(--warning-ink); }
+  .case-note-live svg, .case-note-live re-icon{ opacity:1; }
+  .case-button{
+    width:100%; min-height:var(--tap); margin-top:12px; border-radius:var(--r-md);
+    display:flex; align-items:center; justify-content:center; gap:7px;
+  }
+  .case-claim{ display:flex; flex-direction:column; gap:2px; font-size:var(--t-body); color:var(--ink); }
+  .case-claim span{ font-size:var(--t-caption); color:var(--mist); font-weight:500; }
+  .case-claim-money{
+    display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+    margin-top:8px; font-size:var(--t-caption); color:var(--mist);
+  }
+  .case-claim-money b{ font-size:var(--t-body-lg); color:var(--deep); }
+  .case-textarea{
+    width:100%; min-height:104px; margin-top:6px; padding:11px 12px; font:inherit;
+    font-size:var(--t-body); color:var(--ink); background:var(--cloud); line-height:1.45;
+    border:1px solid var(--line); border-radius:var(--r-md); resize:none; outline:none;
+  }
+  .case-textarea:focus{ background:var(--surface); border-color:var(--deep); }
   .sheet-grab{ width:38px; height:4px; border-radius:var(--r-pill); background:var(--border-strong); margin:9px auto 0; flex-shrink:0; }
   .sheet-head{ padding:12px 18px 10px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-shrink:0; }
   .sheet-title{ font-family:'Fraunces', ui-serif, serif; font-size:var(--t-title); font-weight:600; color:var(--ink); }
@@ -1384,8 +1411,8 @@ const BOOKINGS = [
     id:'b1', customerId:'c1', providerId:'p1',
     summary:'Kitchen faucet leak', request:'Kitchen faucet keeps leaking',
     date:dayLabel(0), time:'2:30 PM', status:'ongoing',
-    amountCentavos:36500, paymentStatus:'Pending (Cash on Arrival)',
-    paymentMethod:'Cash on Arrival', eta:'15 mins', arrivalTime:'2:45 PM',
+    amountCentavos:36500, payStatus:'pending_site',
+    payMethod:'cash', eta:'15 mins', arrivalTime:'2:45 PM',
     barangay:'Poblacion', address:'Blk 4 Lot 12, Rizal St., Poblacion',
     lat:6.3671, lng:124.9331, notes:'Faucet body drips even when fully closed.',
     createdAt:isoMinutesAgo(210), source:'demo'
@@ -1394,7 +1421,7 @@ const BOOKINGS = [
     id:'b2', customerId:'c1', providerId:'p2',
     summary:'Breaker keeps tripping', request:'Breaker kept tripping in the sala',
     date:dayLabel(1), time:'4:00 PM', status:'upcoming',
-    amountCentavos:41500, paymentStatus:'Unpaid', paymentMethod:'GCash (0912***6789)',
+    amountCentavos:41500, payStatus:'unpaid', payMethod:'gcash',
     arrivalTime:'4:00 PM',
     barangay:'Poblacion', address:'Blk 4 Lot 12, Rizal St., Poblacion',
     lat:6.3671, lng:124.9331, notes:'Trips when the air-con and kettle run together.',
@@ -1404,7 +1431,7 @@ const BOOKINGS = [
     id:'b3', customerId:'c1', providerId:'p3',
     summary:'Full house deep clean', request:'Full house deep clean',
     date:'Aug 30', time:'9:00 AM', status:'completed',
-    amountCentavos:51500, paymentStatus:'Paid Online', paymentMethod:'GCash (0912***6789)',
+    amountCentavos:51500, payStatus:'captured', payMethod:'gcash',
     arrivalTime:'Completed', myRating:5,
     barangay:'Poblacion', address:'Blk 4 Lot 12, Rizal St., Poblacion',
     lat:6.3671, lng:124.9331, notes:'Two bedrooms, sala and kitchen.',
@@ -1414,7 +1441,7 @@ const BOOKINGS = [
     id:'b6', customerId:'c1', providerId:'p2',
     summary:'Rewire flooded junction box', request:'Rewired the flooded outdoor junction box',
     date:'Aug 21', time:'10:00 AM', status:'completed',
-    amountCentavos:48000, paymentStatus:'Paid Online', paymentMethod:'GCash (0912***6789)',
+    amountCentavos:48000, payStatus:'captured', payMethod:'gcash',
     arrivalTime:'Completed',
     barangay:'Poblacion', address:'Blk 4 Lot 12, Rizal St., Poblacion',
     lat:6.3671, lng:124.9331, notes:'Outdoor box took rainwater during the storm.',
@@ -1424,7 +1451,10 @@ const BOOKINGS = [
     id:'b4', customerId:'c1', providerId:'p6',
     summary:'Grocery pickup', request:'Grocery pickup from the market',
     date:'Aug 14', time:'11:00 AM', status:'completed',
-    amountCentavos:7500, paymentStatus:'Paid Online', paymentMethod:'GCash (0912***6789)',
+    /* A delivery paid on arrival: the only finished job the platform never held,
+       so the receivable, the ageing table and the "fee owed on cash work" line
+       have a record behind them instead of a heading over an empty table. */
+    amountCentavos:7500, payStatus:'collected', payMethod:'cash',
     arrivalTime:'Completed', myRating:4,
     barangay:'Poblacion', address:'Blk 4 Lot 12, Rizal St., Poblacion',
     lat:6.3671, lng:124.9331, notes:'Market list, one trip.',
@@ -1434,7 +1464,7 @@ const BOOKINGS = [
     id:'b5', customerId:'c1', providerId:'p4',
     summary:'Refrigerator not cooling', request:'Refrigerator not cooling',
     date:'Aug 5', time:'1:00 PM', status:'cancelled',
-    amountCentavos:31500, paymentStatus:'Cancelled', paymentMethod:'GCash (0912***6789)',
+    amountCentavos:31500, payStatus:'voided', payMethod:'gcash',
     arrivalTime:'Cancelled', cancelReason:'Provider could not make the slot',
     barangay:'Poblacion', address:'Blk 4 Lot 12, Rizal St., Poblacion',
     lat:6.3671, lng:124.9331, notes:'',
@@ -1444,7 +1474,7 @@ const BOOKINGS = [
     id:'pb1', customerId:'c2', providerId:'p1',
     summary:'Fix kitchen sink leak', request:'Kitchen sink is leaking continuously from the pipe joint underneath.',
     date:dayLabel(0), time:'6:00 PM', status:'upcoming',
-    amountCentavos:36500, paymentStatus:'Unpaid',
+    amountCentavos:36500, payStatus:'unpaid',
     barangay:'Poblacion', address:'Blk 2 Lot 8, Mabini St., Poblacion',
     lat:6.3671, lng:124.9331, notes:'Joint underneath the sink.',
     createdAt:isoMinutesAgo(300), source:'demo'
@@ -1453,7 +1483,7 @@ const BOOKINGS = [
     id:'pb2', customerId:'c3', providerId:'p1',
     summary:'Water heater check', request:'Water heater is not reaching desired warm temperature.',
     date:dayLabel(1), time:'2:00 PM', status:'upcoming',
-    amountCentavos:42000, paymentStatus:'Unpaid',
+    amountCentavos:42000, payStatus:'unpaid',
     barangay:'Poblacion', address:'Unit 4B, Poblacion Commercial Complex',
     lat:6.3685, lng:124.9345, notes:'Tank unit, about six years old.',
     createdAt:isoMinutesAgo(600), source:'demo'
@@ -1462,7 +1492,7 @@ const BOOKINGS = [
     id:'pb3', customerId:'c4', providerId:'p1',
     summary:'Clogged bathroom drain', request:'Bathroom floor drain completely cleared and sanitized.',
     date:'Yesterday', time:'9:00 AM', status:'completed',
-    amountCentavos:35000, paymentStatus:'Paid Online', arrivalTime:'Completed',
+    amountCentavos:35000, payStatus:'captured', arrivalTime:'Completed',
     barangay:'Barangay 4', address:'12 Orchid St., Barangay 4',
     lat:6.3550, lng:124.9210, notes:'Slow drain behind the toilet.',
     createdAt:isoMinutesAgo(60 * 26), source:'demo'
@@ -1471,7 +1501,7 @@ const BOOKINGS = [
     id:'pb4', customerId:'c5', providerId:'p1',
     summary:'Main valve repair', request:'Main water valve ruptured near garage entrance.',
     date:dayLabel(1), time:'10:30 AM', status:'upcoming',
-    amountCentavos:50000, paymentStatus:'Unpaid',
+    amountCentavos:50000, payStatus:'unpaid',
     barangay:'Poblacion', address:'Lot 3 Block 1, Rizal Ave., Poblacion',
     lat:6.3660, lng:124.9320, notes:'Water meter is off, awaiting the repair.',
     createdAt:isoMinutesAgo(180), source:'demo'
@@ -1480,7 +1510,7 @@ const BOOKINGS = [
     id:'pb5', customerId:'c6', providerId:'p1',
     summary:'Shower handle replacement', request:'Shower handle snapped off inside the fitting.',
     date:'Aug 28', time:'Cancelled', status:'cancelled',
-    amountCentavos:28000, paymentStatus:'Cancelled', arrivalTime:'Cancelled',
+    amountCentavos:28000, payStatus:'voided', arrivalTime:'Cancelled',
     cancelReason:'Client cancelled due to schedule conflict',
     barangay:'San Isidro', address:'45 Sampaguita St., San Isidro',
     lat:6.3900, lng:124.9500, notes:'',
@@ -1490,7 +1520,7 @@ const BOOKINGS = [
     id:'pb6', customerId:'c7', providerId:'p1',
     summary:'Bathroom tap will not shut off', request:'The tap in the small bathroom keeps running after I turn it off. Nothing is overflowing yet, but it has run all night twice this week.',
     date:dayLabel(1), time:'9:00 AM', status:'requested',
-    amountCentavos:35000, paymentStatus:'Unpaid', arrivalTime:'Awaiting provider',
+    amountCentavos:35000, payStatus:'unpaid', arrivalTime:'Awaiting provider',
     barangay:'Poblacion', address:'Blk 5 Lot 2, Bonifacio St., Poblacion',
     lat:6.3652, lng:124.9301, notes:'Wasteful but not overflowing yet.',
     createdAt:isoMinutesAgo(6), source:'demo'
@@ -1499,7 +1529,7 @@ const BOOKINGS = [
     id:'pb7', customerId:'c8', providerId:'p1',
     summary:'Kitchen drain backs up', request:'Water comes back up through the floor drain whenever the kitchen sink is full. Most days after dinner.',
     date:dayLabel(2), time:'2:00 PM', status:'requested',
-    amountCentavos:40000, paymentStatus:'Unpaid', arrivalTime:'Awaiting provider',
+    amountCentavos:40000, payStatus:'unpaid', arrivalTime:'Awaiting provider',
     barangay:'San Isidro', address:'6 Santiago Ave., San Isidro',
     lat:6.3887, lng:124.9463, notes:'Smell reaches the sala by evening.',
     createdAt:isoMinutesAgo(14), source:'demo'
@@ -1661,6 +1691,20 @@ function isSettled(booking) {
   return ledgerFor(booking.id).some(e => e.eventType === 'booking.settled' || e.eventType === 'booking.settled_cash');
 }
 
+/* What one booking has actually put into an account, net of anything already
+   taken back from it. Two rules depend on this rather than on a formula: a case
+   may only freeze money the job itself earned, and a refund may only reverse the
+   fee the job itself paid. Anything else reaches into another provider's
+   earnings, or charges commission on parts that were never commissioned. */
+function creditedFor(bookingId, account) {
+  let net = 0;
+  ledgerFor(bookingId).forEach(e => e.lines.forEach(l => {
+    if (l.account !== account) return;
+    net += (l.direction === 'credit' ? l.amountCentavos : -l.amountCentavos);
+  }));
+  return Math.max(0, net);
+}
+
 /* Debits raise assets and expenses; credits raise liabilities and revenue. */
 function accountBalance(account, scope) {
   const def = ACCOUNTS[account];
@@ -1778,8 +1822,8 @@ function providerBalances(providerId) {
      provider already holds the customer's money and owes us a fee — counting their
      takings as a payable would let a payout write a cheque from money we never
      received, and the payable would go negative doing it. */
-  const held = settled.filter(b => !/cash on arrival/i.test(b.paymentMethod || ''));
-  const onSite = settled.filter(b => /cash on arrival/i.test(b.paymentMethod || ''));
+  const held = settled.filter(b => !isCashJob(b));
+  const onSite = settled.filter(b => isCashJob(b));
   let pending = 0, available = 0, disputed = 0;
   held.forEach(b => {
     const share = settlementToProvider(b.pricing);
@@ -1815,7 +1859,7 @@ function providerStatement(providerId) {
 
 function commissionReceivableAgeing() {
   const byProvider = {};
-  BOOKINGS.filter(b => b.status === 'completed' && b.pricing && /cash on arrival/i.test(b.paymentMethod || ''))
+  BOOKINGS.filter(b => b.status === 'completed' && b.pricing && isCashJob(b))
     .forEach(b => {
       const key = b.providerId;
       byProvider[key] = byProvider[key] || { providerId: key, owedCentavos: 0, jobs: 0, oldest: b.createdAt };
@@ -1859,8 +1903,11 @@ function seedHistoricalLedger() {
         inclusions: spec.partsCentavos ? [{ label:'Parts and materials', amountCentavos: spec.partsCentavos }] : []
       }));
     b.amountCentavos = b.pricing.customerTotalCentavos;
-    if (!b.paymentMethod)
-      b.paymentMethod = /paid online/i.test(b.paymentStatus || '') ? 'GCash (0912***6789)' : 'Cash on Arrival';
+    /* A job the record says was paid on site never passed through us; everything
+       else in the demo roster was booked through the partner. Read from the code,
+       never from the words on screen. */
+    if (!b.payMethod) b.payMethod = b.payStatus === 'pending_site' ? 'cash' : 'gcash';
+    if (!b.payStatus) b.payStatus = 'unpaid';
     b.summary = b.summary || listing.title;
     void provider;
   });
@@ -1871,12 +1918,12 @@ function seedHistoricalLedger() {
     .forEach(b => settleBooking(b));
   BOOKINGS.filter(b => b.source === 'demo' && b.pricing &&
                        ['upcoming', 'ongoing', 'completed'].includes(b.status) &&
-                       !/cash on arrival/i.test(b.paymentMethod || ''))
+                       !isCashJob(b))
     .forEach(b => { if (!paymentsFor(b.id).length)
       recordPayment(b, 'authorization', 'authorized', b.pricing.customerTotalCentavos, 'Held on acceptance'); });
   BOOKINGS.filter(b => b.source === 'demo' && b.status === 'completed' && b.pricing)
     .forEach(b => {
-      const cash = /cash on arrival/i.test(b.paymentMethod || '');
+      const cash = isCashJob(b);
       if (!paymentsFor(b.id).some(p => p.type === 'capture' || p.type === 'collection'))
         recordPayment(b, cash ? 'collection' : 'capture', cash ? 'collected' : 'captured',
                       b.pricing.customerTotalCentavos, cash ? 'Collected on site' : 'Released on completion');
@@ -1917,7 +1964,7 @@ function settlementLines(booking) {
    never passes through here, because no money was ever taken for it. */
 function takeHolding(booking) {
   if (!booking.pricing) return null;
-  if (/cash on arrival/i.test(booking.paymentMethod || '')) return null;
+  if (isCashJob(booking)) return null;
   if (ledgerFor(booking.id).some(e => e.eventType === 'payment.authorized')) return null;
   return postEvent('payment.authorized', [
     { account:'escrow_held', direction:'debit', amountCentavos: booking.pricing.customerTotalCentavos },
@@ -1936,7 +1983,7 @@ function returnHolding(booking, note) {
 
 function settleBooking(booking) {
   const p = booking.pricing;
-  if (/cash on arrival/i.test(booking.paymentMethod || '')) {
+  if (isCashJob(booking)) {
     /* The provider collected the cash on site. The platform never held it, so
        there is no asset to move — only a fee the provider now owes. */
     return postEvent('booking.settled_cash', [
@@ -2019,7 +2066,22 @@ function providerIsFreeFrom(booking) {
   const clash = bookingsForProvider().some(b => b.id !== booking.id &&
     (b.status === 'ongoing' || b.status === 'en_route' || b.status === 'arrived'));
   return clash
-    ? { ok:false, reason:'You already have a job in progress. Finish or reschedule that one first.' }
+    ? { ok:false, reason:'You already have a job in progress. Close it out before starting this one.' }
+    : { ok:true };
+}
+
+/* Accepting is where a visit is promised, so an impossible pair has to be
+   refused here rather than at the door. The clash is the same slot on the same
+   day: a solo provider may hold Tuesday morning and Tuesday evening, but not
+   Tuesday at 10:00 twice. */
+function providerIsFreeToAccept(booking) {
+  const clash = BOOKINGS.find(b => b.id !== booking.id &&
+    b.providerId === booking.providerId &&
+    ['upcoming', 'en_route', 'arrived', 'ongoing'].includes(b.status) &&
+    b.date === booking.date && b.time === booking.time);
+  return clash
+    ? { ok:false, reason:'You already hold ' + clash.date + ' at ' + clash.time +
+        '. Answer that request first — the same hour cannot belong to two jobs.' }
     : { ok:true };
 }
 
@@ -2119,15 +2181,23 @@ function onExpire(booking) {
 }
 
 function onDispute(booking, actor, opts) {
-  const held = booking.pricing && !/cash on arrival/i.test(booking.paymentMethod || '')
-    ? settlementToProvider(booking.pricing) : 0;
+  /* Freeze only what this job has actually paid the provider, less anything
+     already held for it. A case raised before completion holds nothing, because
+     the money is still with the customer or the platform — the old code froze the
+     provider's full share anyway and took it out of whatever else they had earned. */
+  const held = Math.max(0, creditedFor(booking.id, 'provider_payable')
+                             - accountBalance('dispute_hold', booking.id));
   return {
     ledger: held > 0 ? { type:'dispute.held',
       lines: [{ account:'provider_payable', scope: booking.providerId, direction:'debit', amountCentavos: held },
               { account:'dispute_hold', scope: booking.id, direction:'credit', amountCentavos: held }],
       note:(opts && opts.reason) || 'Case opened' } : null,
+    frozenCentavos: held,
     notify:{ to:'admin', title:'Dispute opened',
-             body:'Case on ' + booking.summary + ' is waiting for evidence. Nothing is decided yet.' }
+      body: 'Case on ' + booking.summary + ' is waiting for evidence. '
+        + (held > 0 ? peso(held) + ' of this job’s payout is frozen while it is read.'
+                    : 'Nothing had been paid out on this job yet, so there was nothing to freeze.')
+        + ' Nothing here has decided who was at fault.' }
   };
 }
 
@@ -2135,12 +2205,18 @@ function onUphold(booking) {
   /* Release what the freeze held. This is a decision to hand the money back to
      the provider and it is entered as one — the freeze is never deleted. */
   const held = accountBalance('dispute_hold', booking.id);
-  if (held <= 0) return { notify:{ to:'customer', title:'Case closed', body:'The booking stands as completed.' } };
-  return { ledger: { type:'dispute.released',
-      lines: [{ account:'dispute_hold', scope: booking.id, direction:'debit', amountCentavos: held },
-              { account:'provider_payable', scope: booking.providerId, direction:'credit', amountCentavos: held }],
-      note:'Closed in the provider’s favour' },
-    notify:{ to:'customer', title:'Case closed', body:'The booking stands as completed.' } };
+  if (held > 0)
+    postEvent('dispute.released',
+      [{ account:'dispute_hold', scope: booking.id, direction:'debit', amountCentavos: held },
+       { account:'provider_payable', scope: booking.providerId, direction:'credit', amountCentavos: held }],
+      { bookingId: booking.id, note:'Closed in the provider’s favour', source: booking.source });
+  /* A case can be raised while the work is still on the go. Closing it for the
+     provider then has to make the money that completion would have made, or the
+     job reads completed on screen while the books hold nothing for it and the
+     customer's hold is never released. */
+  if (booking.pricing && !isSettled(booking)) captureBooking(booking);
+  return { notify:{ to:'customer', title:'Case closed',
+    body: 'The booking stands as completed. ' + (held > 0 ? peso(held) + ' has been released to the provider.' : 'No payout was held.') } };
 }
 
 /* disputed -> cancelled is a decision with a number attached to it. */
@@ -2149,7 +2225,7 @@ function onRefundDue(booking, actor, opts) { return onRefund(booking, actor, opt
 /* ---- the table ------------------------------------------------------------- */
 const TRANSITIONS = {
   requested: {
-    upcoming:  { actors:['provider'],                     effects: onAccept },
+    upcoming:  { actors:['provider'], guard: providerIsFreeToAccept, effects: onAccept },
     cancelled: { actors:['customer', 'provider', 'system'], effects: onCancel },
     expired:   { actors:['system'],                       effects: onExpire }
   },
@@ -2159,14 +2235,20 @@ const TRANSITIONS = {
     cancelled: { actors:['customer', 'provider'],         effects: onCancel },
     disputed:  { actors:['customer', 'admin'], guard: canDispute, effects: onDispute }
   },
+  /* On the way, the visit has not been made, so "no one was there" cannot be true
+     yet — that outcome belongs to arrived. A provider who cannot get there, or
+     finds the door shut on the way, cancels: late, and with the fee attached. */
   en_route: {
     arrived:   { actors:['provider'],                     effects: onArrive },
-    no_show:   { actors:['provider'],                     effects: onNoShow },
-    cancelled: { actors:['customer'],                     effects: onCancel }
+    cancelled: { actors:['customer', 'provider'],         effects: onCancel }
   },
   arrived: {
     ongoing:   { actors:['provider'], guard: providerIsFreeFrom, effects: onStart },
-    no_show:   { actors:['provider'],                     effects: onNoShow }
+    no_show:   { actors:['provider'],                     effects: onNoShow },
+    /* The customer is not locked at the door: they may still call it off, and the
+       machine charges them for it as a late cancellation rather than inventing a
+       visit that never started. */
+    cancelled: { actors:['customer'],                     effects: onCancel }
   },
   ongoing: {
     completed: { actors:['provider', 'customer'],         effects: onComplete },
@@ -2293,7 +2375,7 @@ function seedStatusHistory() {
     b.completedAt = new Date(Date.parse(startedAt) + 40 * 60000).toISOString();
     recordStatusEvent(b, 'ongoing', 'completed', as, 'Marked complete', b.completedAt);
     /* A job the demo says was paid for is one the customer confirmed. */
-    b.confirmedBy = /paid/i.test(b.paymentStatus || '') ? 'customer' : null;
+    b.confirmedBy = ['captured', 'collected'].includes(b.payStatus) ? 'customer' : null;
   });
   return true;
 }
@@ -2324,20 +2406,36 @@ const PAYMENT_LABELS = {
   voided:        'Never charged'
 };
 
+/* A booking stores codes. The words are produced on the way to a screen, because
+   the money rules used to read the words: renaming "Cash on Arrival" anywhere in
+   the copy would silently change how a job is held, settled, frozen or refunded,
+   and a booking-axis word like "Cancelled" could and did land on the money axis
+   (AGENTS.md 22). */
+const PAY_METHODS = {
+  gcash: 'GCash (0912***6789)',
+  cash:  'Cash on Arrival'
+};
+
+function payMethodLabel(booking){ return PAY_METHODS[booking.payMethod] || PAY_METHODS.gcash; }
+function payStatusLabel(booking){ return PAYMENT_LABELS[booking.payStatus] || PAYMENT_LABELS.unpaid; }
+/* Cash is a settlement route, not a phrase: it is the one method where the
+   platform never holds the money, and every rule that branches on it reads this. */
+function isCashJob(booking){ return booking.payMethod === 'cash'; }
+
 function recordPayment(booking, type, status, amountCentavos, note) {
   const row = {
     id: 'pay' + (++paymentSeq),
     bookingId: booking.id,
     type,                                  /* authorization | capture | refund | void | collection */
     status,                                /* the values in PAYMENT_LABELS */
-    method: booking.paymentMethod || 'Cash on Arrival',
+    method: booking.payMethod || 'cash',
     amountCentavos,
     gatewayRef: MockGateway.ref(type),     /* a real gateway returns its own id here */
     at: new Date().toISOString(),
     note: note || ''
   };
   PAYMENTS.push(row);
-  booking.paymentStatus = PAYMENT_LABELS[status] || status;
+  booking.payStatus = status;                        /* the code; screens map it to words */
   return row;
 }
 
@@ -2358,8 +2456,8 @@ const Gateway = MockGateway;   /* swap this line, nothing else, to go live */
 
 /* ---- the money half of each transition ------------------------------------- */
 function authorizeBooking(booking) {
-  if (/cash on arrival/i.test(booking.paymentMethod || '')) {
-    booking.paymentStatus = PAYMENT_LABELS.pending_site;
+  if (isCashJob(booking)) {
+    booking.payStatus = 'pending_site';
     return null;                       /* nothing is taken until the work is done */
   }
   if (!booking.pricing) return null;
@@ -2374,7 +2472,7 @@ function captureBooking(booking) {
   const p = booking.pricing;
   if (!p) return null;
   if (isSettled(booking)) return null;
-  if (/cash on arrival/i.test(booking.paymentMethod || '')) {
+  if (isCashJob(booking)) {
     /* The customer paid the provider on site. The platform never held a peso, so
        there is nothing to capture — only the fee it is now owed. */
     settleBooking(booking);
@@ -2399,16 +2497,77 @@ function voidBooking(booking, note) {
   return recordPayment(booking, 'void', 'voided', held, note || 'Held money returned, nothing charged');
 }
 
+/* The credit lines this booking actually put on the books, read back from the
+   ledger rather than derived from a rate. A refund takes these back. */
+function postedCredits(booking) {
+  const out = [];
+  ledgerFor(booking.id).forEach(e => {
+    if (e.eventType !== 'booking.settled' && e.eventType !== 'booking.settled_cash') return;
+    e.lines.forEach(l => { if (l.direction === 'credit') out.push({ account: l.account, scope: l.scope, amountCentavos: l.amountCentavos }); });
+  });
+  return out;
+}
+
+/* What the platform can actually hand back. A partner job the customer has paid
+   for is refundable up to the agreed total; a job still on hold is refundable up
+   to the hold; and on a cash job the visit money never passed through us, so only
+   our own fee is ours to forgive. */
+function refundableCentavos(booking) {
+  const p = booking.pricing;
+  if (!p) return 0;
+  if (isCashJob(booking)) return creditedFor(booking.id, 'platform_fee_revenue');
+  if (!isSettled(booking)) return Math.max(0, accountBalance('customer_deposit', booking.id));
+  const already = paymentsFor(booking.id).filter(x => x.type === 'refund').reduce((t, x) => t + x.amountCentavos, 0);
+  return Math.max(0, p.customerTotalCentavos - already);
+}
+
+/* A refund takes money out of every place the settlement put it in, in the same
+   proportions it went in — the provider's share, our fee, the fixed fee and any
+   tax, line for line from the booking's own entries. Re-deriving the split from
+   today's rate would put commission on parts the platform never commissioned, and
+   capping our fee by the platform's whole revenue lets one provider's refund be
+   funded from another's earnings. */
+function refundLines(booking, amountCentavos) {
+  const p = booking.pricing;
+  if (isCashJob(booking))
+    return [{ account:'platform_fee_revenue', direction:'debit', amountCentavos: amountCentavos },
+            { account:'commission_receivable', scope: booking.providerId, direction:'credit', amountCentavos: amountCentavos }];
+
+  /* Still on hold: nothing was ever earned, so the hold simply goes back. */
+  if (!isSettled(booking))
+    return [{ account:'customer_deposit', scope: booking.id, direction:'debit', amountCentavos: amountCentavos },
+            { account:'escrow_held', direction:'credit', amountCentavos: amountCentavos }];
+
+  const total = p.customerTotalCentavos;
+  const debits = postedCredits(booking).map(c => ({
+    account: c.account, scope: c.scope, direction: 'debit',
+    amountCentavos: Math.min(c.amountCentavos, Math.round(c.amountCentavos * amountCentavos / total))
+  })).filter(l => l.amountCentavos > 0);
+  /* Rounding has to land somewhere: the largest line absorbs the remainder so the
+     reversal adds up to exactly the money leaving the platform. */
+  const sum = debits.reduce((t, l) => t + l.amountCentavos, 0);
+  const gap = amountCentavos - sum;
+  if (gap !== 0 && debits.length) {
+    const biggest = debits.reduce((a, b) => (b.amountCentavos > a.amountCentavos ? b : a));
+    if (biggest.amountCentavos + gap > 0) biggest.amountCentavos += gap;
+  }
+  return debits.concat([{ account:'escrow_held', direction:'credit', amountCentavos: amountCentavos }]);
+}
+
 /* A refund takes money out of three places at once: back to the customer, out of
-   what we owe the provider, and off our own earned fee. Pro rata, because taking
-   a full commission on work we agreed to refund would be taking a cut of nothing. */
+   what we owe the provider, and off our own earned fee. Pro rata against the
+   settlement this job actually made, because taking a full commission on work we
+   agreed to refund would be taking a cut of nothing. */
 function refundBooking(booking, amountCentavos, actor, note) {
   const p = booking.pricing;
   if (!p) throw new GuardRejected('this job never had terms agreed, so there is nothing to refund');
-  const already = paymentsFor(booking.id).filter(x => x.type === 'refund').reduce((t, x) => t + x.amountCentavos, 0);
-  const refundable = p.customerTotalCentavos - already;
-  const amount = Math.min(Math.round(amountCentavos), refundable);
-  if (amount <= 0) throw new GuardRejected('this job has already been refunded in full');
+  const cap = refundableCentavos(booking);
+  if (cap <= 0)
+    throw new GuardRejected(isCashJob(booking)
+      ? 'The customer paid on site and no fee was booked on this job, so there is nothing the platform can return.'
+      : 'This job has already been refunded in full, or nothing is being held for it.');
+  const amount = Math.min(Math.round(amountCentavos), cap);
+  if (amount <= 0) throw new GuardRejected('a refund has to be at least one centavo');
 
   /* Any freeze must be released into the payable before it can be paid out of. */
   const held = accountBalance('dispute_hold', booking.id);
@@ -2417,20 +2576,16 @@ function refundBooking(booking, amountCentavos, actor, note) {
      { account:'provider_payable', scope: booking.providerId, direction:'credit', amountCentavos: held }],
     { bookingId: booking.id, note:'Released to fund a refund', source: booking.source });
 
-  const feePortion = Math.min(Math.round(amount * p.commissionRate), accountBalance('platform_fee_revenue'));
-  const providerPortion = amount - feePortion;
-  const payable = accountBalance('provider_payable', booking.providerId);
-  if (providerPortion > payable)
+  const lines = refundLines(booking, amount);
+  const providerLine = lines.find(l => l.account === 'provider_payable');
+  if (providerLine && providerLine.amountCentavos > accountBalance('provider_payable', booking.providerId))
     throw new GuardRejected('the provider has already been paid out; this refund needs a claw-back, which the pilot does not do');
 
   Gateway.refund(amount);
-  postEvent('payment.refunded', [
-    { account:'provider_payable', scope: booking.providerId, direction:'debit', amountCentavos: providerPortion },
-    { account:'platform_fee_revenue', direction:'debit', amountCentavos: feePortion },
-    { account:'escrow_held', direction:'credit', amountCentavos: amount }
-  ], { bookingId: booking.id, note: note || 'Refunded after review', source: booking.source });
+  postEvent('payment.refunded', lines,
+    { bookingId: booking.id, note: note || 'Refunded after review', source: booking.source });
 
-  const row = recordPayment(booking, 'refund', amount === p.customerTotalCentavos - already ? 'refunded' : 'partially_refunded',
+  const row = recordPayment(booking, 'refund', amount === cap ? 'refunded' : 'partially_refunded',
     amount, note || 'Refunded after review');
   row.byActor = (actor && actor.role) || 'admin';
   return row;
@@ -2471,13 +2626,14 @@ function runPayoutCycle(providerId) {
 
 /* ---- the machine's refund move, replacing the placeholder ------------------ */
 function onRefund(booking, actor, opts) {
-  const amount = opts && opts.refundCentavos ? opts.refundCentavos
-    : (booking.pricing ? booking.pricing.customerTotalCentavos -
-        paymentsFor(booking.id).filter(x => x.type === 'refund').reduce((t, x) => t + x.amountCentavos, 0) : 0);
+  const amount = opts && opts.refundCentavos ? opts.refundCentavos : refundableCentavos(booking);
+  const cash = isCashJob(booking);
   refundBooking(booking, amount, actor, (opts && opts.reason) || 'Case closed in the customer’s favour');
   booking.resolvedBy = (actor && actor.role) || 'admin';
-  return { notify:{ to:'customer', title:'Refund issued',
-                    body: peso(accountBalanceFor(booking)) + ' is on its way back to you.' } };
+  return { notify:{ to:'customer', title: cash ? 'Fee reversed' : 'Refund issued',
+    body: cash
+      ? peso(amount) + ' of platform fee was taken off this job. The visit money was paid straight to the provider, so returning that part is between you and them.'
+      : peso(amount) + ' is on its way back to you.' } };
 }
 function accountBalanceFor(booking) {
   const p = booking.pricing;
@@ -2498,10 +2654,21 @@ let disputeSeq = 0;
 function openDispute(bookingId, actor, reason) {
   const b = bookingById(bookingId);
   if (!b) throw new Error('no booking ' + bookingId);
+  if (DISPUTES.some(d => d.bookingId === bookingId && d.status === 'under review'))
+    throw new GuardRejected('this job already has a case open.');
+  const text = (reason || '').trim();
+  if (text.length < 10)
+    throw new GuardRejected('Say what went wrong in a few words — a person has to read it.');
+  /* The move happens first. If the machine refuses it, or the freeze will not
+     balance, no case is left pointing at a booking that never opened. */
+  attemptTransition(bookingId, 'disputed', actor, { reason: text });
   const d = {
     id: 'DS-' + new Date().getFullYear() + '-' + String(++disputeSeq).padStart(4, '0'),
-    bookingId, openedBy: (actor && actor.role) || 'customer', reason,
+    bookingId, openedBy: (actor && actor.role) || 'customer', reason: text,
     amountInClaimCentavos: b.pricing ? b.pricing.customerTotalCentavos : b.amountCentavos,
+    /* What the books actually froze, not what the claim asks for — the card can
+       then say honestly when a case has no money behind it. */
+    frozenCentavos: accountBalance('dispute_hold', bookingId),
     status: 'under review',
     openedAt: new Date().toISOString(),
     evidence: bookingTimeline(bookingId).map(e => ({ at: e.at, text: label(e.to) + (e.note ? ' — ' + e.note : '') })),
@@ -2509,7 +2676,6 @@ function openDispute(bookingId, actor, reason) {
   };
   DISPUTES.push(d);
   b.disputeId = d.id;
-  attemptTransition(bookingId, 'disputed', actor, { reason });
   persist();
   return d;
 }
@@ -2548,10 +2714,13 @@ function seedDemoDispute() {
   const b = BOOKINGS.find(x => x.source === 'demo' && x.status === 'completed' && x.pricing && x.providerId === 'p2');
   if (!b) return false;
   b.confirmedBy = 'customer';
+  /* The freeze is a real entry, not a caption on the screen. */
+  const held = settlementToProvider(b.pricing);
   const d = {
     id: 'DS-2026-0001', bookingId: b.id, openedBy: 'customer',
     reason: 'The same fault came back three days after the repair.',
     amountInClaimCentavos: b.pricing.customerTotalCentavos,
+    frozenCentavos: held,
     status: 'under review', openedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
     evidence: bookingTimeline(b.id).map(e => ({ at: e.at, text: label(e.to) + (e.note ? ' — ' + e.note : '') })),
     resolution: null, resolvedAt: null
@@ -2559,8 +2728,6 @@ function seedDemoDispute() {
   DISPUTES.push(d);
   b.disputeId = d.id;
   disputeSeq = 1;
-  /* The freeze is a real entry, not a caption on the screen. */
-  const held = settlementToProvider(b.pricing);
   postEvent('dispute.held', [
     { account: 'provider_payable', scope: b.providerId, direction: 'debit', amountCentavos: held },
     { account: 'dispute_hold', scope: b.id, direction: 'credit', amountCentavos: held }
@@ -2604,7 +2771,7 @@ function categorySupply() {
 function statementCard() {
   const st = platformStatement();
   const all = BOOKINGS.filter(b => b.status === 'completed' && b.pricing);
-  const cashJobs = all.filter(b => /cash on arrival/i.test(b.paymentMethod || ''));
+  const cashJobs = all.filter(b => isCashJob(b));
   return `<div class="card" style="border-radius:14px; padding:14px; margin-bottom:14px;">
       <div class="row" style="margin-bottom:12px;">
         <b class="card-title">Platform statement</b>
@@ -2822,7 +2989,7 @@ function resetDemoData() {
 /* 5 adds payment records and payouts: the money axis of a job has to survive a
    reload exactly like the service axis does. */
 /* 6 adds dispute cases, which carry their own claim amount and outcome. */
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 const STORE_KEY = 'sukinnect.snapshot.v1';
 
 const Store = (function () {
@@ -2906,6 +3073,9 @@ function snapshot() {
     statusEvents: STATUS_EVENTS,
     ledger: LEDGER,
     config: CONFIG,
+    /* The change log travels with the values it describes. A console that shows a
+       15% rate with no record of who set it is not auditable (AGENTS.md 29, 31). */
+    configAudit: CONFIG_AUDIT,
     profileData: state.profileData,
     providerSettings: { availability: state.providerAvailability, emergencyDispatch: state.providerEmergencyDispatch },
     providerProfileData: state.providerProfileData
@@ -2917,6 +3087,19 @@ function persist() { return Store.write(snapshot()); }
 function hydrate() {
   const snap = Store.read();
   if (!snap) return { restored: false, kind: Store.kind };
+  /* The version number says the shape is right. It does not say the values are.
+     A booking whose status the machine does not have would load, print a word no
+     screen can explain and have no transitions at all — an inert record. Same for
+     a payment state or a ledger account. Such a dump is refused and the app starts
+     from the sample records instead of carrying a hole through every screen. */
+  if (!Array.isArray(snap.bookings) ||
+      snap.bookings.some(b => !b || !BOOKING_STATES[b.status]))
+    return { restored:false, kind:Store.kind, rejected:'a booking carries a status the machine does not have' };
+  if (snap.bookings.some(b => b.payStatus && !PAYMENT_LABELS[b.payStatus]))
+    return { restored:false, kind:Store.kind, rejected:'a booking carries a payment state that does not exist' };
+  if (Array.isArray(snap.ledger) &&
+      snap.ledger.some(e => !e.lines || e.lines.some(l => !ACCOUNTS[l.account])))
+    return { restored:false, kind:Store.kind, rejected:'the ledger names an account that does not exist' };
   replaceContents(PROVIDERS, snap.providers);
   replaceContents(BOOKINGS, snap.bookings);
   replaceContents(CUSTOMERS, snap.customers);
@@ -2935,6 +3118,12 @@ function hydrate() {
   STATUS_EVENTS.forEach(e => { const n = parseInt(String(e.id).replace(/[^0-9]/g, ''), 10);
                                if (!Number.isNaN(n) && n > statusEventSeq) statusEventSeq = n; });
   if (snap.config) Object.assign(CONFIG, snap.config);
+  /* The log of every rate change comes back with the rates it describes, so an
+     administrator's decision is still on the record after a reload (29, 31). */
+  if (snap.configAudit) replaceContents(CONFIG_AUDIT, snap.configAudit);
+  /* The log of those changes has to come back with them, or a restored device
+     shows a rate nobody is able to account for. */
+  if (snap.configAudit) replaceContents(CONFIG_AUDIT, snap.configAudit);
   /* Ledger ids are a sequence, not a timestamp. A restored dump has to raise the
      counter past its own entries or the next event reuses an id already booked. */
   LEDGER.forEach(e => { const n = parseInt(String(e.id).replace(/[^0-9]/g, ''), 10);
@@ -2998,6 +3187,9 @@ let state = {
   selectedProvider:null, 
   selectedBookingId:'b1',
   selectedProviderBookingId:null,
+  // Which job the case sheet is about. Only the sheet reads it, and closing the
+  // sheet clears it, so a stale case form cannot be submitted against another job.
+  caseBookingId:null,
   activeChatProvider:null,
   isChatOpen:false,
   conciergePhotoAttached: false,
@@ -3101,7 +3293,6 @@ let state = {
   expandedOngoing: false
 };
 
-
 /* ---- reicon icon system (reicon.dev v1.2.4, MIT license) — Outline + Filled weights ---- */
 const ICONS = {
   home: {o:`<path d="M9 17.25C8.58579 17.25 8.25 17.5858 8.25 18C8.25 18.4142 8.58579 18.75 9 18.75H15C15.4142 18.75 15.75 18.4142 15.75 18C15.75 17.5858 15.4142 17.25 15 17.25H9Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M12 1.25C11.2919 1.25 10.6485 1.45282 9.95055 1.79224C9.27585 2.12035 8.49642 2.60409 7.52286 3.20832L5.45628 4.4909C4.53509 5.06261 3.79744 5.5204 3.2289 5.95581C2.64015 6.40669 2.18795 6.86589 1.86131 7.46263C1.53535 8.05812 1.38857 8.69174 1.31819 9.4407C1.24999 10.1665 1.24999 11.0541 1.25 12.1672V13.7799C1.24999 15.6837 1.24998 17.1866 1.4027 18.3616C1.55937 19.567 1.88856 20.5401 2.63236 21.3094C3.37958 22.0824 4.33046 22.4277 5.50761 22.5914C6.64849 22.75 8.10556 22.75 9.94185 22.75H14.0581C15.8944 22.75 17.3515 22.75 18.4924 22.5914C19.6695 22.4277 20.6204 22.0824 21.3676 21.3094C22.1114 20.5401 22.4406 19.567 22.5973 18.3616C22.75 17.1866 22.75 15.6838 22.75 13.7799V12.1672C22.75 11.0541 22.75 10.1665 22.6818 9.4407C22.6114 8.69174 22.4646 8.05812 22.1387 7.46263C21.8121 6.86589 21.3599 6.40669 20.7711 5.95581C20.2026 5.5204 19.4649 5.06262 18.5437 4.49091L16.4771 3.20831C15.5036 2.60409 14.7241 2.12034 14.0494 1.79224C13.3515 1.45282 12.7081 1.25 12 1.25ZM8.27953 4.50412C9.29529 3.87371 10.0095 3.43153 10.6065 3.1412C11.1882 2.85833 11.6002 2.75 12 2.75C12.3998 2.75 12.8118 2.85833 13.3935 3.14119C13.9905 3.43153 14.7047 3.87371 15.7205 4.50412L17.7205 5.74537C18.6813 6.34169 19.3559 6.76135 19.8591 7.1467C20.3487 7.52164 20.6303 7.83106 20.8229 8.18285C21.0162 8.53589 21.129 8.94865 21.1884 9.58104C21.2492 10.2286 21.25 11.0458 21.25 12.2039V13.725C21.25 15.6959 21.2485 17.1012 21.1098 18.1683C20.9736 19.2163 20.717 19.8244 20.2892 20.2669C19.8649 20.7058 19.2871 20.9664 18.2858 21.1057C17.2602 21.2483 15.9075 21.25 14 21.25H10C8.09247 21.25 6.73983 21.2483 5.71422 21.1057C4.71286 20.9664 4.13514 20.7058 3.71079 20.2669C3.28301 19.8244 3.02642 19.2163 2.89019 18.1683C2.75149 17.1012 2.75 15.6959 2.75 13.725V12.2039C2.75 11.0458 2.75076 10.2286 2.81161 9.58104C2.87103 8.94865 2.98385 8.53589 3.17709 8.18285C3.36965 7.83106 3.65133 7.52164 4.14092 7.1467C4.6441 6.76135 5.31869 6.34169 6.27953 5.74537L8.27953 4.50412Z" fill="currentColor"/>`},
@@ -3148,7 +3339,6 @@ ICONS.home.f = ICONS.home.o;
 ICONS.calendar.f = ICONS.calendar.o;
 ICONS.chat.f = ICONS.chat.o;
 ICONS.user.f = ICONS.user.o;
-
 
 const REICON_MAP = {
   home:'home', calendar:'calendar', chat:'chat', user:'user', chart:'chart-bar',
@@ -3524,7 +3714,7 @@ function providerFiltersSheet(){
     </div>`;
 }
 
-const SHEET_LABELS = { providerFilters:'Filter providers', bookingRequest:'Book an appointment' };
+const SHEET_LABELS = { providerFilters:'Filter providers', bookingRequest:'Book an appointment', raiseCase:'Raise a case' };
 
 const REQUEST_TIMES = ['8:00 AM','10:00 AM','1:00 PM','3:00 PM','5:00 PM'];
 
@@ -3540,10 +3730,14 @@ function requestDays(){
   });
 }
 
-function requestPayments(){
-  const list = (state.profileData.paymentMethods || []).slice();
-  if(list.indexOf('Cash on Arrival') === -1) list.push('Cash on Arrival');
-  return list;
+/* Two ways the money can travel, named in words and carried as codes. The
+   resident picks a route; the record keeps the code, so the rules cannot drift
+   with the copy. */
+function requestPaymentOptions(){
+  return [
+    { code:'gcash', label: PAY_METHODS.gcash },
+    { code:'cash',  label: PAY_METHODS.cash  }
+  ];
 }
 
 // Provider Detail is entered from results, from a booking, and from admin. One
@@ -3603,12 +3797,6 @@ function requestPick(active, label, onClick){
   return `<button type="button" class="pick ${active ? 'on' : ''}" aria-pressed="${active}" onclick="${onClick}">${label}</button>`;
 }
 
-// "GCash" contains the word "cash", so a substring test would bill an e-wallet
-// pick as physical money handed over on site. Match the option by its full name.
-function isCashPayment(method){
-  return /cash on arrival/i.test(method || '');
-}
-
 /* Which job on this provider's list the resident is asking for, and what it costs
    under today's configuration. Nothing here is stored yet: the terms freeze when
    the provider accepts, not before. */
@@ -3662,7 +3850,7 @@ function termsCard(p, d, pay, cash) {
             with you before any work begins${b.passThroughCentavos ? ', and parts are charged at cost' : ''}.
             ${cash
               ? 'You settle in cash when the work is done, and the provider records it here.'
-              : 'Pay with ' + esc(pay) + ' once the provider confirms the scope and price.'}
+              : 'Pay with ' + esc(pay.label) + ' once the provider confirms the scope and price.'}
             Our fee comes out of the provider's share, which is why the amount above matches
             the amount on their card.
           </p>`;
@@ -3700,17 +3888,112 @@ function cancelRow(b) {
         </button>
       </div>`;
 }
+
+/* ---- raising a case --------------------------------------------------------
+   The machine has allowed a job to go "Under review" from three states, but until
+   now nothing in the app led there: `openDispute` had no caller, so the evidence
+   chain, the freeze and the help desk could only ever be reached by the one seeded
+   case. Both parties now get a door, and it is the case record that opens, not the
+   status alone. */
+function caseActor(){
+  return state.role === 'provider'
+    ? { role:'provider', id: CURRENT_PROVIDER_ID }
+    : { role:'customer', id: CURRENT_CUSTOMER_ID };
+}
+
+/* Which of the two words applies: can this state be disputed at all, and if it can,
+   is it this person, inside this job's window? */
+function caseDoor(b, actor){
+  const rules = TRANSITIONS[b.status] && TRANSITIONS[b.status].disputed;
+  if (!rules) return { kind:'none' };
+  if (DISPUTES.some(d => d.bookingId === b.id && d.status === 'under review'))
+    return { kind:'open' };
+  const allowed = transitionAllowed(b, 'disputed', actor);
+  return allowed.ok ? { kind:'offer', actors: rules.actors } : { kind:'refused', reason: allowed.reason };
+}
+
+function caseRow(b){
+  const door = caseDoor(b, caseActor());
+  if (door.kind === 'none') return '';
+  if (door.kind === 'open')
+    return `<div class="case-note case-note-live">${ic('scale',13)}
+        <span>A case is open on this job. The help desk is reading the evidence; nothing has been decided.</span></div>`;
+  if (door.kind === 'refused')
+    return `<div class="case-note">${ic('alert-triangle',13)} <span>${esc(door.reason)}</span></div>`;
+  return `<button type="button" class="btn sm secondary case-button" onclick="openCaseSheet('${b.id}')">
+      ${ic('scale',14)} Something went wrong with this job</button>`;
+}
+
+function openCaseSheet(bookingId){
+  const b = bookingById(bookingId);
+  if(!b) return;
+  state.caseBookingId = bookingId;
+  state.sheet = 'raiseCase';
+  render();
+  const box = document.getElementById('case-reason');
+  if (box) box.focus();
+}
+
+function raiseCaseSheet(){
+  const b = bookingById(state.caseBookingId);
+  if(!b) return '';
+  const claim = b.pricing ? b.pricing.customerTotalCentavos : b.amountCentavos;
+  const frozen = accountBalance('dispute_hold', b.id);
+  return `
+    <div class="sheet-grab"></div>
+    <div class="sheet-head">
+      <div>
+        <div class="sheet-title">Raise a case</div>
+        <div class="sheet-sub">An administrator reads the evidence. Nothing here decides who was at fault.</div>
+      </div>
+      <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close the case form">${ic("x",15)}</button>
+    </div>
+    <div class="sheet-body">
+      <div class="sheet-group">
+        <div class="sheet-label">The job</div>
+        <div class="case-claim"><b>${esc(b.summary)}</b><span>${esc(providerOf(b).name)} · ${esc(label(b.status))}</span></div>
+        <div class="case-claim-money">
+          <span>Claimed</span><b>${peso(claim)}</b>
+        </div>
+        <div class="sheet-sub">${frozen > 0
+          ? peso(frozen) + ' of this job’s payout is already held. The rest stays where it is until somebody has read the evidence.'
+          : 'Nothing is being held yet, so there is nothing to freeze. Opening a case does not take money from anyone.'}</div>
+      </div>
+      <div class="sheet-group">
+        <div class="sheet-label"><label for="case-reason">What went wrong</label></div>
+        <textarea id="case-reason" class="case-textarea" rows="4" placeholder="Tell us what happened and what you were expecting - a few sentences is enough."></textarea>
+        <div class="sheet-sub">The booking, its timeline and its payment record are attached for the reader.</div>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <button type="button" class="btn" id="case-submit" onclick="submitCase()">Send to the help desk</button>
+    </div>`;
+}
+
+function submitCase(){
+  const b = bookingById(state.caseBookingId);
+  if(!b){ state.caseBookingId = null; closeSheet(); return; }
+  const box = document.getElementById('case-reason');
+  const reason = (box && box.value ? box.value : '').trim();
+  let d;
+  try { d = openDispute(b.id, caseActor(), reason); }
+  catch (err) { showToast(err.message, 'error'); return; }
+  state.caseBookingId = null;
+  state.sheet = null;
+  showToast('Case ' + d.id + ' opened - the help desk has the job, the timeline and the money record');
+  render();
+}
 /* The record the product promises: what was agreed, what it cost, what happened
    to the money. Built from the frozen pricing and the payment rows, never typed. */
 function receiptCard(b) {
   const p = b.pricing;
   if (!p) return '';
   const rows = paymentsFor(b.id);
-  const cash = /cash on arrival/i.test(b.paymentMethod || '');
+  const cash = isCashJob(b);
   return `<div class="card" style="border-radius:14px; padding:14px; margin-bottom:14px;">
       <div class="row" style="margin-bottom:10px;">
         <b class="card-title">Payment record</b>
-        <span class="chip">${esc(b.paymentStatus || 'Unpaid')}</span>
+        <span class="chip">${esc(payStatusLabel(b))}</span>
       </div>
       <div class="row"><span>${esc(b.listingTitle || b.summary)}</span><b>${peso(p.baseCentavos)}</b></div>
       ${p.inclusions.map(i => `<div class="row"><span>${esc(i.label)} <span class="mut">at cost</span></span><b>${peso(i.amountCentavos)}</b></div>`).join('')}
@@ -3721,6 +4004,9 @@ function receiptCard(b) {
       </div>
       <div class="row"><span class="mut">${esc(providerOf(b).name.split(' ')[0])} keeps</span><b class="mut">${peso(p.providerShareCentavos)}</b></div>
       <div class="row"><span class="mut">Sukinnect fee, from their share</span><b class="mut">${peso(p.commissionCentavos)} at ${Math.round(p.commissionRate * 100)}%</b></div>
+      <div class="row"><span class="mut">How it was paid</span><b class="mut">${esc(payMethodLabel(b))}</b></div>
+      ${cash ? `<div style="font-size:var(--t-caption); color:var(--mist); margin-top:6px; line-height:1.5;">
+        Handed over on site — Sukinnect never held this money. Only our own fee can be reversed here; the visit itself is settled between you.</div>` : ''}
       ${rows.length ? `<div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--line); font-size:var(--t-caption); color:var(--mist); line-height:1.7;">
         ${rows.map(r => `<div>${esc(String(r.at).slice(11, 16))} &middot; ${esc(r.type)} ${peso(r.amountCentavos)} &middot; <b style="color:var(--ink-soft);">${esc(r.status)}</b>${cash && r.type === 'collection' ? ' &middot; handed over on site' : ''}</div>`).join('')}
       </div>` : ''}
@@ -3773,7 +4059,7 @@ function statusCard(b) {
     return `<div class="card" style="border-radius:14px; padding:14px; margin-bottom:14px;">
           <div class="row" style="margin-bottom:10px;">
             <span style="font-size:var(--t-caption); font-weight:800; text-transform:uppercase; color:var(--ink-soft);">${label(b.status)}</span>
-            <span style="font-size:var(--t-caption); color:var(--mist);">${esc(b.paymentStatus || 'Unpaid')}</span>
+            <span style="font-size:var(--t-caption); color:var(--mist);">${esc(payStatusLabel(b))}</span>
           </div>
           <div style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--ink-soft);">
             ${steps}
@@ -3807,10 +4093,10 @@ function bookingRequestSheet(){
   if(!p) return '';
   const d = state.requestDraft || { service:'', dayIdx:0, timeIdx:1, addrIdx:0, payIdx:0 };
   const days = requestDays();
-  const pays = requestPayments();
+  const pays = requestPaymentOptions();
   const addrs = state.profileData.savedAddresses || [state.profileData.address];
   const pay = pays[d.payIdx] || pays[0];
-  const cash = isCashPayment(pay);
+  const cash = pay.code === 'cash';
   return `
     <div class="sheet-grab"></div>
     <div class="sheet-head">
@@ -3856,7 +4142,6 @@ function bookingRequestSheet(){
         </div>
       </div>`}
 
-
       <div class="sheet-group">
         <div class="sheet-label">Service address</div>
 
@@ -3868,7 +4153,7 @@ function bookingRequestSheet(){
       <div class="sheet-group">
         <div class="sheet-label">Payment</div>
         <div class="hscroll req-rail">
-          ${pays.map((m, i) => requestPick(d.payIdx === i, esc(m), `pickRequest('payIdx',${i})`)).join('')}
+          ${pays.map((m, i) => requestPick(d.payIdx === i, esc(m.label), `pickRequest('payIdx',${i})`)).join('')}
         </div>
       </div>
 
@@ -3912,7 +4197,7 @@ function submitBookingRequest(){
   render();
   setTimeout(() => {
     const days = requestDays();
-    const pays = requestPayments();
+    const pays = requestPaymentOptions();
     const pay = pays[d.payIdx] || pays[0];
     const me = customerOf({ customerId: CURRENT_CUSTOMER_ID });
     const listing = draftListing(p, d);
@@ -3940,8 +4225,8 @@ function submitBookingRequest(){
       createdAt: new Date().toISOString(),
       source: 'live',
       arrivalTime: 'Awaiting provider',
-      paymentStatus: isCashPayment(pay) ? 'Pending (Cash on Arrival)' : 'Unpaid',
-      paymentMethod: pay,
+      payStatus: pay.code === 'cash' ? 'pending_site' : 'unpaid',
+      payMethod: pay.code,
       address: (state.profileData.savedAddresses || [state.profileData.address])[d.addrIdx]
     };
 
@@ -3982,6 +4267,7 @@ function cancelBookingRequest(id){
 function sheetHTML(){
   if(state.sheet === 'providerFilters') return providerFiltersSheet();
   if(state.sheet === 'bookingRequest') return bookingRequestSheet();
+  if(state.sheet === 'raiseCase') return raiseCaseSheet();
   return '';
 }
 
@@ -4526,7 +4812,7 @@ function residentHome(){
       </div>
       <div class="row" style="margin-top:7px; gap:8px; font-size:var(--t-caption);">
         <span style="color:var(--ink-soft); min-width:0;">${nextStep}</span>
-        ${(() => { const paid = /paid/i.test(active.paymentStatus) && !/unpaid|pending/i.test(active.paymentStatus); const c = statusColors(paid ? 'completed' : 'requested'); return `<span class="chip" style="background:${c.bg}; color:${c.fg}; flex-shrink:0;">${esc(active.paymentStatus)}</span>`; })()}
+        ${(() => { const paid = ['captured', 'collected'].includes(active.payStatus); const c = statusColors(paid ? 'completed' : 'requested'); return `<span class="chip" style="background:${c.bg}; color:${c.fg}; flex-shrink:0;">${esc(active.paymentStatus)}</span>`; })()}
       </div>
     </div>` : ''}
 
@@ -5140,7 +5426,6 @@ function residentBookingDetail(){
 
       ${statusCard(b)}
 
-
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; background:var(--background); padding:12px; border-radius:12px; font-size:12px; margin-bottom:14px;">
         <div>
           <span style="color:var(--mist); font-size:var(--t-caption);">Arrival Time:</span><br>
@@ -5148,7 +5433,7 @@ function residentBookingDetail(){
         </div>
         <div>
           <span style="color:var(--mist); font-size:var(--t-caption);">Payment Status:</span><br>
-          <b style="font-size:12.5px; color:var(--ink);">${b.paymentStatus}</b>
+          <b style="font-size:12.5px; color:var(--ink);">${esc(payStatusLabel(b))}</b>
         </div>
         <div style="margin-top:4px;">
           <span style="color:var(--mist); font-size:var(--t-caption);">${b.status === 'requested' ? 'Indicative fee:' : 'Total Fee:'}</span><br>
@@ -5162,6 +5447,7 @@ function residentBookingDetail(){
       </div>
 
       ${receiptCard(b)}
+      ${caseRow(b)}
       ${ratingBlock(b)}
 
       <div style="display:flex; gap:10px; margin-bottom: ${b.status === 'completed' ? '12px' : '0'};">
@@ -5827,12 +6113,16 @@ function jobActionBar(b) {
   const options = nextActionFor(b, 'provider');
   if (!options.length) return '';
   const VERBS = { en_route:'On the way', arrived:'I have arrived', ongoing:'Start the work',
-                  completed:'Mark complete', no_show:'No one is here', cancelled:'Decline this request' };
+                  completed:'Mark complete', no_show:'No one is here', cancelled:'Decline this request',
+                  disputed:'Something went wrong with this job' };
+  /* Every verb here acts on its own, except a case: that needs a reason from a
+     person before the status may move, so it opens the form instead. */
+  const act = (to) => to === 'disputed' ? `openCaseSheet('${b.id}')` : `providerJobAction('${b.id}','${to}')`;
   return `<div class="card" style="border-radius:14px; padding:14px; margin-bottom:14px; border:1px solid var(--line);">
       <div style="font-size:var(--t-caption); font-weight:800; text-transform:uppercase; color:var(--ink-soft); margin-bottom:10px;">Your next step</div>
       <div style="display:flex; flex-direction:column; gap:8px;">
         ${options.filter(o => o !== 'cancelled').map((o, i) => `
-          <button type="button" class="btn ${i === 0 ? '' : 'secondary'}" style="width:100%; border-radius:12px;" onclick="providerJobAction('${b.id}','${o}')">${VERBS[o] || label(o)}</button>`).join('')}
+          <button type="button" class="btn ${i === 0 ? '' : 'secondary'}" style="width:100%; border-radius:12px;" onclick="${act(o)}">${VERBS[o] || label(o)}</button>`).join('')}
       </div>
       <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">
         ${b.status === 'ongoing'
