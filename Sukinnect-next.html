@@ -20,13 +20,6 @@
 <link href="fonts/fonts.css" rel="stylesheet">
 <link rel="stylesheet" href="leaflet/leaflet.css">
 <script src="leaflet/leaflet.js"></script>
-<!-- Category artwork. Both are deferred so a 300KB player never delays the
-     splash: the tiles paint their static SVG first and the animation replaces
-     it once these have run. Vendored, not fetched — the WebView loads this page
-     off disk, where a CDN link is a broken request. lottie-web is MIT; its
-     licence ships beside it. -->
-<script defer src="lottie/lottie.min.js"></script>
-<script defer src="lottie/category-animations.js"></script>
 <script defer src="reicon.js"></script>
 <style>
   /* ============================================================
@@ -1624,43 +1617,7 @@ function catArt(serviceId){
   return ic(serviceMeta(serviceId).icon, 24);
 }
 
-/* The static SVG above is the artwork's resting state; this replaces it with the
-   Lottie build once the page is painted. Three ways this must not happen — the
-   player still loading, the device asking for less motion, or a trade with no
-   animation authored for it — and in each the tile simply keeps its drawn
-   still, so a missing file is never a blank square.
-   READY is the shortlist that has been looked at and judged good enough to show.
-   The six builds exist, but drawn from Lottie primitives alone they read worse
-   than the SVG scenes above — a faucet made of three rounded rectangles is a
-   blob — so none ships until its geometry matches the drawing it replaces. */
-const CAT_LOTTIE_READY = [];
-let CAT_LOTTIE_RUNS = [];
-function mountCategoryArt(){
-  /* render() rebuilds the tiles, so the previous instances are gone with the old
-     nodes; dropping them here is what stops each repaint leaking a player. */
-  CAT_LOTTIE_RUNS.forEach(a => { try { a.destroy(); } catch (err) {} });
-  CAT_LOTTIE_RUNS = [];
-  if (typeof lottie === 'undefined' || typeof SUKI_CAT_LOTTIE === 'undefined') return;
-  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  document.querySelectorAll('.cat .art[data-cat-art]').forEach(el => {
-    const id = el.dataset.catArt;
-    if (CAT_LOTTIE_READY.indexOf(id) < 0) return;
-    const theme = SERVICE_THEME[id];
-    if (!theme) return;
-    let data = null;
-    try { data = SUKI_CAT_LOTTIE.build(id, theme); } catch (err) { data = null; }
-    if (!data) return;
-    try {
-      el.innerHTML = '';
-      CAT_LOTTIE_RUNS.push(lottie.loadAnimation({
-        container: el, renderer: 'svg', loop: true, autoplay: true, animationData: data
-      }));
-    } catch (err) {
-      /* a bad file must not cost the user their category icon */
-      el.innerHTML = catArt(id);
-    }
-  });
-}
+
 
 // Accepts a provider object or a provider id.
 function serviceByProvider(providerOrId){
@@ -5384,7 +5341,7 @@ function residentHome(){
 
     <div class="section-label" style="margin-top:16px;">Browse by service</div>
     <div class="catgrid">
-      ${SERVICES.map(s=>{ const m = serviceMeta(s.id); return `<button type="button" class="cat" data-service="${s.id}"><span class="art" data-cat-art="${s.id}" style="background-color:${m.bg}; color:${m.fg};">${catArt(s.id)}</span><span>${esc(s.label)}</span></button>`; }).join('')}
+      ${SERVICES.map(s=>{ const m = serviceMeta(s.id); return `<button type="button" class="cat" data-service="${s.id}"><span class="art" style="background-color:${m.bg}; color:${m.fg};">${catArt(s.id)}</span><span>${esc(s.label)}</span></button>`; }).join('')}
     </div>
 
     <button type="button" class="concierge-row" id="open-concierge-btn" style="margin-top:18px;">
@@ -7466,7 +7423,6 @@ function bindTabHandlers(){
     };
   });
 
-  mountCategoryArt();
 
   document.querySelectorAll('[data-provider-booking-id]').forEach(el => {
     el.onclick = () => openProviderBooking(el.dataset.providerBookingId);
