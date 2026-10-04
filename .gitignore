@@ -19,3 +19,6 @@ Thumbs.db
 Desktop.ini
 *.tmp
 *.swp
+
+# screenshots written by tools/shot.cjs — looked at, not shipped
+.shots/

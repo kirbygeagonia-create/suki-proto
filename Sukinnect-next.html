@@ -369,16 +369,19 @@
   .auth-sheet::-webkit-scrollbar{ display:none; width:0; height:0; }
   /* The logo file has a white ground, so on a white screen it sits directly on
      the surface — no tile, no border, no treatment. The mark itself is untouched. */
-  .auth-mark{ display:block; width:84px; height:84px; margin:0 auto; }
+  .auth-mark{ display:block; width:72px; height:72px; margin:0 auto; }
   .auth-mark img{ width:100%; height:100%; object-fit:contain; display:block; }
   .auth-wordmark{
     font-family:"Fraunces", ui-serif, serif; font-size:var(--t-title-lg); font-weight:600;
-    letter-spacing:-.4px; line-height:1.1; color:var(--ink); margin-top:10px;
+    letter-spacing:-.4px; line-height:1.1; color:var(--ink); margin-top:8px;
   }
   /* Fields are full width and left-aligned — centring a text field is centring
      nothing, it just makes the label hard to find. What is centred is the brand,
-     the links, the action and the note. */
-  .auth-form{ margin-top:var(--s-8); text-align:left; }
+     the links, the action and the note.
+     The vertical rhythm is set so the tallest state — creating an account, which
+     carries four fields, the toggle and the Admin line — fits a 640pt phone
+     without the last control falling off the bottom of the card. */
+  .auth-form{ margin-top:var(--s-6); text-align:left; }
   /* Resident and Service Pro are the two roles the marketplace exists for, so
      they are the only two choices on the card. Admin is an operations console,
      not a person looking for a plumber: it is reached from a quiet line at the
@@ -418,7 +421,7 @@
   .auth-role button[aria-pressed="true"]{
     background:var(--surface); color:var(--deep); box-shadow:var(--shadow-xs);
   }
-  .auth-field{ margin-bottom:var(--s-4); }
+  .auth-field{ margin-bottom:var(--s-3); }
   .auth-input-label{
     display:block; text-align:left; font-size:var(--t-caption); font-weight:700;
     color:var(--mist); margin-bottom:6px; letter-spacing:.02em;
@@ -432,7 +435,7 @@
     padding:11px 6px; margin-left:-6px; margin-right:-6px;
   }
   .auth-divider{
-    display:flex; align-items:center; gap:var(--s-3); margin:var(--s-5) 0 var(--s-4);
+    display:flex; align-items:center; gap:var(--s-3); margin:var(--s-4) 0 var(--s-3);
     font-size:var(--t-caption); color:var(--mist);
   }
   .auth-divider::before, .auth-divider::after{
@@ -449,7 +452,7 @@
      a tap tall so it is still comfortable to hit (39, 72). */
   .auth-admin-link{
     display:flex; align-items:center; justify-content:center; gap:6px; width:100%;
-    min-height:var(--tap); margin-top:var(--s-4); border:none; background:none;
+    min-height:var(--tap); margin-top:var(--s-2); border:none; background:none;
     font-family:inherit; font-size:var(--t-caption); font-weight:700;
     color:var(--mist); cursor:pointer; text-decoration:underline;
     text-underline-offset:3px;
@@ -1163,15 +1166,22 @@
     display:flex; align-items:center; justify-content:space-between; gap:10px;
     border-bottom:1px solid rgba(255,255,255,.1);
   }
-  .chat-head-name{ font-family:"Fraunces", ui-serif, serif; font-size:var(--t-body-lg); font-weight:600; line-height:1.2; }
+  .chat-head-name{
+    font-family:"Fraunces", ui-serif, serif; font-size:var(--t-body-lg); font-weight:600;
+    line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
   .chat-head-sub{
     font-size:var(--t-caption); color:var(--brand-tint); font-weight:600; margin-top:2px;
     display:flex; align-items:center; gap:3px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   .chat-head-tag{
     background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.32); color:var(--on-brand);
     font-size:var(--t-caption); font-weight:700; padding:4px 10px; border-radius:var(--r-pill);
-    white-space:nowrap; flex-shrink:0;
+    white-space:nowrap;
+    /* The name of the person you are talking to outranks the distance to them, so
+       the tag gives way first rather than pushing the name into an ellipsis. */
+    flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis;
   }
   .chat-list{
     display:flex; flex-direction:column; gap:12px; overflow-y:auto; flex:1;
@@ -2754,6 +2764,21 @@ function pushThreadMessage(booking, to, actor, note){
   if (actor && actor.role === other) postMessage(booking, other, note);
 }
 
+/* Each move said the way the person who made it would say it. The status label
+   alone ("Arrived — Arrived on site") reads like a log pasted into a chat
+   window; the event still owns the fact, this only phrases it. */
+const THREAD_LINES = {
+  upcoming:  'Accepted — I will be there as arranged.',
+  en_route:  'On the way now.',
+  arrived:   'I have arrived at the address.',
+  ongoing:   'Starting the work now.',
+  completed: 'Work is done. Confirm and rate it when you are satisfied.',
+  cancelled: 'This one will not go ahead.',
+  expired:   'No answer came in time, so nothing was booked.',
+  no_show:   'I made the call-out but no one was there.',
+  disputed:  'I have raised this with the help desk.'
+};
+
 function seedMessages() {
   if (MESSAGES.length) return false;
   BOOKINGS.filter(b => b.source === 'demo').forEach(b => {
@@ -2762,11 +2787,7 @@ function seedMessages() {
       if (e.to === 'requested' || e.from === e.to) return;
       const who = e.actorRole === 'provider' ? 'provider' : (e.actorRole === 'customer' ? 'customer' : null);
       if (!who) return;
-      /* "Accepted — Accepted" is what telling the same story twice sounds like. The
-         note is only worth appending when it says more than the move did. */
-      const name = label(e.to);
-      const extra = e.note && e.note.toLowerCase() !== name.toLowerCase() ? ' — ' + e.note : '';
-      postMessage(b, who, name + extra, e.at);
+      postMessage(b, who, THREAD_LINES[e.to] || label(e.to), e.at);
     });
   });
   return true;
@@ -4073,7 +4094,12 @@ function raiseCaseSheet(){
   const b = bookingById(state.caseBookingId);
   if(!b) return '';
   const claim = b.pricing ? b.pricing.customerTotalCentavos : b.amountCentavos;
-  const frozen = accountBalance('dispute_hold', b.id);
+  /* What opening this case would freeze — what the job has actually paid the
+     provider, less anything an earlier case already holds. Reading
+     accountBalance('dispute_hold') here instead would always say "nothing",
+     because the freeze has not happened yet: the form is answered before it. */
+  const holdable = Math.max(0, creditedFor(b.id, 'provider_payable')
+                                 - accountBalance('dispute_hold', b.id));
   return `
     <div class="sheet-grab"></div>
     <div class="sheet-head">
@@ -4090,9 +4116,9 @@ function raiseCaseSheet(){
         <div class="case-claim-money">
           <span>Claimed</span><b>${peso(claim)}</b>
         </div>
-        <div class="sheet-sub">${frozen > 0
-          ? peso(frozen) + ' of this job’s payout is already held. The rest stays where it is until somebody has read the evidence.'
-          : 'Nothing is being held yet, so there is nothing to freeze. Opening a case does not take money from anyone.'}</div>
+        <div class="sheet-sub">${holdable > 0
+          ? peso(holdable) + ' of this job’s payout will be held while the case is read. It goes to nobody until somebody has looked at the evidence.'
+          : 'Nothing has been paid out on this job yet, so opening a case freezes nothing.'}</div>
       </div>
       <div class="sheet-group">
         <div class="sheet-label"><label for="case-reason">What went wrong</label></div>
@@ -4101,7 +4127,7 @@ function raiseCaseSheet(){
       </div>
     </div>
     <div class="sheet-foot">
-      <button type="button" class="btn" id="case-submit" onclick="submitCase()">Send to the help desk</button>
+      <button type="button" class="btn" id="case-submit" style="width:100%;" onclick="submitCase()">Send to the help desk</button>
     </div>`;
 }
 
@@ -5481,12 +5507,12 @@ function residentChatRoom(){
       <div style="min-width:0;">
         <div class="chat-head-name">${esc(activeChat.name)}</div>
         <div class="chat-head-sub">
-          ${isPro ? ic(activeChatService.icon,12) + ' Verified ' + esc(activeChat.service) + ' specialist'
+          ${isPro ? ic(activeChatService.icon,12) + ' Verified ' + esc(activeChat.service)
                   : ic('user',12) + ' Client · ' + esc(activeChat.barangay || 'no barangay on file')}
         </div>
       </div>
     </div>
-    <span class="chat-head-tag">${isPro ? 'Brgy. ' + esc(activeChat.barangay) + ' &middot; ' + activeChat.distanceKm + ' km'
+    <span class="chat-head-tag">${isPro ? activeChat.distanceKm + ' km away'
                                         : esc(firstName ? firstName + '’s job' : 'this job')}</span>
   </div>
 
