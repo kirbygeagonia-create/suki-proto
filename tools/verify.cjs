@@ -121,8 +121,6 @@ suite('screens', async () => {
   const broken = [];
   const label = () => [state.role + '/' + state.tab,
     state.adminScreen !== 'overview' ? state.adminScreen : null,
-    state.providerProfileSection ? 'sec:' + state.providerProfileSection : null,
-    state.residentProfileSection ? 'sec:' + state.residentProfileSection : null,
     state.bookingFilter !== 'all' ? 'f:' + state.bookingFilter : null,
     state.providerBookingFilter !== 'all' ? 'f:' + state.providerBookingFilter : null,
     state.selectedProviderBookingId ? '#' + state.selectedProviderBookingId : null,
@@ -133,8 +131,7 @@ suite('screens', async () => {
     state.selectedBookingId = 'b1'; state.selectedProviderBookingId = 'pb6';
     state.selectedProvider = PROVIDERS[0]; state.selectedVerificationId = 'maria';
     state.selectedAdminProvider = 'p1'; state.adminScreen = 'overview';
-    state.residentProfileSection = null; state.providerProfileSection = null;
-    state.adminAccountSection = null; state.bookingFilter = 'all'; state.providerBookingFilter = 'all';
+    state.bookingFilter = 'all'; state.providerBookingFilter = 'all';
     state.sheet = null; state.providerResponding = null; state.providerDeclineConfirm = false;
   };
   function visit(setup) {
@@ -144,6 +141,11 @@ suite('screens', async () => {
       const html = app._document.getElementById('screen').innerHTML;
       const bad = html.match(/undefined|NaN|\[object Object\]/);
       if (bad) { broken.push(label() + '  paints ' + bad[0]); return; }
+      /* Square brackets around a label are developer shorthand that never got
+         taken out before shipping — the FSM button read "[Set Available 5–8 PM]"
+         on a real screen, and no other check notices because it renders fine. */
+      const ph = html.match(/\[\s*[A-Z][A-Za-z0-9–— &\/-]{2,44}\]/);
+      if (ph) broken.push(label() + '  shows a placeholder: ' + ph[0]);
       /* Unbalanced markup renders, but the sheet or card that lost its opening
          tag silently stops being a group — a structure bug no text check sees. */
       const open = (html.match(/<div\b/g) || []).length;
@@ -1099,6 +1101,61 @@ suite('journeys', async () => {
   });
   c.check('every open state can be moved on by somebody',
     stranded.length === 0, stranded.join(', ') + ' has no actor left with a move');
+
+  return c;
+});
+
+/* Screens that state a number the prototype never worked out. A demo may show
+   sample data — AGENTS.md 76 and 86 — but it must not dress an invented figure
+   up as a measurement, and it must not contradict the records on the same device. */
+suite('honesty', async () => {
+  const c = makeChecker();
+  const app = boot();
+  const { state, render } = app;
+  /* The fake DOM exposes innerHTML, not textContent. Reading the wrong one here
+     returns undefined, every text assertion then matches nothing, and the checks
+     pass for the reason that they were never looking at anything. */
+  const paint = (role, tab) => {
+    state.view = 'app'; state.role = role; state.tab = tab;
+    state.sheet = null; state.isChatOpen = false;
+    render();
+    return app._document.getElementById('screen').innerHTML
+      .replace(/<[^>]*>/g, ' ').replace(/&[a-z]+;/g, ' ').replace(/\s+/g, ' ').trim();
+  };
+
+  const fsm = paint('provider', 'fsm');
+  const invented = ['expected requests', 'available plumbers', 'predicted to increase', 'District Surge'];
+  c.check('the radar states no forecast the prototype cannot compute',
+    !invented.some(w => fsm.includes(w)), invented.filter(w => fsm.includes(w)).join(', ') + ' still claimed');
+  c.check('and it admits the figures are demo counts, not measurement',
+    /does not forecast demand/i.test(fsm), 'the honesty caption is gone');
+
+  /* The chip and the sentence have to agree with each other; if they drift, one
+     of them is being typed rather than read from the same count. */
+  const chip = (fsm.match(/(\d+) waiting/) || [])[1];
+  const line = (fsm.match(/(\d+) requests? in \w+ (?:is|are) waiting/) || [])[1];
+  c.check('the radar chip and its sentence report the same count',
+    chip !== undefined && chip === line, 'chip says ' + chip + ', sentence says ' + line);
+
+  /* A next-step line that names the step you are already on tells the reader
+     nothing about what happens next (AGENTS.md 21). */
+  const states = app.BOOKING_STATES;
+  const contradicts = Object.entries(states)
+    .filter(([, s]) => s.next && /confirm/i.test(s.next) && s.label === 'Accepted')
+    .map(([id]) => id);
+  c.check('no state promises a step that state has already taken',
+    contradicts.length === 0, contradicts.join(', ') + ' still promises confirmation');
+
+  /* Chips are labels. A chip phrased as an instruction reads as a control and
+     goes nowhere when pressed. */
+  const intel = paint('admin', 'admin_dashboard');
+  state.adminScreen = 'intelligence'; render();
+  const intelHtml = app._document.getElementById('screen').innerHTML;
+  const commanding = [...intelHtml.matchAll(/<span class="chip[^"]*"[^>]*>([^<]*)<\/span>/g)]
+    .map(m => m[1].trim()).filter(t => /\b(here|now|tap|press|go)\b/i.test(t));
+  c.check('no chip is worded as a command',
+    commanding.length === 0, commanding.join(' | ') + ' read as actions but are not buttons');
+  void intel;
 
   return c;
 });

@@ -2334,7 +2334,7 @@ const BOOKING_STATES = {
   requested: { label:'Requested',       tone:'quiet',  hint:'Waiting for the provider to answer',
                next:'They accept, the visit is held, or the request lapses on its own' },
   upcoming:  { label:'Accepted',        tone:'held',   hint:'Booked, not started',
-               next:'The provider confirms and starts out' },
+               next:'The provider sets off, then arrives' },
   en_route:  { label:'On the way',      tone:'active', hint:'The provider has left for you',
                next:'The provider arrives' },
   arrived:   { label:'Arrived',         tone:'active', hint:'The provider is at the door',
@@ -6413,7 +6413,9 @@ function adminMarketplaceIntelligence(){  const f = state.adminIntFilters;
       ${gaps.length ? gaps.map(g => `
         <div class="row" style="padding:8px 0; border-top:1px solid var(--line); font-size:var(--t-body-sm);">
           <span style="flex:1; min-width:0;"><b>${esc(g.label)}</b><br><span style="color:var(--mist); font-size:var(--t-caption);">${g.demand} job${g.demand === 1 ? '' : 's'} against ${g.supply} provider${g.supply === 1 ? '' : 's'}</span></span>
-          <span class="chip" style="color:var(--warning-ink);">recruit here</span>
+          <!-- A label, not a call to action: this prototype has no recruitment flow,
+               and a chip reading "recruit here" looked like the one thing to press. -->
+          <span class="chip" style="color:var(--warning-ink);">${g.supply === 0 ? 'no provider' : 'one provider'}</span>
         </div>`).join('') : `<div style="font-size:var(--t-caption); color:var(--mist);">Every category with demand has more than one provider on the demo roster.</div>`}
       <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">
         Computed from the demo roster and demo bookings on this device. A real gap needs live demand, which
@@ -6843,6 +6845,39 @@ function setProviderAvailable() {
   render();
   showToast('You are marked available - residents in your area see you now');
 }
+
+/* The radar used to recite a forecast nothing computes — "14 expected requests ·
+   6 available plumbers" — on a roster that holds one plumber, which the
+   intelligence screen two tabs away states outright. It now counts what is
+   actually on this device: requests in this provider's own trade still waiting
+   for an answer. The button says what setProviderAvailable does rather than
+   promising a 5–8 PM window the prototype has no model for. */
+function opportunityRadar(){
+  const me = PROVIDERS.find(p => p.id === CURRENT_PROVIDER_ID) || PROVIDERS[0];
+  const cat = serviceMeta(me.serviceId);
+  const waiting = BOOKINGS.filter(b => b.status === 'requested' && providerOf(b).serviceId === me.serviceId);
+  const hands = PROVIDERS.filter(p => p.serviceId === me.serviceId).length;
+  return `
+    <div class="card" style="background:var(--grad-brand-panel); color:var(--on-brand);">
+      <div class="row" style="margin-bottom:6px;">
+        <span style="font-size:var(--t-caption); font-weight:800; color:var(--on-brand);"><span style="color:var(--brand-secondary); display:inline-flex; vertical-align:-2px;">${ic("zap",12)}</span> Opportunity radar</span>
+        <span class="chip ${waiting.length ? 'badge-gold' : ''}" style="font-size:var(--t-caption);">${waiting.length ? waiting.length + ' waiting' : 'nothing waiting'}</span>
+      </div>
+      <div style="font-size:var(--t-body-lg); font-weight:700; margin-bottom:4px;">${cat.label}</div>
+      <div style="font-size:var(--t-caption); opacity:0.92; line-height:1.45; margin-bottom:12px;">
+        ${waiting.length
+          ? `<b>${waiting.length} request${waiting.length === 1 ? '' : 's'} in ${cat.label.toLowerCase()} ${waiting.length === 1 ? 'is' : 'are'} waiting for an answer right now.</b> ${hands} provider${hands === 1 ? '' : 's'} on this roster cover${hands === 1 ? 's' : ''} the trade.`
+          : `<b>No ${cat.label.toLowerCase()} request is waiting for an answer at the moment.</b> Nothing here is urging you to change your availability.`}
+      </div>
+      <button class="btn sm" style="background:var(--surface); color:var(--deep); width:100%; font-weight:800;" onclick="setProviderAvailable()">
+        Mark myself available
+      </button>
+      <div style="font-size:var(--t-caption); opacity:0.72; line-height:1.45; margin-top:9px;">
+        Counted from the demo bookings on this device. This prototype does not forecast demand — a real
+        surge needs live request history, which the pilot has not gathered yet.
+      </div>
+    </div>`;
+}
 function toggleEmergencyDispatch() {
   state.providerEmergencyDispatch = !state.providerEmergencyDispatch;
   persist();
@@ -7062,19 +7097,7 @@ function providerFSM(){
     
     ${earningsCard(CURRENT_PROVIDER_ID)}
 
-    <div class="card" style="background:var(--grad-brand-panel); color:var(--on-brand);">
-      <div class="row" style="margin-bottom:6px;">
-        <span style="font-size:var(--t-caption); font-weight:800; color:var(--on-brand);"><span style="color:var(--brand-secondary); display:inline-flex; vertical-align:-2px;">${ic("zap",12)}</span> Opportunity radar</span>
-        <span class="chip badge-gold" style="font-size:var(--t-caption);">High Demand</span>
-      </div>
-      <div style="font-size:var(--t-body-lg); font-weight:700; margin-bottom:4px;">Poblacion District Surge</div>
-      <div style="font-size:var(--t-caption); opacity:0.9; line-height:1.4; margin-bottom:12px;">
-        Plumbing requests are predicted to increase tonight from 5–8 PM. <b>14 expected requests · 6 available plumbers.</b>
-      </div>
-      <button class="btn sm" style="background:var(--surface); color:var(--deep); width:100%; font-weight:800;" onclick="setProviderAvailable()">
-        [Set Available 5–8 PM]
-      </button>
-    </div>
+    ${opportunityRadar()}
 
     ${realRequestCard()}
 
