@@ -590,7 +590,7 @@ async function main() {
   if (MEASURE) {
     const flat = (key) => manifest.flatMap(m => (m.audit && m.audit[key] || []).map(x => ({ screen: m.name, ...x })));
     const tally = (rows, label, fmt) => {
-      console.log('\\n' + label + ': ' + rows.length);
+      console.log('\n' + label + ': ' + rows.length);
       const byScreen = {};
       rows.forEach(r => { byScreen[r.screen] = (byScreen[r.screen] || 0) + 1; });
       Object.entries(byScreen).sort((a, b) => b[1] - a[1]).slice(0, 8)
@@ -615,7 +615,7 @@ async function main() {
       vend.length + (vend.length ? '  e.g. ' + [...new Set(vend.map(r => r.what || 'unlabelled <img>'))].slice(0, 4).join(' | ') : ''));
     console.log('\nsingle-line previews shortened with an ellipsis (intended, listed for review): ' + previews.length + (previews.length ? '  e.g. ' + previews.slice(0,3).map(r => '\"' + r.text + '\x22 loses ' + r.lost + 'px').join(', ') : ''));
     const hOver = manifest.filter(m => m.audit && m.audit.hOverflow > 0);
-    console.log('\\nhorizontal overflow (a screen wider than the phone): ' + (hOver.length ? hOver.map(m => m.name + ' +' + m.audit.hOverflow + 'px').join(', ') : 'none'));
+    console.log('\nhorizontal overflow (a screen wider than the phone): ' + (hOver.length ? hOver.map(m => m.name + ' +' + m.audit.hOverflow + 'px').join(', ') : 'none'));
     const sizes = new Set(manifest.flatMap(m => (m.audit && m.audit.usedSizes) || []));
     console.log('distinct painted font sizes across the app: ' + sizes.size + '  [' + [...sizes].sort((a,b)=>a-b).join(', ') + ']');
     fs.writeFileSync(path.join(OUT, 'audit.json'), JSON.stringify(manifest.map(m => ({ name: m.name, ...m.audit })), null, 1));
