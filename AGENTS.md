@@ -1179,12 +1179,30 @@ CURRENT STATE OF THE CODE, re-measured. The passages below previously described 
 older build and were wrong in ways that would have sent the next reader the wrong
 scope, so they are replaced rather than left to be re-derived:
 
-Sukinnect.html now has ONE :root block, 1,138 var() usages against 106 hard-coded
-hex values (37 distinct, over half of them plain #fff), and the legacy teal and
-gold values survive only as documented aliases (--ink, --deep, --gold, --verified)
-so existing call sites resolve to the new palette. The two tokens that were listed
-as deliberately unresolved have since been decided, with the reasoning in code
-comments next to each:
+TWO FILES EXIST NOW, and a reader must know which one they are in. `Sukinnect.html` is
+the shipped prototype, untouched by the rebuild on `feat/domain-kernel`. `Sukinnect-next.html`
+is the rebuild: same single-file architecture, with a domain kernel (centavos money, a
+Store adapter, a booking state machine, a double-entry ledger, payment records behind a
+gateway seam, disputes, and message threads as records). Work happens in the -next file;
+§11 and §88 still apply to both. Measured with `node tools/verify.cjs` and a static scan:
+
+Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 108 hard-coded hex
+                    values (the earlier 106 came from a pattern that also matched booking
+                    fragments such as "#8226", so treat these as ±2 either way).
+Sukinnect-next.html— 7,141 lines, 1,332 var() usages, 57 hex values in the file and 17 of
+                    them outside :root. Those 17 are, honestly: the per-trade SERVICE_THEME
+                    palette, which is deliberately literal (§45); the
+                    <meta name="theme-color"> value, which cannot take a var(); one comment
+                    that quotes the measured brand hexes; and two booking-id fragments
+                    ("#8226", "#9021") a naive scan misreads as colours. Everything that was
+                    a real violation is now a token: #fff (fifty uses) became --surface and
+                    --on-brand, the modal dim became --scrim, and the phone mockup's bezel
+                    and signal bars became --device-bezel and --device-signal.
+
+The legacy teal and gold values survive only as documented aliases (--ink, --deep,
+--gold, --verified) so existing call sites resolve to the new palette. The two tokens
+that were listed as deliberately unresolved have since been decided, with the reasoning
+in code comments next to each:
 
 --text-muted: derived as #5F6E92, measured against both surfaces it ships on,
 because a value too light to pass section 72 is worse than no value.

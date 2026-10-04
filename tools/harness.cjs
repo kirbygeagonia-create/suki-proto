@@ -38,7 +38,11 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   'canDispute', 'creditedFor', 'isCashJob', 'payStatusLabel', 'payMethodLabel',
   'refundableCentavos', 'refundLines', 'postedCredits', 'notificationRoute',
   'openDispute', 'openCaseSheet', 'submitCase', 'raiseCaseSheet', 'caseDoor', 'caseActor',
-  'PAY_METHODS', 'PAYMENT_LABELS', 'TRANSITIONS', 'providerIsFreeToAccept'];
+  'PAY_METHODS', 'PAYMENT_LABELS', 'TRANSITIONS', 'providerIsFreeToAccept',
+  /* the thread, and the verbs the provider's card offers */
+  'MESSAGES', 'threadsFor', 'threadMessages', 'threadKeyOf', 'threadKeyFor', 'postMessage',
+  'appendMessage', 'sendChatMessage', 'openChatThread', 'currentThreadKey', 'nextStepFor',
+  'JOB_VERBS', 'photoAvatar', 'serviceAvatar', 'isSettled', 'seedMessages'];
 
 function boot({ appMode = false, storage = null } = {}) {
   const src = fs.readFileSync(APP, 'utf8');

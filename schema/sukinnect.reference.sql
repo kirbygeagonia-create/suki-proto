@@ -15,6 +15,9 @@
 --      is how the prototype ended up with a marketplace loop that never closed.
 --   3. Booking status and payment status are separate columns and are never merged.
 --      "completed + unpaid" and "cancelled + refunded" are both real states.
+--      Both columns hold a code, and only the application turns a code into the
+--      words a person reads. A rule that branches on a label is a rule that
+--      changes when the copy changes.
 --   4. ledger_event_lines is append-only. A correction is a new row, never an
 --      UPDATE. Every event balances; the trigger enforces at insert time what the
 --      application asserts in code.
@@ -127,7 +130,16 @@ CREATE TABLE bookings (
   requested_asap         TINYINT(1)   NOT NULL DEFAULT 0,
   scheduled_date         DATE,
   scheduled_time         VARCHAR(16),
+  /* Minutes, not a sentence. The kernel carries a display string ("15 mins") because
+     there is nothing to compute against in a single file; a backend stores the
+     number and formats on the way out, like every other amount here. */
   eta_min                SMALLINT UNSIGNED,
+
+  /* A denormalised copy of pricing.customerTotalCentavos, because every list,
+     receipt and statement reads the total without unwinding a JSON column. The two
+     are written together at accept time and must never diverge — the kernel keeps
+     one (pricing) as authority and derives the other. */
+  customer_total_centavos INT UNSIGNED NOT NULL DEFAULT 0,
 
   status                 ENUM('requested','upcoming','en_route','arrived','ongoing',
                               'completed','cancelled','expired','no_show','disputed')
@@ -147,10 +159,18 @@ CREATE TABLE bookings (
       providerShareCentavos, customerTotalCentavos, platformRevenueCentavos,
       frozenAt                                                       */
 
-  payment_status         ENUM('unpaid','pending_site','authorized','captured',
+  /* Codes, never the words on screen. The prototype kept the *label* here —
+     "Held, not yet paid" — and then decided money rules by searching that string,
+     so renaming a phrase in the copy would have changed how a job settled, and a
+     booking word ("Cancelled") had already arrived on the money axis. The label is
+     PAYMENT_LABELS[code], produced on the way to a screen. */
+  payment_status         ENUM('unpaid','pending_site','authorized','captured','collected',
                               'refunded','partially_refunded','voided')
                          NOT NULL DEFAULT 'unpaid',
-  payment_method         ENUM('gcash','maya','card','cash_on_arrival') NULL,
+  /* Same two-value rule as PAY_METHODS in the kernel. 'cash' is the route where the
+     platform never holds the money — the only method the ledger branches on.
+     maya and card join this list when a partner supports them, not before. */
+  payment_method         ENUM('gcash','cash') NULL,
   customer_rating        TINYINT UNSIGNED NULL CHECK (customer_rating BETWEEN 1 AND 5),
   source                 ENUM('demo','live') NOT NULL DEFAULT 'live',
   PRIMARY KEY (id),
@@ -184,8 +204,8 @@ CREATE TABLE payments (
   id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   booking_id         VARCHAR(24) NOT NULL,
   type               ENUM('authorization','capture','refund','void','collection') NOT NULL,
-  status             ENUM('authorized','captured','refunded','partially_refunded','voided','failed') NOT NULL,
-  method             ENUM('gcash','maya','card','cash_on_arrival') NOT NULL,
+  status             ENUM('authorized','captured','refunded','partially_refunded','voided','collected','failed') NOT NULL,
+  method             ENUM('gcash','cash') NOT NULL,
   amount_centavos    INT UNSIGNED NOT NULL,
   gateway_ref        VARCHAR(64),          -- a partner's own id; MOCK-* before one exists
   note               VARCHAR(190),
@@ -249,9 +269,16 @@ CREATE TABLE payouts (
 CREATE TABLE disputes (
   id                     VARCHAR(24) NOT NULL,
   booking_id             VARCHAR(24) NOT NULL,
-  opened_by              ENUM('resident','provider','admin') NOT NULL,
+  /* The kernel's actor vocabulary is customer / provider / admin / system. It used
+     to say "resident" here, which is the name of a screen, not of a party to a
+     transaction. */
+  opened_by              ENUM('customer','provider','admin') NOT NULL,
   reason                 TEXT NOT NULL,
   amount_in_claim_centavos INT UNSIGNED NOT NULL,
+  /* What the books actually froze when the case opened — not what the claim asks
+     for. A case raised before the job settled holds nothing, and the card has to
+     be able to say so from a column rather than from a caption. */
+  frozen_centavos        INT UNSIGNED NOT NULL DEFAULT 0,
   status                 ENUM('under review','closed — the booking stands',
                               'closed — partly refunded','closed — refunded') NOT NULL DEFAULT 'under review',
   resolution             VARCHAR(190),
@@ -259,6 +286,25 @@ CREATE TABLE disputes (
   resolved_at            DATETIME NULL,
   PRIMARY KEY (id),
   CONSTRAINT dispute_booking FOREIGN KEY (booking_id) REFERENCES bookings(id)
+) ENGINE=InnoDB;
+
+-- ─────────────────────────────────────────────────────────── coordination
+/* Messaging exists to coordinate a service, so a thread belongs to a pair of
+   people and the jobs between them, and a message is a row rather than painted
+   text. The prototype stored none of this: what a resident typed went into the
+   DOM, disappeared on the next render and was never visible to the other side.
+   Which thread a device has read is deliberately absent — that is one marker per
+   installation (state.threadRead), not a fact about the conversation. */
+CREATE TABLE messages (
+  id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  thread       VARCHAR(48) NOT NULL,           -- t-<customer_id>-<provider_id>
+  booking_id   VARCHAR(24) NULL,               -- the job the line is about, when there is one
+  sender       ENUM('customer','provider') NOT NULL,
+  body         TEXT NOT NULL,
+  sent_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY message_thread (thread, sent_at),
+  CONSTRAINT message_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- ───────────────────────────────────────────────────────────────── configuration

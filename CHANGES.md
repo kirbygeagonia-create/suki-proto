@@ -3,7 +3,7 @@
 Branch `feat/domain-kernel`. Work happens in **`Sukinnect-next.html`**; `Sukinnect.html`
 is byte-for-byte the shipped prototype and is untouched until the rebuild is approved.
 
-Run `node tools/verify.cjs` to check everything below (200 assertions, no browser needed).
+Run `node tools/verify.cjs` to check everything below (240 assertions, no browser needed).
 
 ---
 
@@ -70,7 +70,9 @@ tracking view, the dispute evidence chain, and the admin audit. Previously all t
 were hand-typed lists, which is how a tracking screen could show "Provider reviewed ✓"
 for a step no code had performed.
 
-Guards worth knowing: one job in progress per provider; a late cancellation costs a fee
+Guards worth knowing: a provider cannot accept a second request for the slot they already
+hold (this moved in §12 — it had only fired when the work started, which is after the
+promise was made); a late cancellation costs a fee
 that is paid **to the provider, never to the platform**, so the platform has no incentive
 to profit from cancellations; an unanswered request lapses on the next open, with its real
 timestamp rather than a pretence that it just happened.
@@ -85,8 +87,9 @@ sat in escrow forever with revenue reading zero.
 A `PAYMENTS` row records what was done to the money — authorization, capture, refund,
 void, collection — with a gateway reference. Four verbs behind one object: a real partner
 (PayMongo, Xendit) implements the same four and returns the same shape. Accepting holds,
-completing releases, cancelling returns, and a refund reverses our own fee **pro rata** to
-what was refunded.
+completing releases, cancelling returns, and a refund reverses the fee **this booking's own
+ledger lines recorded**, pro rata (§12 corrected the first version, which recomputed it from
+today's rate).
 
 Payouts are a schedule, not a wallet: the lesser of what is due and what is owed, above a
 minimum, after the hold window. Cash jobs are excluded from the payable position — the
@@ -126,7 +129,9 @@ editable fee and settlement rules with a change log; a payout run; a reset contr
 plain statement of where this device keeps its records.
 
 Disputes became cases attached to real bookings — claim amount, frozen payout, the job's own
-evidence timeline, three outcomes that each move money. The dashboard's invented month
+evidence timeline, three outcomes that each move money. **§12 found this overstated:** the
+case record could only be created by the seeded demo, because no screen ever called the
+function that makes one. The dashboard's invented month
 (₱42,800), its 52/30/18 "revenue allocation" (a budget split presented as a commission
 model), the 428-booking GMV and the what-if simulator are gone; counts, weekly activity and
 supply gaps are computed, and the intelligence filters filter.
@@ -151,9 +156,87 @@ they cannot be misread. Not loaded by the prototype.
 
 Two documents were stale in ways that would have misdirected the next reader, and are
 corrected rather than left: `AGENTS.md` §31 described a duplicated colour system with 372
-hard-coded hex values (there is one `:root` and 106), and listed `--text-muted` and the
+hard-coded hex values (there is one `:root`), and listed `--text-muted` and the
 category palette as undecided (both are decided, with the reasoning in code comments);
 `SUKINNECT_UIUX_REDESIGN_PROMPT.md` §2 is an audit whose findings have all since been fixed.
+
+## 12. A full audit of the rebuild, and what it found
+
+An audit of everything above — static cross-checks plus executable probes against the real
+kernel, not readings of the source — found that a system can be arithmetically correct,
+balanced, and unreachable. Every one of these was verified by driving the code before it was
+fixed, and most are now asserted by the `journeys` suite.
+
+**The dispute journey was severed at the door.** `openDispute` was the only thing that
+created a case record and had no caller anywhere, while the provider's action bar rendered
+whatever move the machine allowed — including one whose verb was missing, so the button read
+**"Under review"** and pressing it moved the status with no case attached. The job then had
+moves belonging only to an administrator, on a card the help desk never showed. A resident
+could not raise a case either. Both parties now open a form that states the claim, records
+what was actually frozen, and appears in the desk.
+
+**Three money rules were wrong in ways the balance check could not see,** because each event
+still balanced on its own:
+- freezing a case debited the provider's payable by the job's full share even when that job
+  had never settled, so a case on one job seized what another had earned (probe: a
+  provider's payable went 31500 → 0 for a job at `upcoming`);
+- closing a case for the provider left the booking `completed` on screen while the ledger held
+  no settlement, no revenue and no capture — the customer's hold was never released either;
+- a refund re-derived our fee as `amount × rate` against the **customer total**, which put
+  commission on parts and materials — the one thing §3's pricing rule exists to prevent — and
+  capped that reversal against the platform's whole revenue account, letting one provider's
+  refund be funded from another's earned fee. A job whose recorded fee was ₱50.00 had ₱51.50
+  taken back. Refunds now walk the booking's own posted lines, pro rata, and a cash job can
+  only have its fee forgiven: the platform never held the visit money and does not pretend to
+  return it.
+
+**`no_show` was offered while the provider was still en route,** which recorded "The provider
+arrived and no one was there" before `arrivedAt` existed and paid a call-out fee for a visit
+never made — while the customer, locked out of `arrived` with no moves at all, had no way to
+avoid being billed for it. `no_show` belongs to `arrived`; the customer can now call the job
+off there.
+
+**The money axis was stored as prose and read as prose.** `paymentStatus` held the display
+label ("Held, not yet paid"), and fourteen rules tested it with regular expressions —
+including `/cash on arrival/i` against `paymentMethod`, whose values are labels carrying a
+masked phone number, and one line that *derived* the method from the status label. Renaming
+copy anywhere would have changed how a job is held, settled, frozen or refunded, and a
+booking word (`'Cancelled'`) had already landed in the field in two demo records. Records hold
+codes now; `PAY_METHODS` and `PAYMENT_LABELS` produce words on the way to a screen.
+`SCHEMA_VERSION` went to 8 with the shape, and `hydrate` additionally refuses a dump whose
+bookings carry a status, a payment code or a ledger account the machine does not have — an
+unknown status used to load happily as a record nobody could move.
+
+**The fee change log did not survive a reload.** `CONFIG_AUDIT` was in the seed but not in
+`snapshot()`, so after a reload the console showed an administrator's 15% rate with no record
+of anyone setting it (§29, §31).
+
+**Messages were not stored at all.** The room painted two Taglish sentences typed into the
+template whatever the job was, and `sendChatMessage` appended a node to the DOM and toasted
+"Message sent" — nothing persisted, nothing reached the other side, and the thread list took
+its snippet from the booking request and its unread dot from the job's *status*, claiming
+messages nobody had written. Threads are records now, seeded from the status timeline in the
+first person, written by every move and by the person typing; both sides read the same rows.
+
+**Things the earlier sections of this file claimed more than they delivered** — §5's
+"one job in progress per provider" (the guard fired at start, not at accept), §6's pro-rata
+fee, §9's disputes — are corrected above rather than left standing.
+
+**A design-system pass followed the same rule:** values that existed in one place were being
+typed in many. `#fff` appeared 50 times outside `:root` (29 as a surface, 21 as ink on a brand
+fill) and is now `--surface` / `--on-brand`; the modal dim is `--scrim`; sixteen cards retyped
+the radius, padding and border that `.card` already declares and now use `.card-lg`; selects
+were 34px tall and are a tap tall; six controls had only a placeholder and now have a name; the
+status copy a resident reads lived in three places (`BOOKING_STATES`, a second map on Home, and
+prose in the tracking card) and is now one table that also owns "what happens next", which the
+tracking card had been inventing. No pixel moved: the work is that the numbers exist once.
+
+**The gate got the check that was missing.** `journeys` asks the shipped markup whether a
+person standing on that screen can do the thing the model claims: a case can be raised from
+both sides and lands in the desk; no action button is allowed to read a state name; no
+booking carries a word where a code belongs; no function is defined that nothing references;
+no state key is written that no screen reads; every open state has an actor left with a move.
+It is 240 assertions now, and it found the dead code this section had just added.
 
 ---
 
@@ -167,8 +250,10 @@ category palette as undecided (both are decided, with the reasoning in code comm
   until the job is delivered, and is labelled that way.
 - **No invented rates, tax positions or traction.** Everything numeric is a config value
   labelled as a pilot assumption, a demo record tagged `demo`, or a sum over entries.
-- **Provider chat stays a resident-side prototype.** A provider's threads open the job
-  itself, which is where coordination actually lives, rather than a chat built on the
-  resident's identity.
+- **No delivery, scheduling or reminder automation.** A lapse and an auto-confirmation are
+  evaluated when the app is opened, because a closed tab runs nothing and there is no cron.
+- **No read receipts or delivery status on messages.** A thread says what was written and by
+  which side; it does not claim anybody saw it. Which threads a device has read is one local
+  marker, not a record.
 - **`Sukinnect.html` is still the shipped file,** and `Sukinnect-Android/app/src/main/assets/`
   still holds a separate copy. Promotion and re-syncing are a decision, not a step.

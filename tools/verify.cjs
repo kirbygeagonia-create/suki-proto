@@ -963,6 +963,146 @@ suite('login', async () => {
   return c;
 });
 
+/* ══ 12. every journey can actually be walked ═══════════════════════════════
+   The audit found a status the machine could produce and no screen produced: the
+   booking moved to "Under review" from a button labelled with the state itself,
+   and the function that creates a case had no caller at all. Rendering cleanly
+   was never going to catch that. So this suite asks the shipped markup the
+   question the code cannot answer by itself: is there a control there, for the
+   person who is standing on that screen, that does the thing the model claims? */
+suite('journeys', async () => {
+  const c = makeChecker();
+  const app = boot();
+  const { state, render, BOOKINGS, TRANSITIONS, nextActionFor, PAYMENT_LABELS, PAY_METHODS,
+          BOOKING_STATES, FINISHED_STATES, openCaseSheet, submitCase, resolveDispute,
+          DISPUTES, MESSAGES, sendChatMessage } = app;
+  const src = app._source;
+  const html = () => app._document.getElementById('screen').innerHTML;
+  const go = (role, tab, extra) => {
+    state.view = 'app'; state.role = role; state.tab = tab; state.isChatOpen = false;
+    if (extra) extra();
+    render();
+    return html();
+  };
+  const controls = (pattern) => [...html().matchAll(pattern)].map(m => m[1]);
+
+  /* ── the case door exists on both sides ── */
+  const residentJob = BOOKINGS.find(b => b.customerId === app.CURRENT_CUSTOMER_ID && b.status === 'completed' && b.pricing);
+  residentJob.completedAt = new Date(Date.now() - 86400000).toISOString();
+  go('resident', 'booking_detail', () => { state.selectedBookingId = residentJob.id; });
+  c.check('a resident with an eligible job is offered a case',
+    /openCaseSheet\('/.test(html()));
+  c.check('and the offer is a button, not a state name wearing a verb',
+    !/>Under review</.test(html()) && /Something went wrong/.test(html()));
+
+  const proJob = BOOKINGS.find(b => b.providerId === app.CURRENT_PROVIDER_ID && b.status === 'ongoing');
+  go('provider', 'provider_booking_detail', () => { state.selectedProviderBookingId = proJob.id; });
+  c.check('a provider with a live job is offered the same door',
+    /openCaseSheet\('/.test(html()));
+
+  c.check('openDispute, the only thing that makes a case, is called from the app',
+    (src.match(/openDispute\(/g) || []).length >= 2,
+    'call sites: ' + ((src.match(/openDispute\(/g) || []).length - 1));
+
+  /* walking it end to end, through the screens rather than the kernel */
+  const before = DISPUTES.length;
+  state.role = 'resident'; state.tab = 'booking_detail'; state.selectedBookingId = residentJob.id;
+  render();
+  openCaseSheet(residentJob.id);
+  const box = app._document.getElementById('case-reason');
+  box.value = 'The same fault returned the day after the repair was finished.';
+  submitCase();
+  c.check('the form a resident fills in produces a case, not only a status',
+    DISPUTES.length === before + 1 && DISPUTES.some(d => d.bookingId === residentJob.id));
+  c.check('and the help desk can see the case it produced',
+    (() => { const h = go('admin', 'admin_disputes'); const d = DISPUTES.find(x => x.bookingId === residentJob.id);
+             return d ? h.includes(d.id) : false; })());
+
+  /* ── no machine move is offered as a bare state name ── */
+  /* The rule the card should have followed all along: if a move can be offered to
+     the provider, it has a verb. Falling back to the state's own name is how
+     "Under review" ended up on a button. */
+  const offered = new Set();
+  Object.keys(TRANSITIONS).forEach(status =>
+    Object.keys(TRANSITIONS[status] || {}).forEach(to => {
+      if ((TRANSITIONS[status][to].actors || []).includes('provider')) offered.add(to);
+    }));
+  const noVerb = [...offered].filter(to => !app.JOB_VERBS[to]);
+  c.check('every move a provider can make has a verb, not a state name',
+    noVerb.length === 0, 'rendered as the status itself: ' + noVerb.join(', '));
+  c.check('and the card never has to fall back to a label',
+    /JOB_VERBS\[o\] \|\| label\(o\)/.test(src) && !/const VERBS = \{/.test(src));
+
+  /* a requested job, the one place the fallback used to fire */
+  const asked = BOOKINGS.find(b => b.status === 'requested' && b.providerId === app.CURRENT_PROVIDER_ID);
+  if (asked) {
+    go('provider', 'provider_booking_detail', () => { state.selectedProviderBookingId = asked.id; });
+    c.check('the accept button says accept, not accepted',
+      /Accept this request/.test(html()) && !/>Accepted</.test(html()));
+  }
+
+  /* ── the money axis only ever holds codes ── */
+  c.check('no booking carries a payment word where a code belongs',
+    BOOKINGS.every(b => !b.payStatus || PAYMENT_LABELS[b.payStatus]),
+    BOOKINGS.filter(b => b.payStatus && !PAYMENT_LABELS[b.payStatus]).map(b => b.id + ':' + b.payStatus).join(', '));
+  c.check('no booking carries a payment method nobody offered it',
+    BOOKINGS.every(b => !b.payMethod || PAY_METHODS[b.payMethod]),
+    BOOKINGS.filter(b => b.payMethod && !PAY_METHODS[b.payMethod]).map(b => b.id + ':' + b.payMethod).join(', '));
+  c.check('and the phrase tests that used to decide money are gone from the kernel',
+    !/\/cash on arrival\/i\.test\(/.test(src), 'still reading a label to settle a job');
+
+  /* ── nothing is declared that nothing reaches ── */
+  const deadFunctions = [...src.matchAll(/^function ([A-Za-z_$][\w$]*)\s*\(/gm)]
+    .map(m => m[1]).filter(n => (src.match(new RegExp('\\b' + n + '\\b', 'g')) || []).length <= 1);
+  c.check('no function is defined that nothing references',
+    deadFunctions.length === 0, deadFunctions.join(', '));
+  const untouched = Object.keys(state).filter(k =>
+    (src.match(new RegExp('state\\.' + k + '\\b', 'g')) || []).length <= 1);
+  c.check('no state key is declared that no screen reads or writes',
+    untouched.length === 0, untouched.join(', '));
+  const inertWrites = Object.keys(state).filter(k => {
+    const writes = (src.match(new RegExp('state\\.' + k + '\\s*(\\+|-)?=(?![=>])', 'g')) || []).length;
+    const reads = (src.match(new RegExp('state\\.' + k + '(?!\\s*(\\+|-)?=(?![=>]))', 'g')) || []).length;
+    return writes > 0 && reads === 0;
+  });
+  c.check('nothing is stored that no screen ever reads',
+    inertWrites.length === 0, inertWrites.join(', '));
+
+  /* ── a message is a record ── */
+  go('resident', 'messages');
+  const threadBefore = MESSAGES.length;
+  state.isChatOpen = true;
+  state.activeChatProvider = app.PROVIDERS[0];
+  state.activeChatCounterpart = app.PROVIDERS[0];
+  state.activeChatCustomerId = app.CURRENT_CUSTOMER_ID;
+  state.activeChatProviderId = app.PROVIDERS[0].id;
+  render();
+  app._document.getElementById('chat-input').value = 'The side gate is unlocked, come through that.';
+  sendChatMessage();
+  c.check('what the resident types becomes a record',
+    MESSAGES.length === threadBefore + 1, 'grew by ' + (MESSAGES.length - threadBefore));
+  c.check('and it is still on the screen after the screen rebuilds',
+    /side gate is unlocked/.test(render() || html()) || /side gate is unlocked/.test(html()));
+  c.check('the thread list shows the last message, not the original request',
+    (() => { state.isChatOpen = false; state.tab = 'messages'; render();
+             return /side gate is unlocked/.test(app._document.getElementById('screen').innerHTML)
+                 || /side gate is unlocked/.test(JSON.stringify(app.threadsFor('resident'))); })());
+
+  /* ── the open states are open for somebody ── */
+  const stranded = Object.keys(BOOKING_STATES).filter(status => {
+    if (FINISHED_STATES.includes(status)) return false;
+    const probe = BOOKINGS.find(b => b.pricing) || BOOKINGS[0];
+    const was = probe.status; probe.status = status;
+    const anyone = ['customer', 'provider', 'admin', 'system'].some(r => nextActionFor(probe, r).length > 0);
+    probe.status = was;
+    return !anyone;
+  });
+  c.check('every open state can be moved on by somebody',
+    stranded.length === 0, stranded.join(', ') + ' has no actor left with a move');
+
+  return c;
+});
+
 (async () => {
   let total = 0, failed = 0;
   for (const { name, fn } of suites) {

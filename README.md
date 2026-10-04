@@ -47,6 +47,14 @@ illegal moves, the ledger's balance assertions, refunds, payouts, the price list
 that renders every screen of every role and fails on any painted `undefined`, `NaN` or
 unbalanced markup. Nothing here is a copy of the logic — it loads the file the phone loads.
 
+A `journeys` pass asks the shipped markup a question rendering cannot answer: **can a person
+standing on that screen do the thing the model claims?** It checks a case can be raised from
+both sides and reaches the help desk, that no action button reads a state name, that records
+carry codes rather than words, that no function or state key exists which nothing reaches, and
+that every open state has an actor left with a move. That suite was written after an audit
+found a status the machine could produce and no screen produced — the app was green at the
+time.
+
 ## Architecture
 
 One file, two layers. The upper half is an application kernel with **no DOM access**; the
@@ -58,9 +66,17 @@ Sukinnect-next.html
 └── <script>
     ├── DOMAIN KERNEL     money · catalogue · config · accounts + ledger
     │                     pricing · state machine · payments + gateway · payouts
-    │                     statements · disputes · Store adapter (localStorage ⇄ memory)
+    │                     statements · disputes · message threads · status timeline
+    │                     Store adapter (localStorage ⇄ memory)
     └── APP LAYER         state · render() · ~60 screen functions
 ```
+
+Two rules the kernel keeps to: **a record stores a code, never a sentence** (the words come
+from `BOOKING_STATES`, `PAYMENT_LABELS`, `PAY_METHODS`, `JOB_VERBS`), and **a status cannot
+move without its consequence** — the transition table names who may move it, what must
+already be true, and what money, notification, thread line and record it leaves behind.
+Opening a case creates the case record and then moves the job, in that order; the desk shows
+what the books froze, not what the claim asked for.
 
 Screens call down into the kernel; the kernel never calls up into a screen. Records join by
 id (`providerOf(booking)`, `customerOf(booking)`) — no record holds a copy of another. The
@@ -89,13 +105,17 @@ For a job with a ₱800 base at the pilot's 10 %:
 - The fee is deducted **from the provider's share**, so the price on the card is the price
   the customer pays. Nothing appears at the till that was not on the card.
 - **Booking status and payment status are separate fields**, always displayed separately.
-  `completed + unpaid` and `cancelled + refunded` are both real.
+  `completed + unpaid` and `cancelled + refunded` are both real. Each holds a **code**
+  (`captured`, `pending_site`, `cash`); the words a person reads are produced from it, so no
+  rule can change because the copy did.
 - Money is recorded as **double-entry events** that must balance, or the posting throws
   before any status changes. Reports are sums over that ledger — no figure on a screen is
   typed, and none can disagree with the books.
 - Accepting a job **holds** the customer's money with a licensed partner; completing
   **releases** it into provider earnings and platform revenue; cancelling returns it; a
-  refund reverses our fee **pro rata**.
+  refund walks **this booking's own posted lines** back, pro rata — never a rate recomputed
+  against today's configuration, which would put commission on parts and materials. A cash
+  job can only have its fee forgiven: the platform never held the visit money.
 - **There is no stored-value wallet** and no resident balance. A customer's money is an
   obligation to deliver or refund, never a number they can spend (AGENTS.md §23).
 - Cash-on-arrival is a first-class path: the platform never held that money, so the fee is a
