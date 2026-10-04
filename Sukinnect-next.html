@@ -4507,7 +4507,10 @@ function receiptCard(b) {
         <span style="font-weight:800; color:var(--ink);">Total</span><b style="font-size:var(--t-body-lg);">${peso(p.customerTotalCentavos)}</b>
       </div>
       <div class="row"><span class="mut">${esc(providerOf(b).name.split(' ')[0])} keeps</span><b class="mut">${peso(p.providerShareCentavos)}</b></div>
-      <div class="row"><span class="mut">Sukinnect fee, from their share</span><b class="mut">${peso(p.commissionCentavos)} at ${Math.round(p.commissionRate * 100)}%</b></div>
+      <!-- The rate sits with the amount on one unwrapped line: "₱40.00 at 10%"
+         broke across two, so the figure and its percentage no longer read as one
+         fact, and the long label pushed them both around. -->
+      <div class="row"><span class="mut">Sukinnect fee <span class="mut">from their share</span></span><b class="mut" style="white-space:nowrap;">${peso(p.commissionCentavos)} · ${Math.round(p.commissionRate * 100)}%</b></div>
       <div class="row"><span class="mut">How it was paid</span><b class="mut">${esc(payMethodLabel(b))}</b></div>
       ${cash ? `<div style="font-size:var(--t-caption); color:var(--mist); margin-top:6px; line-height:1.5;">
         Handed over on site — Sukinnect never held this money. Only our own fee can be reversed here; the visit itself is settled between you.</div>` : ''}
@@ -5358,22 +5361,26 @@ function residentConcierge(){
 
   <div class="pad" style="background:var(--cloud);">
     
-    <div style="background:var(--grad-brand-dark); border-radius:16px; padding:16px; color:var(--on-brand); margin-bottom:14px; box-shadow:0 6px 16px rgba(3,82,174,0.18);">
-      <p style="font-size:var(--t-body-sm); line-height:1.5; opacity:0.95; margin:0;">
+    <!-- This is a caveat, not the headline of the screen. As a full-width dark
+         gradient block it was the loudest thing here, and it said "this does not
+         diagnose" — so the first and strongest impression was a disclaimer. -->
+    <div style="display:flex; gap:9px; align-items:flex-start; background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--brand-secondary); border-radius:12px; padding:11px 13px; margin-bottom:14px;">
+      <span style="color:var(--deep); display:inline-flex; flex:none; margin-top:1px;">${ic("lightbulb",15)}</span>
+      <p style="font-size:var(--t-caption); line-height:1.5; color:var(--ink-soft); margin:0;">
         Describe the problem or attach a photo. This prototype sorts what you provide into a service category and prepares a job briefing for the provider &mdash; it does not diagnose the fault.
       </p>
     </div>
 
     <div class="card" style="border-radius:16px; padding:16px; background:var(--surface); border:1px solid var(--line); margin-bottom:14px;">
-      <label style="font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:block; margin-bottom:8px;">Describe the Issue</label>
+      <label style="font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:block; margin-bottom:8px;">Describe the issue</label>
       <textarea id="concierge-input-field" rows="4" oninput="conciergeInput(this)" style="width:100%; border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:14px; font-family:inherit; font-size:var(--t-body-sm); outline:none; color:var(--ink); resize:none;" placeholder="Describe what is broken, leaking, or needs maintenance...">${esc(state.conciergeInput)}</textarea>
 
-      <label style="font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:block; margin-bottom:8px;">Attach Photo of Breakdown</label>
+      <label style="font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:block; margin-bottom:8px;">Attach a photo of the problem</label>
       
       <button class="btn secondary" style="width:100%; background:var(--surface); border:1.5px solid var(--line); border-radius:12px; padding:12px; font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:12px; box-shadow:0 2px 5px rgba(0,0,0,0.02);" onclick="document.getElementById('hidden-file-input').click()">
         <input type="file" id="hidden-file-input" accept="image/*" style="display:none;" onchange="handlePhotoUpload(event)">
         ${ic("camera",16)}
-        <span>${state.conciergePhotoAttached ? esc(state.conciergePhotoName) : 'Upload / Snap Photo'}</span>
+        <span>${state.conciergePhotoAttached ? esc(state.conciergePhotoName) : 'Upload or take a photo'}</span>
       </button>
       ${state.conciergePhotoError ? `<div class="inline-error">${ic("alert-triangle",12)} ${state.conciergePhotoError}</div>` : ''}
       ${state.conciergePhotoAttached && !state.conciergePhotoError ? `<button type="button" class="auth-switch" style="display:block; margin:-6px auto 12px;" onclick="removeConciergePhoto()">Remove photo</button>` : ''}
@@ -5387,7 +5394,7 @@ function residentConcierge(){
       <button class="btn" style="width:100%; border-radius:12px; padding:14px; font-size:var(--t-body);" id="concierge-analyze-btn" ${state.conciergeAnalyzing ? 'disabled' : ''}>
         ${state.conciergeAnalyzing
           ? '<span class="spinner"></span> Preparing the job briefing&hellip;'
-          : 'Analyze Text & Photo Evidence ' + ic("arrow-right",12)}
+          : 'Analyze the text and photo ' + ic("arrow-right",12)}
       </button>
     </div>
 
@@ -5986,10 +5993,18 @@ function residentBookingDetail(){
       ${statusCard(b)}
 
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; background:var(--background); padding:12px; border-radius:12px; font-size:var(--t-caption); margin-bottom:14px;">
-        <div>
-          <span style="color:var(--mist); font-size:var(--t-caption);">Arrival Time:</span><br>
+        <!-- Arrival only means something once the provider is actually moving.
+             Before that it repeats the scheduled time sitting at the top of this
+             same card, which is how one screen came to state 4:00 PM twice. -->
+        <!-- Arrival only means something once the provider is actually moving.
+             Before that it repeats the scheduled time sitting at the top of this
+             same card, which is how one screen came to state 4:00 PM twice. The
+             cell is dropped rather than filled with the status, which the card
+             directly above already carries. -->
+        ${['en_route','arrived','ongoing','completed'].includes(b.status) ? `<div>
+          <span style="color:var(--mist); font-size:var(--t-caption);">Arrived / arriving:</span><br>
           <b style="font-size:var(--t-body-sm); color:var(--ink);">${b.arrivalTime}</b>
-        </div>
+        </div>` : ''}
         <div>
           <span style="color:var(--mist); font-size:var(--t-caption);">Payment Status:</span><br>
           <b style="font-size:var(--t-body-sm); color:var(--ink);">${esc(payStatusLabel(b))}</b>
@@ -6398,7 +6413,7 @@ function adminMarketplaceIntelligence(){  const f = state.adminIntFilters;
       <div class="stat"><div class="num">${pesoCompact(st.grossCentavos)}</div><div class="lbl">Services sold</div></div>
       <div class="stat"><div class="num">${st.bookings}</div><div class="lbl">Bookings</div></div>
       <div class="stat"><div class="num">${st.completed}</div><div class="lbl">Completed</div></div>
-      <div class="stat"><div class="num">${st.completionRate}%</div><div class="lbl">Completion</div></div>
+      <div class="stat"><div class="num">${st.completionRate}%</div><div class="lbl">${st.closed ? 'Of ' + st.closed + ' closed job' + (st.closed === 1 ? '' : 's') : 'Nothing closed yet'}</div></div>
     </div>
     <div class="card card-lg">
       <div class="row" style="margin-bottom:10px;"><b class="card-title">Where the work went</b><span class="chip">${f.days ? f.days + ' days' : 'all time'}</span></div>
@@ -6443,6 +6458,10 @@ function intelligenceStats(f) {
     grossCentavos: byCategory.reduce((t, r) => t + r.centavos, 0),
     bookings: inWindow.length,
     completed: completed.length,
+    /* The rate is of jobs that have *finished*, so the denominator has to travel
+       with it: "100% Completion" sitting under "8 Bookings" reads as false until
+       the reader is told 1 of 1 closed jobs completed. */
+    closed: closed.length,
     completionRate: closed.length ? Math.round(completed.length / closed.length * 100) : 0,
     byCategory
   };
