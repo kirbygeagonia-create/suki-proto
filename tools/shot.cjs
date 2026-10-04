@@ -59,7 +59,7 @@ const PROBE = flag('probe', '');
    what a real browser actually laid out.
    -------------------------------------------------------------------------------- */
 const AUDIT_JS = `(function(){
-  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], contrast: [], overlaps: [], stretched: [], vendor: [], mapEscape: [], hOverflow: 0 };
+  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], contrast: [], overlaps: [], stretched: [], vendor: [], mapEscape: [], occluded: [], hOverflow: 0 };
   const vw = document.documentElement.clientWidth;
   out.hOverflow = document.documentElement.scrollWidth - vw;
   const TAP = 44;
@@ -276,6 +276,29 @@ const AUDIT_JS = `(function(){
     else if (getComputedStyle(el).position === 'static')
       out.mapEscape.push({ what: el.id || '(unnamed)', why: '.map-mount is not positioning the frame' });
   });
+  /* A modal layer is only modal if it is actually on top. Sample points across the
+     open sheet and ask the page what is really there: a lower layer with a large
+     internal z-index (Leaflet puts 1000 on its own controls) will answer for a
+     point the sheet believes it owns. */
+  const top = document.querySelector('.sheet-layer, .modal-layer');
+  if (top) {
+    const panel = top.querySelector('.sheet, .modal-card') || top;
+    const pr = panel.getBoundingClientRect();
+    if (pr.width > 4 && pr.height > 4) {
+      for (let ix = 1; ix <= 4; ix++) {
+        for (let iy = 1; iy <= 4; iy++) {
+          const x = Math.round(pr.left + pr.width * ix / 5);
+          const y = Math.round(pr.top + pr.height * iy / 5);
+          if (x < 0 || y < 0 || x > vw || y > document.documentElement.clientHeight) continue;
+          const hit = document.elementFromPoint(x, y);
+          if (hit && !top.contains(hit) && !hit.contains(top)) {
+            out.occluded.push({ what: (hit.className || hit.tagName).toString().split(' ')[0],
+              at: ix + '/' + iy });
+          }
+        }
+      }
+    }
+  }
   return out;
 })()`;
 
@@ -632,6 +655,7 @@ async function main() {
     tally(unl, 'clickable things with no accessible name', r => r.screen + '  ' + r.unlabelled);
     tally(str, 'images drawn out of proportion', r => r.screen + '  ' + r.src + ' natural ' + r.natural + ' drawn ' + r.drawn);
     tally(flat('mapEscape'), 'map panes painted outside their own frame', r => r.screen + '  ' + r.what + ' — ' + r.why);
+    tally(flat('occluded'), 'something painting on top of an open modal layer', r => r.screen + '  ' + r.what + ' at sample ' + r.at);
     const vend = flat('vendor');
     console.log('\nvendor-owned controls excluded (Leaflet attribution + markers, not ours to resize): ' +
       vend.length + (vend.length ? '  e.g. ' + [...new Set(vend.map(r => r.what || 'unlabelled <img>'))].slice(0, 4).join(' | ') : ''));
