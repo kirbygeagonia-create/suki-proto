@@ -45,6 +45,9 @@ const DESKTOP = has('desktop');
 const APP_MODE = !DESKTOP;
 const ONLY = (flag('only', '') || '').split(',').map(s => s.trim()).filter(Boolean);
 const MEASURE = has('measure');
+/* Asks Chrome to report prefers-reduced-motion, so a claim that the app honours
+   that setting can be measured instead of assumed. */
+const REDUCED = has('reduced-motion');
 const PROBE = flag('probe', '');
 
 /* ------------------------------------------------------------------ the audit
@@ -486,6 +489,10 @@ async function main() {
     deviceScaleFactor: DPR, mobile: !DESKTOP
   });
   await session.send('Emulation.setScrollbarsHidden', { hidden: true });
+  if (REDUCED) {
+    await session.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+    console.log('  emulating prefers-reduced-motion: reduce');
+  }
 
   const loaded = new Promise(resolve => {
     const check = (e) => { if (e.method === 'Page.loadEventFired') resolve(); };
