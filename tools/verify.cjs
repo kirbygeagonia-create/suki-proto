@@ -1118,6 +1118,10 @@ suite('honesty', async () => {
   const paint = (role, tab) => {
     state.view = 'app'; state.role = role; state.tab = tab;
     state.sheet = null; state.isChatOpen = false;
+    /* The admin console renders its sub-screen until this is put back. Leaving it
+       set made a later paint() quietly re-shoot the previous screen, so every text
+       match returned null and the checks beside it passed for nothing. */
+    state.adminScreen = 'overview';
     render();
     return app._document.getElementById('screen').innerHTML
       .replace(/<[^>]*>/g, ' ').replace(/&[a-z]+;/g, ' ').replace(/\s+/g, ' ').trim();
@@ -1148,14 +1152,38 @@ suite('honesty', async () => {
 
   /* Chips are labels. A chip phrased as an instruction reads as a control and
      goes nowhere when pressed. */
-  const intel = paint('admin', 'admin_dashboard');
+  paint('admin', 'admin_dashboard');
   state.adminScreen = 'intelligence'; render();
   const intelHtml = app._document.getElementById('screen').innerHTML;
   const commanding = [...intelHtml.matchAll(/<span class="chip[^"]*"[^>]*>([^<]*)<\/span>/g)]
     .map(m => m[1].trim()).filter(t => /\b(here|now|tap|press|go)\b/i.test(t));
   c.check('no chip is worded as a command',
     commanding.length === 0, commanding.join(' | ') + ' read as actions but are not buttons');
-  void intel;
+
+  /* The dashboard used to type its own digits: the attention list claimed 6
+     applications beside a queue of 3, and 5 expiring credentials where two
+     providers hold a flagged one. One concept must be one count on one screen. */
+  const dash = paint('admin', 'admin_dashboard');
+  const said = (re) => { const m = dash.match(re); return m ? +m[1] : null; };
+  const k = app.adminCounts();
+  const pairs = [
+    ['applications', said(/(\d+)\s+Provider applications need review/i), said(/(\d+)\s+Applications to review/i), k.pendingVerification],
+    ['open cases',   said(/(\d+)\s+Cases open for review/i),           said(/(\d+)\s+Cases open(?!\s+for)/i),    k.liveCases],
+    ['credentials',  said(/(\d+)\s+Credentials expiring or expired/i), null,                                      k.expiringSoon],
+  ];
+  const disagreeing = pairs
+    .filter(([, shown, alsoShown, truth]) => shown !== null && shown !== truth)
+    .map(([n, shown, , truth]) => n + ': list shows ' + shown + ' but the records hold ' + truth);
+  c.check('the attention list counts from the records', disagreeing.length === 0, disagreeing.join(' | '));
+
+  const tileWrong = pairs.filter(([, , alsoShown, truth]) => alsoShown !== null && alsoShown !== truth)
+    .map(([n, , alsoShown, truth]) => n + ': tile shows ' + alsoShown + ' against ' + truth);
+  c.check('and the stat tiles agree with it', tileWrong.length === 0, tileWrong.join(' | '));
+
+  c.check('both places were actually found to compare',
+    pairs.every(([n, shown, also, truth]) => shown !== null && (also !== null || n === 'credentials')) &&
+    pairs.every(([, , , truth]) => Number.isInteger(truth)),
+    pairs.map(([n, shown, also]) => n + '=' + shown + '/' + also).join(', '));
 
   return c;
 });

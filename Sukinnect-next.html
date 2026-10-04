@@ -1051,13 +1051,18 @@
     box-shadow:0 1px 5px var(--brand-glow);
   }
 
-  /* Stat cards — brand accent spine, bolder numbers */
+  /* Stat cards — bolder numbers, and a spine that means something.
+     Every card used to carry the same brand-blue bar whatever the number said, so
+     the accent was decoration and four admin screens looked like one dashboard
+     template (76, 83). The bar now appears only where a figure is genuinely
+     flagged, and its colour is that judgement. */
   .stat{ border-radius:14px; position:relative; overflow:hidden; box-shadow:var(--shadow-sm); }
-  .stat::before{
-    content:""; position:absolute; left:0; top:0; bottom:0; width:3px;
-    background:var(--grad-accent);
-    border-radius:3px 0 0 3px;
+  .stat.tone-warn::before, .stat.tone-alert::before, .stat.tone-good::before{
+    content:""; position:absolute; left:0; top:0; bottom:0; width:3px; border-radius:3px 0 0 3px;
   }
+  .stat.tone-warn::before{ background:var(--warning); }
+  .stat.tone-alert::before{ background:var(--error); }
+  .stat.tone-good::before{ background:var(--success); }
   .stat .num{ color:var(--deep); }
 
   /* Chips & status pills */
@@ -1647,6 +1652,16 @@ const PRO_PHOTOS = {
 };
 const GENERIC_AVATAR = 'avatars/avatar-09.png';
 const VERIF_PHOTOS = { maria:'avatars/avatar-10.png', joel:'avatars/avatar-11.png', liza:'avatars/avatar-12.png' };
+
+/* The applicants waiting on a decision, in one place. The verification queue and
+   the dashboard's "needs attention" list both read this, because they were
+   previously stating 3 and 6 for the same queue on the same screen. */
+const PENDING_APPLICANTS = [
+  {id:'maria', initials:'MS', name:'Maria Santos', service:'Electrical Specialist', days:'1 day ago', barangay:'Poblacion', docs:'4/5', priority:'High Priority', priorityColor:'var(--warning-100)', priorityText:'var(--warning-ink)', issue:'Missing NBI Clearance', issueColor:'var(--error-100)', issueText:'var(--error-ink)'},
+  {id:'joel', initials:'JA', name:'Joel Aquino', service:'Appliance Specialist', days:'2 days ago', barangay:'San Isidro', docs:'5/5', priority:'Normal Priority', priorityColor:'var(--warning-100)', priorityText:'var(--warning-ink)', issue:'All documents submitted', issueColor:'var(--success-100)', issueText:'var(--success-ink)'},
+  {id:'liza', initials:'LR', name:'Liza Ramos', service:'Cleaning Specialist', days:'3 days ago', barangay:'Sta. Cruz', docs:'3/5', priority:'For Initial Review', priorityColor:'var(--brand-tint-soft)', priorityText:'var(--brand-primary-dark)', issue:'2 documents to review', issueColor:'var(--warning-100)', issueText:'var(--warning-ink)'},
+];
+const docsOutstanding = () => PENDING_APPLICANTS.filter(a => a.docs !== '5/5').length;
 const SELF_PHOTOS = { resident:'avatars/avatar-03.png', admin:'avatars/ADMIN.png', self:'avatars/PLUMBER.png' };
 
 // Warm the image cache for every avatar up front. On file:// URLs an <img>
@@ -3139,10 +3154,14 @@ function seedDemoDispute() {
 function adminCounts() {
   const verified = PROVIDERS.length;                       /* the demo roster is verified */
   const open = BOOKINGS.filter(b => !FINISHED_STATES.includes(b.status) && b.status !== 'disputed').length;
-  const pendingVerification = 3;                            /* applicants in the queue */
+  /* Everything below is counted, because the dashboard used to type its own
+     digits: it showed 6 applications beside a queue of 3, and 5 expiring
+     credentials where two providers hold a flagged one. */
+  const pendingVerification = PENDING_APPLICANTS.length;
+  const missingDocs = docsOutstanding();
   const liveCases = DISPUTES.filter(d => d.status === 'under review').length;
-  const expiringSoon = 5;
-  return { verified, open, pendingVerification, liveCases, expiringSoon };
+  const expiringSoon = PROVIDERS.filter(p => adminProviderMeta(p).credential !== 'Valid').length;
+  return { verified, open, pendingVerification, missingDocs, liveCases, expiringSoon };
 }
 function weeklyBookings() {
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -6206,6 +6225,7 @@ const row = (id, title, detail) => settingsRow('residentProfileSection', id, tit
 
 function adminDashboard(){
   const ap = state.adminProfileData;
+  const k = adminCounts();
   return `
   <div class="topbar">
     <div style="display:flex; align-items:center; gap:10px;">
@@ -6218,19 +6238,23 @@ function adminDashboard(){
   </div>
   <div class="pad" style="background:var(--cloud);">
     <h3 style="font-size:var(--t-body); margin:0 0 8px;">Needs attention</h3>
+    <!-- Every figure here is counted from the records, and the wording claims no
+         age the records do not carry: it said "disputes open beyond 48 hours: 3"
+         on a device holding two disputes in total, and "6 applications" beside a
+         queue of three. -->
     <button type="button" class="job-row" onclick="state.tab='admin_disputes'; render();" aria-label="Open disputes">
-      <span class="jr-time" style="color:var(--error-ink);">3</span>
-      <span style="min-width:0; flex:1;"><span class="jr-t">Disputes open beyond 48 hours</span><span class="jr-s">Oldest case has evidence waiting on review</span></span>
+      <span class="jr-time" style="color:${k.liveCases ? 'var(--error-ink)' : 'var(--mist)'};">${k.liveCases}</span>
+      <span style="min-width:0; flex:1;"><span class="jr-t">Cases open for review</span><span class="jr-s">${k.liveCases ? 'Evidence is being read; nothing is decided yet' : 'Nothing is under review right now'}</span></span>
       <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',14)}</span>
     </button>
     <button type="button" class="job-row" onclick="state.tab='admin_verifications'; state.adminProviderCategory='pending'; render();" aria-label="Open verification queue">
-      <span class="jr-time" style="color:var(--warning-ink);">6</span>
-      <span style="min-width:0; flex:1;"><span class="jr-t">Provider applications need review</span><span class="jr-s">Two are missing a clearance document</span></span>
+      <span class="jr-time" style="color:var(--warning-ink);">${k.pendingVerification}</span>
+      <span style="min-width:0; flex:1;"><span class="jr-t">Provider applications need review</span><span class="jr-s">${k.missingDocs} ${k.missingDocs === 1 ? 'has' : 'have'} documents still outstanding</span></span>
       <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',14)}</span>
     </button>
     <button type="button" class="job-row" onclick="state.tab='admin_verifications'; state.adminProviderCategory='credentials'; render();" aria-label="Open credential monitor">
-      <span class="jr-time" style="color:var(--warning-ink);">5</span>
-      <span style="min-width:0; flex:1;"><span class="jr-t">Credentials expire within 30 days</span><span class="jr-s">Providers keep working until the renewal is checked</span></span>
+      <span class="jr-time" style="color:var(--warning-ink);">${k.expiringSoon}</span>
+      <span style="min-width:0; flex:1;"><span class="jr-t">Credentials expiring or expired</span><span class="jr-s">Providers keep working until the renewal is checked</span></span>
       <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',14)}</span>
     </button>
     <button type="button" class="job-row" onclick="state.adminScreen='intelligence'; render();" aria-label="Open marketplace intelligence">
@@ -6241,11 +6265,10 @@ function adminDashboard(){
 
     <h3 style="font-size:var(--t-body); margin:20px 0 8px;">This week</h3>
     <div class="statgrid">
-${(() => { const k = adminCounts(); return `
       <button type="button" class="stat" onclick="state.tab='admin_verifications'; state.adminProviderCategory='verified'; render();"><div class="num">${k.verified}</div><div class="lbl">Verified providers, demo roster</div></button>
       <button type="button" class="stat" onclick="state.tab='admin_disputes'; render();"><div class="num">${k.open}</div><div class="lbl">Live bookings</div></button>
-      <button type="button" class="stat" onclick="state.tab='admin_verifications'; state.adminProviderCategory='pending'; render();"><div class="num">${k.pendingVerification}</div><div class="lbl">Applications to review</div></button>
-      <button type="button" class="stat" onclick="state.tab='admin_disputes'; render();"><div class="num">${k.liveCases}</div><div class="lbl">Cases open</div></button>`; })()}
+      <button type="button" class="stat${k.pendingVerification ? ' tone-warn' : ''}" onclick="state.tab='admin_verifications'; state.adminProviderCategory='pending'; render();"><div class="num">${k.pendingVerification}</div><div class="lbl">Applications to review</div></button>
+      <button type="button" class="stat${k.liveCases ? ' tone-alert' : ''}" onclick="state.tab='admin_disputes'; render();"><div class="num">${k.liveCases}</div><div class="lbl">Cases open</div></button>
     </div>
     <div style="font-size:var(--t-caption); color:var(--mist); margin:6px 0 4px;">Sample marketplace figures, not live counts.</div>
 
@@ -6413,7 +6436,7 @@ function adminMarketplaceIntelligence(){  const f = state.adminIntFilters;
       <div class="stat"><div class="num">${pesoCompact(st.grossCentavos)}</div><div class="lbl">Services sold</div></div>
       <div class="stat"><div class="num">${st.bookings}</div><div class="lbl">Bookings</div></div>
       <div class="stat"><div class="num">${st.completed}</div><div class="lbl">Completed</div></div>
-      <div class="stat"><div class="num">${st.completionRate}%</div><div class="lbl">${st.closed ? 'Of ' + st.closed + ' closed job' + (st.closed === 1 ? '' : 's') : 'Nothing closed yet'}</div></div>
+      <div class="stat${st.closed ? (st.completionRate >= 90 ? ' tone-good' : ' tone-warn') : ''}"><div class="num">${st.completionRate}%</div><div class="lbl">${st.closed ? 'Of ' + st.closed + ' closed job' + (st.closed === 1 ? '' : 's') : 'Nothing closed yet'}</div></div>
     </div>
     <div class="card card-lg">
       <div class="row" style="margin-bottom:10px;"><b class="card-title">Where the work went</b><span class="chip">${f.days ? f.days + ' days' : 'all time'}</span></div>
@@ -6518,17 +6541,12 @@ function adminProviderManagementProfile(){
 
 function adminVerifications(){
   const verifiedProviders = PROVIDERS.slice(0, 4);
-  const pendingProviders = ['Maria Santos - Electrical Specialist','Joel Aquino - Appliance Specialist','Liza Ramos - Cleaning Specialist'];
-  const pendingDetails = [
-    {id:'maria', initials:'MS', name:'Maria Santos', service:'Electrical Specialist', days:'1 day ago', barangay:'Poblacion', docs:'4/5', priority:'High Priority', priorityColor:'var(--warning-100)', priorityText:'var(--warning-ink)', issue:'Missing NBI Clearance', issueColor:'var(--error-100)', issueText:'var(--error-ink)'},
-    {id:'joel', initials:'JA', name:'Joel Aquino', service:'Appliance Specialist', days:'2 days ago', barangay:'San Isidro', docs:'5/5', priority:'Normal Priority', priorityColor:'var(--warning-100)', priorityText:'var(--warning-ink)', issue:'All documents submitted', issueColor:'var(--success-100)', issueText:'var(--success-ink)'},
-    {id:'liza', initials:'LR', name:'Liza Ramos', service:'Cleaning Specialist', days:'3 days ago', barangay:'Sta. Cruz', docs:'3/5', priority:'For Initial Review', priorityColor:'var(--brand-tint-soft)', priorityText:'var(--brand-primary-dark)', issue:'2 documents to review', issueColor:'var(--warning-100)', issueText:'var(--warning-ink)'}
-  ];
-  // The sort control has to change the order the admin actually sees, or it is
-  // decoration (issue #1 of the audit): applicants sort on how long they wait.
-  pendingDetails.sort((a,b) => state.adminPendingSort === 'longest'
+  /* Sorted into a new array: the shared roster must keep its own order, or the
+     last sort an admin used would leak into the dashboard's counts. */
+  const pendingDetails = PENDING_APPLICANTS.slice().sort((a,b) => state.adminPendingSort === 'longest'
     ? waitDays(b.days) - waitDays(a.days)
     : waitDays(a.days) - waitDays(b.days));
+  const pendingProviders = pendingDetails.map(a => a.name + ' - ' + a.service);
   const category = state.adminProviderCategory || 'verified';
   const providerQuery = (state.adminVerifiedSearch || '').toLowerCase();
   let visibleVerified = verifiedProviders.filter(provider => {
@@ -7020,7 +7038,7 @@ function providerDashboard(){
 
     <div class="statgrid" style="margin:14px 0 4px;">
       <div class="stat"><div class="num">${pesoShort(bookedThisWeek(CURRENT_PROVIDER_ID))}</div><div class="lbl">Booked this week</div></div>
-      <div class="stat"><div class="num">${completionRate(CURRENT_PROVIDER_ID)}%</div><div class="lbl">Completion</div></div>
+      <div class="stat${completionRate(CURRENT_PROVIDER_ID) >= 90 ? ' tone-good' : ' tone-warn'}"><div class="num">${completionRate(CURRENT_PROVIDER_ID)}%</div><div class="lbl">Completion</div></div>
     </div>
     <div class="demo-note">Sample figures from this prototype, not live earnings.</div>
 
