@@ -328,7 +328,7 @@
      colour is confined to the badge: it is a secondary cue, the brand is not (45). */
   .cat{
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:8px; min-height:96px; padding:10px 6px; text-align:center;
+    gap:8px; min-height:104px; padding:10px 6px; text-align:center;
     background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md);
     font-size:var(--t-body); font-weight:700; cursor:pointer; color:var(--ink);
     line-height:1.2;
@@ -339,28 +339,51 @@
      own trade hue and nothing else: brand blue still owns the header, the buttons
      and the nav (45). */
   .cat .art{
-    width:56px; height:56px; border-radius:18px; flex-shrink:0; overflow:hidden;
+    width:60px; height:60px; border-radius:19px; flex-shrink:0; overflow:hidden;
     display:flex; align-items:center; justify-content:center;
+    /* The trade tint comes in as a background-colour from the markup; this layer
+       is the light falling across it, which is what makes the frame read as a
+       picture rather than a flat chip. */
+    background-image:radial-gradient(circle at 28% 18%, rgba(255,255,255,.92), rgba(255,255,255,0) 68%);
+    box-shadow:inset 0 0 0 1px rgba(3,0,43,.05);
   }
   .cat .art svg{ width:100%; height:100%; display:block; }
-  /* One shared motion vocabulary; each scene picks the parts it needs. */
-  @keyframes caFall{ 0%{ transform:translateY(-4px); opacity:0; } 30%{ opacity:1; } 75%{ transform:translateY(6px); opacity:1; } 100%{ transform:translateY(8px); opacity:0; } }
-  @keyframes caRise{ 0%{ transform:translateY(6px) scale(.55); opacity:0; } 35%{ opacity:.95; } 100%{ transform:translateY(-10px) scale(1.05); opacity:0; } }
+  /* One shared motion vocabulary; each scene picks the parts it needs and staggers
+     them with animation-delay. Everything here animates transform or opacity — the
+     two properties a phone composites without repainting — except the two that draw
+     a line, which are a handful of pixels wide. */
+  @keyframes caFall{ 0%{ transform:translateY(-5px); opacity:0; } 25%{ opacity:1; } 70%{ transform:translateY(7px); opacity:1; } 100%{ transform:translateY(10px); opacity:0; } }
+  @keyframes caRise{ 0%{ transform:translateY(7px) scale(.5); opacity:0; } 30%{ opacity:.95; } 100%{ transform:translateY(-12px) scale(1.08); opacity:0; } }
   @keyframes caSpin{ to{ transform:rotate(360deg); } }
-  @keyframes caFlash{ 0%,60%,100%{ opacity:.2; } 78%{ opacity:1; } }
-  @keyframes caBob{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-2.5px); } }
-  @keyframes caMarch{ to{ stroke-dashoffset:-28; } }
-  @keyframes caFlip{ 0%,52%{ transform:scaleX(1); } 74%{ transform:scaleX(.12); } 96%,100%{ transform:scaleX(1); } }
-  .cat .ca-fall, .cat .ca-rise, .cat .ca-spin, .cat .ca-flash, .cat .ca-bob, .cat .ca-flip{
-    transform-box:fill-box; transform-origin:center;
-  }
+  @keyframes caFlash{ 0%,62%,100%{ opacity:.2; } 80%{ opacity:1; } }
+  @keyframes caBob{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-3px); } }
+  @keyframes caMarch{ to{ stroke-dashoffset:-30; } }
+  @keyframes caFlip{ 0%,52%{ transform:scaleX(1); } 74%{ transform:scaleX(.1); } 96%,100%{ transform:scaleX(1); } }
+  @keyframes caStream{ to{ stroke-dashoffset:-24; } }
+  @keyframes caRipple{ 0%{ transform:scale(.35); opacity:.75; } 100%{ transform:scale(1.6); opacity:0; } }
+  @keyframes caGlow{ 0%,100%{ opacity:.5; transform:scale(.9); } 50%{ opacity:1; transform:scale(1.08); } }
+  @keyframes caFlicker{ 0%,100%{ opacity:.5; } 42%{ opacity:1; } 68%{ opacity:.72; } }
+  @keyframes caTwinkle{ 0%,100%{ transform:scale(.3) rotate(0deg); opacity:0; } 50%{ transform:scale(1) rotate(45deg); opacity:1; } }
+  @keyframes caSway{ 0%,100%{ transform:rotate(-6deg); } 50%{ transform:rotate(6deg); } }
+  @keyframes caSlide{ 0%,100%{ transform:translateX(0); opacity:.35; } 50%{ transform:translateX(4px); opacity:.9; } }
+  .cat .ca-fall, .cat .ca-rise, .cat .ca-spin, .cat .ca-flash, .cat .ca-bob,
+  .cat .ca-flip, .cat .ca-ripple, .cat .ca-glow, .cat .ca-flicker, .cat .ca-twinkle,
+  .cat .ca-sway, .cat .ca-slide{ transform-box:fill-box; transform-origin:center; }
   .cat .ca-fall{ animation:caFall 2.2s ease-in infinite; }
   .cat .ca-rise{ animation:caRise 2.6s ease-out infinite; }
-  .cat .ca-spin{ animation:caSpin 3.4s linear infinite; }
+  .cat .ca-spin{ animation:caSpin 3.6s linear infinite; }
+  .cat .ca-spin-back{ animation:caSpin 4.6s linear infinite reverse; transform-box:fill-box; transform-origin:center; }
   .cat .ca-flash{ animation:caFlash 2.4s ease-in-out infinite; }
   .cat .ca-bob{ animation:caBob 2.8s ease-in-out infinite; }
-  .cat .ca-flip{ animation:caFlip 3.2s ease-in-out infinite; }
-  .cat .ca-march{ animation:caMarch 1.6s linear infinite; }
+  .cat .ca-flip{ animation:caFlip 3.4s ease-in-out infinite; transform-origin:left center; }
+  .cat .ca-march{ animation:caMarch 1.5s linear infinite; }
+  .cat .ca-stream{ animation:caStream 1.1s linear infinite; }
+  .cat .ca-ripple{ animation:caRipple 2.2s ease-out infinite; }
+  .cat .ca-glow{ animation:caGlow 2.6s ease-in-out infinite; }
+  .cat .ca-flicker{ animation:caFlicker 2.6s ease-in-out infinite; }
+  .cat .ca-twinkle{ animation:caTwinkle 2.2s ease-in-out infinite; }
+  .cat .ca-sway{ animation:caSway 2.4s ease-in-out infinite; }
+  .cat .ca-slide{ animation:caSlide 1.8s ease-in-out infinite; }
   /* The concierge is a prototype feature that sharpens discovery; it must not
      outrank search and categories, so it is one row, not a hero (20, 8). */
   .concierge-row{
@@ -1202,9 +1225,6 @@
     }
     .card:hover, .notif-item:hover, .result-card:hover{ box-shadow:var(--shadow-sm) !important; }
     .notif-item:hover .notif-icon, .cat:hover .art{ transform:none !important; }
-    /* The category scenes loop forever, which is exactly what this setting asks
-       for an end to. The scene still draws; only its motion stops. */
-    .cat .art svg *{ animation:none !important; }
     .btn:hover{ filter:none !important; }
     .navitem:hover{ color:inherit !important; }
   }
@@ -1449,41 +1469,134 @@ function serviceMeta(serviceId){
   return { id:svc.id, label:svc.label, icon:svc.icon, bg:theme.bg, fg:theme.fg };
 }
 
-// One small scene per trade, for the category tiles. Drawn to the same metaphor as
-// the line icon in SERVICES so a tile and a provider disc never disagree about what
-// a plumber looks like. `aria-hidden` because the label beside it is the accessible
-// name; the scene is decoration, not a second thing to read.
+// One drawn scene per trade, for the category tiles. Each is a small picture with
+// several parts moving independently — water running and dripping, a filament
+// flicking, bubbles lifting, a page turning, a drum tumbling, a parcel travelling —
+// rather than an icon with one animated piece.
+//
+// Inline SVG, not bitmaps: the WebView loads this file off disk with no network
+// (81), a vector stays crisp at any pixel ratio, an animated bitmap would be a
+// several-hundred-kilobyte GIF per trade in the APK, and a flat picture could not
+// move at all. Every fill is the trade's own hue or white laid over it, so brand
+// blue still owns the header, the buttons and the nav (45). Gradient ids are
+// namespaced per trade because they live in one shared document.
+//
+// `aria-hidden` on the svg: the label under the tile is the accessible name, and
+// the scene is decoration, not a second thing to read.
 const CAT_ART = {
-  plumbing: `<path d="M9 15h13v9" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
-    <path d="M15 10v5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-    <path d="M22 24v5" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
-    <path class="ca-fall" d="M22 34c2.9 3.6 2.9 6.2 0 6.2s-2.9-2.6 0-6.2z" fill="currentColor"/>
-    <path class="ca-flash" d="M14 46h16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" opacity=".45"/>`,
-  electrical: `<path d="M31 7 15 30h9l-4 19 18-24h-9l4-18z" fill="currentColor"/>
-    <g class="ca-flash" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
-      <path d="M8 16l4-2M6 26h5M9 36l4-2"/></g>
-    <g class="ca-flash" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="animation-delay:1.2s">
-      <path d="M48 16l-4-2M50 26h-5M47 36l-4-2"/></g>`,
-  cleaning: `<rect x="11" y="33" width="13" height="15" rx="3.5" fill="currentColor"/>
-    <path d="M14 33v-4h7v4" fill="none" stroke="currentColor" stroke-width="2.6"/>
-    <circle class="ca-rise" cx="31" cy="27" r="4.5" fill="none" stroke="currentColor" stroke-width="2.4"/>
-    <circle class="ca-rise" cx="40" cy="21" r="3.2" fill="none" stroke="currentColor" stroke-width="2.2" style="animation-delay:.8s"/>
-    <circle class="ca-rise" cx="34" cy="14" r="2.2" fill="currentColor" style="animation-delay:1.6s"/>`,
-  tutoring: `<path d="M28 15v27" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
-    <path d="M28 16H13a3 3 0 0 0-3 3v20a3 3 0 0 1 3-3h15z" fill="currentColor" opacity=".18"/>
-    <path d="M28 16H13a3 3 0 0 0-3 3v20a3 3 0 0 1 3-3h15z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/>
-    <path d="M28 16h15a3 3 0 0 1 3 3v20a3 3 0 0 0-3-3H28z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/>
-    <path class="ca-flip" d="M28 16h12a3 3 0 0 1 3 3v19" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>`,
-  appliance: `<rect x="9" y="9" width="38" height="38" rx="10" fill="none" stroke="currentColor" stroke-width="3"/>
-    <circle cx="28" cy="29" r="11" fill="currentColor" opacity=".14"/>
-    <circle cx="28" cy="29" r="11" fill="none" stroke="currentColor" stroke-width="2.4"/>
-    <g class="ca-spin" fill="currentColor"><circle cx="28" cy="22" r="2.3"/><circle cx="34" cy="32" r="2.3"/><circle cx="22" cy="32" r="2.3"/></g>
-    <circle class="ca-flash" cx="16" cy="16" r="2.6" fill="currentColor"/>`,
-  delivery: `<g class="ca-bob">
-    <path d="M28 12l14 7v12l-14 7-14-7V19z" fill="currentColor" opacity=".16"/>
-    <path d="M28 12l14 7-14 7-14-7z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/>
-    <path d="M14 19v12l14 7V26M42 19v12l-14 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/></g>
-    <path class="ca-march" d="M6 48h44" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-dasharray="7 7"/>`,
+  plumbing: `<defs>
+      <linearGradient id="ca-pl-metal" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="currentColor" stop-opacity=".95"/>
+        <stop offset="1" stop-color="currentColor" stop-opacity=".5"/></linearGradient>
+      <linearGradient id="ca-pl-water" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="currentColor" stop-opacity=".8"/>
+        <stop offset="1" stop-color="currentColor" stop-opacity=".3"/></linearGradient>
+    </defs>
+    <circle cx="35" cy="17" r="16" fill="currentColor" opacity=".09"/>
+    <rect x="7" y="4" width="15" height="4" rx="2" fill="currentColor" opacity=".75"/>
+    <rect x="12.5" y="7" width="4" height="5" fill="currentColor" opacity=".8"/>
+    <rect x="6" y="11" width="12" height="16" rx="4" fill="url(#ca-pl-metal)"/>
+    <path d="M18 15h11a6 6 0 0 1 6 6v5" fill="none" stroke="url(#ca-pl-metal)" stroke-width="7" stroke-linecap="round"/>
+    <path class="ca-stream" d="M35 28v14" fill="none" stroke="url(#ca-pl-water)" stroke-width="4.6" stroke-linecap="round" stroke-dasharray="7 5"/>
+    <ellipse class="ca-fall" cx="35" cy="45" rx="2.9" ry="3.5" fill="currentColor" opacity=".7" style="animation-delay:.6s"/>
+    <ellipse cx="35" cy="50" rx="12" ry="3.2" fill="currentColor" opacity=".15"/>
+    <ellipse class="ca-ripple" cx="35" cy="50" rx="7" ry="2" fill="none" stroke="currentColor" stroke-width="1.6"/>
+    <ellipse class="ca-ripple" cx="35" cy="50" rx="7" ry="2" fill="none" stroke="currentColor" stroke-width="1.6" style="animation-delay:1.1s"/>`,
+
+  electrical: `<defs>
+      <radialGradient id="ca-el-glow">
+        <stop offset="0" stop-color="currentColor" stop-opacity=".45"/>
+        <stop offset="1" stop-color="currentColor" stop-opacity="0"/></radialGradient>
+      <linearGradient id="ca-el-glass" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="currentColor" stop-opacity=".9"/>
+        <stop offset="1" stop-color="currentColor" stop-opacity=".45"/></linearGradient>
+    </defs>
+    <circle class="ca-glow" cx="28" cy="21" r="21" fill="url(#ca-el-glow)"/>
+    <g class="ca-flash" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" opacity=".6">
+      <path d="M28 1v5M45 5l-3.4 3.6M52 21h-5M9 21H4M11 5l3.4 3.6"/></g>
+    <circle cx="28" cy="21" r="13.5" fill="url(#ca-el-glass)"/>
+    <path d="M20 32.5h16l-2.4 5.5H22.4z" fill="url(#ca-el-glass)"/>
+    <path class="ca-flicker" d="M24 27c0-3.8 2.6-3 2.6-7M32 27c0-3.8-2.6-3-2.6-7" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" opacity=".95"/>
+    <ellipse cx="23" cy="15" rx="3.4" ry="4.6" fill="#fff" opacity=".38" transform="rotate(-24 23 15)"/>
+    <rect x="21" y="39" width="14" height="4" rx="1.6" fill="currentColor" opacity=".78"/>
+    <rect x="22.5" y="44" width="11" height="3.4" rx="1.4" fill="currentColor" opacity=".6"/>
+    <rect x="24.5" y="48.4" width="7" height="3" rx="1.3" fill="currentColor" opacity=".42"/>`,
+
+  cleaning: `<defs>
+      <linearGradient id="ca-cl-body" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="currentColor" stop-opacity=".95"/>
+        <stop offset="1" stop-color="currentColor" stop-opacity=".6"/></linearGradient>
+    </defs>
+    <circle cx="39" cy="15" r="15" fill="currentColor" opacity=".09"/>
+    <rect x="9" y="25" width="15" height="26" rx="5" fill="url(#ca-cl-body)"/>
+    <rect x="12.5" y="19" width="8" height="7" rx="2" fill="currentColor" opacity=".85"/>
+    <path d="M20 21h10l-2 5.5H20z" fill="currentColor" opacity=".7"/>
+    <rect x="27" y="13" width="4.5" height="8" rx="2" fill="currentColor" opacity=".8"/>
+    <rect x="11.5" y="34" width="10" height="15" rx="3.5" fill="#fff" opacity=".3"/>
+    <g fill="none" stroke="currentColor" stroke-width="2">
+      <circle class="ca-rise" cx="39" cy="27" r="5"/>
+      <circle class="ca-rise" cx="47" cy="19" r="3.4" style="animation-delay:.85s"/>
+      <circle class="ca-rise" cx="42" cy="12" r="2.4" style="animation-delay:1.7s"/></g>
+    <g class="ca-twinkle" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="animation-delay:.5s">
+      <path d="M8 9v8M4 13h8"/></g>`,
+
+  tutoring: `<defs>
+      <linearGradient id="ca-tu-cover" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="currentColor" stop-opacity=".9"/>
+        <stop offset="1" stop-color="currentColor" stop-opacity=".55"/></linearGradient>
+    </defs>
+    <circle cx="28" cy="26" r="19" fill="currentColor" opacity=".07"/>
+    <path d="M28 17.5c-3.9-2.7-8.6-3.6-13.4-2.6v24.6c4.8-1 9.5-.1 13.4 2.6z" fill="url(#ca-tu-cover)"/>
+    <path d="M28 17.5c3.9-2.7 8.6-3.6 13.4-2.6v24.6c-4.8-1-9.5-.1-13.4 2.6z" fill="url(#ca-tu-cover)"/>
+    <path d="M27 19.6c-3.4-1.9-7.3-2.7-11.2-2.2v20.9c3.9-.5 7.8.3 11.2 2.2z" fill="#fff" opacity=".9"/>
+    <path d="M29 19.6c3.4-1.9 7.3-2.7 11.2-2.2v20.9c-3.9-.5-7.8.3-11.2 2.2z" fill="#fff" opacity=".75"/>
+    <g stroke="currentColor" stroke-width="1.7" stroke-linecap="round" opacity=".42">
+      <path d="M19.5 23.5h4.5M19.5 28h4.5M32 28h4.5"/></g>
+    <path class="ca-flip" d="M29 18c3.2-1.7 6.8-2.5 10.4-2.2l-.7 5.4c-3-.3-6 .4-8.4 1.8z" fill="currentColor" opacity=".5"/>
+    <circle class="ca-rise" cx="28" cy="11" r="2.6" fill="currentColor" opacity=".7"/>
+    <circle class="ca-rise" cx="21" cy="12" r="1.7" fill="currentColor" opacity=".5" style="animation-delay:1.3s"/>
+    <g transform="translate(41 41) rotate(40)"><g class="ca-sway">
+      <rect x="-2.2" y="-10" width="4.4" height="12" rx="1.2" fill="currentColor" opacity=".85"/>
+      <path d="M-2.2 2h4.4L2.2 6.6h-4.4z" fill="currentColor" opacity=".55"/>
+      <path d="M-1.1 6.6h2.2L0 9.6z" fill="currentColor"/></g></g>`,
+
+  appliance: `<defs>
+      <linearGradient id="ca-ap-body" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="currentColor" stop-opacity=".8"/>
+        <stop offset="1" stop-color="currentColor" stop-opacity=".95"/></linearGradient>
+      <radialGradient id="ca-ap-glass" cx=".35" cy=".3">
+        <stop offset="0" stop-color="#fff" stop-opacity=".95"/>
+        <stop offset="1" stop-color="#fff" stop-opacity=".45"/></radialGradient>
+    </defs>
+    <rect x="7" y="6" width="42" height="44" rx="11" fill="url(#ca-ap-body)"/>
+    <path d="M7 17.5h42" stroke="#fff" stroke-width="1.8" opacity=".4"/>
+    <circle cx="14.5" cy="11.5" r="2.6" fill="#fff" opacity=".8"/>
+    <circle class="ca-flash" cx="22" cy="11.5" r="2.6" fill="#fff" opacity=".95"/>
+    <rect x="36" y="9.5" width="9" height="4" rx="2" fill="#fff" opacity=".5"/>
+    <circle cx="28" cy="32.5" r="13" fill="url(#ca-ap-glass)" opacity=".6"/>
+    <g class="ca-spin" fill="currentColor" opacity=".7">
+      <circle cx="28" cy="25.5" r="3"/><circle cx="34.5" cy="36" r="3"/><circle cx="21.5" cy="36" r="3"/></g>
+    <g class="ca-spin-back" opacity=".45"><path d="M20.5 32.5a7.5 7.5 0 0 1 15 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></g>
+    <circle class="ca-rise" cx="28" cy="30" r="1.8" fill="#fff" opacity=".85" style="animation-delay:.7s"/>
+    <circle cx="28" cy="32.5" r="13" fill="none" stroke="currentColor" stroke-width="2.8" opacity=".85"/>
+    <circle cx="28" cy="32.5" r="4.6" fill="currentColor" opacity=".22"/>
+    <ellipse cx="22" cy="26" rx="3" ry="4.4" fill="#fff" opacity=".5" transform="rotate(-28 22 26)"/>`,
+
+  delivery: `<defs>
+      <linearGradient id="ca-de-box" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="currentColor" stop-opacity=".9"/>
+        <stop offset="1" stop-color="currentColor" stop-opacity=".55"/></linearGradient>
+    </defs>
+    <circle cx="30" cy="21" r="17" fill="currentColor" opacity=".08"/>
+    <g class="ca-bob">
+      <path d="M28 8l15 7.6v15.2L28 38.4 13 30.8V15.6z" fill="url(#ca-de-box)"/>
+      <path d="M28 8l15 7.6L28 23.2 13 15.6z" fill="#fff" opacity=".38"/>
+      <path d="M28 23.2v15.2" stroke="currentColor" stroke-width="1.8" opacity=".4"/>
+      <path d="M20.5 12.4l15 7.6" stroke="#fff" stroke-width="2.8" stroke-linecap="round" opacity=".55"/></g>
+    <g class="ca-slide" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" opacity=".5">
+      <path d="M2 17h6M1 25h7M3 33h5"/></g>
+    <path class="ca-march" d="M4 45h48" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-dasharray="8 7"/>
+    <circle class="ca-flash" cx="46" cy="38" r="3" fill="currentColor" opacity=".7" style="animation-delay:.9s"/>`,
 };
 
 function catArt(serviceId){
@@ -5126,7 +5239,7 @@ function residentHome(){
 
     <div class="section-label" style="margin-top:16px;">Browse by service</div>
     <div class="catgrid">
-      ${SERVICES.map(s=>{ const m = serviceMeta(s.id); return `<button type="button" class="cat" data-service="${s.id}"><span class="art" style="background:${m.bg}; color:${m.fg};">${catArt(s.id)}</span><span>${esc(s.label)}</span></button>`; }).join('')}
+      ${SERVICES.map(s=>{ const m = serviceMeta(s.id); return `<button type="button" class="cat" data-service="${s.id}"><span class="art" style="background-color:${m.bg}; color:${m.fg};">${catArt(s.id)}</span><span>${esc(s.label)}</span></button>`; }).join('')}
     </div>
 
     ${active? `
