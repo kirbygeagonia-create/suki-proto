@@ -181,7 +181,7 @@ suite('screens', async () => {
   visit(() => { state.role = 'admin'; state.tab = 'admin_dashboard'; base(); state.adminScreen = 'audit'; });
   visit(() => { state.role = 'admin'; state.tab = 'admin_verifications'; base(); state.adminProviderCategory = 'pending'; });
   visit(() => { state.role = 'admin'; state.tab = 'admin_verifications'; base(); state.adminProviderCategory = 'credentials'; });
-  visit(() => { state.role = 'admin'; state.tab = 'admin_disputes'; base(); state.adminWarrantyShown = true; });
+  visit(() => { state.role = 'admin'; state.tab = 'admin_disputes'; base(); });
 
   /* the booking sheet paints into its own layer, so it needs its own pass: a
      group that lost its opening tag still looks like a sheet until you tap it */

@@ -1,0 +1,137 @@
+[
+ {
+  "label": "payment vocabularies and accessors",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "recordPayment carries the method code",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "recordPayment writes the code, not the label",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "the cash-on-arrival hold says so by code",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "cash tests on b",
+  "found": 7,
+  "expected": 7
+ },
+ {
+  "label": "cash tests on booking",
+  "found": 4,
+  "expected": 4
+ },
+ {
+  "label": "the refund helpers stop reading the label",
+  "found": 4,
+  "expected": 4
+ },
+ {
+  "label": "the seed stops inventing a method from a phrase",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "confirmation reads the money code",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "the payment rail returns options",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "the sheet reads options",
+  "found": 2,
+  "expected": 2
+ },
+ {
+  "label": "the rail prints the label",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "the sheet knows cash by code",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "the terms card names the route",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "a new request carries codes",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "tracking chip",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "tracking caption",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "detail money line",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "the home strip stops parsing prose",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "unpaid seeds",
+  "found": 6,
+  "expected": 6
+ },
+ {
+  "label": "paid-online seeds",
+  "found": 4,
+  "expected": 4
+ },
+ {
+  "label": "a cancelled job never says Cancelled on the money axis",
+  "found": 2,
+  "expected": 2
+ },
+ {
+  "label": "pending seeds",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "method seeds",
+  "found": 5,
+  "expected": 5
+ },
+ {
+  "label": "cash method seed",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "isCashPayment retires with the phrase it tested",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "the shape changed, so the version did",
+  "found": 1,
+  "expected": 1
+ }
+]

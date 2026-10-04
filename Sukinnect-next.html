@@ -1764,16 +1764,6 @@ function freezePricing(booking, breakdown) {
   booking.amountCentavos = breakdown.customerTotalCentavos;
   return booking.pricing;
 }
-function pricingOf(booking) { return booking.pricing || null; }
-
-/* What a screen prints as the price of a job: the agreed total once terms are
-   frozen, the provider's starting rate while they are still only indicative. */
-function rateFor(booking) {
-  const p = pricingOf(booking);
-  if (p) return p.customerTotalCentavos;
-  const provider = providerOf(booking);
-  return provider ? provider.rateCentavos : booking.amountCentavos;
-}
 
 /* ---- statements read the ledger, nothing else ─────────────────────────────── */
 function platformStatement(range) {
@@ -2008,16 +1998,26 @@ function settleBooking(booking) {
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const BOOKING_STATES = {
-  requested: { label:'Requested',       tone:'quiet',  hint:'Waiting for the provider to answer' },
-  upcoming:  { label:'Accepted',        tone:'held',   hint:'Booked, not started' },
-  en_route:  { label:'On the way',      tone:'active', hint:'The provider has left for you' },
-  arrived:   { label:'Arrived',         tone:'active', hint:'The provider is at the door' },
-  ongoing:   { label:'In progress',     tone:'active', hint:'The work is being done now' },
-  completed: { label:'Completed',       tone:'done',   hint:'Done — the record and the payment stand' },
-  cancelled: { label:'Cancelled',       tone:'gone',   hint:'Closed before the work was delivered' },
-  expired:   { label:'No answer',       tone:'gone',   hint:'The request was never accepted' },
-  no_show:   { label:'No one there',    tone:'gone',   hint:'The provider arrived and no one was home' },
-  disputed:  { label:'Under review',    tone:'alert',  hint:'Evidence is being read; nothing is decided yet' }
+  requested: { label:'Requested',       tone:'quiet',  hint:'Waiting for the provider to answer',
+               next:'They accept, the visit is held, or the request lapses on its own' },
+  upcoming:  { label:'Accepted',        tone:'held',   hint:'Booked, not started',
+               next:'The provider confirms and starts out' },
+  en_route:  { label:'On the way',      tone:'active', hint:'The provider has left for you',
+               next:'The provider arrives' },
+  arrived:   { label:'Arrived',         tone:'active', hint:'The provider is at the door',
+               next:'Work begins' },
+  ongoing:   { label:'In progress',     tone:'active', hint:'The work is being done now',
+               next:'Completion, then your confirmation and the record' },
+  completed: { label:'Completed',       tone:'done',   hint:'Done — the record and the payment stand',
+               next:'' },
+  cancelled: { label:'Cancelled',       tone:'gone',   hint:'Closed before the work was delivered',
+               next:'' },
+  expired:   { label:'No answer',       tone:'gone',   hint:'The request was never accepted',
+               next:'' },
+  no_show:   { label:'No one there',    tone:'gone',   hint:'The provider arrived and no one was home',
+               next:'' },
+  disputed:  { label:'Under review',    tone:'alert',  hint:'Evidence is being read; nothing is decided yet',
+               next:'' }
 };
 
 /* Terminal states settle. Nothing leaves them except a dispute raised in time. */
@@ -2045,6 +2045,9 @@ function bookingTimeline(bookingId) {
 
 function label(status) { return (BOOKING_STATES[status] || { label: status }).label; }
 function stateHint(status) { return (BOOKING_STATES[status] || { hint: '' }).hint; }
+/* What happens after this state — the same table, because a tracking card that
+   typed these sentences itself could disagree with the machine that owns them. */
+function nextStepFor(status) { return (BOOKING_STATES[status] || { next: '' }).next; }
 
 class IllegalTransition extends Error {
   constructor(from, to) {
@@ -2634,11 +2637,6 @@ function onRefund(booking, actor, opts) {
     body: cash
       ? peso(amount) + ' of platform fee was taken off this job. The visit money was paid straight to the provider, so returning that part is between you and them.'
       : peso(amount) + ' is on its way back to you.' } };
-}
-function accountBalanceFor(booking) {
-  const p = booking.pricing;
-  if (!p) return 0;
-  return paymentsFor(booking.id).filter(x => x.type === 'refund').reduce((t, x) => t + x.amountCentavos, 0);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -3264,12 +3262,12 @@ let state = {
   adminVerifiedBarangay:'all',
   adminVerifiedPerformance:'all',
   adminVerifiedCredential:'all',
-  adminVerifiedAccount:'all',
+
   adminIntFilters:{ days:30, category:'all' },
   adminVerifiedSort:'newest',
   adminPendingSort:'newest',
   adminDocRequests: [],
-  adminWarrantyShown: false,
+
   adminFlagged: [],
   adminProviderMenu:null,
   adminCredentialProvider:null,
@@ -3279,7 +3277,7 @@ let state = {
   adminAccountSection:null,
   adminAccountModal:null,
   adminNotifications:{provider:true, credential:true, disputes:true, urgent:true, supply:true, trust:true, payments:true, performance:false, updates:true},
-  adminSessionLocked:false,
+
   residentProfileSection:null,
   residentProfileModal:null,
   residentHouseholdItems:[],
@@ -3290,7 +3288,6 @@ let state = {
   providerEmergencyDispatch:true,
   providerNotifications:{requests:true, bookings:true, messages:true, quotes:true, payments:true, opportunities:true, schedule:true, trust:true, credentials:true, reviews:true},
   providerPortfolio:[],
-  expandedOngoing: false
 };
 
 /* ---- reicon icon system (reicon.dev v1.2.4, MIT license) — Outline + Filled weights ---- */
@@ -3496,13 +3493,6 @@ function sendChatMessage(){
   input.value = '';
   list.scrollTop = list.scrollHeight;
   showToast('Message sent');
-}
-
-function renderAvatar(roleType, isLarge = false) {
-  let cssClass = 'avatar-customer';
-  if(roleType === 'provider') cssClass = 'avatar-provider';
-  if(roleType === 'admin') cssClass = 'avatar-admin';
-  return `<div class="avatar-css ${cssClass} ${isLarge ? 'lg' : ''}"></div>`;
 }
 
 // Anything that came from the user is echoed back into the interface, so it
@@ -3904,10 +3894,12 @@ function caseActor(){
 /* Which of the two words applies: can this state be disputed at all, and if it can,
    is it this person, inside this job's window? */
 function caseDoor(b, actor){
-  const rules = TRANSITIONS[b.status] && TRANSITIONS[b.status].disputed;
-  if (!rules) return { kind:'none' };
+  /* Checked first, because a job already under review has no disputed transition
+     of its own — the door is shut precisely because someone is already walking it. */
   if (DISPUTES.some(d => d.bookingId === b.id && d.status === 'under review'))
     return { kind:'open' };
+  const rules = TRANSITIONS[b.status] && TRANSITIONS[b.status].disputed;
+  if (!rules) return { kind:'none' };
   const allowed = transitionAllowed(b, 'disputed', actor);
   return allowed.ok ? { kind:'offer', actors: rules.actors } : { kind:'refused', reason: allowed.reason };
 }
@@ -3915,9 +3907,11 @@ function caseDoor(b, actor){
 function caseRow(b){
   const door = caseDoor(b, caseActor());
   if (door.kind === 'none') return '';
-  if (door.kind === 'open')
+  if (door.kind === 'open') {
+    const d = DISPUTES.find(x => x.bookingId === b.id && x.status === 'under review');
     return `<div class="case-note case-note-live">${ic('scale',13)}
-        <span>A case is open on this job. The help desk is reading the evidence; nothing has been decided.</span></div>`;
+        <span>Case ${esc(d.id)} is with the help desk — ${d.evidence.length} records attached, and nothing has been decided yet.</span></div>`;
+  }
   if (door.kind === 'refused')
     return `<div class="case-note">${ic('alert-triangle',13)} <span>${esc(door.reason)}</span></div>`;
   return `<button type="button" class="btn sm secondary case-button" onclick="openCaseSheet('${b.id}')">
@@ -4071,10 +4065,7 @@ function statusCard(b) {
 
   /* accepted and on the way: what is happening, and what happens next */
   const live = b.status === 'en_route' || b.status === 'arrived' || b.status === 'ongoing';
-  const next = ({ upcoming:'The provider confirms and starts out',
-                  en_route:'The provider arrives',
-                  arrived:'Work begins',
-                  ongoing:'Completion, then your confirmation and the record' })[b.status] || '';
+  const next = nextStepFor(b.status);
   return `<div class="card" style="border-radius:14px; padding:14px; margin-bottom:14px; ${live ? 'border:1px solid var(--success); background:var(--success-100);' : ''}">
           <div class="row" style="margin-bottom:10px;">
             <span style="font-size:var(--t-caption); font-weight:800; text-transform:uppercase; color:${live ? 'var(--success-ink)' : 'var(--ink-soft)'}; display:flex; align-items:center; gap:5px;">
@@ -4732,21 +4723,23 @@ function adminTabHTML(){
 }
 
 function residentHome(){
-  // A live job on the doorstep outranks a request still waiting for an answer.
-  const active = bookingsForResident().find(b => b.status === 'ongoing' || b.status === 'upcoming')
-              || bookingsForResident().find(b => b.status === 'requested');
+  /* The job that is happening now. A provider on the way, or a case being read, is
+     precisely when a resident opens the app looking for this card, and the old
+     finder knew three statuses out of the machine's ten. */
+  const live = bookingsForResident().filter(b => !FINISHED_STATES.includes(b.status))
+    .sort((a, b) => Date.parse(b.statusChangedAt || b.createdAt) - Date.parse(a.statusChangedAt || a.createdAt));
+  const active = live[0] || null;
   const hasUnread = NOTIFICATIONS.some(n=>n.unread);
-  // Only the four states this prototype really has. Saying what happens next is
-  // the point of the stepper, not the decoration (21).
-  const STAGES = ['Requested', 'Accepted', 'In progress', 'Completed'];
-  const stageIndex = { requested:0, upcoming:1, ongoing:2, completed:3 }[active && active.status];
-  const nextStep = active ? {
-    requested:'Waiting for the provider to answer',
-    upcoming:'Confirmed - the visit is held for this slot',
-    ongoing:'On the job now - you will see the fee when it closes',
-    completed:'Done - pay and rate it from the booking',
-    cancelled: active.cancelReason || 'Closed'
-  }[active.status] : '';
+  /* The path a visit walks and the one line about what is happening both come from
+     BOOKING_STATES now. They were typed a second time here — which is how a
+     stepper and a tracking card could tell the same story in different words — and
+     the stepper used to stop at four steps, so en_route and arrived had no place on
+     it at all (21, 65). */
+  const STAGES = ['requested', 'upcoming', 'en_route', 'arrived', 'ongoing', 'completed'];
+  const stageIndex = active ? STAGES.indexOf(active.status) : -1;
+  /* A case under review sits outside the path: the stepper steps aside and the
+     hint says where the job actually is. */
+  const nextStep = active ? (stateHint(active.status) || active.cancelReason || label(active.status)) : '';
   /* Her own completed jobs, newest provider first, one card per provider. With no
      history yet the rail falls back to the roster rather than showing an empty
      shelf — and it says which of the two it is showing. */
@@ -4805,14 +4798,14 @@ function residentHome(){
             <div style="font-size:var(--t-caption); color:var(--mist); margin-top:1px;">${providerOf(active).name} · ${active.date}, ${active.time}</div>
           </div>
         </div>
-        <span class="chip status-${active.status}" style="flex-shrink:0;">${active.status}</span>
+        <span class="chip status-${active.status}" style="flex-shrink:0;">${esc(label(active.status))}</span>
       </div>
-      <div class="mini-steps" role="img" aria-label="Stage ${stageIndex+1} of ${STAGES.length}: ${STAGES[stageIndex]}">
-        ${STAGES.map((label, i) => `<span class="st ${i < stageIndex ? 'on' : ''}${i === stageIndex ? ' now' : ''}"></span>`).join('')}
-      </div>
+      ${stageIndex >= 0 ? `<div class="mini-steps" role="img" aria-label="Stage ${stageIndex+1} of ${STAGES.length}: ${esc(label(active.status))}">
+        ${STAGES.map((code, i) => `<span class="st ${i < stageIndex ? 'on' : ''}${i === stageIndex ? ' now' : ''}"></span>`).join('')}
+      </div>` : ''}
       <div class="row" style="margin-top:7px; gap:8px; font-size:var(--t-caption);">
-        <span style="color:var(--ink-soft); min-width:0;">${nextStep}</span>
-        ${(() => { const paid = ['captured', 'collected'].includes(active.payStatus); const c = statusColors(paid ? 'completed' : 'requested'); return `<span class="chip" style="background:${c.bg}; color:${c.fg}; flex-shrink:0;">${esc(active.paymentStatus)}</span>`; })()}
+        <span style="color:var(--ink-soft); min-width:0;">${esc(nextStep)}</span>
+        ${(() => { const paid = ['captured', 'collected'].includes(active.payStatus); const c = statusColors(paid ? 'completed' : 'requested'); return `<span class="chip" style="background:${c.bg}; color:${c.fg}; flex-shrink:0;">${esc(payStatusLabel(active))}</span>`; })()}
       </div>
     </div>` : ''}
 
@@ -5550,7 +5543,6 @@ function clearProfileModals(){
   state.selectedAdminProvider = null;
   state.adminProviderMenu = null;
   state.adminCredentialProvider = null;
-  state.expandedOngoing = false;
   // in-progress editing, Concierge draft, admin session lock
   state.conciergePhotoAttached = false;
   state.conciergePhotoName = '';
@@ -5560,8 +5552,7 @@ function clearProfileModals(){
   state.conciergeServiceId = null;
   state.conciergePhotoError = null;
   state.conciergeError = null;
-  state.adminSessionLocked = false;
-  // sub-screen + filter state back to its defaults
+// sub-screen + filter state back to its defaults
   state.residentProfileSection = null;
   state.adminAccountSection = null;
   state.providerProfileSection = null;
@@ -5805,12 +5796,6 @@ function askForDocuments(id, name){
 
 const ADMIN_SORTS = [['newest','Newest first'], ['rating','Highest rating'], ['jobs','Most jobs completed']];
 
-function cycleAdminSort(){
-  const i = ADMIN_SORTS.findIndex(s => s[0] === state.adminVerifiedSort);
-  state.adminVerifiedSort = ADMIN_SORTS[(i + 1) % ADMIN_SORTS.length][0];
-  render();
-}
-
 // An applicant has no rating and no completed jobs, so the pending queue sorts on
 // the one thing it really has: how long it has been waiting.
 const ADMIN_PENDING_SORTS = [['newest','Newest submitted'], ['longest','Longest waiting']];
@@ -5975,12 +5960,27 @@ function adminVerifications(){
     </div>
     ${category === 'credentials' ? `
     <div style="font-size:14px; font-weight:800; margin:8px 0 10px;">Credential monitor</div>
-    <div class="card"><div class="row"><b class="card-title">Expiring in 30 days</b><span class="chip badge-gold">5 credentials</span></div><div style="font-size:12px; line-height:1.55; margin-top:8px;"><b>Ramil Odiada</b><br>Barangay Clearance<br>Expires October 2, 2026</div><button class="btn sm btn-block" style="margin-top:10px;" onclick="state.adminAlertState.reminderSent=true; adminLog('Renewal reminder sent','Ramil Odiada','Provider notified'); render();">${state.adminAlertState.reminderSent ? 'Reminder Sent' : 'Send Reminder'}</button></div>
-    <div class="card"><div class="row"><b class="card-title">Credential status</b><span class="chip badge-alert">Review needed</span></div><div style="font-size:12px; color:var(--ink-soft); margin-top:7px;">No provider is automatically suspended. Review the provider verification status before taking action.</div></div>
+    ${(() => {
+      /* The chip on a provider's row names this screen, so the screen has to be
+         about that provider. It used to be a fixed card about one person on the
+         roster whoever you clicked, with a typed count on it. */
+      const picked = PROVIDERS.find(p => p.id === state.adminCredentialProvider);
+      const watch = PROVIDERS.filter(p => adminProviderMeta(p).credential !== 'Valid');
+      return `
+    <div class="card"><div class="row"><b class="card-title">Needs a look</b><span class="chip badge-alert">${watch.length} of ${PROVIDERS.length} providers</span></div>
+      ${watch.length ? watch.map(p => `<div style="font-size:12px; line-height:1.55; margin-top:8px;"><b>${esc(p.name)}</b><br>${esc(p.credentials[0] || 'No credential on file')}<br><span style="color:var(--mist);">${esc(adminProviderMeta(p).credential)}</span></div>`).join('')
+        : `<div style="font-size:12px; color:var(--mist); margin-top:8px;">Every credential on the roster is marked valid. Nothing is waiting on you.</div>`}
+    </div>
+    ${picked ? `<div class="card"><div class="row"><b class="card-title">${esc(picked.name)}</b><span class="chip">${esc(adminProviderMeta(picked).credential)}</span></div>
+      <div style="font-size:12px; line-height:1.7; margin-top:8px;">${esc(picked.service)} · Brgy. ${esc(picked.barangay)}<br>${(picked.badges || []).map(esc).join(' · ') || 'No verification badge recorded'}<br><span style="color:var(--mist);">Declared credentials: ${picked.credentials.length ? picked.credentials.map(esc).join(', ') : 'none on file'}</span></div>
+      <button class="btn sm secondary btn-block" style="margin-top:10px;" onclick="openAdminProviderProfile('${picked.id}')">Open the full provider record</button>
+    </div>` : ''}
+    <div class="card"><div class="row"><b class="card-title">How this works</b><span class="chip">No automatic action</span></div><div style="font-size:12px; color:var(--ink-soft); margin-top:7px;">Nothing here suspends a provider. A credential is a document a person uploaded in the sample records; an administrator reads it and decides.</div></div>`;
+    })()}
     ` : category === 'verified' ? `
     <div style="display:flex; gap:8px; margin-bottom:10px;"><div style="flex:1; min-height:44px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md); padding:9px 10px; display:flex; align-items:center; gap:7px;"><span style="font-size:16px;">⌕</span><input value="${state.adminVerifiedSearch || ''}" oninput="state.adminVerifiedSearch=this.value; render();" placeholder="Search name, service, or barangay..." style="width:100%; border:0; outline:0; font:inherit; font-size:var(--t-caption); background:transparent;"></div><button class="btn sm secondary" style="padding:7px 10px;" onclick="state.adminVerifiedFiltersOpen=!state.adminVerifiedFiltersOpen; render();">Filter${(state.adminVerifiedPerformance !== 'all' || state.adminVerifiedCredential !== 'all') ? 's (1)' : ''}</button></div>
     ${state.adminVerifiedFiltersOpen ? `<div class="card" style="padding:10px; margin-bottom:10px;"><div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:var(--t-caption);"><label>Service<select onchange="state.adminVerifiedService=this.value; render();" style="width:100%; padding:7px; margin-top:3px;"><option value="all">All Services</option><option value="plumbing">Plumbing</option><option value="electrical">Electrical</option><option value="cleaning">Cleaning</option><option value="appliance">Appliance</option></select></label><label>Barangay<select onchange="state.adminVerifiedBarangay=this.value; render();" style="width:100%; padding:7px; margin-top:3px;"><option value="all">All Barangays</option><option value="poblacion">Poblacion</option><option value="san isidro">San Isidro</option><option value="sta. cruz">Sta. Cruz</option></select></label><label>Performance<select onchange="state.adminVerifiedPerformance=this.value; render();" style="width:100%; padding:7px; margin-top:3px;"><option value="all">All</option><option value="normal">Normal</option><option value="monitor">Monitor</option><option value="needs-review">Needs Review</option></select></label><label>Credentials<select onchange="state.adminVerifiedCredential=this.value; render();" style="width:100%; padding:7px; margin-top:3px;"><option value="all">All</option><option value="valid">Valid</option><option value="expiring-soon">Expiring Soon</option><option value="expired">Expired</option></select></label></div><button class="btn sm secondary" style="margin-top:10px;" onclick="state.adminVerifiedSearch=''; state.adminVerifiedService='all'; state.adminVerifiedBarangay='all'; state.adminVerifiedPerformance='all'; state.adminVerifiedCredential='all'; state.adminVerifiedFiltersOpen=false; render();">Reset</button></div>` : ''}
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><div><b class="card-title">${visibleVerified.length} Verified Providers</b><div style="font-size:var(--t-caption); color:var(--gold-600);">1 provider needs attention</div></div><select onchange="state.adminVerifiedSort=this.value; render();" style="padding:7px; border:1px solid var(--line); border-radius:8px; font:inherit; font-size:var(--t-caption);"><option value="newest">Newest Verified</option><option value="rating">Highest Rating</option><option value="jobs">Most Completed Jobs</option></select></div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><div><b class="card-title">${visibleVerified.length} Verified Providers</b><div style="font-size:var(--t-caption); color:${visibleVerified.filter(p => adminProviderMeta(p).performance !== 'Normal').length ? 'var(--gold-600)' : 'var(--mist)'};">${visibleVerified.filter(p => adminProviderMeta(p).performance !== 'Normal').length} of these need a look</div></div><select aria-label="Order the verified roster" onchange="state.adminVerifiedSort=this.value; render();" style="min-height:var(--tap); padding:7px 10px; border:1px solid var(--line); border-radius:var(--r-md); font:inherit; font-size:var(--t-caption);">${ADMIN_SORTS.map(s => `<option value="${s[0]}"${state.adminVerifiedSort === s[0] ? ' selected' : ''}>${esc(s[1])}</option>`).join('')}</select></div>
     ${visibleVerified.map(provider => { const meta=adminProviderMeta(provider); return `
       <div class="card" style="padding:11px; margin-bottom:10px;"><div class="row" style="align-items:flex-start;"><div style="display:flex; gap:10px; align-items:center;">${photoAvatar(provider, 42)}<div><b class="card-title">${provider.name}</b><div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${provider.service} - Brgy. ${provider.barangay}</div></div></div><span class="chip">Verified</span></div><div style="display:flex; gap:8px; margin-top:9px; font-size:var(--t-caption); color:var(--ink-soft);"><span style="display:inline-flex; align-items:center; gap:4px;">${stars(provider.rating,11)}<span>${provider.rating}</span></span><span>${provider.jobs} jobs</span></div><div style="display:flex; gap:5px; margin-top:8px; flex-wrap:wrap;"><span class="chip" style="background:${meta.performance==='Normal'?'var(--success-100)':meta.performance==='Monitor'?'var(--warning-100)':'var(--error-100)'}; color:${meta.performance==='Normal'?'var(--success-ink)':meta.performance==='Monitor'?'var(--warning-ink)':'var(--error-ink)'};">${meta.performance}</span><button class="chip" style="border:0; cursor:pointer;" onclick="state.adminProviderCategory='credentials'; state.adminCredentialProvider='${provider.id}'; render();">Credentials: ${meta.credential}</button></div><div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px;">Last active: ${meta.active}</div><div style="display:flex; gap:6px; margin-top:9px;"><button class="btn sm" style="flex:1;" onclick="openAdminProviderProfile('${provider.id}')">View Provider</button><button class="btn sm secondary" style="width:42px; padding:7px;" aria-label="More actions" onclick="state.adminProviderMenu=state.adminProviderMenu==='${provider.id}' ? null : '${provider.id}'; render();">⋮</button></div>${state.adminProviderMenu===provider.id ? `<div style="display:flex; flex-direction:column; gap:5px; margin-top:8px;"><button class="btn sm secondary" onclick="openAdminProviderProfile('${provider.id}')">View Provider</button><button class="btn sm secondary" onclick="state.adminProviderCategory='credentials'; state.adminCredentialProvider='${provider.id}'; render();">View Credentials</button><button class="btn sm secondary" onclick="openAdminProviderProfile('${provider.id}'); state.adminProviderSection='bookings';">View Bookings</button><button class="btn sm secondary" onclick="openAdminProviderProfile('${provider.id}'); state.adminProviderSection='reviews';">View Reviews &amp; Complaints</button></div>` : ''}</div>`; }).join('') || '<div class="card" style="text-align:center; color:var(--mist);">No verified providers match these filters.</div>'}
     ` : `

@@ -1,0 +1,47 @@
+[
+ {
+  "label": "rateFor",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "renderAvatar",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "cycleAdminSort",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "adminVerifiedAccount declared",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "adminWarrantyShown declared",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "adminSessionLocked declared",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "expandedOngoing declared for real",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "the sign-out reset that named them",
+  "found": 1,
+  "expected": 1
+ },
+ {
+  "label": "the session lock reset",
+  "found": 1,
+  "expected": 1
+ }
+]
