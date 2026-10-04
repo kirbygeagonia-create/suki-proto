@@ -1054,6 +1054,16 @@
     border-radius:var(--r-md); font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5;
   }
   .map-fallback .mf-ic{ flex:none; display:inline-flex; color:var(--deep); }
+  /* And what it is while they are still on their way. Tiles took between one and
+     six seconds in measured runs, long enough that the frame reads as broken
+     rather than as loading, so the wait is named (47). */
+  .map-loading{ position:relative; }
+  .map-loading::after{
+    content:'Loading map…'; position:absolute; inset:0; z-index:1100; pointer-events:none;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--background); color:var(--ink-soft);
+    font-size:var(--t-caption); border-radius:inherit;
+  }
 
   /* Search & inputs — visible focus glow */
   .search-wrapper{ box-shadow:var(--shadow-xs); transition:box-shadow .18s ease, border-color .18s ease; }
@@ -3951,17 +3961,22 @@ function mountMap(elId, at, zoom, popup, fallbackLines){
   };
   if (typeof L === 'undefined') { giveUp(); return null; }
   let map;
+  el.classList.add('map-loading');
   try { map = L.map(elId).setView(at, zoom); }
-  catch (err) { giveUp(); return null; }
+  catch (err) { el.classList.remove('map-loading'); giveUp(); return null; }
   el._map = map;
   L.marker(at).addTo(map).bindPopup(popup);
   /* Leaflet's own `load` event says the tiles it asked for have finished — not that
      any of them painted. The honest signal is the class Leaflet puts on a tile that
      actually decoded: zero of those, and there is no map here, however the event
-     fired. */
+     fired. `tileload` lives on the tile layer, not the map — a listener on the map
+     never runs, which is how the first version of this stayed grey over a painted
+     map. */
   const paintedTiles = () => el.querySelectorAll('.leaflet-tile-loaded').length;
-  const check = () => { if (!paintedTiles()) giveUp(); };
-  L.tileLayer(TILE_URL, { maxZoom: 19 }).on('tileerror', giveUp).on('load', check).addTo(map);
+  const loaded = () => el.classList.remove('map-loading');
+  const check = () => { paintedTiles() ? loaded() : giveUp(); };
+  L.tileLayer(TILE_URL, { maxZoom: 19 })
+    .on('tileload', loaded).on('tileerror', giveUp).on('load', check).addTo(map);
   setTimeout(check, 4000);
   return map;
 }
