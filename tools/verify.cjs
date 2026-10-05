@@ -742,7 +742,8 @@ suite('admin', async () => {
   const { state, BOOKINGS, DISPUTES, LEDGER, CONFIG, CONFIG_AUDIT, LISTINGS,
           platformStatement, statementCard, configPanel, disputeCard, adminCounts, intelligenceStats,
           supplyGaps, setConfig, commitConfig, resolveCase, resolveDispute, resetDemoData,
-          accountBalance, paymentsFor, peso, pesoCompact, render, _document, label } = app;
+          accountBalance, paymentsFor, peso, pesoCompact, render, _document, label,
+          disputeLabel, DISPUTE_STATES, caseIsOpen } = app;
   const el = id => _document.getElementById(id);
 
   /* the card and the ledger agree */
@@ -802,7 +803,16 @@ suite('admin', async () => {
   c.check('it reverses our own fee', accountBalance('platform_fee_revenue') === revenueBefore - Math.round(heldBefore * b.pricing.commissionRate / (1 - b.pricing.commissionRate)),
     String(revenueBefore - accountBalance('platform_fee_revenue')));
   c.check('it leaves a refund row on the job', paymentsFor(b.id).some(p => p.type === 'refund'));
-  c.check('the case is closed and says how', d.status.indexOf('refunded') > 0, d.status);
+  c.check('the case is closed and says how',
+    d.status === 'refunded' && /refunded/.test(disputeLabel(d.status)), d.status + ' / ' + disputeLabel(d.status));
+  /* The status used to BE the sentence, and the audit log recovered the outcome by
+     splitting it on its own em-dash. A code cannot drift into a rule. */
+  c.check('a case stores a code, never a sentence',
+    DISPUTES.every(x => !!DISPUTE_STATES[x.status]) && !/status\.split\(/.test(app._source),
+    DISPUTES.map(x => x.status).join(','));
+  c.check('and the words come from the table, for every outcome',
+    ['open', 'upheld', 'partly_refunded', 'refunded'].every(k => DISPUTE_STATES[k] && DISPUTE_STATES[k].label && DISPUTE_STATES[k].short)
+    && DISPUTE_STATES.open.tone === 'warning' && DISPUTE_STATES.upheld.tone === 'success');
   c.check('closing it twice is refused', (() => { try { resolveDispute(d.id, 'upheld'); return false; } catch (err) { return /already closed/.test(err.message); } })());
   c.check('the booking records the outcome', b.status === 'cancelled' && b.payStatus === 'refunded', b.status + '/' + b.payStatus);
   c.check('every event still balances after a refund', LEDGER.every(e => {
@@ -831,7 +841,7 @@ suite('admin', async () => {
   const jobsBefore = BOOKINGS.length;
   resetDemoData();
   c.check('restoring the sample records clears the case and the money',
-    DISPUTES.length === 1 && DISPUTES[0].status === 'under review' && BOOKINGS.length === jobsBefore);
+    DISPUTES.length === 1 && caseIsOpen(DISPUTES[0]) && BOOKINGS.length === jobsBefore);
   c.check('and the reopened job is back to being disputed',
     BOOKINGS.some(x => x.status === 'disputed'));
   return c;
@@ -998,7 +1008,8 @@ suite('journeys', async () => {
   const app = boot();
   const { state, render, BOOKINGS, TRANSITIONS, nextActionFor, PAYMENT_LABELS, PAY_METHODS,
           BOOKING_STATES, FINISHED_STATES, openCaseSheet, submitCase, resolveDispute,
-          DISPUTES, MESSAGES, sendChatMessage } = app;
+          DISPUTES, MESSAGES, sendChatMessage, attemptTransition, providerOf,
+          CURRENT_CUSTOMER_ID } = app;
   const src = app._source;
   const html = () => app._document.getElementById('screen').innerHTML;
   const go = (role, tab, extra) => {
@@ -1122,6 +1133,38 @@ suite('journeys', async () => {
   });
   c.check('every open state can be moved on by somebody',
     stranded.length === 0, stranded.join(', ') + ' has no actor left with a move');
+
+  /* ── the arrival on screen is the arrival that happened ──
+     A booking used to carry a hand-written `arrivalTime` string that the seed filled
+     with a status word, so a job marked arrived printed the appointment slot (or
+     "Awaiting provider", or "Completed"). The card now reads the stamp the machine
+     writes; this walks a real request to `arrived` and compares what the resident and
+     the provider are shown against it. */
+  const walkable = BOOKINGS.find(x => x.status === 'upcoming' && x.customerId === CURRENT_CUSTOMER_ID
+    && !BOOKINGS.some(y => y.id !== x.id && y.providerId === x.providerId
+      && ['requested', 'upcoming', 'en_route', 'arrived', 'ongoing'].includes(y.status)));
+  let arrivalShown = null, arrivalTruth = null, doorShown = null;
+  if (walkable) {
+    try {
+      const as = { role: 'provider', id: walkable.providerId, name: providerOf(walkable).name };
+      attemptTransition(walkable.id, 'en_route', as);
+      attemptTransition(walkable.id, 'arrived', as);
+      const d = new Date(walkable.arrivedAt);
+      let h = d.getHours(); const mm = String(d.getMinutes()).padStart(2, '0');
+      arrivalTruth = (h % 12 || 12) + ':' + mm + ' ' + (h >= 12 ? 'PM' : 'AM');
+      /* Both lines are the resident's own tracking card: the cell in the detail grid
+         and the caption under the status. The provider's screen is not asked here —
+         it refuses a job belonging to another provider, which is also correct. */
+      const seen = go('resident', 'booking_detail', () => { state.selectedBookingId = walkable.id; });
+      arrivalShown = (seen.match(/Arrived:<\/span><br>\s*<b[^>]*>([^<]*)<\/b>/) || [])[1];
+      doorShown = (seen.match(/At the door · ([^<]{0,20})/) || [])[1];
+    } catch (err) { arrivalShown = 'transition refused: ' + err.message; }
+  }
+  c.check('a job that has arrived shows the time it arrived',
+    !!walkable && arrivalShown === arrivalTruth && (doorShown || '').trim() === arrivalTruth,
+    'cell ' + JSON.stringify(arrivalShown) + ', caption ' + JSON.stringify(doorShown) + ', stamp ' + JSON.stringify(arrivalTruth));
+  c.check('and no record keeps a status word in a time field',
+    !/arrivalTime/.test(src) && BOOKINGS.every(b => b.arrivalTime === undefined));
 
   return c;
 });

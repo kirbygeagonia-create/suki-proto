@@ -14,7 +14,7 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   'PAYMENTS', 'STATUS_EVENTS', 'PAYOUTS', 'DISPUTES', 'CONFIG', 'state', 'Store', 'snapshot',
   'hydrate', 'persist', 'restoreSeed', 'bookingsForResident', 'bookingsForProvider',
   'pendingProviderRequests', 'bookingById', 'providerOf', 'customerOf', 'listingsOf',
-  'listingById', 'agoText', 'serviceMeta', 'peso', 'pesoShort', 'pesoCompact', 'rateLabel',
+  'listingById', 'agoText', 'clockText', 'serviceMeta', 'peso', 'pesoShort', 'pesoCompact', 'rateLabel',
   'toCentavos', 'toPesos', 'computeBreakdown', 'breakdownForBooking', 'postEvent', 'settlementLines', 'settlementToProvider', 'freezePricing', 'commissionRateFor', 'CONFIG_DEFAULTS', 'CONFIG_AUDIT',
   'accountBalance', 'ledgerBalance', 'ledgerFor', 'ACCOUNTS', 'LEDGER_EVENTS',
   'PAYMENTS', 'PAYOUTS', 'PAYMENT_LABELS', 'paymentsFor', 'recordPayment', 'Gateway',
@@ -29,7 +29,7 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   'render', 'showToast', 'resetDemoData', 'setConfig', 'rateFor', 'LedgerImbalance',
   'CURRENT_CUSTOMER_ID', 'CURRENT_PROVIDER_ID', 'CONFIG_DEFAULTS', 'commissionRateFor',
   'adminCounts', 'intelligenceStats', 'supplyGaps', 'disputeCard', 'statementCard', 'configPanel',
-  'resolveCase', 'resolveDispute', 'commitConfig', 'setIntFilter', 'runPayoutNow', 'openDispute',
+  'DISPUTE_STATES', 'disputeLabel', 'caseIsOpen', 'providerCases', 'resolveCase', 'resolveDispute', 'commitConfig', 'setIntFilter', 'runPayoutNow', 'openDispute',
   'categorySupply', 'weeklyBookings', 'adminFinanceScreen', 'ageingCard',
   'loginHTML', 'AUTH_ROLE_LABEL', 'DEMO_LOGIN',
   /* Added after the audit: the guards, the money readers and the case door were

@@ -1736,6 +1736,19 @@ function agoText(iso){
   return days + ' day' + (days === 1 ? '' : 's') + ' ago';
 }
 
+/* A moment on the clock, in the same h:mm AM/PM shape the schedules use. Anything
+   that shows when something happened reads its own timestamp through this, so no
+   screen has to keep a hand-written time string that can go stale. */
+function clockText(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  let h = d.getHours(); const m = String(d.getMinutes()).padStart(2, '0');
+  const ap = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return h + ':' + m + ' ' + ap;
+}
+
 /* ═══ ONE BOOKING ═══════════════════════════════════════════════════════════
    The resident's job and the provider's job were two arrays that never met, so
    a request raised in one never arrived in the other. Every field below belongs
@@ -1749,7 +1762,7 @@ const BOOKINGS = [
     summary:'Kitchen faucet leak', request:'Kitchen faucet keeps leaking',
     date:dayLabel(0), time:'2:30 PM', status:'ongoing',
     amountCentavos:36500, payStatus:'pending_site',
-    payMethod:'cash', eta:'15 mins', arrivalTime:'2:45 PM',
+    payMethod:'cash', 
     barangay:'Poblacion', address:'Blk 4 Lot 12, Rizal St., Poblacion',
     lat:6.3671, lng:124.9331, notes:'Faucet body drips even when fully closed.',
     createdAt:isoMinutesAgo(210), source:'demo'
@@ -1759,7 +1772,6 @@ const BOOKINGS = [
     summary:'Breaker keeps tripping', request:'Breaker kept tripping in the sala',
     date:dayLabel(1), time:'4:00 PM', status:'upcoming',
     amountCentavos:41500, payStatus:'unpaid', payMethod:'gcash',
-    arrivalTime:'4:00 PM',
     barangay:'Poblacion', address:'Blk 4 Lot 12, Rizal St., Poblacion',
     lat:6.3671, lng:124.9331, notes:'Trips when the air-con and kettle run together.',
     createdAt:isoMinutesAgo(1500), source:'demo'
@@ -1769,7 +1781,7 @@ const BOOKINGS = [
     summary:'Full house deep clean', request:'Full house deep clean',
     date:'Aug 30', time:'9:00 AM', status:'completed',
     amountCentavos:51500, payStatus:'captured', payMethod:'gcash',
-    arrivalTime:'Completed', myRating:5,
+    myRating:5,
     barangay:'Poblacion', address:'Blk 4 Lot 12, Rizal St., Poblacion',
     lat:6.3671, lng:124.9331, notes:'Two bedrooms, sala and kitchen.',
     createdAt:isoMinutesAgo(60 * 24 * 34), source:'demo'
@@ -1779,7 +1791,6 @@ const BOOKINGS = [
     summary:'Rewire flooded junction box', request:'Rewired the flooded outdoor junction box',
     date:'Aug 21', time:'10:00 AM', status:'completed',
     amountCentavos:48000, payStatus:'captured', payMethod:'gcash',
-    arrivalTime:'Completed',
     barangay:'Poblacion', address:'Blk 4 Lot 12, Rizal St., Poblacion',
     lat:6.3671, lng:124.9331, notes:'Outdoor box took rainwater during the storm.',
     createdAt:isoMinutesAgo(60 * 24 * 43), source:'demo'
@@ -1792,7 +1803,7 @@ const BOOKINGS = [
        so the receivable, the ageing table and the "fee owed on cash work" line
        have a record behind them instead of a heading over an empty table. */
     amountCentavos:7500, payStatus:'collected', payMethod:'cash',
-    arrivalTime:'Completed', myRating:4,
+    myRating:4,
     barangay:'Poblacion', address:'Blk 4 Lot 12, Rizal St., Poblacion',
     lat:6.3671, lng:124.9331, notes:'Market list, one trip.',
     createdAt:isoMinutesAgo(60 * 24 * 50), source:'demo'
@@ -1802,7 +1813,7 @@ const BOOKINGS = [
     summary:'Refrigerator not cooling', request:'Refrigerator not cooling',
     date:'Aug 5', time:'1:00 PM', status:'cancelled',
     amountCentavos:31500, payStatus:'voided', payMethod:'gcash',
-    arrivalTime:'Cancelled', cancelReason:'Provider could not make the slot',
+    cancelReason:'Provider could not make the slot',
     barangay:'Poblacion', address:'Blk 4 Lot 12, Rizal St., Poblacion',
     lat:6.3671, lng:124.9331, notes:'',
     createdAt:isoMinutesAgo(60 * 24 * 59), source:'demo'
@@ -1829,7 +1840,7 @@ const BOOKINGS = [
     id:'pb3', customerId:'c4', providerId:'p1',
     summary:'Clogged bathroom drain', request:'Bathroom floor drain completely cleared and sanitized.',
     date:'Yesterday', time:'9:00 AM', status:'completed',
-    amountCentavos:35000, payStatus:'captured', arrivalTime:'Completed',
+    amountCentavos:35000, payStatus:'captured',
     barangay:'Barangay 4', address:'12 Orchid St., Barangay 4',
     lat:6.3550, lng:124.9210, notes:'Slow drain behind the toilet.',
     createdAt:isoMinutesAgo(60 * 26), source:'demo'
@@ -1846,8 +1857,8 @@ const BOOKINGS = [
   {
     id:'pb5', customerId:'c6', providerId:'p1',
     summary:'Shower handle replacement', request:'Shower handle snapped off inside the fitting.',
-    date:'Aug 28', time:'Cancelled', status:'cancelled',
-    amountCentavos:28000, payStatus:'voided', arrivalTime:'Cancelled',
+    date:'Aug 28', time:'1:00 PM', status:'cancelled',
+    amountCentavos:28000, payStatus:'voided',
     cancelReason:'Client cancelled due to schedule conflict',
     barangay:'San Isidro', address:'45 Sampaguita St., San Isidro',
     lat:6.3900, lng:124.9500, notes:'',
@@ -1857,7 +1868,7 @@ const BOOKINGS = [
     id:'pb6', customerId:'c7', providerId:'p1',
     summary:'Bathroom tap will not shut off', request:'The tap in the small bathroom keeps running after I turn it off. Nothing is overflowing yet, but it has run all night twice this week.',
     date:dayLabel(1), time:'9:00 AM', status:'requested',
-    amountCentavos:35000, payStatus:'unpaid', arrivalTime:'Awaiting provider',
+    amountCentavos:35000, payStatus:'unpaid',
     barangay:'Poblacion', address:'Blk 5 Lot 2, Bonifacio St., Poblacion',
     lat:6.3652, lng:124.9301, notes:'Wasteful but not overflowing yet.',
     createdAt:isoMinutesAgo(6), source:'demo'
@@ -1866,7 +1877,7 @@ const BOOKINGS = [
     id:'pb7', customerId:'c8', providerId:'p1',
     summary:'Kitchen drain backs up', request:'Water comes back up through the floor drain whenever the kitchen sink is full. Most days after dinner.',
     date:dayLabel(2), time:'2:00 PM', status:'requested',
-    amountCentavos:40000, payStatus:'unpaid', arrivalTime:'Awaiting provider',
+    amountCentavos:40000, payStatus:'unpaid',
     barangay:'San Isidro', address:'6 Santiago Ave., San Isidro',
     lat:6.3887, lng:124.9463, notes:'Smell reaches the sala by evening.',
     createdAt:isoMinutesAgo(14), source:'demo'
@@ -3053,10 +3064,41 @@ function seedMessages() {
   return true;
 }
 
+/* A case stores a code. The words belong to the reader, and the chip, the toast,
+   the guard message and the audit line are all produced from here — so rewording a
+   label cannot change what the machine treats as an open case. `short` is the phrase
+   that reads well inside a sentence; `tone` is the semantic colour, not a brand one. */
+const DISPUTE_STATES = {
+  open:            { label:'Under review',               short:'still open',            tone:'warning' },
+  upheld:          { label:'Closed — the booking stands', short:'the booking stands',   tone:'success' },
+  partly_refunded: { label:'Closed — partly refunded',    short:'partly refunded',      tone:'success' },
+  refunded:        { label:'Closed — refunded',           short:'refunded',             tone:'success' }
+};
+function disputeLabel(code){ const t = DISPUTE_STATES[code]; return t ? t.label : String(code || ''); }
+function disputeShort(code){ const t = DISPUTE_STATES[code]; return t ? t.short : String(code || ''); }
+function disputeTone(code){ const t = DISPUTE_STATES[code]; return t ? t.tone : 'neutral'; }
+function caseIsOpen(d){ return d.status === 'open'; }
+/* A case joins to a provider through its booking — the record carries no providerId
+   of its own, and a filter that assumed one matches nothing at all. */
+function providerCases(providerId){
+  return DISPUTES.filter(d => { const b = bookingById(d.bookingId); return b && b.providerId === providerId; });
+}
+
+/* The evidence a case carries is its own job's timeline, worded once: a note that
+   merely repeats the state adds a dash and nothing else, and the desk reads
+   "Accepted — Accepted" where it should read "Accepted". */
+function caseEvidence(bookingId){
+  return bookingTimeline(bookingId).map(e => ({
+    at: e.at,
+    text: (e.note && e.note.trim().toLowerCase() !== label(e.to).toLowerCase())
+      ? label(e.to) + ' — ' + e.note : label(e.to)
+  }));
+}
+
 function openDispute(bookingId, actor, reason) {
   const b = bookingById(bookingId);
   if (!b) throw new Error('no booking ' + bookingId);
-  if (DISPUTES.some(d => d.bookingId === bookingId && d.status === 'under review'))
+  if (DISPUTES.some(d => d.bookingId === bookingId && caseIsOpen(d)))
     throw new GuardRejected('this job already has a case open.');
   const text = (reason || '').trim();
   if (text.length < 10)
@@ -3071,9 +3113,9 @@ function openDispute(bookingId, actor, reason) {
     /* What the books actually froze, not what the claim asks for — the card can
        then say honestly when a case has no money behind it. */
     frozenCentavos: accountBalance('dispute_hold', bookingId),
-    status: 'under review',
+    status: 'open',
     openedAt: new Date().toISOString(),
-    evidence: bookingTimeline(bookingId).map(e => ({ at: e.at, text: label(e.to) + (e.note ? ' — ' + e.note : '') })),
+    evidence: caseEvidence(bookingId),
     resolution: null, resolvedAt: null
   };
   DISPUTES.push(d);
@@ -3088,23 +3130,23 @@ function openDispute(bookingId, actor, reason) {
 function resolveDispute(disputeId, outcome, actor, note) {
   const d = DISPUTES.find(x => x.id === disputeId);
   if (!d) throw new Error('no dispute ' + disputeId);
-  if (d.status !== 'under review') throw new GuardRejected('this case was already closed as ' + d.status.toLowerCase() + '.');
+  if (!caseIsOpen(d)) throw new GuardRejected('this case was already closed — ' + disputeShort(d.status) + '.');
   const b = bookingById(d.bookingId);
   if (outcome === 'upheld') {
     attemptTransition(b.id, 'completed', { role: 'admin', id: actor && actor.id });
-    d.status = 'closed — the booking stands';
+    d.status = 'upheld';
   } else if (outcome === 'partial') {
     const half = Math.round((note && note.amountCentavos) || d.amountInClaimCentavos / 2);
     attemptTransition(b.id, 'cancelled', { role: 'admin', id: actor && actor.id }, { refundCentavos: half, reason: note && note.reason });
-    d.status = 'closed — partly refunded';
+    d.status = 'partly_refunded';
   } else if (outcome === 'refunded') {
     attemptTransition(b.id, 'cancelled', { role: 'admin', id: actor && actor.id },
                       { refundCentavos: d.amountInClaimCentavos, reason: note && note.reason });
-    d.status = 'closed — refunded';
+    d.status = 'refunded';
   } else throw new Error('unknown dispute outcome: ' + outcome);
   d.resolution = (note && note.reason) || '';
   d.resolvedAt = new Date().toISOString();
-  adminLog('Dispute ' + d.status.split('—')[1].trim(), 'Case ' + d.id, 'Both parties notified');
+  adminLog('Dispute ' + disputeShort(d.status), 'Case ' + d.id, 'Both parties notified');
   persist();
   return d;
 }
@@ -3123,8 +3165,8 @@ function seedDemoDispute() {
     reason: 'The same fault came back three days after the repair.',
     amountInClaimCentavos: b.pricing.customerTotalCentavos,
     frozenCentavos: held,
-    status: 'under review', openedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
-    evidence: bookingTimeline(b.id).map(e => ({ at: e.at, text: label(e.to) + (e.note ? ' — ' + e.note : '') })),
+    status: 'open', openedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
+    evidence: caseEvidence(b.id),
     resolution: null, resolvedAt: null
   };
   DISPUTES.push(d);
@@ -3148,7 +3190,7 @@ function adminCounts() {
      credentials where two providers hold a flagged one. */
   const pendingVerification = PENDING_APPLICANTS.length;
   const missingDocs = docsOutstanding();
-  const liveCases = DISPUTES.filter(d => d.status === 'under review').length;
+  const liveCases = DISPUTES.filter(d => caseIsOpen(d)).length;
   const expiringSoon = PROVIDERS.filter(p => adminProviderMeta(p).credential !== 'Valid').length;
   return { verified, open, pendingVerification, missingDocs, liveCases, expiringSoon };
 }
@@ -3319,11 +3361,11 @@ function disputeCard(d) {
   const b = bookingById(d.bookingId);
   const p = providerOf(b), cust = customerOf(b);
   const held = accountBalance('dispute_hold', b.id);
-  const open = d.status === 'under review';
+  const open = caseIsOpen(d);
   return `<div class="card card-lg">
       <div class="row" style="margin-bottom:8px;">
         <b class="card-title">Case ${esc(d.id)}</b>
-        <span class="chip" style="${open ? 'color:var(--warning-ink);' : 'color:var(--success-ink);'}">${open ? 'Under review' : esc(d.status)}</span>
+        <span class="chip" style="color:var(--${disputeTone(d.status) === 'warning' ? 'warning' : 'success'}-ink);">${esc(disputeLabel(d.status))}</span>
       </div>
       <div style="font-size:var(--t-body-sm); line-height:1.6; color:var(--ink-soft);">
         ${esc(cust.name)} against ${esc(p.name)}<br>
@@ -3352,7 +3394,7 @@ function disputeCard(d) {
           A refund takes money back out of the holding, the provider's share and our own fee, pro rata to
           what was refunded. Nothing here decides fault by wording alone — read the evidence first.
         </div>` : `
-        <div style="font-size:var(--t-caption); color:var(--success-ink); margin-top:10px;">${esc(d.status)} · ${esc(agoText(d.resolvedAt))}</div>`}
+        <div style="font-size:var(--t-caption); color:var(--success-ink); margin-top:10px;">${esc(disputeLabel(d.status))} · ${esc(agoText(d.resolvedAt))}</div>`}
     </div>`;
 }
 function resolveCase(disputeId, outcome) {
@@ -3360,7 +3402,7 @@ function resolveCase(disputeId, outcome) {
     const d = resolveDispute(disputeId, outcome, { role: 'admin' },
       outcome === 'refunded' ? { reason: 'The fault was not resolved' } :
       outcome === 'partial' ? { reason: 'Part of the work was not delivered' } : { reason: 'Evidence supports the completed work' });
-    showToast('Case ' + d.id + ' ' + d.status.toLowerCase());
+    showToast('Case ' + d.id + ' ' + disputeShort(d.status));
   } catch (err) {
     showToast(err.message, 'error');
   }
@@ -3395,7 +3437,7 @@ function resetDemoData() {
 /* 5 adds payment records and payouts: the money axis of a job has to survive a
    reload exactly like the service axis does. */
 /* 6 adds dispute cases, which carry their own claim amount and outcome. */
-const SCHEMA_VERSION = 8;
+const SCHEMA_VERSION = 9;
 const STORE_KEY = 'sukinnect.snapshot.v1';
 
 const Store = (function () {
@@ -4384,7 +4426,7 @@ function caseActor(){
 function caseDoor(b, actor){
   /* Checked first, because a job already under review has no disputed transition
      of its own — the door is shut precisely because someone is already walking it. */
-  if (DISPUTES.some(d => d.bookingId === b.id && d.status === 'under review'))
+  if (DISPUTES.some(d => d.bookingId === b.id && caseIsOpen(d)))
     return { kind:'open' };
   const rules = TRANSITIONS[b.status] && TRANSITIONS[b.status].disputed;
   if (!rules) return { kind:'none' };
@@ -4396,7 +4438,7 @@ function caseRow(b){
   const door = caseDoor(b, caseActor());
   if (door.kind === 'none') return '';
   if (door.kind === 'open') {
-    const d = DISPUTES.find(x => x.bookingId === b.id && x.status === 'under review');
+    const d = DISPUTES.find(x => x.bookingId === b.id && x.status === 'open');
     return `<div class="case-note case-note-live">${ic('scale',13)}
         <span>Case ${esc(d.id)} is with the help desk — ${d.evidence.length} records attached, and nothing has been decided yet.</span></div>`;
   }
@@ -4572,7 +4614,7 @@ function statusCard(b) {
                  the work still read "ETA: 15 mins" beside its own timeline saying
                  the provider had arrived. -->
             ${b.status === 'en_route' && b.eta ? `<span style="font-size:var(--t-caption); font-weight:700; color:var(--brand-primary);">ETA: ${esc(b.eta)}</span>`
-              : b.status === 'arrived' && b.arrivalTime ? `<span style="font-size:var(--t-caption); font-weight:700; color:var(--brand-primary);">At the door · ${esc(b.arrivalTime)}</span>`
+              : b.status === 'arrived' && b.arrivedAt ? `<span style="font-size:var(--t-caption); font-weight:700; color:var(--brand-primary);">At the door · ${esc(clockText(b.arrivedAt))}</span>`
               : ''}
           </div>
           <div style="display:flex; flex-direction:column; gap:6px; font-size:var(--t-caption); color:var(--ink-soft);">
@@ -4717,7 +4759,6 @@ function submitBookingRequest(){
       notes: '',
       createdAt: new Date().toISOString(),
       source: 'live',
-      arrivalTime: 'Awaiting provider',
       payStatus: pay.code === 'cash' ? 'pending_site' : 'unpaid',
       payMethod: pay.code,
       address: (state.profileData.savedAddresses || [state.profileData.address])[d.addrIdx]
@@ -5990,14 +6031,18 @@ function residentBookingDetail(){
       </div>
 
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; background:var(--background); padding:12px; border-radius:12px; font-size:var(--t-caption); margin-bottom:14px;">
-        <!-- Arrival only means something once the provider is actually moving.
-             Before that it repeats the scheduled time sitting at the top of this
-             same card, which is how one screen came to state 4:00 PM twice. The
-             cell is dropped rather than filled with the status, which the card
-             directly above already carries. -->
-        ${['en_route','arrived','ongoing','completed'].includes(b.status) ? `<div>
-          <span style="color:var(--mist); font-size:var(--t-caption);">${b.status === 'en_route' ? 'Arriving:' : 'Arrived:'}</span><br>
-          <b style="font-size:var(--t-body-sm); color:var(--ink);">${b.arrivalTime}</b>
+        <!-- Arrival comes from the stamp the machine writes, not from a string kept
+             on the record. This printed a hand-written field under an "Arrived:"
+             label, so a finished job read "Arrived: Completed" and a job the provider
+             had actually marked arrived read "Arrived: Awaiting provider". Before the
+             provider sets off there is nothing to say: the scheduled time is already
+             at the top of this card and the status row above carries the state. -->
+        ${b.arrivedAt ? `<div>
+          <span style="color:var(--mist); font-size:var(--t-caption);">Arrived:</span><br>
+          <b style="font-size:var(--t-body-sm); color:var(--ink);">${esc(clockText(b.arrivedAt))}</b>
+        </div>` : b.status === 'en_route' && b.eta ? `<div>
+          <span style="color:var(--mist); font-size:var(--t-caption);">Arriving:</span><br>
+          <b style="font-size:var(--t-body-sm); color:var(--ink);">in ${esc(b.eta)}</b>
         </div>` : ''}
         <div>
           <span style="color:var(--mist); font-size:var(--t-caption);">Payment Status:</span><br>
@@ -6527,7 +6572,7 @@ function adminProviderManagementProfile(){
   const meta = adminProviderMeta(provider);
   const section = state.adminProviderSection || 'overview';
   const note = state.adminProviderNotes[provider.id] || '';
-  return `<div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><button onclick="state.tab='admin_verifications'; state.adminProviderCategory='verified'; render();" aria-label="Back to verified providers" style="width:var(--tap); height:var(--tap); display:inline-flex; align-items:center; justify-content:center; background:transparent; border:1px solid rgba(255,255,255,0.35); border-radius:50%; color:var(--on-brand); width:30px; height:30px; cursor:pointer;">${ic("chevron-left",18)}</button><div><div class="title" style="font-size:var(--t-lead);">Provider Profile</div><div class="sub">Administrator management view</div></div></div></div><div class="pad" style="background:var(--cloud);"><div class="card"><div class="row"><div style="display:flex; gap:10px; align-items:center;">${photoAvatar(provider, 40)}<div><b style="font-size:var(--t-input);">${provider.name}</b><div style="font-size:var(--t-caption); color:var(--mist);">${provider.service} - Brgy. ${provider.barangay}</div></div></div><span class="chip">Verified</span></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; font-size:var(--t-caption);"><div>Account status<br><b>${meta.account}</b></div><div>Performance<br><b>${meta.performance}</b></div><div>Verified since<br><b>March 14, 2026</b></div><div>Trust score<br><b>${meta.trust}</b></div></div></div><div class="seg hscroll" style="margin-bottom:12px;">${['overview','performance','credentials','bookings','reviews','activity','notes'].map(tab=>`<button class="seg-btn ${section===tab?'on':''}" style="white-space:nowrap;" onclick="state.adminProviderSection='${tab}'; render();">${tab[0].toUpperCase()+tab.slice(1)}</button>`).join('')}</div>${section==='overview'?`<div class="card"><b class="card-title">Provider overview</b><div style="font-size:var(--t-caption); line-height:1.7; margin-top:9px;">Full name: <b>${provider.name}</b><br>Service category: <b>${provider.service}</b><br>Barangay: <b>${provider.barangay}</b><br>Rating: <b>${provider.rating}</b><br>Completed jobs: <b>${provider.jobs}</b></div></div>`:''}${section==='performance'?`<div class="card"><b class="card-title">Performance</b><div class="stat-strip" style="margin-top:10px;"><span class="f"><b>${provider.jobs}</b><span>completed jobs</span></span><span class="f"><b>${meta.completion}</b><span>completion rate</span></span><span class="f"><b>${meta.cancellation}</b><span>cancellation rate</span></span><span class="f"><b>${provider.rating}</b><span>average rating</span></span></div><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:10px;">${meta.performance==='Normal' ? 'This provider maintains a high completion rate, strong customer rating, and low cancellation rate.' : 'Performance needs administrator review. Review recent jobs and complaints before taking action.'}</div><button class="btn sm secondary btn-block" style="margin-top:10px;" onclick="state.tab='admin_disputes'; render();">Review Recent Jobs</button></div>`:''}${section==='credentials'?`<div class="card"><b class="card-title">Credentials</b><div class="card-body">TESDA ${provider.service} credential - <b style="color:var(--success-ink);">Valid</b><br>Government ID - <b style="color:var(--success-ink);">Verified</b><br>Barangay Clearance - <b style="color:${meta.credential==='Expired'?'var(--error-ink)':'var(--gold-600)'};">${meta.credential}</b></div><button class="btn sm secondary btn-block" style="margin-top:10px;" onclick="state.adminProviderCategory='credentials'; state.tab='admin_verifications'; render();">Open Credential Monitor</button></div>`:''}${section==='bookings'?`<div class="card"><b class="card-title">Recent bookings</b><div class="card-body">Kitchen Faucet Repair - Ana D. - Sep 8 - ₱850 - <b style="color:var(--success-ink);">Completed</b><br>Pipe Leak Repair - Ben R. - Sep 6 - ₱650 - <b style="color:var(--success-ink);">Completed</b><br>Emergency Valve Repair - Carla M. - Sep 4 - ₱950 - <b>Completed</b></div></div>`:''}${section==='reviews'?`<div class="card"><b class="card-title">Reviews &amp; complaints</b><div class="stat-strip" style="margin-top:10px;"><span class="f"><b>${provider.rating}</b><span>rating</span></span><span class="f"><b>${(provider.reviews || []).length}</b><span>reviews on file</span></span><span class="f"><b>${meta.complaints}</b><span>complaints</span></span><span class="f"><b>${DISPUTES.filter(d => d.providerId === provider.id && d.status === 'under review').length}</b><span>cases open</span></span></div></div>`:''}${section==='activity'?`<div class="card"><b class="card-title">Activity</b><div style="font-size:var(--t-caption); line-height:2; margin-top:9px;">September 9 - Completed booking<br>September 8 - Updated availability<br>September 7 - Received 5-star review<br>September 5 - Credential reminder sent</div></div>`:''}${section==='notes'?`<div class="card"><b class="card-title">Internal admin notes</b><textarea id="provider-admin-note" placeholder="Add internal note about this provider..." style="width:100%; min-height:80px; margin-top:9px; padding:9px; border:1px solid var(--line); border-radius:8px; font:inherit;">${note}</textarea><button class="btn sm" style="width:100%; margin-top:8px;" onclick="state.adminProviderNotes['${provider.id}']=document.getElementById('provider-admin-note').value; adminLog('Internal provider note added','${provider.name}','Saved'); render();">Save Note</button></div>`:''}<div class="card">${state.adminFlagged.includes(provider.id) ? `<div class="row"><b class="card-title">Account status</b><span class="chip badge-gold">Flagged for review</span></div><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:8px;">Recorded in the audit log. This prototype does not restrict, suspend or remove accounts - a decision needs a reason and a second administrator.</div>` : `<b class="card-title">Account status</b><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:6px;">Restrictive actions are not available here: they require a written reason and confirmation.</div><button class="btn sm secondary btn-block" style="margin-top:10px;" onclick="flagAccountReview('${provider.id}', '${provider.name}')">Flag for status review</button>`}</div></div>`;
+  return `<div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><button onclick="state.tab='admin_verifications'; state.adminProviderCategory='verified'; render();" aria-label="Back to verified providers" style="width:var(--tap); height:var(--tap); display:inline-flex; align-items:center; justify-content:center; background:transparent; border:1px solid rgba(255,255,255,0.35); border-radius:50%; color:var(--on-brand); width:30px; height:30px; cursor:pointer;">${ic("chevron-left",18)}</button><div><div class="title" style="font-size:var(--t-lead);">Provider Profile</div><div class="sub">Administrator management view</div></div></div></div><div class="pad" style="background:var(--cloud);"><div class="card"><div class="row"><div style="display:flex; gap:10px; align-items:center;">${photoAvatar(provider, 40)}<div><b style="font-size:var(--t-input);">${provider.name}</b><div style="font-size:var(--t-caption); color:var(--mist);">${provider.service} - Brgy. ${provider.barangay}</div></div></div><span class="chip">Verified</span></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; font-size:var(--t-caption);"><div>Account status<br><b>${meta.account}</b></div><div>Performance<br><b>${meta.performance}</b></div><div>Verified since<br><b>March 14, 2026</b></div><div>Trust score<br><b>${meta.trust}</b></div></div></div><div class="seg hscroll" style="margin-bottom:12px;">${['overview','performance','credentials','bookings','reviews','activity','notes'].map(tab=>`<button class="seg-btn ${section===tab?'on':''}" style="white-space:nowrap;" onclick="state.adminProviderSection='${tab}'; render();">${tab[0].toUpperCase()+tab.slice(1)}</button>`).join('')}</div>${section==='overview'?`<div class="card"><b class="card-title">Provider overview</b><div style="font-size:var(--t-caption); line-height:1.7; margin-top:9px;">Full name: <b>${provider.name}</b><br>Service category: <b>${provider.service}</b><br>Barangay: <b>${provider.barangay}</b><br>Rating: <b>${provider.rating}</b><br>Completed jobs: <b>${provider.jobs}</b></div></div>`:''}${section==='performance'?`<div class="card"><b class="card-title">Performance</b><div class="stat-strip" style="margin-top:10px;"><span class="f"><b>${provider.jobs}</b><span>completed jobs</span></span><span class="f"><b>${meta.completion}</b><span>completion rate</span></span><span class="f"><b>${meta.cancellation}</b><span>cancellation rate</span></span><span class="f"><b>${provider.rating}</b><span>average rating</span></span></div><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:10px;">${meta.performance==='Normal' ? 'This provider maintains a high completion rate, strong customer rating, and low cancellation rate.' : 'Performance needs administrator review. Review recent jobs and complaints before taking action.'}</div><button class="btn sm secondary btn-block" style="margin-top:10px;" onclick="state.tab='admin_disputes'; render();">Review Recent Jobs</button></div>`:''}${section==='credentials'?`<div class="card"><b class="card-title">Credentials</b><div class="card-body">TESDA ${provider.service} credential - <b style="color:var(--success-ink);">Valid</b><br>Government ID - <b style="color:var(--success-ink);">Verified</b><br>Barangay Clearance - <b style="color:${meta.credential==='Expired'?'var(--error-ink)':'var(--gold-600)'};">${meta.credential}</b></div><button class="btn sm secondary btn-block" style="margin-top:10px;" onclick="state.adminProviderCategory='credentials'; state.tab='admin_verifications'; render();">Open Credential Monitor</button></div>`:''}${section==='bookings'?`<div class="card"><b class="card-title">Recent bookings</b><div class="card-body">Kitchen Faucet Repair - Ana D. - Sep 8 - ₱850 - <b style="color:var(--success-ink);">Completed</b><br>Pipe Leak Repair - Ben R. - Sep 6 - ₱650 - <b style="color:var(--success-ink);">Completed</b><br>Emergency Valve Repair - Carla M. - Sep 4 - ₱950 - <b>Completed</b></div></div>`:''}${section==='reviews'?`<div class="card"><b class="card-title">Reviews &amp; complaints</b><div class="stat-strip" style="margin-top:10px;"><span class="f"><b>${provider.rating}</b><span>rating</span></span><span class="f"><b>${(provider.reviews || []).length}</b><span>reviews on file</span></span><span class="f"><b>${meta.complaints}</b><span>complaints</span></span><span class="f"><b>${providerCases(provider.id).filter(caseIsOpen).length}</b><span>cases open</span></span></div></div>`:''}${section==='activity'?`<div class="card"><b class="card-title">Activity</b><div style="font-size:var(--t-caption); line-height:2; margin-top:9px;">September 9 - Completed booking<br>September 8 - Updated availability<br>September 7 - Received 5-star review<br>September 5 - Credential reminder sent</div></div>`:''}${section==='notes'?`<div class="card"><b class="card-title">Internal admin notes</b><textarea id="provider-admin-note" placeholder="Add internal note about this provider..." style="width:100%; min-height:80px; margin-top:9px; padding:9px; border:1px solid var(--line); border-radius:8px; font:inherit;">${note}</textarea><button class="btn sm" style="width:100%; margin-top:8px;" onclick="state.adminProviderNotes['${provider.id}']=document.getElementById('provider-admin-note').value; adminLog('Internal provider note added','${provider.name}','Saved'); render();">Save Note</button></div>`:''}<div class="card">${state.adminFlagged.includes(provider.id) ? `<div class="row"><b class="card-title">Account status</b><span class="chip badge-gold">Flagged for review</span></div><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:8px;">Recorded in the audit log. This prototype does not restrict, suspend or remove accounts - a decision needs a reason and a second administrator.</div>` : `<b class="card-title">Account status</b><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:6px;">Restrictive actions are not available here: they require a written reason and confirmation.</div><button class="btn sm secondary btn-block" style="margin-top:10px;" onclick="flagAccountReview('${provider.id}', '${provider.name}')">Flag for status review</button>`}</div></div>`;
 }
 
 function adminVerifications(){
@@ -6600,8 +6645,8 @@ function adminVerifications(){
   </div>`;
 }
 
-function adminDisputes(){  const open = DISPUTES.filter(d => d.status === 'under review');
-  const closed = DISPUTES.filter(d => d.status !== 'under review');
+function adminDisputes(){  const open = DISPUTES.filter(d => caseIsOpen(d));
+  const closed = DISPUTES.filter(d => !caseIsOpen(d));
   return `
   <div class="topbar"><div class="hb"><div><div class="title">Help desk</div><div class="sub">${open.length} reading, ${closed.length} closed</div></div></div></div>
   <div class="pad" style="background:var(--cloud);">
