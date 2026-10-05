@@ -860,6 +860,7 @@ suite('hygiene', async () => {
   const c = makeChecker();
   const src = require('fs').readFileSync(require('./harness.cjs').APP, 'utf8');
   const body = src.slice(src.lastIndexOf('<script>') + 8, src.lastIndexOf('</script>'));
+  const css = src.slice(0, src.indexOf('</style>'));
 
   /* a button that reports success without changing anything is the bug class this
      whole rebuild was asked to remove */
@@ -895,6 +896,24 @@ suite('hygiene', async () => {
 
   /* retired markup should stay retired */
   c.check('no hidden cards are shipped', !/<div class="card" style="display:none;">/.test(body));
+
+  /* The keyboard surface. Each of these was true-once-and-broke: a focus ring that
+     named seventeen classes left every later control invisible, two fields set
+     outline:none inline where no rule could reach them, and one booking card was a
+     div with an onclick — operable by mouse only. */
+  const inlineNoOutline = (src.match(/style="[^"]*outline:\s*none/g) || []).length;
+  c.check('no control suppresses its focus ring from markup', inlineNoOutline === 0,
+    inlineNoOutline + ' inline outline:none');
+  c.check('one focus rule covers everything focusable',
+    /:where\([\s\S]{0,420}?\):focus-visible/.test(css.replace(/\r?\n\s*/g, ' ')),
+    'no :where(...) selector carrying :focus-visible');
+  const bareClicks = (body.match(/<(div|span|li|td|p|img)\b[^>]*onclick=/g) || [])
+    .filter(t => !/role=|tabindex=/.test(t));
+  c.check('every click target is reachable without a mouse', bareClicks.length === 0,
+    bareClicks.map(t => t.slice(1, 30)).join(' | '));
+  c.check('a toast is announced, not just painted', /aria-live/.test(body) && /role', 'status'/.test(body));
+  c.check('each screen states its title as a heading', /<h1 class="title">/.test(body));
+  c.check('and a sheet over it does not pretend to be the page', /<h2 class="sheet-title">/.test(body));
   c.check('a call control dials', (body.match(/href="tel:/g) || []).length >= 2);
   c.check('the provider map uses the provider it names', !/setView\(\[6\.3665, 124\.9338\], 15\)/.test(body));
   c.check('no stored-value wallet language survives',

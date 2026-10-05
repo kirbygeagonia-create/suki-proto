@@ -175,6 +175,9 @@
     padding:calc(18px + var(--sat)) 18px 14px;
     display:flex; align-items:center; justify-content:space-between;
   }
+  /* The screen title is an <h1> so a 30-screen app has an outline a screen reader
+     can navigate; the reset is what lets a heading sit in a flex bar like text. */
+  h1, h2{ margin:0; font-size:inherit; font-weight:inherit; }
   .topbar .title{font-family:"Fraunces",serif; font-size:var(--t-title); font-weight:600;}
   .topbar .sub{font-size:var(--t-body); opacity:0.78; margin-top:2px;}
   /* Root tabs - the ones the bottom nav lands on - carry a large title, the way a
@@ -676,7 +679,7 @@
     box-shadow:var(--ring);
   }
   .search-wrapper input{
-    border:none; outline:none; font-family:inherit; font-size:var(--t-input); width:100%;
+    border:none; font-family:inherit; font-size:var(--t-input); width:100%;
     background:transparent; color:var(--ink);
   }
   .search-btn{
@@ -1026,13 +1029,14 @@
   .filter-icon-btn:disabled, .seg-btn:disabled, .sheet-close:disabled, .search-btn:disabled{ opacity:.45; cursor:default; }
   .btn.secondary{ transition:all .15s ease; }
   .btn.secondary:hover{ background:var(--background); }
-  .btn:focus-visible, .navitem:focus-visible, .filter-icon-btn:focus-visible, .cat:focus-visible,
-  .notif-item:focus-visible, .rate-star:focus-visible,
-  .job-row:focus-visible, button.stat:focus-visible, .concierge-row:focus-visible,
-  .auth-role button:focus-visible, .auth-admin-link:focus-visible, .auth-admin-bar button:focus-visible,
-  .case-button:focus-visible, .chat-list button:focus-visible, .auth-switch:focus-visible, .seg-btn:focus-visible,
-  .addon-btn:focus-visible,
-  .back-btn:focus-visible{
+  /* One focus ring for every element the keyboard can actually reach. The rule this
+     replaces named seventeen classes, so a control added without a line here could be
+     operated by Tab and never seen — and :where() keeps the specificity at zero, so a
+     component that wants a different ring can still ask for one. */
+  :where(button, [type=button], [type=submit], [type=reset], a[href], input, select, textarea,
+         summary, [tabindex]:not([tabindex="-1"]), .navitem, .chip, .pick, .filter-option,
+         .cat, .stat, .job-row, .rate-star, .seg-btn, .addon-btn, .auth-switch,
+         .concierge-row, .notif-item):focus-visible{
     outline:3px solid var(--brand-primary-light); outline-offset:2px;
   }
 
@@ -3887,8 +3891,18 @@ function showToast(message, kind){
   if(!root){
     root = document.createElement('div');
     root.id = 'toast-root';
+    /* Success and progress are polite: a screen reader finishes what it was saying.
+       An error interrupts, because the action failed and the next thing you read
+       would be a lie. The toast's own icon is aria-hidden, so this is the whole
+       announcement — the same words a sighted user sees. */
+    root.setAttribute('role', 'status');
+    root.setAttribute('aria-live', 'polite');
+    root.setAttribute('aria-atomic', 'false');
     document.querySelector('.phone').appendChild(root);
   }
+  /* Set on the root before the node lands, so the change of urgency is what the
+     announcement is made against. */
+  root.setAttribute('aria-live', state === 'error' ? 'assertive' : 'polite');
   const t = document.createElement('div');
   t.className = 'toast';
   t.dataset.kind = state;
@@ -4014,7 +4028,7 @@ function profileSectionSheet(){
   const body = (PROFILE_SECTION_BODIES[cur.role] || (() => ''))(cur.id);
   return `<div class="sheet-grab"></div>`
     + `<div class="sheet-head"><div>`
-      + `<div class="sheet-title">${esc(cur.title)}</div>`
+      + `<h2 class="sheet-title">$1</h2>`
       + `<div class="sheet-sub">${esc(cur.sub)}</div>`
     + `</div><button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close ${esc(cur.title)}">${ic("x",15)}</button></div>`
     + `<div class="sheet-body">${body}</div>`;
@@ -4163,7 +4177,7 @@ function providerFiltersSheet(){
     <div class="sheet-grab"></div>
     <div class="sheet-head">
       <div>
-        <div class="sheet-title">Filter providers</div>
+        <h2 class="sheet-title">$1</h2>
         <div class="sheet-sub">Narrow the list before you start reviewing who to book.</div>
       </div>
       <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close filters">${ic("x",15)}</button>
@@ -4472,7 +4486,7 @@ function raiseCaseSheet(){
     <div class="sheet-grab"></div>
     <div class="sheet-head">
       <div>
-        <div class="sheet-title">Raise a case</div>
+        <h2 class="sheet-title">$1</h2>
         <div class="sheet-sub">An administrator reads the evidence. Nothing here decides who was at fault.</div>
       </div>
       <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close the case form">${ic("x",15)}</button>
@@ -4636,7 +4650,7 @@ function bookingRequestSheet(){
     <div class="sheet-grab"></div>
     <div class="sheet-head">
       <div>
-        <div class="sheet-title">Book ${esc(p.name.split(' ')[0])}</div>
+        <h2 class="sheet-title">$1</h2>
         <div class="sheet-sub">Check every term below &mdash; nothing is confirmed until the provider accepts.</div>
       </div>
       <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close">${ic("x",15)}</button>
@@ -5206,7 +5220,7 @@ function screenHeader(title, opts){
     ? `<button class="back-btn" id="${o.backId}" aria-label="${o.backLabel || 'Back'}">${ic('chevron-left',18)}</button>`
     : (o.back ? `<button class="back-btn" onclick="${o.back}" aria-label="${o.backLabel || 'Back'}">${ic('chevron-left',18)}</button>` : '');
   return `<div class="topbar"><div class="hb">` + back
-    + `<div><div class="title">${title}</div>${o.sub ? `<div class="sub">${o.sub}</div>` : ''}</div>`
+    + `<div><h1 class="title">${title}</h1>${o.sub ? `<div class="sub">${o.sub}</div>` : ''}</div>`
     + `</div>${o.action || ''}</div>`;
 }
 
@@ -5407,7 +5421,7 @@ function residentConcierge(){
 
     <div class="card" style="border-radius:16px; padding:16px; margin-bottom:14px">
       <label style="font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:block; margin-bottom:8px;">Describe the issue</label>
-      <textarea id="concierge-input-field" rows="4" oninput="conciergeInput(this)" style="width:100%; border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:14px; font-family:inherit; font-size:var(--t-body-sm); outline:none; color:var(--ink); resize:none;" placeholder="Describe what is broken, leaking, or needs maintenance...">${esc(state.conciergeInput)}</textarea>
+      <textarea id="concierge-input-field" rows="4" oninput="conciergeInput(this)" style="width:100%; border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:14px; font-family:inherit; font-size:var(--t-body-sm); color:var(--ink); resize:none;" placeholder="Describe what is broken, leaking, or needs maintenance...">${esc(state.conciergeInput)}</textarea>
 
       <label style="font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:block; margin-bottom:8px;">Attach a photo of the problem</label>
       
@@ -5917,7 +5931,7 @@ function residentChatRoom(){
 
     <div style="position:sticky; bottom:0; flex-shrink:0; background:var(--surface); border-top:1px solid var(--line); padding:10px 16px; display:flex; align-items:center; gap:10px; z-index:10; box-shadow:0 -4px 12px rgba(0,0,0,0.06);">
       <div style="flex:1; min-height:var(--field-h); background:var(--background); border:1px solid var(--line); border-radius:var(--r-pill); padding:0 16px; display:flex; align-items:center;">
-        <input type="text" id="chat-input" aria-label="Write a message" placeholder="Type a message to ${firstName}..." style="width:100%; border:none; outline:none; background:transparent; font-family:inherit; font-size:var(--t-body-sm); padding:11px 0; color:var(--ink);">
+        <input type="text" id="chat-input" aria-label="Write a message" placeholder="Type a message to ${firstName}..." style="width:100%; border:none; background:transparent; font-family:inherit; font-size:var(--t-body-sm); padding:11px 0; color:var(--ink);">
       </div>
       <button class="btn" style="border-radius:999px; padding:10px 22px; font-size:var(--t-body-sm);" onclick="sendChatMessage()">Send</button>
     </div>
@@ -6110,7 +6124,7 @@ function residentBookings(){
       const sc = statusColors(b.status);
 
       return `
-        <div class="card" onclick="openBookingDetail('${b.id}')" style="cursor:pointer; border-radius:14px; padding:14px; margin-bottom:12px; border:1px solid var(--line); background:var(--surface);">
+        <div class="card" role="button" tabindex="0" onclick="openBookingDetail('${b.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openBookingDetail('${b.id}')}" style="cursor:pointer; border-radius:14px; padding:14px; margin-bottom:12px; border:1px solid var(--line); background:var(--surface);">
           <div class="row" style="align-items:flex-start; margin-bottom:8px;">
             <div style="display:flex; gap:12px; align-items:center;">
               ${serviceAvatar(providerOf(b), 40, '')}
