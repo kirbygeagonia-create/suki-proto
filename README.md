@@ -192,7 +192,10 @@ To swap an image, replace the file and keep the name. To add a trade, add a row 
 - Storage can be unavailable (`file://` on some browsers, private windows); the app then keeps
   records in memory and says so on the money console.
 - `Sukinnect-Android/app/src/main/assets/` holds a **separate copy** of the web files. Any
-  accepted change must be re-synced there before it reaches a device build.
+  accepted change must be re-synced there before it reaches a device build. It currently holds
+  the rebuild, staged for a handset pass — see [`DEVICE-PASS.md`](DEVICE-PASS.md), which also
+  says how to put the shipped file back.
 - Screens are rendered in Node and painted in a real browser at a phone size and measured, but
-  never on a handset. Touch feel, the on-screen keyboard, and device performance are still owed
-  a human check.
+  never on a handset. Touch feel, the on-screen keyboard, and device performance are the three
+  things no instrument in this repo can prove; [`DEVICE-PASS.md`](DEVICE-PASS.md) is the
+  checklist for the pass that is still owed.
