@@ -379,6 +379,84 @@ only ever used the later one.
 object is not a step to take from a branch. The gate now fails the rebuild if it ever loads an
 icon library again, and that check was falsified against `Sukinnect.html`, which it flags.
 
+## 14. A third audit: the whole dataset, and the checks that were not looking
+
+The gate walks one scripted journey through the machine and the instrument measures one
+painted frame per screen. This audit asserted the same invariants across **every** seed
+record instead — 13 bookings, 12 ledger events, 11 payments, 39 status events, 38 messages,
+one case — and then read the rendered pages for what no assertion can see.
+
+The first run reported 51 findings. **Thirty of them were the audit script's own wrong
+assumptions**, and reporting those as defects would have been the actual failure: a greedy
+thread regex (`-p` swallowed by `\S+`), a money identity that added the commission to the
+customer's total (the fee comes out of the provider's share, so it never appears on the
+customer's line), a debit/credit sign read the wrong way round, lifecycle rules that forgot
+a case opens *after* the work is done, and an assertion that every booking must carry frozen
+pricing when pricing is created at acceptance. The corrected script now reports zero, and
+the trial balance closes to 0 centavos.
+
+What was real:
+
+- **A booking carried its arrival as a hand-written string, and the card printed it under an
+  "Arrived:" label.** The seed filled that field with `Completed`, `Cancelled` and `Awaiting
+  provider`; a live request wrote `Awaiting provider` into it and nothing ever replaced it.
+  So a finished job read "Arrived: Completed", and a job the provider had genuinely marked
+  arrived read the appointment slot — `4:00 PM` where the real arrival was `11:11 PM`. The
+  field is deleted; the card reads `arrivedAt`, the stamp the machine already wrote, through
+  one `clockText` formatter.
+- **A case stored its lifecycle as sentences.** Nine comparisons matched `'under review'`, a
+  guard and a toast lowercased a label into user copy, and the audit log recovered what had
+  happened by splitting the status on its own em-dash. `DISPUTE_STATES` now holds codes with
+  the words derived from them; `SCHEMA_VERSION` went to 9 so an old snapshot is discarded
+  rather than half-read.
+- **The provider profile counted cases with `d.providerId`, a field a dispute does not
+  have.** It reported zero open cases for the one provider who has one, and would have
+  reported zero for everyone for ever, because nothing throws.
+- **The provider dashboard labelled a week "Today"** — every upcoming job, in record order,
+  cut to three, so Monday's jobs sat under Today and a second Monday job was dropped with no
+  way to reach it from the screen.
+- **Two admin cards typed their statistics.** "Marketplace analytics" showed 82/68/74% under
+  a "This week" chip, the last of them contradicted by the same screen (one case, open, none
+  closed). "Operations workload" drew a donut of 18 items split 45/25/30 while four tiles
+  above it counted 7, 3 and 1. Both now compute from the records and name their denominator.
+- **The audit log invented an entry** — "September 10, 2026 · Maria Santos · Review in
+  progress" — whenever no administrator had acted, and the same screen carried a search field
+  with no handler, no id and nothing that reads it.
+- **Trust & Safety stated a trend it cannot see** ("cancellation activity increased") in the
+  card whose own caption says the pilot measured nothing, and claimed five reviews arrived
+  within twelve minutes when the demo records carry no review times.
+
+### The instrument was blind to a fifth class
+
+Accessibility measured zero across 30 screens while four real gaps sat underneath it:
+the focus ring was an enumeration of seventeen class names, so any control added later could
+be Tab-reached and never seen; two fields set `outline:none` **inline**, which no stylesheet
+can beat; one booking card was a `<div>` with an `onclick`; a toast painted and never
+announced; and no screen had a heading at all, so a 30-screen app had an empty document
+outline. All five are fixed, and the render pass now fails on an empty or placeholder
+heading.
+
+### Two mistakes of my own, both worth keeping in the record
+
+**A scripted edit destroyed 23 titles.** Two `sub()` calls passed a replacement containing
+`$1`/`$2` while wrapping it as `() => repl`, which suppresses `String.replace`'s capture
+substitution — so `<h1$1>$2</h1>` was written into the file, losing the text inside. Four of
+them had already been committed. The gate passed all 265 checks throughout, because it looks
+for unbalanced `<div>` counts and painted `undefined`, and a placeholder heading is neither.
+The titles were restored from the parent commit, the tool was fixed, and the render pass now
+asserts that a heading has text and no `$n` in it — falsified by re-injecting the original
+damage and watching it fail.
+
+**A check that could not fail.** The first version of the schedule-order assertion passed
+against a build with the sort removed: on the seed as it stands, record order already happens
+to be chronological for today's jobs, so the check was measuring nothing. It now shuffles the
+record array before rendering, and reports `1080 → 870` when the sort is taken out.
+
+The gate is 271 checks. The instrument is still zero on all nine categories across 30
+screens, with no console errors.
+
+---
+
 ## Deliberately not done
 
 - **No server, no database, no framework, no CSS library, no ES modules.** The Android shell

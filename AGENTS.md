@@ -1191,7 +1191,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 77 hard
                     and signal bars and the older per-trade palette). Untouched by the
                     rebuild; still byte-identical to main, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 7,544 lines, ONE :root block, 1,554 var() usages. A scan for `#` +
+Sukinnect-next.html— 7,697 lines, ONE :root block, 1,562 var() usages. A scan for `#` +
                     hex digits finds 32 values outside :root, and 2 of them are not
                     colours: booking-id fragments ("#8226", "#9021") that any pattern which
                     does not require a colour context will match. Quote the method with the
@@ -1207,6 +1207,10 @@ Sukinnect-next.html— 7,544 lines, ONE :root block, 1,554 var() usages. A scan 
                     mockup's bezel and signal bars became --device-bezel and
                     --device-signal. Type is fully on the scale: all 84 `font-size`
                     declarations in the file take a var(), and none of them is a literal px.
+                    (The 85th `font-size` is `inherit`, in the reset that lets an <h1> sit in
+                    a flex bar as the div it replaced.) Every screen title is now an <h1>
+                    and every sheet title an <h2> — 21 and 4 — because a 30-screen app with
+                    no headings has no outline for a screen reader to navigate.
 
 ICONS DIVERGE BETWEEN THE TWO FILES, and a reader should not mistake that for an accident.
 `Sukinnect.html` loads `reicon.js` (8 MB, Git LFS) and draws through its `<re-icon>` custom
