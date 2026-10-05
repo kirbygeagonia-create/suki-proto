@@ -154,6 +154,19 @@ suite('screens', async () => {
       const ob = (html.match(/<button\b/g) || []).length;
       const cb = (html.match(/<\/button>/g) || []).length;
       if (ob !== cb) broken.push(label() + '  buttons unbalanced: ' + ob + ' against ' + cb);
+      /* A scripted edit once wrote `<h1$1>$2</h1>` into 23 titles because
+         String.replace's capture substitution had been suppressed. It rendered, it
+         balanced, and every screen simply lost its name — so the heading itself is
+         now checked, not just the markup around it. */
+      const heads = [...html.matchAll(/<(h[1-4])([^>]*)>([\s\S]*?)<\/\1>/g)];
+      const badHead = heads.filter(h => !h[3].replace(/<[^>]*>/g, '').trim()
+                              || /\$\d/.test(h[0]) || /\$\d/.test(h[3]));
+      if (badHead.length)
+        broken.push(label() + '  heading is empty or still holds a placeholder: '
+          + badHead.map(h => '<' + h[1] + h[2] + '>' + h[3] + '</' + h[1] + '>').join(' ').slice(0, 90));
+      const ho = (html.match(/<h[1-4]\b/g) || []).length;
+      const hc = (html.match(/<\/h[1-4]>/g) || []).length;
+      if (ho !== hc) broken.push(label() + '  headings unbalanced: ' + ho + ' against ' + hc);
     } catch (err) { broken.push(label() + '  throws ' + err.message); }
   }
   const SCREENS = [['resident', 'home'], ['resident', 'bookings'], ['resident', 'messages'],
