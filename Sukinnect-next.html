@@ -4209,11 +4209,32 @@ const REQUEST_TIMES = ['8:00 AM','10:00 AM','1:00 PM','3:00 PM','5:00 PM'];
 // The three nearest days, worked out when the sheet opens, so a request the
 // resident raises now reads as a real upcoming job instead of inheriting a
 // frozen date from the sample records.
-function requestDays(){
+/* The name the request sheet gives a day, and the only honest way to ask whether a
+   job belongs to it: a booking's `date` is this string, written when the request was
+   raised. Screens that list work by when it happens compare against this instead of
+   inventing their own idea of today. */
+function dayName(offset){
   const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset)
+    .toLocaleDateString('en-PH', { weekday:'short', month:'short', day:'numeric' });
+}
+/* '2:30 PM' into minutes past midnight. A time the picker did not write sorts last
+   rather than pretending to be early. */
+function timeMinutes(t){
+  const m = /^(\d{1,2}):(\d{2})\s*([AP])M$/i.exec(String(t || '').trim());
+  if (!m) return Number.MAX_SAFE_INTEGER;
+  return ((+m[1] % 12) + (/p/i.test(m[3]) ? 12 : 0)) * 60 + +m[2];
+}
+function dayRank(date){
+  const i = [dayName(0), dayName(1), dayName(2)].indexOf(date);
+  return i < 0 ? 99 : i;
+}
+function byWhen(a, b){
+  return dayRank(a.date) - dayRank(b.date) || timeMinutes(a.time) - timeMinutes(b.time);
+}
+function requestDays(){
   return [0,1,2].map(offset => {
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
-    const date = d.toLocaleDateString('en-PH', { weekday:'short', month:'short', day:'numeric' });
+    const date = dayName(offset);
     return { date, label: offset === 0 ? 'Today' : offset === 1 ? 'Tomorrow' : date };
   });
 }
@@ -7042,7 +7063,12 @@ function providerDashboard(){
   const neutralPercent = Math.round(neutralReviews / reviewTotal * 100);
   const negativePercent = 100 - positivePercent - neutralPercent;
   const waiting = pendingProviderRequests();
-  const today = bookingsForProvider().filter(b => b.status === 'upcoming' || b.status === 'ongoing');
+  /* Ordered by when the job happens, then split by day — the heading says Today, so
+     only today's jobs may sit under it. */
+  const scheduled = bookingsForProvider()
+    .filter(b => b.status === 'upcoming' || b.status === 'ongoing').sort(byWhen);
+  const today = scheduled.filter(b => b.date === dayName(0));
+  const beyond = scheduled.filter(b => b.date !== dayName(0));
   return `
   <div class="topbar">
     <div style="display:flex; align-items:center; gap:10px;">
@@ -7075,7 +7101,7 @@ function providerDashboard(){
     </div>` : ''}
 
     <h3 style="font-size:var(--t-body); margin:0 0 8px;">Today</h3>
-    ${today.length ? today.slice(0,3).map(b => `
+    ${today.length ? today.map(b => `
       <button type="button" class="job-row" data-provider-booking-id="${b.id}" aria-label="Open ${esc(b.summary)} at ${esc(b.time)}">
         <span class="jr-time">${esc(b.time)}</span>
         <span style="min-width:0; flex:1;">
@@ -7085,6 +7111,13 @@ function providerDashboard(){
         <span style="color:var(--mist); display:inline-flex; flex-shrink:0;">${ic('arrow-right',14)}</span>
       </button>`).join('') : `
       <div class="card"><div style="font-size:var(--t-body); color:var(--ink-soft);">Nothing is scheduled for today. New requests appear at the top of this screen.</div></div>`}
+    ${beyond.length ? `<button type="button" class="card card-quiet" style="width:100%; text-align:left; font:inherit; color:var(--ink); display:flex; align-items:center; gap:8px; margin-top:8px; cursor:pointer;" onclick="state.tab='bookings'; render();" aria-label="Open the bookings tab to see ${beyond.length} more scheduled job${beyond.length === 1 ? '' : 's'}">
+      <span style="flex:1; min-width:0;">
+        <span style="display:block; font-size:var(--t-body-sm); font-weight:700;">${beyond.length} more scheduled job${beyond.length === 1 ? '' : 's'}</span>
+        <span style="display:block; font-size:var(--t-caption); color:var(--mist); margin-top:2px;">next: ${esc(beyond[0].date)} at ${esc(beyond[0].time)} — ${esc(beyond[0].summary)}</span>
+      </span>
+      <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',14)}</span>
+    </button>` : ''}
 
     <div class="stat-strip" style="margin:14px 0 4px;">
       <span class="f"><b>${pesoShort(bookedThisWeek(CURRENT_PROVIDER_ID))}</b><span>booked this week</span></span>

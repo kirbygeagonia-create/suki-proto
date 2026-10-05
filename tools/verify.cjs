@@ -657,7 +657,7 @@ suite('provider', async () => {
   const { state, BOOKINGS, LISTINGS, earningsCard, jobActionBar, realRequestCard, listingsPanel,
           threadsFor, providerJobAction, toggleListing, commitListingDraft, pendingProviderRequests,
           bookingsForProvider, bookingsForResident, providerBalances, bookedThisWeek, completionRate,
-          cancellationRate, pesoShort, label, render, _document } = app;
+          cancellationRate, pesoShort, label, render, _document, dayName, timeMinutes } = app;
   state.view = 'app'; state.role = 'provider'; state.tab = 'fsm';
 
   /* the wallet is gone, and what replaced it says where the money is */
@@ -667,6 +667,50 @@ suite('provider', async () => {
   c.check('it reports the hold and the minimum honestly',
     earn.includes(pesoShort(providerBalances('p1').availableCentavos)) || /Ready to pay out/.test(earn));
   c.check('cash taken on site is shown as already the provider’s', /Collected on site/.test(earn));
+
+  /* The dashboard's "Today" section. It used to take every upcoming job in record
+     order, cut it to three and label the result Today — so it showed a Monday job
+     under a Today heading, out of time order, and dropped a second one that nobody
+     could reach from the screen. */
+  const dash = (() => {
+    const was = state.tab;
+    state.role = 'provider'; state.tab = 'dashboard'; render();
+    const out = _document.getElementById('screen').innerHTML || '';
+    state.tab = was; render();
+    return out.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  })();
+  const held = bookingsForProvider().filter(b => b.status === 'upcoming' || b.status === 'ongoing');
+  const todays = held.filter(b => b.date === dayName(0));
+  const beyond = held.filter(b => b.date !== dayName(0));
+  const slice = (dash.match(/Today ([\s\S]*?)(?=booked this week|Insights|$)/) || [])[1] || '';
+  c.check('a provider can reach every job he holds',
+    held.every(b => slice.includes(b.summary) || /more scheduled job/.test(slice)),
+    held.filter(b => !slice.includes(b.summary)).map(b => b.id).join(' ') + ' are neither listed nor counted');
+  c.check('the Today section lists only jobs that are today',
+    todays.every(b => slice.includes(b.summary)) &&
+    (beyond.length === 0 || slice.includes(beyond[0].date)),
+    'today=' + todays.map(b => b.id).join(',') + ' beyond=' + beyond.map(b => b.id + '@' + b.date).join(','));
+  /* Asserting the order on the seed as it stands proves nothing — record order
+     happens to be chronological for today's two jobs, so an unsorted list passes.
+     Shuffle the array first and ask again: now only a real sort keeps the screen
+     in order. */
+  const rowsInOrder = (() => {
+    const was = BOOKINGS.slice();
+    try {
+      BOOKINGS.length = 0;
+      was.slice().reverse().forEach(x => BOOKINGS.push(x));
+      state.role = 'provider'; state.tab = 'dashboard'; render();
+      const out = (_document.getElementById('screen').innerHTML || '').replace(/<[^>]+>/g, ' ');
+      const seg = (out.match(/Today ([\s\S]*?)(?=more scheduled job|booked this week|Insights|$)/) || [])[1] || '';
+      return (seg.match(/\b\d{1,2}:\d{2} [AP]M\b/g) || []).map(timeMinutes);
+    } finally {
+      BOOKINGS.length = 0; was.forEach(x => BOOKINGS.push(x));
+      render();
+    }
+  })();
+  c.check('jobs are listed in the order they happen, whatever order the records are in',
+    rowsInOrder.length >= 2 && rowsInOrder.every((t, i) => i === 0 || rowsInOrder[i - 1] <= t),
+    rowsInOrder.join(' → '));
 
   /* only moves the machine allows */
   const job = bookingsForProvider().find(b => b.status === 'upcoming');
