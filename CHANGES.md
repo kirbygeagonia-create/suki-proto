@@ -343,6 +343,42 @@ glyph has a fallback path" was briefly vacuous — the fake DOM exposes `innerHT
 `textContent`, so the helper was asserting against `undefined` and every check passed for
 nothing. Both were caught by testing the checker rather than trusting it.
 
+The same counting bug came back while removing reicon. A check written
+`(html.match(/id="rt-resident"[^>]*>([\s\S]{0,80}?)(<svg|<re-icon)/) || []).length === 2`
+asserted "both role chips carry a glyph" and passed on a screen with one chip, because a
+non-global `String.match` returns the capture groups alongside the hit: length 2 means found
+once. Rewritten global, with a second check that both chips were actually painted to compare,
+so a zero can never read as a pass again.
+
+### The 8 MB icon library, measured out of use
+
+`Sukinnect-next.html` no longer loads `reicon.js`. It never needed to: `ic()` emitted
+`<re-icon>` whenever `REICON_READY` was not false, and the flag was set true at parse time, so
+the custom element was assumed present and a 4-second timer existed to notice when it was not —
+which meant the first four seconds of a page whose icons had not registered were a screen with
+no icons. With the library disabled the inline set drew the same glyphs on every screen of all
+30, so the dependency, the 47-name map, the flag and both timers came out and the inline set
+became the only path.
+
+**Removing it broke six icons, and the screenshots did not show it.** The map had 13 names with
+no drawing in the inline set, and six of them were live: four of the six trades carry an icon
+name on their record (`bubbles`, `book`, `plug`, `package`), and two empty states ask for
+`search` and `inbox` by name. Under reicon those resolved to library glyphs; without it `ic()`
+returned an empty string — which throws nothing, fails no render, and on the Home screen is
+invisible because the category tiles are drawn SVG scenes. The gate's own check missed them too:
+it scanned for `ic('name')` in markup, and a name carried by a data row is not that.
+
+All six were drawn from the library's own path data (MIT, local file) and added to the inline
+set, which is now 41 glyphs for the 38 names the app can reach. The coverage check reads all
+three ways a name arrives — written in markup, carried by a record, passed to `emptyState()` —
+and was falsified by hiding one drawing and confirming the gate names it. A second check
+rejects a glyph key declared twice, which is how the set had carried two drawings of `x` and
+only ever used the later one.
+
+`Sukinnect.html` still loads reicon, and the file stays in the repository — deleting an LFS
+object is not a step to take from a branch. The gate now fails the rebuild if it ever loads an
+icon library again, and that check was falsified against `Sukinnect.html`, which it flags.
+
 ## Deliberately not done
 
 - **No server, no database, no framework, no CSS library, no ES modules.** The Android shell

@@ -858,15 +858,28 @@ suite('hygiene', async () => {
   c.check('no control claims success it does not deliver', congratulating.length === 0,
     congratulating.map(t => t.slice(0, 60)).join(' | '));
 
-  /* the inline icon set is the offline fallback: a missing glyph means an empty
-     square in exactly the situation where it matters most */
+  /* The inline set is the only icon path the rebuild takes: a missing glyph is an
+     empty square on every screen, with no custom element left to catch it. Names
+     reach ic() three ways — written in markup, carried by a record, or passed to
+     emptyState() — and a data-table name is the one a grep for ic(' misses. */
   const defined = new Set((body.match(/^  '?([a-z0-9-]+)'?: \{o:/gm) || [])
     .map(l => l.replace(/^  '?/, '').replace(/'?: \{o:$/, '')));
-  const asked = new Set((body.match(/\bic\(\s*['"]([a-z0-9-]+)['"]/g) || [])
-    .map(m => m.replace(/.*['"]([a-z0-9-]+)['"]/, '$1')));
+  const dupes = (body.match(/^  '?([a-z0-9-]+)'?: \{o:/gm) || []).length - defined.size;
+  const quoted = new Set([...body.matchAll(/\bic\(\s*['"]([a-z0-9-]+)['"]/g)].map(m => m[1]));
+  const carried = new Set([...body.matchAll(/\bicon:\s*'([a-z0-9-]+)'/g)].map(m => m[1]));
+  const empties = new Set([...body.matchAll(/\bemptyState\(\s*'([a-z0-9-]+)'/g)].map(m => m[1]));
+  const asked = new Set([...quoted, ...carried, ...empties]);
   const missing = [...asked].filter(n => !defined.has(n));
-  c.check('every glyph has a fallback path', missing.length === 0, 'missing: ' + missing.join(','));
-  c.check('the fallback stays small', defined.size <= 40, defined.size + ' entries');
+  c.check('every glyph the app can reach has a drawing', missing.length === 0, 'missing: ' + missing.join(','));
+  c.check('and the names were actually looked for', asked.size >= 30 && defined.size >= asked.size,
+    asked.size + ' reachable, ' + defined.size + ' drawn');
+  c.check('no glyph key is declared twice', dupes === 0, dupes + ' duplicate entry(ies)');
+  c.check('the set stays the size of an icon system', defined.size <= 48, defined.size + ' entries');
+  /* reicon.js is 8 MB of LFS for a set the file now draws itself, and a page that
+     waits for a custom element to register shows a screen with no icons for four
+     seconds when it never does. The rebuild loads neither. */
+  c.check('the rebuild paints icons from one source, not two',
+    !/<script[^>]*reicon\.js/.test(src) && !/<re-icon/.test(src) && !/REICON_READY/.test(src));
   c.check('the active tab can still be drawn filled',
     /ICONS\.home\.f/.test(body) && /ICONS\.calendar\.f/.test(body));
 
@@ -934,8 +947,16 @@ suite('login', async () => {
   c.check('the card never outgrows the viewport, so the keyboard has room',
     /\.auth-sheet\{[\s\S]{0,400}?max-height:100%/.test(css)
     && /\.auth-screen\{[\s\S]{0,260}?overflow:hidden/.test(css));
+  /* Global, because a non-global match returns the capture groups as well as the
+     hit, and a length of 2 then means "found once", not "both chips". */
+  const chipGlyphs = (one.match(/id="rt-(?:resident|provider)"[^>]*>[\s\S]{0,90}?<svg/g) || []).length;
   c.check('each role chip carries the glyph of where it leads',
-    (one.match(/id="rt-resident"[^>]*>[\s\S]{0,80}?(<svg|<re-icon)/) || []).length === 2);
+    chipGlyphs === 2, 'found ' + chipGlyphs + ' of 2');
+  /* The check is only worth anything if the chips are there to look at: an empty
+     render would report zero and read like a glyph problem, not a broken screen. */
+  c.check('and both role chips were actually painted to compare',
+    chipGlyphs === 2 && (one.match(/id="rt-resident"/g) || []).length === 1
+    && (one.match(/id="rt-provider"/g) || []).length === 1);
   c.check('the official mark is the first thing on it',
     one.indexOf('Sukinnect_Logo.png') > -1 && one.indexOf('Sukinnect_Logo.png') < one.indexOf('login-email'));
   /* what was asked off the screen: the pitch, not the product */

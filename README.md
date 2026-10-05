@@ -10,8 +10,10 @@ rebuild is summarised in **[`CHANGES.md`](CHANGES.md)**.
 
 ## Clone and run
 
-Large assets (`reicon.js`, the pitch deck) are Git LFS files. Install LFS **before**
-cloning or they arrive as ~130-byte stubs and the prototype renders without icons:
+Large assets (`reicon.js`, the pitch deck) are Git LFS files. Install LFS **before** cloning or
+they arrive as ~130-byte stubs. Only `Sukinnect.html` needs the icon library — the rebuild
+draws every glyph from a set inside its own file — so a stubbed `reicon.js` costs the shipped
+prototype its icons and costs `Sukinnect-next.html` nothing:
 
 ```
 git lfs install
@@ -173,7 +175,7 @@ matches is a simulated flow, and the screens say so.
 | What | Where | Notes |
 |---|---|---|
 | Logo | `Sukinnect_Logo.png` | exact case. Official mark — never redrawn, recoloured, stretched or replaced. It has a white background, so change the surface around it, not the file. |
-| Icons | `reicon.js` (LFS) + an inline fallback set | `<re-icon>` is primary. The inline set is not a partial safety net: every one of the 32 glyph names the app asks for has a local definition, and the gate fails if a new one is used without it. Measured with reicon disabled, the fallback renders the same icons on every screen. Add a name to both, or none. |
+| Icons | an inline SVG set inside `Sukinnect-next.html`; `reicon.js` (LFS) for `Sukinnect.html` | The rebuild loads no icon library: 41 glyphs are drawn in the file and every one of the 38 names the app can reach has one — whether the name is written in markup, carried by a service record, or passed to an empty state. The gate checks all three and fails if a new name arrives undrawn. Measured with reicon disabled, that set drew the same icons on every screen of all 30, so the rebuild dropped the 8 MB custom element and the four seconds of iconless paint it cost when registration lost the race. `Sukinnect.html` still uses reicon, so add a name to both files or neither. |
 | Type | `fonts/` | Fraunces for display, Plus Jakarta Sans for UI. Self-hosted; no remote fonts. |
 | Photos | `avatars/` | local PNGs, mapped per persona in `PRO_PHOTOS`. Keep imagery local — the APK runs offline. |
 | Maps | `leaflet/` | vendored. Tiles come from OpenStreetMap, the one network dependency, so a map is blank with no connection. |

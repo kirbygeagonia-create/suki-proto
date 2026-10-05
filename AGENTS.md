@@ -1191,7 +1191,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 77 hard
                     and signal bars and the older per-trade palette). Untouched by the
                     rebuild; still byte-identical to main, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 7,575 lines, ONE :root block, 1,554 var() usages. A scan for `#` +
+Sukinnect-next.html— 7,544 lines, ONE :root block, 1,554 var() usages. A scan for `#` +
                     hex digits finds 32 values outside :root, and 2 of them are not
                     colours: booking-id fragments ("#8226", "#9021") that any pattern which
                     does not require a colour context will match. Quote the method with the
@@ -1207,6 +1207,16 @@ Sukinnect-next.html— 7,575 lines, ONE :root block, 1,554 var() usages. A scan 
                     mockup's bezel and signal bars became --device-bezel and
                     --device-signal. Type is fully on the scale: all 84 `font-size`
                     declarations in the file take a var(), and none of them is a literal px.
+
+ICONS DIVERGE BETWEEN THE TWO FILES, and a reader should not mistake that for an accident.
+`Sukinnect.html` loads `reicon.js` (8 MB, Git LFS) and draws through its `<re-icon>` custom
+element. `Sukinnect-next.html` loads nothing of the sort: 41 glyphs are drawn in the file, and
+every one of the 38 names the app can reach has one. Six of those (four trade icons and two
+empty states) lived only inside the library, and dropping it blanked them silently — a name
+carried by a data row is not an `ic('name')` in markup, so the check that watched for that
+missed them. They are drawn inline now, and the gate checks all three ways a name arrives. This
+does not touch §10: the
+official mark is a PNG, not an icon, and it is still the only brand image on the sign-in.
 
 The rebuild also added a real verification surface, because reading the file cannot
 see a layout: `node tools/shot.cjs` drives the machine's own Chrome headless over the
