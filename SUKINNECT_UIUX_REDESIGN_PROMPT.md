@@ -3,6 +3,23 @@
 Paste this whole file into your AI coding tool (Cursor, Claude Code, etc.) with the repo open.
 It builds on `AGENTS.md`, it does not replace it. If the two ever conflict on product meaning, branding, or scope, `AGENTS.md` wins.
 
+> **Superseded — kept as provenance, not as a task list.** `AGENTS.md` is the master context
+> for this project and this file is the brief the rebuild was planned from. Its colour values
+> (`#0352AE`, `#05BCC4`, `#03002B`, `#0E4DFF`, `#F1F5FF`/`#C9D5FF`/`#E7EDFF`) were measured
+> from the logo and the deck and are still correct — an intermediate revision of the master
+> prompt carried four wrong ones (`#03002A`, `#0307A4`, `#000BDD`, `#90D0F0`) and those are
+> recorded as corrected in `AGENTS.md` §30, not here.
+>
+> What to read instead, for the parts of this file that have moved on:
+> - **What the code does now** — `CHANGES.md`, and `node tools/verify.cjs`.
+> - **Which file to open** — §0 says to read `Sukinnect.html` end to end. It is 4,707 lines and
+>   frozen; the working file is `Sukinnect-next.html`. The line numbers cited below are from
+>   the build this brief was written against and no longer land where they say.
+> - **What was decided since** — the domain kernel (centavos money, a ledger, a booking state
+>   machine, payments behind a gateway seam), profile sections as sheets, cards with a
+>   hierarchy, and the category tiles as drawn SVG scenes. §2's audit list is marked in place
+>   in place as worked through.
+
 ---
 
 ## 0. BEFORE YOU TOUCH ANYTHING
