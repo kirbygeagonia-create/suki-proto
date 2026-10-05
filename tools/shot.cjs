@@ -13,8 +13,11 @@
    usage:
      node tools/shot.cjs                       # the default journey, phone in app mode
      node tools/shot.cjs --list                # what the named screens are
-     node tools/shot.cjs --only=login,home     # a subset
+     node tools/shot.cjs --only=login,resident-home     # a subset (--list for the names)
      node tools/shot.cjs --width=390 --height=844 --dpr=2
+     node tools/shot.cjs --measure             # also run the audit over each painted frame
+     node tools/shot.cjs --reduced-motion      # emulate prefers-reduced-motion: reduce
+     node tools/shot.cjs --probe=@file         # evaluate an expression after the page settles
      node tools/shot.cjs --desktop             # the phone frame inside the desktop shell
      node tools/shot.cjs --out=.shots          # where the PNGs go
 */

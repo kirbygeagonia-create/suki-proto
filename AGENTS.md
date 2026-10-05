@@ -1186,18 +1186,40 @@ Store adapter, a booking state machine, a double-entry ledger, payment records b
 gateway seam, disputes, and message threads as records). Work happens in the -next file;
 §11 and §88 still apply to both. Measured with `node tools/verify.cjs` and a static scan:
 
-Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 108 hard-coded hex
-                    values (the earlier 106 came from a pattern that also matched booking
-                    fragments such as "#8226", so treat these as ±2 either way).
-Sukinnect-next.html— 7,141 lines, 1,332 var() usages, 57 hex values in the file and 17 of
-                    them outside :root. Those 17 are, honestly: the per-trade SERVICE_THEME
-                    palette, which is deliberately literal (§45); the
-                    <meta name="theme-color"> value, which cannot take a var(); one comment
-                    that quotes the measured brand hexes; and two booking-id fragments
-                    ("#8226", "#9021") a naive scan misreads as colours. Everything that was
-                    a real violation is now a token: #fff (fifty uses) became --surface and
-                    --on-brand, the modal dim became --scrim, and the phone mockup's bezel
-                    and signal bars became --device-bezel and --device-signal.
+Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 77 hard-coded hex
+                    values outside :root (53 of them #fff, plus the phone mockup's bezel
+                    and signal bars and the older per-trade palette). Untouched by the
+                    rebuild; still byte-identical to main, and still carrying the old
+                    gradient-hero sign-in.
+Sukinnect-next.html— 7,575 lines, ONE :root block, 1,554 var() usages. A scan for `#` +
+                    hex digits finds 32 values outside :root, and 2 of them are not
+                    colours: booking-id fragments ("#8226", "#9021") that any pattern which
+                    does not require a colour context will match. Quote the method with the
+                    number, or the next reader will re-derive 30 and think the count drifted.
+                    The 30 real ones are, honestly: fifteen `#fff` inside the category
+                    artwork (SVG highlights, which have no token to take — they are white by
+                    definition, not a brand surface); the six-trade SERVICE_THEME palette,
+                    two values per trade, deliberately literal (§45); two measured brand
+                    hexes quoted inside a comment; and the <meta name="theme-color"> value,
+                    which cannot take a var().
+                    Everything that was a real violation is now a token: #fff became
+                    --surface and --on-brand, the modal dim became --scrim, and the phone
+                    mockup's bezel and signal bars became --device-bezel and
+                    --device-signal. Type is fully on the scale: all 84 `font-size`
+                    declarations in the file take a var(), and none of them is a literal px.
+
+The rebuild also added a real verification surface, because reading the file cannot
+see a layout: `node tools/shot.cjs` drives the machine's own Chrome headless over the
+DevTools Protocol with no npm packages, and `--measure` runs an in-page instrument
+across all 30 screens for tap targets, WCAG contrast (sampling gradients at the text's
+own position), clipped text, off-scale fonts, content trapped under the nav, unnamed
+controls, escaping map panes, and anything painting over an open modal. A screenshot
+tool that navigates by assigning `state.*` measures a screen nobody can reach — the
+SCREENS table walks the app's real entry points for that reason.
+
+An animated-illustration pipeline (Lottie) was installed here and then removed again:
+it added 305KB that animated nothing, because the professional artwork it was built for
+never arrived. The category tiles are drawn SVG with CSS motion.
 
 The legacy teal and gold values survive only as documented aliases (--ink, --deep,
 --gold, --verified) so existing call sites resolve to the new palette. The two tokens

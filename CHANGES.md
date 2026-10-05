@@ -240,6 +240,109 @@ It is 240 assertions now, and it found the dead code this section had just added
 
 ---
 
+## 13. A measured design pass, and a second audit
+
+Everything in this section was found by looking at rendered pixels or by reading the
+code behind a screen, not by reasoning about the design. The mechanical baseline stayed
+clean throughout: 248 gate checks, and zero violations from the instrument across 30
+screens for tap targets, contrast, clipped text, off-scale fonts, nav traps, unnamed
+controls, stretched images, escaping map panes and modal occlusion.
+
+### The verification surface, and its own bugs
+
+`tools/shot.cjs` drives the installed Chrome headless over the DevTools Protocol with no
+npm packages, and `--measure` runs an in-page instrument. Three times the tool, not the
+app, was the problem:
+
+- It reported a blank map because its SCREENS table assigned `state.tab` directly, which
+  skips `openProviderDetail()` — the only thing that mounts Leaflet. A tool that pokes
+  state measures a screen nobody can reach.
+- A re-shot PNG at the same path read back stale twice, so a dark header appeared in a
+  screenshot of code that computed white. Captures now go to a fresh directory.
+- Its first contrast version took a gradient's worst stop, which read white-on-navy as
+  white-on-white. It now samples the gradient at the position the text actually occupies.
+
+Byte comparison is also weaker than it looks: a screen with a live timestamp or an
+animated tile differs run to run with no code change. Two claims in this session were
+settled by proving that instead of by eyeballing a diff.
+
+### Design changes applied
+
+- **Root tabs take a light header.** The four screens the bottom nav lands on show the
+  person's own name in ink on white; drill-in screens keep the gradient, because there the
+  brand is what tells you that you have left home.
+- **Section labels lost their capitals and their tracking.** Status pills kept both — a
+  different component, not in scope. Fourteen modal titles followed later.
+- **The category tiles are drawn scenes** — a dripping tap, a sparking bulb, rising
+  bubbles, a turning page, a tumbling drum, a parcel over moving road — as inline SVG with
+  CSS motion. Remote images are impossible offline (§81) and no licensed animated set for
+  these six trades could be fetched, so the artwork is original.
+- **A live job now owns the top of Home,** above the category grid rather than below it.
+- **Booking detail answers what is happening before who is doing it.** The status card was
+  already correct; it sat under the provider row and its button.
+- **Profile modules open in a sheet** in all three roles instead of rendering beneath the
+  list they were opened from. This deleted a post-paint patch that removed duplicate admin
+  cards, which existed only because the detail was interpolated after all four of its
+  groups.
+- **Cards have a hierarchy:** `.card-hero`, `.card`, `.card-quiet`. Twenty-five call sites
+  were restating values the class already provided, and three carried a literal 18px radius
+  that matched no token.
+- **The stat spine means something now.** Every card carried the same brand bar whatever the
+  number said; the bar appears only where a figure is flagged. Read-only grids became one
+  summary line, on the rule that a number you can press is a control and a number you can
+  only read is not. The dashboard's four tiles navigate, so they stayed tiles.
+
+### Errors found and fixed
+
+- **Every form field in the app was a raw browser control.** `.form-input` set width,
+  padding and height only — no border, radius, background, colour or font — so eighteen
+  fields drew as grey 2px squares in the default typeface. `.form-label-8` was used fourteen
+  times and `.form-input-readonly` three times with no rule at all, so a read-only field was
+  indistinguishable from an editable one and rendered smaller than its neighbours. Both
+  arrived in the centavos commit, which renamed call sites and left the rules unwritten.
+- **The admin dashboard stated two different numbers for one concept** — 6 applications
+  needing review beside a queue of 3, and 5 expiring credentials where two providers hold a
+  flagged one. It also claimed 3 disputes open beyond 48 hours on a device holding 2
+  disputes in total. Counts now come from the records; the unverifiable "beyond 48 hours"
+  qualifier was dropped rather than invented.
+- **The Opportunity Radar recited a forecast nothing computes** — "14 expected requests ·
+  6 available plumbers" on a roster with one plumber. It counts waiting requests now.
+- **A button read `[Set Available 5–8 PM]`** — brackets from a note-to-self — and promised a
+  time window the prototype has no model for.
+- **An accepted booking was told "Next: the provider confirms,"** which it already had.
+- **A `recruit here` chip** looked like the one actionable thing on the supply-gaps screen
+  and did nothing, because there is no recruitment flow.
+- **The map's loading caption had been the only thing making its container a positioning
+  context,** and Leaflet sets that only asynchronously: for the first second of a map's life
+  its tiles painted across the card above it.
+- **Then the fix for that caused a worse one.** A positioned element with `z-index:auto`
+  creates no stacking context, so Leaflet's internal `z-index:1000` panes escaped the map box
+  and drew on top of the booking sheet — over the field the resident was meant to fill.
+  Fixed with `isolation:isolate`; the instrument now samples nine points inside any open
+  modal and asks `elementFromPoint` who is really there.
+- **"100% Completion" beside "8 Bookings"** was the ratio of *closed* jobs; the denominator
+  now travels with the label.
+- **Provider Insights typed its figures** — 4 providers, 4.85 average, 600 jobs, 1 needing
+  attention — none held by any record. Counted now, as are the profile's "186 reviews" and
+  "0 open disputes".
+
+### The Lottie experiment, installed and removed
+
+A 305KB animated-illustration pipeline was vendored (MIT, licence shipped with it), wired
+behind an allowlist, and deleted again. The reason it stayed empty is worth keeping: the
+placeholder animations built from Lottie primitives read worse than the SVG scenes already
+committed, and no licensed animated set for these six trades could be fetched — LottieFiles
+returns 403 to anything programmatic, and the GitHub collections are weather icons and
+generic UI glyphs. Deleting it removed weight that animated nothing.
+
+### Two findings that were my own tooling
+
+A static scan reported four orphaned avatars; `warmAvatars()` builds their filenames in a
+loop, so a grep cannot see the reference and the files are live. And a check that "every
+glyph has a fallback path" was briefly vacuous — the fake DOM exposes `innerHTML`, not
+`textContent`, so the helper was asserting against `undefined` and every check passed for
+nothing. Both were caught by testing the checker rather than trusting it.
+
 ## Deliberately not done
 
 - **No server, no database, no framework, no CSS library, no ES modules.** The Android shell

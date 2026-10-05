@@ -55,6 +55,34 @@ that every open state has an actor left with a move. That suite was written afte
 found a status the machine could produce and no screen produced — the app was green at the
 time.
 
+### Look at the painted page
+
+```
+node tools/shot.cjs                 # every named screen, 390×844 app mode, into .shots/
+node tools/shot.cjs --list          # what the named screens are
+node tools/shot.cjs --only=resident-home,provider-detail
+node tools/shot.cjs --measure       # also print the audit tally below
+node tools/shot.cjs --reduced-motion
+node tools/shot.cjs --desktop       # the phone frame inside the desktop shell
+node tools/shot.cjs --probe=@file   # any expression, evaluated after the page settles
+```
+
+Renders real Chrome over `file://` through the DevTools protocol — raw CDP on Node's built-in
+`WebSocket`, so nothing is installed — paints each screen at a phone size, and then measures
+what the browser actually laid out rather than what the source claims: tap targets under 44px,
+text contrast against the pixels behind it (a gradient is sampled where the text sits, not at
+its worst stop), controls still covered by the bottom nav after the screen is scrolled to its
+end, clipped or ellipsised copy, type sizes off the declared scale, horizontal overflow, a map
+tile escaping its own frame, and any control inside an open modal that something else is
+sitting on top of. Vendored Leaflet chrome is counted separately, because resizing it means
+fighting vendor CSS.
+
+Both tools exist because instruments saturate. After a few rounds every check reported zero and
+the next four defects — a dashboard that contradicted itself, an ETA shown for a provider who
+had not left, a map drawn over a booking sheet, and every form field in the app rendering as a
+raw browser control — were found by reading code and looking at the screenshots, not by a
+number.
+
 ## Architecture
 
 One file, two layers. The upper half is an application kernel with **no DOM access**; the
@@ -145,7 +173,7 @@ matches is a simulated flow, and the screens say so.
 | What | Where | Notes |
 |---|---|---|
 | Logo | `Sukinnect_Logo.png` | exact case. Official mark — never redrawn, recoloured, stretched or replaced. It has a white background, so change the surface around it, not the file. |
-| Icons | `reicon.js` (LFS) + an inline fallback set | `<re-icon>` is primary; the inline set carries the glyphs the chrome needs if it never registers. Add a name to both, or none. |
+| Icons | `reicon.js` (LFS) + an inline fallback set | `<re-icon>` is primary. The inline set is not a partial safety net: every one of the 32 glyph names the app asks for has a local definition, and the gate fails if a new one is used without it. Measured with reicon disabled, the fallback renders the same icons on every screen. Add a name to both, or none. |
 | Type | `fonts/` | Fraunces for display, Plus Jakarta Sans for UI. Self-hosted; no remote fonts. |
 | Photos | `avatars/` | local PNGs, mapped per persona in `PRO_PHOTOS`. Keep imagery local — the APK runs offline. |
 | Maps | `leaflet/` | vendored. Tiles come from OpenStreetMap, the one network dependency, so a map is blank with no connection. |
@@ -163,5 +191,6 @@ To swap an image, replace the file and keep the name. To add a trade, add a row 
   records in memory and says so on the money console.
 - `Sukinnect-Android/app/src/main/assets/` holds a **separate copy** of the web files. Any
   accepted change must be re-synced there before it reaches a device build.
-- Screens have been verified by rendering every one of them in Node and inspecting the
-  output, not by human eyes on a handset. Visual polish on a real device is still owed.
+- Screens are rendered in Node and painted in a real browser at a phone size and measured, but
+  never on a handset. Touch feel, the on-screen keyboard, and device performance are still owed
+  a human check.
