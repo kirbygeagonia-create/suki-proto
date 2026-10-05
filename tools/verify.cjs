@@ -1303,8 +1303,8 @@ suite('honesty', async () => {
   /* The dashboard used to type its own digits: the attention list claimed 6
      applications beside a queue of 3, and 5 expiring credentials where two
      providers hold a flagged one. One concept must be one count on one screen. */
-  const dash = paint('admin', 'admin_dashboard');
-  const said = (re) => { const m = dash.match(re); return m ? +m[1] : null; };
+  const dashHtml = paint('admin', 'admin_dashboard');
+  const said = (re) => { const m = dashHtml.match(re); return m ? +m[1] : null; };
   const k = app.adminCounts();
   const pairs = [
     ['applications', said(/(\d+)\s+Provider applications need review/i), said(/(\d+)\s+Applications to review/i), k.pendingVerification],
@@ -1324,6 +1324,45 @@ suite('honesty', async () => {
     pairs.every(([n, shown, also, truth]) => shown !== null && (also !== null || n === 'credentials')) &&
     pairs.every(([, , , truth]) => Number.isInteger(truth)),
     pairs.map(([n, shown, also]) => n + '=' + shown + '/' + also).join(', '));
+
+  /* The analytics card was the last screen typing its own percentages: 82%, 68% and
+     74% in the markup, the third of them contradicted two tiles above it (one case
+     open, none closed, "Cases resolved 74%"). */
+  const adminDash = paint('admin', 'admin_dashboard');
+  const rates = app.marketplaceRates();
+  /* paint() strips tags, so a rate is read from the text a reader actually sees —
+     which is also the only version that can mislead them. */
+  const pct = label => {
+    const m = adminDash.match(new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s+(\\d{1,3})%'));
+    return m ? +m[1] : null;
+  };
+  c.check('the analytics card shows the rates the records give',
+    pct('Completed bookings') === rates.completion &&
+    pct('Provider verification progress') === rates.verification &&
+    pct('Cases resolved') === rates.cases,
+    [pct('Completed bookings'), pct('Provider verification progress'), pct('Cases resolved')]
+      .join(' / ') + ' vs ' + [rates.completion, rates.verification, rates.cases].join(' / '));
+  c.check('and each rate travels with its denominator',
+    /\d+ of \d+ closed jobs finished/.test(adminDash) && /\d+ of \d+ on the roster are verified/.test(adminDash)
+    && /\d+ of \d+ cases closed/.test(adminDash), 'a percentage with no denominator reads as a measurement');
+  /* The operations donut was typed: 18 items split 45/25/30 on a screen whose own
+     tiles said 3 applications and 1 case. */
+  const work = app.opsWorkload(app.adminCounts());
+  const k2 = app.adminCounts();
+  c.check('the workload ring is the queue the tiles count',
+    work.total === k2.open + k2.pendingVerification + k2.expiringSoon + k2.liveCases &&
+    work.parts[0].items === k2.open && work.parts[2].items === k2.liveCases &&
+    work.parts.reduce((t,p)=>t+p.items,0) === work.total,
+    work.parts.map(p => p.label + '=' + p.items).join(', ') + ' total ' + work.total);
+  c.check('the ring closes at 100% whatever the rounding does',
+    work.total === 0 || work.parts[work.parts.length-1].to === 100,
+    work.parts.map(p=>p.from+'-'+p.to).join(' '));
+  c.check('no typed queue survives on the dashboard',
+    !/18<br>items|>45%<\/b>|>25%<\/b>|>30%<\/b>/.test(app._source));
+
+  c.check('no percentage on the dashboard is a literal in the markup',
+    !/<b>\d{1,3}%<\/b>/.test(app._source.slice(app._source.indexOf('function adminDashboard'),
+      app._source.indexOf('function adminDashboard') + 24000)));
 
   return c;
 });

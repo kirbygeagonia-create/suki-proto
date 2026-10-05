@@ -28,7 +28,7 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   'submitBookingRequest', 'answerRequest', 'providerJobAction', 'openProviderDetail',
   'render', 'showToast', 'resetDemoData', 'setConfig', 'rateFor', 'LedgerImbalance',
   'CURRENT_CUSTOMER_ID', 'CURRENT_PROVIDER_ID', 'CONFIG_DEFAULTS', 'commissionRateFor',
-  'adminCounts', 'intelligenceStats', 'supplyGaps', 'disputeCard', 'statementCard', 'configPanel',
+  'adminCounts', 'marketplaceRates', 'opsWorkload', 'intelligenceStats', 'supplyGaps', 'disputeCard', 'statementCard', 'configPanel',
   'DISPUTE_STATES', 'disputeLabel', 'caseIsOpen', 'providerCases', 'resolveCase', 'resolveDispute', 'commitConfig', 'setIntFilter', 'runPayoutNow', 'openDispute',
   'categorySupply', 'weeklyBookings', 'adminFinanceScreen', 'ageingCard',
   'loginHTML', 'AUTH_ROLE_LABEL', 'DEMO_LOGIN',

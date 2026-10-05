@@ -3198,6 +3198,43 @@ function adminCounts() {
   const expiringSoon = PROVIDERS.filter(p => adminProviderMeta(p).credential !== 'Valid').length;
   return { verified, open, pendingVerification, missingDocs, liveCases, expiringSoon };
 }
+/* Three shares the records can answer. This card used to carry 82%, 68% and 74% as
+   literals; "Cases resolved 74%" sat above a help desk holding one open case and no
+   closed one. A rate with nothing behind it returns null so the screen can say so
+   rather than draw an empty bar and call it a measurement. */
+/* The queue an administrator actually faces, from the same counts the tiles above
+   it use. The donut this replaces was drawn from typed percentages — 18 items split
+   45/25/30 on a screen that also said 3 applications and 1 case. */
+function opsWorkload(k){
+  const parts = [
+    { label:'Live bookings', items:k.open, tone:'var(--deep)' },
+    { label:'Verification', items:k.pendingVerification + k.expiringSoon, tone:'var(--gold)' },
+    { label:'Help desk', items:k.liveCases, tone:'var(--alert)' }
+  ];
+  const total = parts.reduce((t, p) => t + p.items, 0);
+  let acc = 0;
+  return { total, parts: parts.map((p, idx) => {
+    const from = total ? Math.round(acc / total * 100) : 0;
+    acc += p.items;
+    /* the last band closes at 100 so rounding cannot leave a gap in the ring */
+    const to = total ? (idx === parts.length - 1 ? 100 : Math.round(acc / total * 100)) : 0;
+    return Object.assign({}, p, { from, to, pct: total ? Math.round(p.items / total * 100) : 0 });
+  })};
+}
+function marketplaceRates(){
+  const closed = BOOKINGS.filter(b => FINISHED_STATES.includes(b.status) && b.status !== 'disputed');
+  const done = closed.filter(b => ['completed', 'rated', 'paid'].includes(b.status));
+  const roster = PROVIDERS.length + PENDING_APPLICANTS.length;
+  const resolved = DISPUTES.filter(d => !caseIsOpen(d)).length;
+  return {
+    completion: closed.length ? Math.round(done.length / closed.length * 100) : null,
+    completionOf: closed.length, doneCount: done.length,
+    verification: roster ? Math.round(PROVIDERS.length / roster * 100) : null,
+    verificationOf: roster,
+    cases: DISPUTES.length ? Math.round(resolved / DISPUTES.length * 100) : null,
+    casesResolved: resolved, casesTotal: DISPUTES.length
+  };
+}
 function weeklyBookings() {
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const now = new Date();
@@ -6280,7 +6317,9 @@ const row = (id, title, detail) => settingsRow('residentProfileSection', id, tit
 
 function adminDashboard(){
   const ap = state.adminProfileData;
-  const k = adminCounts();
+  const k = adminCounts();
+  const rates = marketplaceRates();
+  const work = opsWorkload(k);
   return `
   <div class="topbar">
     <div style="display:flex; align-items:center; gap:10px;">
@@ -6321,18 +6360,27 @@ function adminDashboard(){
     <h3 style="font-size:var(--t-body); margin:20px 0 8px;">This week</h3>
     <div class="statgrid">
       <button type="button" class="stat" onclick="state.tab='admin_verifications'; state.adminProviderCategory='verified'; render();"><div class="num">${k.verified}</div><div class="lbl">Verified providers, demo roster</div></button>
-      <button type="button" class="stat" onclick="state.tab='admin_disputes'; render();"><div class="num">${k.open}</div><div class="lbl">Live bookings</div></button>
+      <button type="button" class="stat" onclick="state.tab='admin_dashboard'; state.adminScreen='intelligence'; render();" aria-label="Open marketplace intelligence, where the ${k.open} live bookings are counted"><div class="num">${k.open}</div><div class="lbl">Live bookings</div></button>
       <button type="button" class="stat${k.pendingVerification ? ' tone-warn' : ''}" onclick="state.tab='admin_verifications'; state.adminProviderCategory='pending'; render();"><div class="num">${k.pendingVerification}</div><div class="lbl">Applications to review</div></button>
       <button type="button" class="stat${k.liveCases ? ' tone-alert' : ''}" onclick="state.tab='admin_disputes'; render();"><div class="num">${k.liveCases}</div><div class="lbl">Cases open</div></button>
     </div>
-    <div style="font-size:var(--t-caption); color:var(--mist); margin:6px 0 4px;">Sample marketplace figures, not live counts.</div>
+    <div style="font-size:var(--t-caption); color:var(--mist); margin:6px 0 4px;">Counted from the demo records on this device — a sample marketplace, not a live one.</div>
 
     <div class="card" style="margin-top:14px">
-      <div class="row" style="margin-bottom:10px;"><b class="card-title">Marketplace analytics</b><span class="chip">This week</span></div>
+      <div class="row" style="margin-bottom:10px;"><b class="card-title">Marketplace analytics</b><span class="chip">From these records</span></div>
       <div style="display:flex; flex-direction:column; gap:10px; font-size:var(--t-caption); color:var(--ink-soft);">
-        <div><div class="row"><span>Completed bookings</span><b>82%</b></div><div style="height:7px; margin-top:4px; background:var(--line); border-radius:999px; overflow:hidden;"><div style="width:82%; height:100%; background:var(--verified); border-radius:999px;"></div></div></div>
-        <div><div class="row"><span>Provider verification progress</span><b>68%</b></div><div style="height:7px; margin-top:4px; background:var(--line); border-radius:999px; overflow:hidden;"><div style="width:68%; height:100%; background:var(--warning-600); border-radius:999px;"></div></div></div>
-        <div><div class="row"><span>Cases resolved</span><b>74%</b></div><div style="height:7px; margin-top:4px; background:var(--line); border-radius:999px; overflow:hidden;"><div style="width:74%; height:100%; background:var(--deep); border-radius:999px;"></div></div></div>
+        ${[
+          { label:'Completed bookings', pct:rates.completion, tone:'var(--verified)',
+            note: rates.completionOf ? rates.doneCount + ' of ' + rates.completionOf + ' closed jobs finished' : 'no job has closed yet' },
+          { label:'Provider verification progress', pct:rates.verification, tone:'var(--warning-600)',
+            note: PROVIDERS.length + ' of ' + rates.verificationOf + ' on the roster are verified' },
+          { label:'Cases resolved', pct:rates.cases, tone:'var(--deep)',
+            note: rates.casesTotal ? rates.casesResolved + ' of ' + rates.casesTotal + ' cases closed' : 'no case has been opened yet' }
+        ].map(row => `<div>
+          <div class="row"><span>${row.label}</span><b>${row.pct === null ? '—' : row.pct + '%'}</b></div>
+          <div style="height:7px; margin-top:4px; background:var(--line); border-radius:999px; overflow:hidden;"><div style="width:${row.pct || 0}%; height:100%; background:${row.tone}; border-radius:999px;"></div></div>
+          <div style="font-size:var(--t-caption); color:var(--mist); margin-top:4px;">${row.note}</div>
+        </div>`).join('')}
       </div>
     </div>
     <h3 style="font-size:var(--t-body); margin:20px 0 8px;">Operations</h3>
@@ -6375,11 +6423,11 @@ function adminDashboard(){
       <div style="display:flex; gap:14px; margin-top:10px; font-size:var(--t-caption); color:var(--mist);"><span><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--verified); vertical-align:-1px;"></span> Completed</span><span><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--brand-tint); vertical-align:-1px;"></span> Open</span></div>
     </div>
     <div class="card">
-      <div class="row" style="margin-bottom:10px;"><b class="card-title">Operations workload</b><span class="chip">Current queue</span></div>
-      <div style="display:flex; align-items:center; gap:18px;">
-        <div style="width:94px; height:94px; border-radius:50%; background:conic-gradient(var(--deep) 0 45%, var(--gold) 45% 70%, var(--alert) 70% 100%); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><div style="width:56px; height:56px; border-radius:50%; background:var(--surface); display:flex; align-items:center; justify-content:center; text-align:center; font-size:var(--t-caption); color:var(--mist);">18<br>items</div></div>
-        <div style="display:flex; flex-direction:column; gap:7px; font-size:var(--t-caption); color:var(--ink-soft);"><div><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--deep); vertical-align:-1px;"></span> Bookings <b>45%</b></div><div><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--gold); vertical-align:-1px;"></span> Verification <b>25%</b></div><div><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--alert); vertical-align:-1px;"></span> Help desk <b>30%</b></div></div>
-      </div>
+      <div class="row" style="margin-bottom:10px;"><b class="card-title">Operations workload</b><span class="chip">${work.total ? work.total + ' item' + (work.total === 1 ? '' : 's') + ' waiting' : 'Nothing waiting'}</span></div>
+      ${work.total ? `<div style="display:flex; align-items:center; gap:18px;">
+        <div style="width:94px; height:94px; border-radius:50%; background:conic-gradient(${work.parts.map(p => p.tone + ' ' + p.from + '% ' + p.to + '%').join(', ')}); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><div style="width:56px; height:56px; border-radius:50%; background:var(--surface); display:flex; align-items:center; justify-content:center; text-align:center; font-size:var(--t-caption); color:var(--mist);">${work.total}<br>items</div></div>
+        <div style="display:flex; flex-direction:column; gap:7px; font-size:var(--t-caption); color:var(--ink-soft);">${work.parts.map(p => `<div><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:${p.tone}; vertical-align:-1px;"></span> ${p.label} <b>${p.items}</b></div>`).join('')}</div>
+      </div>` : `<div style="font-size:var(--t-caption); color:var(--mist);">No booking is live, no application is waiting, and no case is open.</div>`}
     </div>
     <div class="card">
       <div class="row" style="margin-bottom:10px;"><b class="card-title">What the marketplace earned</b><span class="chip">From the ledger</span></div>
