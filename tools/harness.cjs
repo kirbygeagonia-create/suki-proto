@@ -65,7 +65,9 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   'signInAsProvider', 'applyProviderIdentity',
   /* the operator's view of the pilot */
   'adminMarketplaceIntelligence', 'adminCategories', 'intelligenceStats', 'bookingsInWindow',
-  'ADMIN_PRICING_WORDS', 'ADMIN_CAPABILITY_WORDS', 'ADMIN_SAFETY_WORDS'];
+  'ADMIN_PRICING_WORDS', 'ADMIN_CAPABILITY_WORDS', 'ADMIN_SAFETY_WORDS',
+  'residentResults', 'residentProviderDetail', 'providerBookings', 'providerDashboard',
+  'openBookingRequest', 'submitBookingRequest', 'openProviderBooking', 'findProviderBooking'];
 
 function boot({ appMode = false, storage = null } = {}) {
   const src = fs.readFileSync(APP, 'utf8');

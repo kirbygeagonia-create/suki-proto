@@ -2818,6 +2818,14 @@ function onAccept(booking, actor) {
      From now on the booking carries its own price rather than pointing at a rate
      table an administrator may change next week. */
   if (!booking.pricing) {
+    /* A negotiated job already has its money settled — in the offer. If that offer
+       named no labour, there is no service price to freeze, and falling back to the
+       provider's listing would invent one: walking a sell-only purchase through to
+       completion charged it the harvest rate the resident was never quoted. */
+    if (booking.offerId) {
+      booking.pricing = null;
+      booking.amountCentavos = 0;
+    } else {
     const listing = booking.listingId ? listingById(booking.listingId) : defaultListingFor(booking.providerId);
     const provider = providerOf(booking);
     freezePricing(booking, computeBreakdown({
@@ -2827,6 +2835,7 @@ function onAccept(booking, actor) {
     }));
     booking.listingId = listing ? listing.id : booking.listingId || null;
     booking.listingTitle = listing ? listing.title : provider.service;
+    }
   }
   booking.acceptedAt = new Date().toISOString();
   authorizeBooking(booking);            /* held for a partner job, nothing for cash */

@@ -1602,6 +1602,46 @@ suite('fruit', async () => {
       /Providers declare/.test(pilot[0]) &&
       plain.every(t => !/Safety rules on this category/.test(t) && !/Providers declare/.test(t));
   })(), 'pilot rows leaked onto an ordinary category');
+  /* The defect the unit checks all missed and only walking the flow found: a pure
+     fruit purchase, confirmed by the provider, fell back to the provider's harvest
+     listing and froze a service fee onto a job that had no labour in it — then
+     authorized and settled it. A negotiated job's price is whatever the offer said.
+     Driven through b10 because the lifecycle guards ask who is signed in, and only
+     Ramil and Erning are accounts a reviewer can be. */
+  c.check('confirming a negotiated purchase invents no service fee', (() => {
+    const w = boot();
+    w.makeOffer('b10', { basis:'per_kg', quantityGrams:120000, unitPriceCentavos:5500,
+      produceCentavos:660000, labourCentavos:0, whoHarvests:'provider' }, { role:'provider' });
+    w.answerOffer('b10','accept', { role:'customer', id: w.CURRENT_CUSTOMER_ID });
+    w.applyProviderIdentity('p7');
+    w.attemptTransition('b10','upcoming', { role:'provider', id:'p7' });
+    const job = w.bookingById('b10');
+    return job.status === 'upcoming' && job.amountCentavos === 0 && !job.pricing &&
+      w.ledgerFor('b10').length === 0;
+  })(), 'a purchase-only job came out priced or ledgered');
+  c.check('walking that purchase to completion settles nothing on the ledger', (() => {
+    const w = boot();
+    w.makeOffer('b10', { basis:'per_kg', quantityGrams:120000, unitPriceCentavos:5500,
+      produceCentavos:660000, labourCentavos:0, whoHarvests:'provider' }, { role:'provider' });
+    w.answerOffer('b10','accept', { role:'customer', id: w.CURRENT_CUSTOMER_ID });
+    w.applyProviderIdentity('p7');
+    ['upcoming','en_route','arrived','ongoing','completed'].forEach(to =>
+      w.attemptTransition('b10', to, { role:'provider', id:'p7' }));
+    const job = w.bookingById('b10');
+    return job.status === 'completed' && w.ledgerFor('b10').length === 0 &&
+      w.bookingAmountText(job) === 'No service fee' &&
+      /Fruit settled/.test(w.payStatusLabel(job));
+  })(), 'a purchase came out as a paid service job');
+  c.check('a negotiated harvest-and-buy freezes only its labour leg', (() => {
+    const w = boot();
+    w.makeOffer('b10', { basis:'per_kg', quantityGrams:120000, unitPriceCentavos:5500,
+      produceCentavos:660000, labourCentavos:160000, whoHarvests:'provider' }, { role:'provider' });
+    w.answerOffer('b10','accept', { role:'customer', id: w.CURRENT_CUSTOMER_ID });
+    const job = w.bookingById('b10');
+    return !!job.pricing && job.pricing.baseCentavos === 160000 &&
+      job.amountCentavos === 160000 && job.produce.amountCentavos === 660000;
+  })(), 'the two legs merged or the wrong one was frozen');
+
   c.check('the catalogue admits what it cannot do',
     /does not do/.test(adm.adminCategories()) && /not available here/.test(adm.adminCategories()));
 

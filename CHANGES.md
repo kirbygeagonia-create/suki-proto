@@ -531,6 +531,17 @@ those decide how money moves and are still being validated.
 
 ### Two things that went wrong and what caught them
 
+**A ₱800 service fee invented onto a fruit purchase — found only by walking the flow.**
+Every unit check passed. `answerOffer` correctly froze nothing for a zero-labour offer, the
+guards correctly posted nothing, and the fee column correctly said `No service fee`. Then the
+provider confirmed the visit, and `onAccept` — written long before this category — found
+`!booking.pricing` and did the only thing it knew: freeze a price from the provider's listing.
+Erning lists "Harvest one fruit tree" at ₱800, so a job negotiated as a pure purchase was
+charged ₱800, authorized it, and settled it to the ledger on completion. The fix is one branch:
+a booking that carries an `offerId` already has its money agreed, and agreeing nothing means
+charging nothing. Three checks now walk offer → accept → confirm → complete and assert the
+ledger stays empty; reverting the branch fails all three.
+
 **A payload inserted into the wrong array.** The providers block was anchored on the comment
 `people who ask for work`, which sits under `NOTIFICATIONS`, not `PROVIDERS`. The file simply
 stopped parsing — `node --check` on the extracted script body named the line within seconds.
@@ -539,31 +550,34 @@ not silently differ from the one that was reviewed.
 
 **A falsifier that died mid-run and poisoned its own backup.** The mutation harness printed an
 arrow to a Windows console that could not encode it, crashed with a mutant still applied, and
-the next run took its "pristine" backup from the mutated file. The gate came back green while
-`answerOffer` still contained an injected `attemptTransition`. Fixed by rewriting the file
-from an in-memory copy inside a `finally`, and by never trusting a restore that is not the
-last line of the script.
+the next run took its "pristine" backup from the mutated file. The gate then reported green on
+a file that still carried an injected `attemptTransition` inside `answerOffer`. Fixed by
+restoring from an in-memory copy inside a `finally` after every single mutant, and by never
+trusting a restore that is not the last thing the script does.
 
 ### What is now measured, with the method
 
-- `node tools/verify.cjs` → **317 checks passed** (271 before this work; +38 in a `fruit`
-  suite, +8 admin split checks).
-- Every new check was falsified: `python .qoder/tmp/falsify-fruit-suite.py` breaks one rule at
-  a time in the real file and requires the intended check to fail. **12 of 12 mutants caught**
-  (one by a sibling check watching the same rule), and the file is restored and re-run green
-  afterwards.
+- `node tools/verify.cjs` → **320 checks passed** (271 before this work; +49 in a `fruit`
+  suite, three of which walk the whole negotiated flow).
+- Every new rule is falsified by mutating it in the real file and requiring the intended check
+  to fail: **13 of 13 mutants caught**, each followed by a restore and a re-run green.
 - `node tools/shot.cjs --measure` → **40 screens** at 360×640, 390×844 and 412×915 in app mode,
   plus the desktop shell: zero on all nine measured categories, no horizontal overflow, no
-  console errors. Six of those screens are new and exist only to photograph the pilot:
-  `fruit-sheet`, `fruit-harvest-sheet`, `fruit-offer`, `fruit-record`, `fruit-request`,
-  `offer-sheet`, plus the provider and admin views of it.
-- Screenshots were read, not just measured. Three defects were found that way and are not
+  console errors. Eight of those screens exist only to photograph the pilot: `fruit-sheet`,
+  `fruit-harvest-sheet`, `fruit-offer`, `fruit-record`, `fruit-provider-dash`,
+  `fruit-request`, `offer-sheet`, `fruit-harvest-job`, `fruit-provider-profile`,
+  `admin-categories`, `admin-intel-produce`.
+- `.qoder/tmp/fruit-journey-2.cjs` walks DISCOVER → CHOOSE MODE → DESCRIBE → REQUEST → ASSESS →
+  OFFER → ACCEPT → CONFIRM → HARVEST → COMPLETE → RECORD as a person would, in both roles, and
+  is what found the invented-fee defect above. It is not yet a gate suite; its three load-bearing
+  claims are.
+- Screenshots were read, not only measured. Three defects were found that way and are not
   measurable: an open offer sitting *under* a red destructive "Withdraw this request" button;
   an accepted offer whose status card still claimed "Waiting for Maricel to accept"; and a
   provider's job screen asserting "the client was shown your starting rate" on a job that
   shows no rate at all.
-- The catalogue's own arithmetic is on screen: 120 kg at ₱55/kg with ₱1,600 harvesting
-  renders ₱6,600 / ₱1,600 from the same `offerTotals` the acceptance path uses.
+- The catalogue's arithmetic is on screen: 120 kg at ₱55/kg with ₱1,600 harvesting renders
+  ₱6,600 / ₱1,600 from the same `offerTotals` the acceptance path uses.
 
 ---
 
