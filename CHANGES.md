@@ -457,6 +457,116 @@ screens, with no console errors.
 
 ---
 
+## 15. Fruit Harvest & Buy, and the two kinds of money
+
+`SUKINNECT_MASTER_IMPLEMENTATION_PROMPT.md` asks for one new category and forbids almost
+every easy way of building it: no second booking table, no wallet, no invented prices, no
+new navigation tab, no certification the repository has no evidence for, and no produce
+purchase counted as service revenue. The build is in five steps, each landed against the
+gate.
+
+**The offer is a child record, not a fourteenth booking state.** `OFFERS` hangs beside the
+booking it prices. A job with an offer out is still `requested`, which keeps the machine the
+only thing that moves a lifecycle and means an offer that goes nowhere leaves the record
+exactly where it was. Every revision is kept and points at what it replaced, because the
+question a dispute asks about a negotiated job is *what was offered, and what did they agree
+to*. `answerOffer` deliberately does **not** transition: confirming the visit is the
+provider's move and the guard on it is theirs to answer — a schedule the resident agreed to
+alone is not a booking.
+
+**Two legs, one rule.** `offerTotals` keeps labour and produce apart and never adds them
+into a single figure for a single party; `offerDirection` says who pays whom.
+`CONFIG.produceCommissionRate` is `null`, meaning *undecided*, and an undecided rate charges
+nothing **and carries the reason with it** (`produceFeeUndecided`) rather than reading as a
+generous zero. Accepting freezes only the labour leg. A purchase-only job therefore has no
+service price at all, and the fee column says `No service fee` / `Price by offer` instead of
+`₱0` — which is what seven screens would otherwise have printed, and `₱0` reads as *free* to
+a resident and as *zero revenue* to a report.
+
+**Zero is not a transaction.** `hasServiceMoney` now guards `authorizeBooking`,
+`takeHolding`, `settleBooking` and `captureBooking`. Without it the first accepted fruit sale
+would have thrown inside `assertBalanced`, which refuses a zero-amount line — a crash the
+category would have caused by existing, not by being used wrong. This is not a fruit branch:
+any trade could have a free job.
+
+**A request that was answered does not lapse.** `applyDueTransitions` expires a `requested`
+job after `acceptTtlMinutes` of silence from the provider. A provider who replied with a
+price did not stay silent, so the window now skips jobs carrying an open offer; an offer
+expires on its own `validUntil`, which is a different clock belonging to a different record.
+
+**Home orders by motion, not by timestamp.** The card's own comment has always said a job in
+motion is the reason the app was opened, while the code sorted on recency alone — so a
+nine-minute-old request would have pushed the plumber standing in the kitchen off the top of
+the screen. `IN_MOTION` ranks ongoing/arrived/en_route first. The falsifier had to be
+retargeted afterwards: the mutation that used to break this could no longer be expressed.
+
+**Category behaviour is metadata.** `CATEGORY_DEFAULTS` gives every category a behaviour
+record — modes, pricing models, request fields, capabilities, safety rules, matching rules,
+commission basis — and the fruit row overrides it. The request sheet asks *what do you want
+to happen* only when a category resolves to more than one mode, and the fields that follow
+come from `requestFields`. The six original trades resolve to one mode each and are asked
+nothing new; their sheets are unchanged.
+
+**Capability is declared, not issued.** `fruitCapability` sits on the provider record. The
+profile card is titled *what Erning says they can do*, lists equipment and a working-height
+band, and closes with "Sukinnect has not inspected any of it, and this is not a safety
+certificate". `Barangay Endorsed` was removed from the harvester's badges: on a climbing job
+that reads as *someone verified they can do it safely*, and nobody has. A provider outside
+their declared modes is shown why and still allowed to refuse — the refusal is theirs to
+make, not a rule the platform invented.
+
+**The provider demo can be a different provider.** `CURRENT_PROVIDER_ID` was a constant,
+which quietly meant the provider app could only ever be one plumber's app — so a category
+with its own provider-side flow could not be seen at all. It is now a `let` chosen at
+sign-in (`ramil@demo.ph` or `erning@demo.ph`), it travels in the snapshot with the profile it
+belongs to, and a reset returns to the shipped persona. One shell, one set of screens.
+
+**The operator sees two numbers, never one.** `intelligenceStats` reports produce beside
+services with a card that states the exclusion in words ("not in the total above… the
+platform never held that money"), and a gate check asserts that folding produce into
+`grossCentavos` breaks it. A new Categories surface reads the live catalogue back to the
+administrator — modes, pricing models, commission basis, declared capabilities, safety rules,
+supply against 30-day demand — and says plainly that editing them is not available, because
+those decide how money moves and are still being validated.
+
+### Two things that went wrong and what caught them
+
+**A payload inserted into the wrong array.** The providers block was anchored on the comment
+`people who ask for work`, which sits under `NOTIFICATIONS`, not `PROVIDERS`. The file simply
+stopped parsing — `node --check` on the extracted script body named the line within seconds.
+Lifted out verbatim by a repair script rather than retyped, so a hand-copied provider could
+not silently differ from the one that was reviewed.
+
+**A falsifier that died mid-run and poisoned its own backup.** The mutation harness printed an
+arrow to a Windows console that could not encode it, crashed with a mutant still applied, and
+the next run took its "pristine" backup from the mutated file. The gate came back green while
+`answerOffer` still contained an injected `attemptTransition`. Fixed by rewriting the file
+from an in-memory copy inside a `finally`, and by never trusting a restore that is not the
+last line of the script.
+
+### What is now measured, with the method
+
+- `node tools/verify.cjs` → **317 checks passed** (271 before this work; +38 in a `fruit`
+  suite, +8 admin split checks).
+- Every new check was falsified: `python .qoder/tmp/falsify-fruit-suite.py` breaks one rule at
+  a time in the real file and requires the intended check to fail. **12 of 12 mutants caught**
+  (one by a sibling check watching the same rule), and the file is restored and re-run green
+  afterwards.
+- `node tools/shot.cjs --measure` → **40 screens** at 360×640, 390×844 and 412×915 in app mode,
+  plus the desktop shell: zero on all nine measured categories, no horizontal overflow, no
+  console errors. Six of those screens are new and exist only to photograph the pilot:
+  `fruit-sheet`, `fruit-harvest-sheet`, `fruit-offer`, `fruit-record`, `fruit-request`,
+  `offer-sheet`, plus the provider and admin views of it.
+- Screenshots were read, not just measured. Three defects were found that way and are not
+  measurable: an open offer sitting *under* a red destructive "Withdraw this request" button;
+  an accepted offer whose status card still claimed "Waiting for Maricel to accept"; and a
+  provider's job screen asserting "the client was shown your starting rate" on a job that
+  shows no rate at all.
+- The catalogue's own arithmetic is on screen: 120 kg at ₱55/kg with ₱1,600 harvesting
+  renders ₱6,600 / ₱1,600 from the same `offerTotals` the acceptance path uses.
+
+---
+
 ## Deliberately not done
 
 - **No server, no database, no framework, no CSS library, no ES modules.** The Android shell
@@ -467,6 +577,15 @@ screens, with no console errors.
   until the job is delivered, and is labelled that way.
 - **No invented rates, tax positions or traction.** Everything numeric is a config value
   labelled as a pilot assumption, a demo record tagged `demo`, or a sum over entries.
+- **No fruit market price, and no produce commission.** `CONFIG.produceCommissionRate` is
+  `null` and stays that way until the business decides it. The offer sheet's price fields are
+  blank; a provider types a number, the prototype never suggests one.
+- **No certification, endorsement or safety verification for the pilot.** Capability is
+  displayed as the provider's own declaration. `Barangay Endorsed` is not on the harvester's
+  badges, and no screen implies Sukinnect inspected a harness, a ladder or a tree.
+- **No photo upload for fruit requests.** The form keeps the file's name and size on the
+  device and says so; a data URL would put a resident's photograph into the local snapshot,
+  which §56 protects and this prototype has nowhere honest to send.
 - **No delivery, scheduling or reminder automation.** A lapse and an auto-confirmation are
   evaluated when the app is opened, because a closed tab runs nothing and there is no cron.
 - **No read receipts or delivery status on messages.** A thread says what was written and by

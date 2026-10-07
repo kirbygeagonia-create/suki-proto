@@ -1,7 +1,7 @@
 # Handset pass — the thing no browser check can prove
 
 The rebuild in `Sukinnect-next.html` has been rendered in Node (252 assertions), painted in
-real Chrome at 390×844 across 30 screens, and measured for tap targets, contrast, clipping and
+real Chrome at 390×844 across 40 screens, and measured for tap targets, contrast, clipping and
 occlusion. None of that is a phone. Three categories are still unverified because no instrument
 can reach them: a thumb, an on-screen keyboard, and a slow device.
 
@@ -71,6 +71,40 @@ The instrument cannot emulate this at all: `shot.cjs` measures a viewport with n
 - The category tiles animate. On the lowest-spec device you have, is the motion still readable,
   or does it read as flicker? `prefers-reduced-motion` is honoured in code but only if the
   device reports it.
+
+## 5. The fruit pilot — 6 min
+
+This one can only be seen on a device in two places, and neither is reachable from a
+screenshot. Sign in as the **provider** with `erning@demo.ph` (any password) to get the harvest
+job in the inbox; `ramil@demo.ph` is still the plumbing account.
+
+- [ ] **The photo control.** On the fruit request sheet, open *Access, timing and photos* and
+      tap *Add a photo*. **If nothing happens, that is a finding, not a bug in the page:** an
+      `<input type="file">` inside a WebView only opens a picker if the shell implements
+      `WebChromeClient.onShowFileChooser`. The desktop Chrome camera cannot tell you this, and
+      the page has no way to know either. Report whether a picker appeared. If it did, confirm
+      the file name shows as a chip and that removing it works.
+- [ ] **The totals move while you type, and nothing is buried.** As the provider, open the
+      harvest-and-buy request and press *Make an offer*. Type a price per kilo. The summary
+      under the fields must update on every keystroke **without the field losing focus or the
+      keyboard closing**. If the caret jumps, or the keyboard dismisses, say so — that is a
+      real-device-only failure.
+- [ ] **The Send offer button is reachable with the keyboard open** while the price field is
+      focused, and it is greyed out until a number exists.
+- [ ] **The mode step reads as three decisions, not three paragraphs.** On a 360-class phone,
+      is *Harvest Only / Sell My Fruit / Harvest + Buy* scannable in one glance, and does the
+      selected one look selected without relying on the blue border alone?
+- [ ] **Answering an offer is the loudest thing on the screen.** As the resident, open the job
+      with an offer on it. Accept and Decline should sit above *Withdraw this request*, and
+      withdrawing should not be the reddest control on the page.
+- [ ] **The money wording survives being read aloud.** With TalkBack on, read the offer card
+      and then the record after accepting. It should be obvious which number is the fruit and
+      which is the service fee, and that the platform holds neither. If you have to re-read it,
+      the sentence is too long — report which one.
+- [ ] **Nothing claims a certificate.** As the resident, open Erning's profile. The capability
+      block should read as what the person declared. If anything on that screen could be
+      mistaken for Sukinnect having checked a ladder harness, that is the most serious finding
+      on this list.
 
 ## What to report
 

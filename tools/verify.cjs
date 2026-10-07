@@ -1557,6 +1557,54 @@ suite('fruit', async () => {
     prov.state.providerProfileData.name === 'Erning Bautista',
     prov.state.providerProfileData.name + ' / ' + prov.bookingsForProvider().map(b => b.id + '@' + b.providerId).join(','));
 
+  /* ---- the admin sees the two kinds of money as two numbers ---- */
+  const adm = boot();
+  adm.state.view='app'; adm.state.role='admin';
+  adm.answerOffer('b8','accept', { role:'customer', id: adm.CURRENT_CUSTOMER_ID });
+  const ints = adm.intelligenceStats({ days: 36500, category:'all' });
+  c.check('a settled purchase appears in the produce figures at all',
+    ints.produceJobs === 1 && ints.produceCentavos === 209000,
+    JSON.stringify({ j:ints.produceJobs, c:ints.produceCentavos }));
+  c.check('and never in services sold',
+    ints.grossCentavos === ints.byCategory.reduce((t,r)=>t+r.centavos,0) &&
+    !ints.byCategory.some(r => r.id === 'fruit' && r.centavos >= 209000),
+    JSON.stringify(ints.byCategory));
+  c.check('the produce card states the exclusion in words',
+    /not in the total above/.test(adm.adminMarketplaceIntelligence()) &&
+    /never held that money/.test(adm.adminMarketplaceIntelligence()));
+  c.check('a settled fruit purchase moves the platform statement not at all', (() => {
+    const before = adm.platformStatement();
+    const copy = boot();
+    const open = before.grossServicesCentavos + '/' + before.commissionEarnedCentavos;
+    /* The same job, agreed: the produce money changes hands between two people and
+       the platform's own books cannot notice it. If this figure moves, a purchase has
+       been counted as service revenue. */
+    copy.answerOffer('b8','accept', { role:'customer', id: copy.CURRENT_CUSTOMER_ID });
+    const after = copy.platformStatement();
+    return open === (after.grossServicesCentavos + '/' + after.commissionEarnedCentavos) &&
+      after.grossServicesCentavos < 209000;
+  })());
+  c.check('the catalogue is reachable from the console and names every category',
+    /state.adminScreen === 'categories'/.test(src) &&
+    adm.SERVICES.every(cat => new RegExp(cat.label.replace(/[&]/g,'&amp;')).test(adm.adminCategories())),
+    'categories screen renders ' + adm.SERVICES.length + ' rows');
+  c.check('the pilot is marked as a pilot to the administrator',
+    /Pilot/.test(adm.adminCategories()) && /Safety rules on this category/.test(adm.adminCategories()));
+  c.check('an ordinary category is not described with the pilot vocabulary', (() => {
+    /* Each category renders as its own card, so the pilot's rows — the safety rules
+       and the capability list — must not appear on any of the other six. A single
+       concatenated string would let one card's text stand in for another's. */
+    const cards = adm.adminCategories().split('<div class="card">').slice(1);
+    const pilot = cards.filter(t => /Fruit Harvest/.test(t));
+    const plain = cards.filter(t => !/Fruit Harvest/.test(t));
+    return pilot.length === 1 &&
+      /Safety rules on this category/.test(pilot[0]) &&
+      /Providers declare/.test(pilot[0]) &&
+      plain.every(t => !/Safety rules on this category/.test(t) && !/Providers declare/.test(t));
+  })(), 'pilot rows leaked onto an ordinary category');
+  c.check('the catalogue admits what it cannot do',
+    /does not do/.test(adm.adminCategories()) && /not available here/.test(adm.adminCategories()));
+
   return c;
 });
 

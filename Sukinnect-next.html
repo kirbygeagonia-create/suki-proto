@@ -6355,7 +6355,7 @@ function providerTabHTML(){
 }
 
 function adminTabHTML(){
-  if(state.tab==='admin_dashboard') return state.adminScreen === 'finance' ? adminFinanceScreen() : state.adminScreen === 'intelligence' ? adminMarketplaceIntelligence() : state.adminScreen === 'trust' ? adminTrustSafety() : state.adminScreen === 'audit' ? adminAuditLog() : adminDashboard();
+  if(state.tab==='admin_dashboard') return state.adminScreen === 'finance' ? adminFinanceScreen() : state.adminScreen === 'intelligence' ? adminMarketplaceIntelligence() : state.adminScreen === 'categories' ? adminCategories() : state.adminScreen === 'trust' ? adminTrustSafety() : state.adminScreen === 'audit' ? adminAuditLog() : adminDashboard();
   if(state.tab==='admin_verifications') return adminVerifications();
   if(state.tab==='verification_review') return providerVerificationReview();
   if(state.tab==='admin_provider_profile') return adminProviderManagementProfile();
@@ -7420,6 +7420,11 @@ function adminDashboard(){
       <span style="min-width:0; flex:1;"><span class="jr-t">Electrical supply gap in San Isidro</span><span class="jr-s">Demand with no nearby provider, from sample activity</span></span>
       <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',14)}</span>
     </button>
+    <button type="button" class="job-row" onclick="state.adminScreen='categories'; render();" aria-label="Open the category catalogue">
+      <span class="jr-time" style="color:var(--deep);">${SERVICES.filter(s => s.pilot).length}</span>
+      <span style="min-width:0; flex:1;"><span class="jr-t">Pilot category under review</span><span class="jr-s">${SERVICES.length} categories live — how each one transacts</span></span>
+      <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',14)}</span>
+    </button>
 
     <h3 style="font-size:var(--t-body); margin:20px 0 8px;">This week</h3>
     <div class="statgrid">
@@ -7607,6 +7612,22 @@ function adminMarketplaceIntelligence(){  const f = state.adminIntFilters;
            the number itself, so it survives the change of form -->
       <span class="f"><b${st.closed ? ` style="color:${st.completionRate >= 90 ? 'var(--success-ink)' : 'var(--warning-ink)'}"` : ''}>${st.completionRate}%</b><span>${st.closed ? 'of ' + st.closed + ' closed job' + (st.closed === 1 ? '' : 's') : 'nothing closed yet'}</span></span>
     </div>
+    ${st.produceJobs ? `<div class="card">
+      <div class="row" style="align-items:flex-start; gap:8px;">
+        <span class="produce-ic">${ic('weight', 15)}</span>
+        <div style="min-width:0; flex:1;">
+          <div class="row"><b class="card-title" style="flex:1;">Fruit bought, ${esc(pesoCompact(st.produceCentavos))}</b>
+            <span class="chip tone-neutral">not in the total above</span></div>
+          <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:4px;">
+            ${st.produceJobs} job${st.produceJobs === 1 ? '' : 's'} in this window settled a produce purchase between a resident and a buyer.
+            The platform never held that money${st.produceFeeUndecided
+              ? ' and charges nothing on it: a rate on produce is still an open decision in this pilot, not a rule.'
+              : ' and took ' + esc(peso(st.produceFeeCentavos)) + ' on it.'}
+          </div>
+        </div>
+      </div>
+    </div>` : ''}
+
     <div class="card card-lg">
       <div class="row" style="margin-bottom:10px;"><b class="card-title">Where the work went</b><span class="chip">${f.days ? f.days + ' days' : 'all time'}</span></div>
       ${st.byCategory.length ? st.byCategory.map(row => `
@@ -7651,8 +7672,18 @@ function intelligenceStats(f) {
     return { id: cat.id, label: cat.label, jobs: rows.length,
              centavos: rows.reduce((t, b) => t + (b.pricing ? b.pricing.baseCentavos : b.amountCentavos), 0) };
   }).filter(r => r.jobs).sort((a, b) => b.centavos - a.centavos);
+  /* The fruit money is counted here and added to nothing else on this screen. It is
+     not a service fee, the platform never held it, and a tile that put it beside
+     "services sold" would turn a buyer's payment into marketplace revenue (37, 59). */
+  const produceJobs = inWindow.filter(b => b.produce);
+  const produceCentavos = produceJobs.reduce((t, b) => t + b.produce.amountCentavos, 0);
+  const produceFee = produceJobs.reduce((t, b) => t + (b.produce.platformFeeCentavos || 0), 0);
   return {
     grossCentavos: byCategory.reduce((t, r) => t + r.centavos, 0),
+    produceCentavos,
+    produceJobs: produceJobs.length,
+    produceFeeCentavos: produceFee,
+    produceFeeUndecided: CONFIG.produceCommissionRate === null,
     bookings: inWindow.length,
     completed: completed.length,
     /* The rate is of jobs that have *finished*, so the denominator has to travel
@@ -7672,6 +7703,81 @@ function supplyGaps(f) {
        the same set of jobs. */
     demand: bookingsInWindow(f).filter(b => providerOf(b).serviceId === cat.id).length
   })).filter(r => r.demand > 0 && r.supply <= 1);
+}
+
+/* The metadata stores codes because the machine reads them; an administrator reads
+   sentences. Held here rather than inline so a new code shows up as an untranslated
+   value on this screen instead of a wrong one. */
+const ADMIN_PRICING_WORDS = {
+  fixed_listing:'a listed price', per_kg:'the kilo', per_tree:'the tree', per_lot:'the whole lot',
+  negotiated_offer:'an agreed offer', labour_only:'labour only'
+};
+const ADMIN_CAPABILITY_WORDS = { harvester:'harvesting', buyer:'buying fruit', harvester_buyer:'both' };
+const ADMIN_SAFETY_WORDS = {
+  declare_access_hazards:'what makes the approach difficult has to be said up front',
+  provider_may_decline:'a provider may refuse work they cannot do safely',
+  no_climb_promise:'nobody is told a tree is safe to climb, and the platform does not say it is'
+};
+
+/* What the marketplace actually offers, read from the same records the rest of the
+   app runs on. The screen is honest about its own limit: an administrator can see
+   how a category transacts here, but this prototype does not let that be rewritten,
+   because a category's modes and pricing rules are product decisions with money
+   attached and not a copy field (59, 88). */
+function adminCategories(){
+  const f = { days: 30, category: 'all' };
+  const supply = categorySupply();
+  return `
+  ${screenHeader('Categories', { back:"state.adminScreen='overview'; render();", backLabel:'Back to the console', sub:'What the marketplace offers and how each one is transacted' })}
+  <div class="pad" style="background:var(--cloud);">
+    <div class="card card-quiet">
+      <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.55;">
+        Every category below is read from the catalogue the app itself uses to match,
+        price and book. Supply is the demo roster; demand is jobs in the last 30 days.
+      </div>
+    </div>
+    ${SERVICES.map(cat => {
+      const meta = serviceMeta(cat.id);
+      const beh = categoryBehaviour(cat.id);
+      const s = supply.find(x => x.id === cat.id) || {};
+      const demand = bookingsInWindow(f).filter(b => providerOf(b).serviceId === cat.id).length;
+      return `<div class="card">
+        <div class="row" style="align-items:flex-start; gap:9px;">
+          <span class="svc-avatar" style="width:34px; height:34px; background:${meta.bg}; color:${meta.fg}; flex-shrink:0;">${ic(meta.icon, 17)}</span>
+          <div style="min-width:0; flex:1;">
+            <b class="card-title">${esc(cat.label)}</b>
+            <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">
+              ${s.supply || 0} provider${(s.supply || 0) === 1 ? '' : 's'} on the roster · ${demand} job${demand === 1 ? '' : 's'} asked for in 30 days
+            </div>
+          </div>
+          ${meta.pilot ? '<span class="chip tone-active">Pilot</span>' : ''}
+        </div>
+        <div class="cap-rows" style="margin-top:10px;">
+          <div><span>How it transacts</span><b>${beh.modes.map(m => esc(m.label)).join(', ')}</b></div>
+          <div><span>Priced by</span><b>${beh.pricingModels.map(m => esc(ADMIN_PRICING_WORDS[m] || m)).join(', ')}</b></div>
+          <div><span>Commission basis</span><b>${beh.commissionBasis === 'labour_only'
+            ? 'the service part only — never the fruit itself'
+            : 'the service fee'}</b></div>
+          ${beh.capabilities.length > 1 ? `<div><span>Providers declare</span><b>${beh.capabilities.map(x => esc(ADMIN_CAPABILITY_WORDS[x] || x)).join(', ')}</b></div>` : ''}
+        </div>
+        ${beh.safetyRules && beh.safetyRules.length ? `<div class="fruit-tall" style="margin-top:10px;">
+          <div style="min-width:0;">
+            <b style="display:block; margin-bottom:3px; color:var(--ink);">Safety rules on this category</b>
+            ${beh.safetyRules.map(r => `<div>· ${esc(ADMIN_SAFETY_WORDS[r] || r)}</div>`).join('')}
+          </div>
+        </div>` : ''}
+      </div>`;
+    }).join('')}
+    <div class="card card-quiet">
+      <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.55;">
+        <b>What this screen does not do.</b> Changing a category's modes, pricing
+        models or commission basis is not available here. Those decide how money moves,
+        and in this pilot they are still being validated rather than configured.
+        The platform fee on services is editable, and audited, under Money.
+      </div>
+      <button type="button" class="btn sm secondary" style="width:100%; margin-top:10px; border-radius:10px;" onclick="state.adminScreen='finance'; render();">Open the fee and payout settings</button>
+    </div>
+  </div>`;
 }
 
 function adminTrustSafety(){

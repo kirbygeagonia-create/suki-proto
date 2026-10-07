@@ -471,6 +471,12 @@ const SCREENS = [
   ['admin-finance',    `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='finance'; render();`],
   ['admin-trust',      `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='trust'; render();`],
   ['admin-intel',      `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='intelligence'; render();`],
+  ['admin-categories', `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='categories'; render();`],
+  /* the produce split only exists once a purchase has been agreed, so the camera
+     agrees one first — the same answerOffer the resident's own button calls */
+  ['admin-intel-produce', `state.view='app'; state.role='admin';
+                        answerOffer('b8','accept',{ role:'customer', id:CURRENT_CUSTOMER_ID });
+                        state.tab='admin_dashboard'; state.adminScreen='intelligence'; render();`],
   ['admin-verifiers',  `state.view='app'; state.role='admin'; state.tab='admin_verifications'; state.adminProviderCategory='pending'; render();`],
   ['admin-verified',   `state.view='app'; state.role='admin'; state.tab='admin_verifications'; state.adminProviderCategory='verified'; render();`],
   ['admin-desk',       `state.view='app'; state.role='admin'; state.tab='admin_disputes'; render();`],

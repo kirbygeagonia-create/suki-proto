@@ -57,6 +57,19 @@ that every open state has an actor left with a move. That suite was written afte
 found a status the machine could produce and no screen produced — the app was green at the
 time.
 
+A `fruit` pass holds the pilot category to the rules its brief states: one booking table,
+produce money that never reaches the service figures, an undecided commission rate that stays
+undecided, an offer that cannot move a lifecycle, a request that was answered with a price not
+lapsing as if it had not been, and a capability that reads as declared rather than verified.
+
+**A check that cannot fail is not a check.** Every rule above is falsified by mutating the rule
+in the real file and requiring the intended check to fail — `python` over a dozen targeted
+breaks, each restoring the file from an in-memory copy in a `finally` so a crash cannot leave a
+mutation behind. One earlier version of that harness died mid-run to a console-encoding error
+and poisoned its own backup; the gate then reported green on a file that still carried a
+mutation. The restore is now the last thing that runs, and the numbers below are only quoted
+from a run that ended green.
+
 ### Look at the painted page
 
 ```
@@ -163,6 +176,54 @@ For a job with a ₱800 base at the pilot's 10 %:
 built. **It is not loaded by the prototype** — it exists so the centavos, append-only and
 no-wallet rules are written where they cannot be misread.
 
+## Fruit Harvest & Buy — the pilot category
+
+A seventh category, marked **pilot** everywhere it appears, that a reviewer can walk end to
+end: `erning@demo.ph` signs in as the harvester-buyer, `ramil@demo.ph` is still the plumbing
+account. Same provider shell, same screens — only the identity differs.
+
+Three modes, because they are three different transactions: **Harvest Only** (you keep the
+fruit, you pay for labour), **Sell My Fruit** (a buyer pays you and takes it), **Harvest + Buy**
+(both). The request sheet asks which one first; the fields that follow come from the category's
+own `requestFields`, and the six original trades resolve to a single mode each and are asked
+nothing new.
+
+**Two kinds of money, and they never merge.**
+
+| | |
+|---|---|
+| Labour (harvesting) | a service fee — the normal path: frozen on acceptance, commissioned, ledgered, receipted |
+| Produce (the fruit) | a purchase between two people — **not** a service fee, **not** platform revenue, **not** held by the platform |
+
+- The price is **negotiated**, because a standing rate cannot price a standing tree. An offer
+  is a child record beside the booking, never a booking state: the job stays `requested` while
+  an offer is out, and `answerOffer` does not move the lifecycle — confirming the visit is the
+  provider's move. Every revision is kept, so a dispute can read *what was offered, and what
+  did they agree to*.
+- `CONFIG.produceCommissionRate` is **`null` — undecided**. An undecided rate charges nothing
+  **and carries the reason** (`produceFeeUndecided`), so it cannot be misread as a decided zero.
+  No screen, and no report, adds a peso of produce to the platform's earnings.
+- Weight is stored in **whole grams** and typed in kilos, for the same reason money is stored
+  in centavos.
+- **A fee column may never show `₱0` for a job that has no price.** `bookingAmountText` says
+  `Price by offer` while it is open and `No service fee` once a purchase is settled; the value
+  of the crop appears only in its own labelled row.
+- **Zero is not a transaction.** `hasServiceMoney` guards the authorize, hold, settle and
+  capture paths, so a job with no service money posts nothing — `assertBalanced` would reject a
+  zero line, and a ₱0 payment record would be a receipt for nothing.
+- **Capability is declared, not verified.** Harvester / buyer / both sits on the provider's
+  category profile with equipment and a working-height band, labelled as the provider's own
+  statement. No badge or line implies Sukinnect inspected anything. A provider may refuse work
+  they cannot do safely, and the screens say so.
+- A request the provider answered **with a price** has not gone unanswered, so the lapse window
+  skips jobs carrying an open offer. An offer expires on its own `validUntil`, if it has one.
+
+The administrator's intelligence screen reports the two totals **separately**, with the produce
+card stating in words that it is not in the services figure; the new **Categories** surface
+reads the live catalogue back — modes, pricing models, commission basis, declared capabilities,
+safety rules, supply against 30-day demand — and says plainly that editing those rules is not
+available here, because they decide how money moves and are still being validated.
+
 ## Honest labelling
 
 Demo data is `source:'demo'`, records you create in a session are `source:'live'`. Pilot
@@ -175,7 +236,7 @@ matches is a simulated flow, and the screens say so.
 | What | Where | Notes |
 |---|---|---|
 | Logo | `Sukinnect_Logo.png` | exact case. Official mark — never redrawn, recoloured, stretched or replaced. It has a white background, so change the surface around it, not the file. |
-| Icons | an inline SVG set inside `Sukinnect-next.html`; `reicon.js` (LFS) for `Sukinnect.html` | The rebuild loads no icon library: 41 glyphs are drawn in the file and every one of the 38 names the app can reach has one — whether the name is written in markup, carried by a service record, or passed to an empty state. The gate checks all three and fails if a new name arrives undrawn. Measured with reicon disabled, that set drew the same icons on every screen of all 30, so the rebuild dropped the 8 MB custom element and the four seconds of iconless paint it cost when registration lost the race. `Sukinnect.html` still uses reicon, so add a name to both files or neither. |
+| Icons | an inline SVG set inside `Sukinnect-next.html`; `reicon.js` (LFS) for `Sukinnect.html` | The rebuild loads no icon library: 42 glyphs are drawn in the file and every one of the 39 names the app can reach has one — whether the name is written in markup, carried by a service record, or passed to an empty state. The gate checks all three and fails if a new name arrives undrawn. Measured with reicon disabled, that set drew the same icons on every screen of all 40, so the rebuild dropped the 8 MB custom element and the four seconds of iconless paint it cost when registration lost the race. `Sukinnect.html` still uses reicon, so add a name to both files or neither. |
 | Type | `fonts/` | Fraunces for display, Plus Jakarta Sans for UI. Self-hosted; no remote fonts. |
 | Photos | `avatars/` | local PNGs, mapped per persona in `PRO_PHOTOS`. Keep imagery local — the APK runs offline. |
 | Maps | `leaflet/` | vendored. Tiles come from OpenStreetMap, the one network dependency, so a map is blank with no connection. |

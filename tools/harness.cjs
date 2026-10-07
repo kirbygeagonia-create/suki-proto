@@ -62,7 +62,10 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   'offerDraftUnits', 'openMakeOffer', 'submitOffer', 'offerInput', 'pickOfferBasis',
   'pickOfferWho', 'capabilityCard', 'providerJobAction', 'realRequestCard', 'jobActionBar',
   'requestActionCard', 'PROVIDER_DEMO_ACCOUNTS', 'PROVIDER_DEMO_PROFILES',
-  'signInAsProvider', 'applyProviderIdentity'];
+  'signInAsProvider', 'applyProviderIdentity',
+  /* the operator's view of the pilot */
+  'adminMarketplaceIntelligence', 'adminCategories', 'intelligenceStats', 'bookingsInWindow',
+  'ADMIN_PRICING_WORDS', 'ADMIN_CAPABILITY_WORDS', 'ADMIN_SAFETY_WORDS'];
 
 function boot({ appMode = false, storage = null } = {}) {
   const src = fs.readFileSync(APP, 'utf8');
