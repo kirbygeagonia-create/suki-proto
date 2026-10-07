@@ -42,7 +42,27 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   /* the thread, and the verbs the provider's card offers */
   'MESSAGES', 'threadsFor', 'threadMessages', 'threadKeyOf', 'threadKeyFor', 'postMessage',
   'appendMessage', 'sendChatMessage', 'openChatThread', 'currentThreadKey', 'nextStepFor',
-  'JOB_VERBS', 'photoAvatar', 'serviceAvatar', 'isSettled', 'seedMessages'];
+  'JOB_VERBS', 'photoAvatar', 'serviceAvatar', 'isSettled', 'seedMessages',
+  /* the pilot category: its child record, its arithmetic, and its readers */
+  'OFFERS', 'OFFER_STATES', 'offerLabel', 'offerIsOpen', 'offersFor', 'currentOffer',
+  'openOfferFor', 'offerTotals', 'offerDirection', 'describeOffer', 'makeOffer',
+  'answerOffer', 'kgText', 'seedFruitOffers', 'fruitCapability', 'providerCanMode',
+  'capabilityLabel', 'categoryBehaviour', 'CATEGORY_DEFAULTS', 'SERVICES',
+  /* the resident's fruit sheet and the readers every screen share */
+  'bookingRequestSheet', 'modeRail', 'modesFor', 'fruitBlock', 'fruitFields', 'fruitField',
+  'fruitInput', 'pickFruitField', 'toggleFruitBool', 'requestPhotos', 'dropFruitPhoto',
+  'fruitDraft', 'pickRequestMode', 'offerTermsCard', 'termsCard',
+  'bookingModeRecord', 'priceByOffer', 'bookingAmountText', 'bookingAmountPhrase',
+  'FRUIT_FIELD_UI',
+  /* the resident's screens, so a probe can read what a tap would show */
+  'residentHome', 'residentBookingDetail', 'statusCard', 'offerCard', 'offerMoneyLines',
+  'produceRow', 'answerResidentOffer', 'offersFor', 'offerIsOpen', 'hasServiceMoney',
+  /* the provider's side of the pilot */
+  'providerJobMoves', 'makeOfferSheet', 'offerTotalsBlock', 'offerDraft', 'offerDraftTotals',
+  'offerDraftUnits', 'openMakeOffer', 'submitOffer', 'offerInput', 'pickOfferBasis',
+  'pickOfferWho', 'capabilityCard', 'providerJobAction', 'realRequestCard', 'jobActionBar',
+  'requestActionCard', 'PROVIDER_DEMO_ACCOUNTS', 'PROVIDER_DEMO_PROFILES',
+  'signInAsProvider', 'applyProviderIdentity'];
 
 function boot({ appMode = false, storage = null } = {}) {
   const src = fs.readFileSync(APP, 'utf8');

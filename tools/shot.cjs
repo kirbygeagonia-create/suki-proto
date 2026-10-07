@@ -415,6 +415,26 @@ const SCREENS = [
                         state.sheet='bookingRequest'; render();`],
   ['booking-detail',   `state.view='app'; state.role='resident';
                         openBookingDetail(BOOKINGS.find(b=>b.status==='upcoming'&&b.customerId===CURRENT_CUSTOMER_ID).id);`],
+  /* The pilot category, reached the way a resident reaches it: pick the category's
+     provider, open the sheet, choose a mode. Screens nobody can navigate to are
+     not screens — they are markup. */
+  ['fruit-sheet',      `state.view='app'; state.role='resident'; openProviderDetail('p7', 'results');
+                        openBookingRequest(); state.requestDraft.mode='sell_fruit';
+                        state.requestDraft.fruit={ fruitType:'Mango', treeCount:1,
+                          estimatedQuantityGrams:40000, treeHeightBand:'about 5 metres, ladder needed',
+                          ownershipConfirmed:true };
+                        state.sheet='bookingRequest'; render();`],
+  ['fruit-harvest-sheet', `state.view='app'; state.role='resident'; openProviderDetail('p7', 'results');
+                        openBookingRequest(); state.requestDraft.mode='harvest_only';
+                        state.requestDraft.fruit={ fruitType:'Mango', treeCount:2,
+                          estimatedQuantityGrams:25000 };
+                        state.sheet='bookingRequest'; render();`],
+  ['fruit-offer',      `state.view='app'; state.role='resident';
+                        openBookingDetail(BOOKINGS.find(b=>b.id==='b8').id);`],
+  ['fruit-record',     `state.view='app'; state.role='resident';
+                        const _b = BOOKINGS.find(b=>b.id==='b8');
+                        answerOffer('b8','accept',{ role:'customer', id:CURRENT_CUSTOMER_ID });
+                        openBookingDetail(_b.id);`],
   ['booking-tracking', `state.view='app'; state.role='resident';
                         openBookingDetail(BOOKINGS.find(b=>b.status==='ongoing'&&b.customerId===CURRENT_CUSTOMER_ID).id);`],
   ['resident-bookings',`state.view='app'; state.role='resident'; state.tab='bookings'; render();`],
@@ -426,6 +446,22 @@ const SCREENS = [
   ['concierge',        `state.view='app'; state.role='resident'; state.tab='concierge'; render();`],
   ['notifications',    `state.view='app'; state.role='resident'; state.tab='notifications'; render();`],
   ['provider-dash',    `state.view='app'; state.role='provider'; state.tab='dashboard'; render();`],
+  /* The pilot's provider side, reached by signing in as the fruit pro rather than
+     by a parallel app: same shell, same screens, different identity. */
+  ['fruit-provider-dash', `applyProviderIdentity('p7');
+                        state.view='app'; state.role='provider'; state.tab='dashboard'; render();`],
+  ['fruit-request',    `applyProviderIdentity('p7');
+                        state.view='app'; state.role='provider'; state.tab='provider_booking_detail';
+                        openProviderBooking('b10'); render();`],
+  ['offer-sheet',      `applyProviderIdentity('p7');
+                        state.view='app'; state.role='provider'; state.tab='provider_booking_detail';
+                        openProviderBooking('b10'); openMakeOffer('b10');
+                        offerInput('unitPesos','55'); offerInput('labourPesos','1600'); render();`],
+  ['fruit-harvest-job',`applyProviderIdentity('p7');
+                        state.view='app'; state.role='provider'; state.tab='provider_booking_detail';
+                        openProviderBooking('b9'); render();`],
+  ['fruit-provider-profile', `applyProviderIdentity('p7');
+                        state.view='app'; state.role='provider'; state.tab='profile'; render();`],
   ['provider-fsm',     `state.view='app'; state.role='provider'; state.tab='fsm'; render();`],
   ['provider-bookings',`state.view='app'; state.role='provider'; state.tab='bookings'; render();`],
   ['provider-job',     `state.view='app'; state.role='provider'; state.tab='bookings'; render();

@@ -1140,8 +1140,21 @@ suite('journeys', async () => {
   const noVerb = [...offered].filter(to => !app.JOB_VERBS[to]);
   c.check('every move a provider can make has a verb, not a state name',
     noVerb.length === 0, 'rendered as the status itself: ' + noVerb.join(', '));
+  /* Asked behaviourally rather than as a grep for a variable name: the naming moved
+     into providerJobMoves, and a check that greps for `JOB_VERBS[o]` only proves the
+     file still spells it that way. This walks every status the provider can hold and
+     fails if any button is wearing a state's own name. */
+  const stateNames = new Set(Object.values(app.BOOKING_STATES).map(st => st.label));
+  const wearingAStateName = [];
+  Object.keys(app.BOOKING_STATES).forEach(st => {
+    BOOKINGS.filter(b => b.status === st).slice(0, 4).forEach(b =>
+      app.providerJobMoves(b).forEach(m => {
+        if (m.kind !== 'note' && stateNames.has(m.label)) wearingAStateName.push(b.id + ':' + m.label);
+      }));
+  });
   c.check('and the card never has to fall back to a label',
-    /JOB_VERBS\[o\] \|\| label\(o\)/.test(src) && !/const VERBS = \{/.test(src));
+    wearingAStateName.length === 0 && !/const VERBS = \{/.test(src),
+    'buttons wearing a state name: ' + (wearingAStateName.join(', ') || 'none'));
 
   /* a requested job, the one place the fallback used to fire */
   const asked = BOOKINGS.find(b => b.status === 'requested' && b.providerId === app.CURRENT_PROVIDER_ID);
@@ -1363,6 +1376,186 @@ suite('honesty', async () => {
   c.check('no percentage on the dashboard is a literal in the markup',
     !/<b>\d{1,3}%<\/b>/.test(app._source.slice(app._source.indexOf('function adminDashboard'),
       app._source.indexOf('function adminDashboard') + 24000)));
+
+  return c;
+});
+/* ══ 15. fruit — the pilot category, as the brief's checklist ═════════════════
+   SUKINNECT_MASTER_IMPLEMENTATION_PROMPT.md §37 lists what has to be true for
+   Fruit Harvest & Buy. A list in a document is not a check, so the load-bearing
+   items are asserted here against the real kernel: one booking table, centavos,
+   the machine owning the lifecycle, produce money never becoming service revenue,
+   and no wallet. Each check was falsified by breaking the rule it watches. */
+suite('fruit', async () => {
+  const app = boot();
+  const { BOOKINGS, OFFERS, PROVIDERS, CONFIG, CONFIG_DEFAULTS, LEDGER } = app;
+  const c = makeChecker();
+  const src = app._source;
+
+  /* ---- the kernel is untouched by the new category ---- */
+  c.check('there is still one booking table and no fruit twin',
+    /const BOOKINGS = \[/.test(src) && !/FRUIT_BOOKINGS/.test(src));
+  c.check('a fruit booking is a booking the machine knows',
+    ['b8','b9','b10'].every(id => app.BOOKING_STATES[app.bookingById(id).status]),
+    ['b8','b9','b10'].map(id => id + '=' + app.bookingById(id).status).join(' '));
+  /* "expired" means the same plain thing to both records, so sharing the word is
+     not the risk. The risk is an offer's own vocabulary leaking into a booking's
+     status field, where the machine has no transitions for it. */
+  c.check('no booking wears an offer-only state',
+    BOOKINGS.every(b => !['proposed','declined','withdrawn','superseded'].includes(b.status)) &&
+    OFFERS.every(o => app.OFFER_STATES[o.status]),
+    BOOKINGS.filter(b => ['proposed','declined','withdrawn','superseded'].includes(b.status)).map(b => b.id + ':' + b.status).join(','));
+  c.check('weight is stored in whole grams, never float kilos',
+    [app.bookingById('b8'), app.bookingById('b10')].every(b =>
+      Number.isInteger(b.fruit.estimatedQuantityGrams)) &&
+    OFFERS.every(o => o.quantityGrams === null || Number.isInteger(o.quantityGrams)));
+  c.check('every money field on an offer is a whole number of centavos',
+    OFFERS.every(o => Number.isInteger(o.produceCentavos) && Number.isInteger(o.labourCentavos) &&
+                      Number.isInteger(o.unitPriceCentavos || 0)));
+  c.check('no wallet or store-value came back for the pilot',
+    !app.ACCOUNTS.wallet && !app.ACCOUNTS.store_value && !/wallet|storeValue/i.test(
+      JSON.stringify(OFFERS) + JSON.stringify(BOOKINGS.filter(b => b.mode))));
+
+  /* ---- the two legs of the money stay separate ---- */
+  const offer = OFFERS[0];
+  const t = app.offerTotals(offer);
+  c.check('a pure purchase earns the platform nothing while the rate is undecided',
+    CONFIG.produceCommissionRate === null && t.platformFeeCentavos === 0 && t.produceFeeUndecided === true,
+    JSON.stringify(t));
+  c.check('the undecided rate is a decision, not an accidental zero',
+    CONFIG_DEFAULTS.produceCommissionRate === null);
+  c.check('the resident is never billed the fruit she is selling',
+    t.customerPaysCentavos === 0 && t.providerPaysCustomerCentavos === offer.produceCentavos,
+    JSON.stringify(t));
+  c.check('the legs add to the job without merging into one number',
+    t.totalCentavos === t.produceCentavos + t.labourCentavos);
+  /* a decided rate changes only the produce leg */
+  const withRate = app.offerTotals(Object.assign({}, offer, { labourCentavos: 100000, produceCentavos: 200000 }));
+  CONFIG.produceCommissionRate = 0.05;
+  const decided = app.offerTotals(Object.assign({}, offer, { labourCentavos: 100000, produceCentavos: 200000 }));
+  c.check('a decided produce rate charges the produce and nothing else changes',
+    decided.platformFeeCentavos - withRate.platformFeeCentavos === 10000 &&
+    decided.customerPaysCentavos - withRate.customerPaysCentavos === 10000 &&
+    decided.produceCentavos === withRate.produceCentavos,
+    (decided.platformFeeCentavos - withRate.platformFeeCentavos) + ' vs 10000');
+  CONFIG.produceCommissionRate = null;
+
+  /* ---- answering an offer is commercial, not lifecycle ---- */
+  const b8 = app.bookingById('b8');
+  app.answerOffer('b8', 'accept', { role:'customer', id: app.CURRENT_CUSTOMER_ID });
+  c.check('accepting an offer does not move the booking', b8.status === 'requested', b8.status);
+  c.check('it records the produce leg beside the record',
+    !!b8.produce && b8.produce.amountCentavos === 209000 && b8.produce.settledAs === 'on_site');
+  c.check('the produce leg is flagged as an undecided fee, not a charged one',
+    b8.produce.feeStatus === 'undecided' && b8.produce.platformFeeCentavos === 0);
+  c.check('a purchase-only job freezes no service price',
+    b8.amountCentavos === 0 && !b8.pricing, JSON.stringify(b8.pricing));
+  c.check('and posts nothing to the ledger', app.ledgerFor('b8').length === 0,
+    app.ledgerFor('b8').map(e => e.eventType).join(','));
+  c.check('the trial balance still closes after an acceptance', (() => {
+    const d = LEDGER.reduce((x, e) => x + e.lines.filter(l => l.direction === 'debit').reduce((y, l) => y + l.amountCentavos, 0), 0);
+    const r = LEDGER.reduce((x, e) => x + e.lines.filter(l => l.direction === 'credit').reduce((y, l) => y + l.amountCentavos, 0), 0);
+    return d === r;
+  })());
+
+  /* ---- a request the provider answered with a price does not lapse ---- */
+  const fresh = boot();
+  fresh.CONFIG.acceptTtlMinutes = 1;
+  const before = fresh.bookingById('b8').status;
+  fresh.applyDueTransitions();
+  c.check('an open offer pauses the accept window, because it was answered',
+    fresh.bookingById('b8').status === before && before === 'requested',
+    fresh.bookingById('b8').status);
+  c.check('an unanswered request still lapses on the clock',
+    fresh.bookingById('b10').status === 'expired' || fresh.bookingById('b10').status !== 'requested',
+    fresh.bookingById('b10').status);
+
+  /* ---- persistence, the four places a table has to appear ---- */
+  const store = fakeStorage();
+  const first = boot({ storage: store });
+  first.makeOffer('b10', { basis:'per_kg', quantityGrams:120000, unitPriceCentavos:5500,
+    produceCentavos:660000, labourCentavos:160000, whoHarvests:'provider' }, { role:'provider' });
+  first.persist();
+  const again = boot({ storage: store });
+  again.hydrate();
+  c.check('an offer survives a reload', again.OFFERS.some(o => o.bookingId === 'b10' && o.produceCentavos === 660000),
+    JSON.stringify(again.OFFERS.map(o => o.id + ':' + o.status)));
+  c.check('the offer sequence starts past the ids a restored dump already used', (() => {
+    const made = again.makeOffer('b10', { basis:'per_lot', produceCentavos:50000, labourCentavos:0 },
+      { role:'provider' });
+    const ids = again.OFFERS.map(o => o.id);
+    return ids.filter(x => x === made.id).length === 1 && new Set(ids).size === ids.length;
+  })(), 'ids: ' + again.OFFERS.map(o => o.id).join(','));
+  c.check('a dump carrying an unknown offer state is refused, not half-read', (() => {
+    const bad = fakeStorage();
+    bad.setItem('sukinnect.snapshot.v1', JSON.stringify({ schemaVersion: again.SCHEMA_VERSION,
+      bookings: [{ id:'z1', status:'requested' }], offers: [{ id:'of9', bookingId:'z1', status:'negotiating' }] }));
+    return boot({ storage: bad }).hydrate().restored === false;
+  })());
+  c.check('an offer attached to no booking is refused too', (() => {
+    const bad = fakeStorage();
+    bad.setItem('sukinnect.snapshot.v1', JSON.stringify({ schemaVersion: again.SCHEMA_VERSION,
+      bookings: [{ id:'z1', status:'requested' }], offers: [{ id:'of9', bookingId:'nowhere', status:'proposed' }] }));
+    return boot({ storage: bad }).hydrate().restored === false;
+  })());
+  c.check('resetting the demo clears the offers and their sequence', (() => {
+    again.resetDemoData();
+    return again.OFFERS.length === 0 || again.OFFERS.every(o => o.source === 'demo');
+  })(), 'offers after reset: ' + again.OFFERS.length);
+
+  /* ---- capability is data the provider declared, not a role ---- */
+  const p7 = PROVIDERS.find(p => p.id === 'p7'), p8 = PROVIDERS.find(p => p.id === 'p8');
+  c.check('a harvester-buyer can take all three modes',
+    ['harvest_only','sell_fruit','harvest_and_buy'].every(m => app.providerCanMode(p7, m)));
+  c.check('a buyer is not offered the harvest',
+    !app.providerCanMode(p8, 'harvest_only') && !app.providerCanMode(p8, 'harvest_and_buy') &&
+     app.providerCanMode(p8, 'sell_fruit'));
+  c.check('capability is a field on a provider, not a fourth role',
+    !/ROLE.*fruit|role === 'fruit'/i.test(src) && !!p7.fruitCapability);
+  c.check('the profile says who declared it and denies verifying it',
+    /Declared by/.test(app.capabilityCard(p7)) && !/certified|verified climber/i.test(app.capabilityCard(p7)),
+    app.capabilityCard(p7).slice(-200));
+
+  /* ---- the six trades that shipped before this one are untouched ---- */
+  c.check('no original category asks a mode', ['plumbing','electrical','cleaning','tutoring','appliance','delivery']
+    .every(id => app.serviceMeta(id).pilot !== true && app.categoryBehaviour(id).modes.length === 1));
+  c.check('only the pilot is marked experimental',
+    app.SERVICES.filter(s => s.pilot).map(s => s.id).join(',') === 'fruit',
+    app.SERVICES.filter(s => s.pilot).map(s => s.id).join(',') || '(none)');
+  c.check('the grid carries seven categories without a new nav tab',
+    app.SERVICES.length === 7 && app.ROOT_TABS.resident.length === 4 &&
+    app.ROOT_TABS.provider.length === 5,
+    app.SERVICES.length + ' services, ' + (app.ROOT_TABS.resident || []).length + ' resident tabs');
+
+  /* ---- the record is linked, the way every other job is ---- */
+  c.check('each fruit job has its own timeline',
+    ['b8','b9','b10'].every(id => app.STATUS_EVENTS.some(e => e.bookingId === id)));
+  c.check('each fruit job opened a thread with the request in it',
+    ['b8','b9','b10'].every(id => app.MESSAGES.some(m => m.bookingId === id)));
+  c.check('a negotiated job still says so in the resident\'s words, not ₱0',
+    app.bookingAmountText(app.bookingById('b10')) === 'Price by offer',
+    app.bookingAmountText(app.bookingById('b10')));
+  c.check('and a settled purchase reports no service fee, not a zero one', (() => {
+    const copy = boot();
+    copy.answerOffer('b8', 'accept', { role:'customer' });
+    return copy.bookingAmountText(copy.bookingById('b8')) === 'No service fee';
+  })());
+
+  /* ---- the provider cannot be shown a door that freezes a price they never set ---- */
+  const prov = boot();
+  prov.applyProviderIdentity('p7');
+  const moves = prov.providerJobMoves(prov.bookingById('b10')).filter(m => m.kind !== 'note');
+  c.check('an unpriced fruit request offers an offer, not an acceptance',
+    moves.length && moves[0].kind === 'offer' && !moves.some(m => m.to === 'upcoming'),
+    JSON.stringify(moves.map(m => m.kind + ':' + m.label)));
+  c.check('a harvest job with a price still uses the ordinary machine',
+    prov.providerJobMoves(prov.bookingById('b9')).every(m => m.kind !== 'offer'));
+  /* Asserted through the reader rather than the symbol: the harness snapshots
+     exports at boot, so a reassigned identity only shows in what the app can see. */
+  c.check('the signed-in provider follows the demo account, not a constant',
+    prov.bookingsForProvider().some(b => b.id === 'b10') &&
+    prov.bookingsForProvider().every(b => b.providerId === 'p7') &&
+    prov.state.providerProfileData.name === 'Erning Bautista',
+    prov.state.providerProfileData.name + ' / ' + prov.bookingsForProvider().map(b => b.id + '@' + b.providerId).join(','));
 
   return c;
 });

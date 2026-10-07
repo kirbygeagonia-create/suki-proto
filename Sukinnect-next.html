@@ -499,6 +499,8 @@
   }
   .auth-sheet .input-field{ border-radius:var(--r-md); background:var(--cloud); }
   .auth-sheet .input-field:focus-within{ background:var(--surface); }
+  .auth-hint{ font-size:var(--t-caption); color:var(--text-muted); line-height:1.5; margin:-2px 0 2px; }
+  .auth-hint b{ color:var(--text-secondary); font-weight:800; }
   .auth-forgot{
     display:block; width:100%; text-align:center; margin:-6px 0 var(--s-5);
     font-size:var(--t-body); color:var(--deep); font-weight:700;
@@ -817,13 +819,98 @@
     background:var(--surface); outline:none; resize:none; line-height:1.45;
   }
   .req-field:focus{border-color:var(--deep); box-shadow:0 0 0 3px var(--deep-100);}
+  /* The mode step is the only place in the app where one choice decides which
+     transaction you are in, so it reads as a list of decisions rather than a row of
+     pills — each with its own line of consequence, at the tap minimum. */
+  .mode-list{ display:flex; flex-direction:column; gap:8px; }
+  .mode-opt{
+    display:flex; flex-direction:column; align-items:flex-start; gap:2px; width:100%;
+    min-height:var(--tap); padding:11px 13px; text-align:left; cursor:pointer;
+    font-family:inherit; background:var(--surface); border:1px solid var(--line);
+    border-radius:12px; color:var(--ink);
+  }
+  .mode-opt:active{ background:var(--cloud); }
+  .mode-opt.on{ border-color:var(--deep); background:var(--deep-100); }
+  .mode-opt .mo-t{ font-size:var(--t-body-sm); font-weight:800; color:var(--ink); }
+  .mode-opt.on .mo-t{ color:var(--deep); }
+  .mode-opt .mo-s{ font-size:var(--t-caption); color:var(--ink-soft); line-height:1.45; }
+  .mode-hint{ font-size:var(--t-caption); color:var(--mist); line-height:1.5; margin-top:8px; }
+  .fruit-sub{ display:block; margin-top:10px; }
+  .fruit-more{ margin-top:12px; }
+  .fruit-more .fold-body{ padding:2px 0 12px; }
+  .fruit-check{
+    display:flex; gap:9px; align-items:flex-start; margin-top:12px; cursor:pointer;
+    font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5;
+  }
+  .fruit-check input{ flex-shrink:0; width:18px; height:18px; margin-top:1px; accent-color:var(--deep); }
+  .fruit-photo{
+    position:relative; display:flex; align-items:center; justify-content:center; gap:7px;
+    margin-top:8px; min-height:var(--tap); border:1px dashed var(--line); border-radius:12px;
+    background:var(--background); color:var(--ink-soft); cursor:pointer;
+    font-size:var(--t-caption); font-weight:700;
+  }
+  .fruit-photo input{ position:absolute; width:1px; height:1px; opacity:0; }
+  .fruit-names{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .fruit-name{ display:inline-flex; align-items:center; gap:6px; max-width:100%;
+    background:var(--background); color:var(--ink-soft); box-shadow:inset 0 0 0 1px var(--line); }
+  .fruit-name-x{
+    display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px;
+    border:0; border-radius:50%; background:transparent; color:inherit; cursor:pointer; padding:0;
+    flex-shrink:0;
+  }
   .req-terms{
     background:var(--background); border:1px solid var(--line); border-radius:12px; padding:12px;
     font-size:var(--t-body-sm); color:var(--ink-soft);
   }
+  /* An offer is money the resident has to decide about, so its lines are set like
+     a bill rather than a paragraph: label left, amount right, one small line of
+     reason under each. Semantic tones only — a price is not a brand moment (34). */
+  .offer-card{ padding:13px; }
+  .offer-lines{ margin-top:11px; border-top:1px solid var(--line); padding-top:9px;
+    display:flex; flex-direction:column; gap:8px; }
+  .offer-line{ display:grid; grid-template-columns:1fr auto; gap:2px 10px; align-items:baseline; }
+  .offer-line .ol-k{ font-size:var(--t-caption); color:var(--ink-soft); font-weight:700; }
+  .offer-line .ol-v{ font-size:var(--t-body-sm); font-weight:800; color:var(--deep); text-align:right; }
+  .offer-line .ol-s{ grid-column:1 / -1; font-size:var(--t-caption); color:var(--mist); line-height:1.45; }
+  .offer-line .mut, .offer-line .ol-v.mut{ color:var(--text-muted); font-weight:700; }
+  .offer-facts{ display:flex; flex-direction:column; gap:5px; margin-top:10px;
+    font-size:var(--t-caption); color:var(--ink-soft); line-height:1.45; }
+  .offer-note{ margin:9px 0 0; font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; }
+  .offer-when{ margin-top:7px; font-size:var(--t-caption); color:var(--mist); }
+  .offer-answer{ display:flex; gap:8px; margin-top:12px; }
+  .offer-answer .btn{ flex:1; min-height:var(--tap); border-radius:10px; }
+  .produce-card{ padding:12px 13px; }
+  .produce-ic{ display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px;
+    border-radius:10px; background:var(--background); color:var(--deep); flex-shrink:0; }
+  .produce-note{ margin:9px 0 0; font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; }
+  .chip.tone-active{ background:var(--deep-100); color:var(--deep); }
+  .chip.tone-good{ background:var(--success-100); color:var(--success-ink); }
+  .chip.tone-alert{ background:var(--error-100); color:var(--error-ink); }
+  .chip.tone-neutral{ background:var(--background); color:var(--text-muted); }
   .req-terms b{font-size:var(--t-body); font-weight:800; color:var(--deep);}
   .req-terms .mut{font-size:var(--t-caption); font-weight:600; color:var(--mist);}
   .req-terms p{font-size:var(--t-caption); line-height:1.55; margin:8px 0 0; color:var(--ink-soft);}
+  /* A note that explains why a button is missing is part of the action group, not
+     a caption under it. */
+  .move-note{ font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5;
+    background:var(--background); border:1px solid var(--line); border-radius:10px; padding:9px 11px; }
+  .offer-fields{ display:flex; flex-direction:column; gap:2px; }
+  .offer-fields .sheet-label{ display:block; }
+  .cap-rows{ display:flex; flex-direction:column; gap:7px; margin-top:10px; }
+  .cap-rows > div{ display:grid; grid-template-columns:1fr 1.4fr; gap:10px;
+    font-size:var(--t-caption); line-height:1.45; }
+  .cap-rows span{ color:var(--mist); }
+  .cap-rows b{ color:var(--ink); font-weight:700; }
+  .cap-note{ margin:11px 0 0; font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5;
+    border-top:1px solid var(--line); padding-top:9px; }
+  .fruit-card .cap-rows{ margin-top:11px; }
+  .fruit-said{ font-size:var(--t-caption); color:var(--mist); line-height:1.45; margin-top:2px; }
+  .fruit-own{ display:flex; gap:7px; align-items:flex-start; margin-top:11px; padding-top:9px;
+    border-top:1px solid var(--line); font-size:var(--t-caption); line-height:1.5; color:var(--success-ink); }
+  .fruit-own.warn{ color:var(--warning-ink); }
+  .fruit-tall{ display:flex; gap:7px; align-items:flex-start; margin-top:8px;
+    font-size:var(--t-caption); line-height:1.5; color:var(--ink-soft);
+    background:var(--background); border:1px solid var(--line); border-radius:10px; padding:9px 11px; }
 
 
   .review-item{padding:12px 0; border-bottom:1px solid var(--line);}
@@ -1452,7 +1539,84 @@ const PROVIDERS = [
       {client:'Sarah D.', date:'Sep 5', stars:5, comment:'Bilis mag-deliver at maingat sa fragile items.'}
     ]
   },
+  {
+    id:'p7',name:'Erning Bautista',service:'Fruit Harvest & Buy',serviceId:'fruit',barangay:'Buayan',distanceKm:2.4,availabilityMin:240,
+    rateCentavos:80000,rateUnit:'per tree, harvesting',rating:4.7,jobs:41,trustScore:88,
+    /* Only what the platform actually checks. A harvest job is the one where a
+       resident might read "endorsed" as "someone verified they can climb safely",
+       and nobody has verified that — so the badge is not given, and the capability
+       block below is labelled as the provider's own declaration. */
+    badges:['ID Verified'],lat:6.3802,lng:124.9154,
+    /* Declared by the provider, not issued by anyone. The distinction is the whole
+       point: the platform has no evidence that these are certified, so it shows what
+       the person says they can do and lets them refuse work they cannot do. */
+    fruitCapability:{
+      modes:['harvester','buyer'],
+      specialties:['mango','banana','coconut'],
+      equipment:['extension pole pruner to 6 m','body harness and line','baskets and drop line'],
+      maxPracticalHeightBand:'up to about 6 metres',
+      accessNotes:'Works in yards with dogs if the owner keeps one aside.',
+      transport:'Kariton for lots over about 200 kg',
+      buysBy:['per tree','whole lot']
+    },
+    credentials:['Barangay clearance','Declared 12 years of backyard harvesting'],
+    smartMatch:{ score:84, reasons:['Harvests mango and coconut','Serves Buayan and nearby barangays',
+      'Brings a pole pruner and harness','Available from tomorrow morning'] },
+    reviews:[
+      {client:'Libby T.', date:'Sep 12', stars:5, comment:'Nakuha nilang lahat ng mangga, wala akong nakitang nasirang sanga.'},
+      {client:'Rogelio D.', date:'Aug 28', stars:4, comment:'Ayos ang oras, medyo late lang ng 20 minuto.'}
+    ]
+  },
+  {
+    id:'p8',name:'Maricel Tan',service:'Fruit Harvest & Buy',serviceId:'fruit',barangay:'Poblacion',distanceKm:0.9,availabilityMin:1440,
+    /* A buyer has no rate to publish. What a sell job costs comes from an offer
+       after she has seen the trees, and the UI has to say that instead of printing
+       ₱0 as if it were a price. */
+    rateCentavos:0,rateUnit:'offer after seeing the trees',rating:4.6,jobs:23,trustScore:82,
+    badges:['ID Verified'],lat:6.3688,lng:124.9302,
+    fruitCapability:{
+      modes:['buyer'],
+      specialties:['mango','calamansi'],
+      equipment:['none — hires a harvester when needed'],
+      maxPracticalHeightBand:'does not climb',
+      accessNotes:'Needs vehicle access to load sacks.',
+      transport:'Small truck, about 1 tonne',
+      buysBy:['per kilo','whole lot']
+    },
+    credentials:['Barangay clearance','Market vendor, Dalet public market'],
+    smartMatch:{ score:78, reasons:['Buys mango by the kilo','Serves your barangay',
+      'Offers after seeing the trees','Available this week'] },
+    reviews:[
+      {client:'Ana D.', date:'Sep 3', stars:5, comment:'Tapat sa timbang at bayad agad.'},
+      {client:'Nena C.', date:'Jul 19', stars:4, comment:'Mababa konti offer kaysa ibinata, pero mabilis.'}
+    ]
+  },
 ];
+
+/* ---- what a category profile says about a provider's ability in it ---- */
+function fruitCapability(provider){
+  return (provider && provider.fruitCapability) || null;
+}
+function providerCanMode(provider, modeId){
+  const cap = fruitCapability(provider);
+  if (!cap) return false;
+  if (modeId === 'harvest_and_buy') return cap.modes.indexOf('harvester') >= 0 && cap.modes.indexOf('buyer') >= 0;
+  if (modeId === 'harvest_only') return cap.modes.indexOf('harvester') >= 0;
+  if (modeId === 'sell_fruit') return cap.modes.indexOf('buyer') >= 0;
+  return cap.modes.indexOf(modeId) >= 0;
+}
+/* One line for a card, from the capability record — never a paragraph. Someone who
+   declared both halves reads as the combined one, because that is the whole shape
+   of work the resident can hire them for. */
+function capabilityLabel(provider){
+  const cap = fruitCapability(provider);
+  if (!cap) return '';
+  const both = cap.modes.indexOf('harvester') >= 0 && cap.modes.indexOf('buyer') >= 0;
+  if (both) return 'Harvester + buyer';
+  if (cap.modes.indexOf('harvester') >= 0) return 'Harvester';
+  if (cap.modes.indexOf('buyer') >= 0) return 'Buyer';
+  return cap.modes.join(' + ');
+}
 
 const SERVICES = [
   {id:'plumbing',label:'Plumbing',icon:'droplet'},{id:'electrical',label:'Electrical',icon:'zap'},
@@ -1789,7 +1953,51 @@ const CUSTOMERS = [
 ];
 
 const CURRENT_CUSTOMER_ID = 'c1';   // the resident this prototype signs in as
-const CURRENT_PROVIDER_ID = 'p1';   // the service pro it signs in as (Ramil Odiada)
+/* Which service pro the demo signs in as. It was a constant, which quietly meant
+   the provider app could only ever be one person's app — so a category with its own
+   provider-side flow had no way to be seen at all. It is still one shell and one
+   set of screens (the brief forbids a second provider app); only the identity moves.
+   Anything that needs to know who "I" am asks at call time, never at boot. */
+let CURRENT_PROVIDER_ID = 'p1';
+
+const PROVIDER_DEMO_ACCOUNTS = {
+  'ramil@demo.ph':   'p1',   // Ramil Odiada — plumbing, the trade the prototype shipped with
+  'erning@demo.ph':  'p7'    // Erning Bautista — the Fruit Harvest & Buy pilot
+};
+
+/* The profile the account edits, per persona. Kept beside the account map so an
+   identity and the name it shows cannot be maintained in two places and drift. */
+const PROVIDER_DEMO_PROFILES = {
+  p1: { name:'Ramil Odiada', email:'ramil@demo.ph', phone:'+63 918 765 4321',
+        service:'Plumbing Specialist', barangay:'Poblacion',
+        rateCentavos:35000, rateUnit:'call-out fee',
+        serviceRadius:'3 km around Poblacion',
+        bankAccount:'GCash (0918***4321)',
+        workingHours:'8:00 AM – 5:00 PM (Mon–Sat)',
+        emergencyDispatch:'Enabled (Accepts urgent pings)' },
+  p7: { name:'Erning Bautista', email:'erning@demo.ph', phone:'+63 917 555 8102',
+        service:'Fruit Harvest & Buy', barangay:'Buayan',
+        rateCentavos:80000, rateUnit:'per tree, harvesting',
+        serviceRadius:'Tupi west barangays, by arrangement',
+        bankAccount:'GCash (0917***8102)',
+        workingHours:'6:00 AM – 4:00 PM (Mon–Sat, daylight only)',
+        emergencyDispatch:'Off (harvesting needs daylight)' }
+};
+
+/* Sign in as whichever demo pro the typed email belongs to. An email the prototype
+   does not know still signs in as Ramil, because that is what a prototype with no
+   accounts does — and the toast says the account is not stored (63). */
+function signInAsProvider(email){
+  const id = PROVIDER_DEMO_ACCOUNTS[String(email || '').trim().toLowerCase()];
+  return applyProviderIdentity(id || 'p1');
+}
+function applyProviderIdentity(id){
+  const profile = PROVIDER_DEMO_PROFILES[id] || PROVIDER_DEMO_PROFILES.p1;
+  CURRENT_PROVIDER_ID = PROVIDER_DEMO_PROFILES[id] ? id : 'p1';
+  Object.keys(state.providerProfileData).forEach(k => delete state.providerProfileData[k]);
+  Object.assign(state.providerProfileData, JSON.parse(JSON.stringify(profile)));
+  return CURRENT_PROVIDER_ID;
+}
 
 /* Demo bookings are dated against the day they are opened, so a job meant to
    read as upcoming does not expire into a fixed September the moment the file is
@@ -1957,7 +2165,72 @@ const BOOKINGS = [
     barangay:'San Isidro', address:'6 Santiago Ave., San Isidro',
     lat:6.3887, lng:124.9463, notes:'Smell reaches the sala by evening.',
     createdAt:isoMinutesAgo(14), source:'demo'
-  }
+  },
+  {
+    /* A buyer has seen the trees and made an offer. The job is still "requested" —
+       the offer is a record beside it, waiting on the resident, not a new state. */
+    id:'b8', customerId:'c1', providerId:'p8',
+    summary:'Fruit to sell — one mango tree', request:'Mango tree is heavy this year. About 40 kilos, need a buyer.',
+    mode:'sell_fruit',
+    fruit:{ fruitType:'Mango', treeCount:1, estimatedQuantityGrams:40000,
+            treeHeightBand:'about 5 metres, ladder needed',
+            accessDifficulty:'Back yard, gate wide enough for a small truck',
+            readiness:'Ready now, will drop in a week',
+            photos:[],
+            notes:'Fruit is for juice, not export grade.',
+            ownershipConfirmed:true },
+    date:dayLabel(6), time:'10:00 AM', status:'requested',
+    amountCentavos:0, payStatus:'unpaid',
+    barangay:'Poblacion', address:'Blk 4 Lot 12, Rizal St., Poblacion',
+    lat:6.3671, lng:124.9331, notes:'',
+    createdAt:isoMinutesAgo(20 * 60), source:'demo'
+  },
+  {
+    /* A harvest-and-buy request sitting in the fruit provider's inbox with no offer
+     * on it yet — the record that makes the provider's own side of the pilot
+     * reachable. Dated inside the answer window, like the other open requests, so
+     * the demo does not lapse it out of existence before anyone looks. */
+    id:'b10', customerId:'c1', providerId:'p7',
+    summary:'Harvest three mango trees and take the fruit', request:'Three mango trees are too much for us this year. Happy to let the buyer take the fruit if they pick it.',
+    mode:'harvest_and_buy',
+    fruit:{ fruitType:'Mango', treeCount:3, estimatedQuantityGrams:120000,
+            treeHeightBand:'over 8 metres',
+            accessDifficulty:'Fenced yard, two dogs inside — keep them in the house',
+            readiness:'Ready now, dropping fast',
+            photos:[],
+            notes:'Fruit is ripe now, not for export.',
+            ownershipConfirmed:true },
+    date:dayLabel(3), time:'7:00 AM', status:'requested',
+    amountCentavos:0, payStatus:'unpaid',
+    barangay:'Poblacion', address:'Blk 4 Lot 12, Rizal St., Poblacion',
+    lat:6.3671, lng:124.9331, notes:'',
+    createdAt:isoMinutesAgo(9), source:'demo'
+  },
+  {
+    /* Harvest only: the resident keeps the fruit and pays for the work. This is an
+       ordinary booking with an ordinary price, which is the point of the mode. */
+    id:'b9', customerId:'c1', providerId:'p7',
+    summary:'Harvest two small trees', request:'Two small trees need cutting back and harvesting before the rains.',
+    mode:'harvest_only',
+    fruit:{ fruitType:'Mango, Calamansi', treeCount:2, estimatedQuantityGrams:25000,
+            treeHeightBand:'about 4 metres',
+            accessDifficulty:'Open yard, no obstacles',
+            readiness:'Ready now',
+            photos:[],
+            notes:'I will keep all the fruit.',
+            ownershipConfirmed:false },
+    date:dayLabel(5), time:'9:00 AM', status:'upcoming',
+    amountCentavos:176000, payStatus:'pending_site', payMethod:'cash',
+    /* Two trees at the listed ₱800 each, plus the drop nets she charged for. The
+       block is frozen by the same freezePricing the plumber's job goes through. */
+    pricing:{ frozenAt:isoMinutesAgo(11 * 60), commissionRate:0.10, baseCentavos:160000,
+              inclusions:[{ label:'Parts and materials', amountCentavos:16000 }],
+              passThroughCentavos:16000, commissionCentavos:16000, fixedFeeCentavos:0, taxCentavos:0,
+              providerShareCentavos:144000, customerTotalCentavos:176000, platformRevenueCentavos:16000 },
+    barangay:'Poblacion', address:'Blk 4 Lot 12, Rizal St., Poblacion',
+    lat:6.3671, lng:124.9331, notes:'',
+    createdAt:isoMinutesAgo(12 * 60), source:'demo'
+  },
 ];
 
 function bookingById(id){ return BOOKINGS.find(b => b.id === id) || null; }
@@ -1995,7 +2268,10 @@ const LISTINGS = [
   { id:'l8',  providerId:'p4', categoryId:'appliance',  title:'Appliance diagnostic',    basePriceCentavos:30000, durationMin:30,  isActive:true },
   { id:'l9',  providerId:'p4', categoryId:'appliance',  title:'Refrigerator repair',     basePriceCentavos:60000, durationMin:90,  isActive:true },
   { id:'l10', providerId:'p5', categoryId:'tutoring',   title:'Math tutoring, per hour', basePriceCentavos:25000, durationMin:60,  isActive:true },
-  { id:'l11', providerId:'p6', categoryId:'delivery',   title:'Parcel trip, base fare',  basePriceCentavos:6000,  durationMin:20,  isActive:true }
+  { id:'l11', providerId:'p6', categoryId:'delivery',   title:'Parcel trip, base fare',  basePriceCentavos:6000,  durationMin:20,  isActive:true },
+  /* Only the harvest side is a listed price. What the fruit itself is worth is never
+     a listing — that is an offer, made after the buyer has seen the trees. */
+  { id:'l12', providerId:'p7', categoryId:'fruit',      title:'Harvest one fruit tree',  basePriceCentavos:80000, durationMin:120, isActive:true }
 ];
 function listingsOf(providerId) { return LISTINGS.filter(l => l.providerId === providerId); }
 function listingById(id) { return LISTINGS.find(l => l.id === id) || null; }
@@ -2013,6 +2289,11 @@ function defaultListingFor(providerId) { return listingsOf(providerId).find(l =>
 const CONFIG_DEFAULTS = {
   commissionRateDefault: 0.10,
   commissionRateByCategory: {},          /* per-category overrides, set by admin */
+  /* null is the value, not a missing one. The deck validates take rates per
+     category during the pilot and says nothing about a fee on produce, so the
+     platform charges none and the admin screen shows "undecided" rather than a
+     number that would read as policy. */
+  produceCommissionRate: null,
   fixedFeeCentavos: 0,                   /* booking or processing fee, ₱0 at pilot */
   taxRate: 0,                            /* applies to the platform fee only */
   cancellationFeeBeforeAcceptCentavos: 0,
@@ -2372,6 +2653,14 @@ function settlementLines(booking) {
   return lines;
 }
 
+/* Zero is not a transaction. A harvest-only job has a price; a pure fruit sale has
+   none, because the buyer's money never passes through the platform. Every payment
+   entry point asks this first and posts nothing rather than writing a ₱0 line the
+   ledger would reject — and is not a fruit branch: any trade could be free. */
+function hasServiceMoney(booking){
+  return !!(booking && booking.pricing && booking.pricing.customerTotalCentavos > 0);
+}
+
 /* Funds the platform is holding for a job it has not delivered yet. Accepting
    creates the obligation, completing converts it into provider earnings and
    platform revenue, and cancelling or letting it lapse gives it back. Cash work
@@ -2379,6 +2668,7 @@ function settlementLines(booking) {
 function takeHolding(booking) {
   if (!booking.pricing) return null;
   if (isCashJob(booking)) return null;
+  if (!hasServiceMoney(booking)) return null;
   if (ledgerFor(booking.id).some(e => e.eventType === 'payment.authorized')) return null;
   return postEvent('payment.authorized', [
     { account:'escrow_held', direction:'debit', amountCentavos: booking.pricing.customerTotalCentavos },
@@ -2397,6 +2687,8 @@ function returnHolding(booking, note) {
 
 function settleBooking(booking) {
   const p = booking.pricing;
+  /* Nothing was ever held and nothing is owed, so there is no release to record. */
+  if (!hasServiceMoney(booking) && !p.commissionCentavos) return null;
   if (isCashJob(booking)) {
     /* The provider collected the cash on site. The platform never held it, so
        there is no asset to move — only a fee the provider now owes. */
@@ -2762,7 +3054,13 @@ function pushStatusNotification(booking, note) {
 function applyDueTransitions() {
   const applied = [];
   const ttl = CONFIG.acceptTtlMinutes * 60000;
-  BOOKINGS.filter(b => b.status === 'requested' && Date.now() - Date.parse(b.createdAt) > ttl)
+  /* The lapse clock measures how long a request waits for a provider. A fruit
+     request that already carries an open offer was answered — the provider replied
+     with a price instead of a yes — so expiring it here would delete a record the
+     resident is still being asked to act on. An offer expires on its own
+     `validUntil`, which is a different clock and belongs to the offer. */
+  BOOKINGS.filter(b => b.status === 'requested' && Date.now() - Date.parse(b.createdAt) > ttl &&
+                       !openOfferFor(b.id))
     .forEach(b => { attemptTransition(b.id, 'expired', { role:'system' }); applied.push({ id:b.id, moved:'expired' }); });
 
   const grace = CONFIG.autoCompleteHours * 3600000;
@@ -2850,7 +3148,44 @@ const PAY_METHODS = {
 };
 
 function payMethodLabel(booking){ return PAY_METHODS[booking.payMethod] || PAY_METHODS.gcash; }
-function payStatusLabel(booking){ return PAYMENT_LABELS[booking.payStatus] || PAYMENT_LABELS.unpaid; }
+/* The fruit leg of a settled buy job, read off the record the offer left behind.
+   It sits beside the service lines and never inside them: the money the buyer handed
+   over for the crop is not a service fee, not platform revenue, and not something
+   the platform holds — it is the resident's own transaction, recorded so both sides
+   can point at it later (54, 59). */
+function produceRow(b){
+  if (!b || !b.produce) return '';
+  const p = b.produce;
+  const weight = p.quantityGrams ? ' · about ' + kgText(p.quantityGrams) : '';
+  const basis = { per_kg:'by the kilo', per_tree:'per tree', per_lot:'for the whole lot' }[p.basis] || 'as agreed';
+  return `<div class="card produce-card">
+      <div class="row" style="align-items:flex-start; gap:8px;">
+        <span class="produce-ic">${ic('weight', 15)}</span>
+        <div style="min-width:0; flex:1;">
+          <div style="font-size:var(--t-body-sm); font-weight:800; color:var(--ink);">
+            Fruit ${b.produce.direction === 'provider_pays_for_produce' ? 'you were paid' : 'you paid'} ${esc(peso(p.amountCentavos))}
+          </div>
+          <div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:2px; line-height:1.5;">
+            ${esc(basis + weight)} · settled ${esc(p.settledAs === 'on_site' ? 'on site, in person' : p.settledAs)}
+          </div>
+        </div>
+      </div>
+      <p class="produce-note">
+        ${p.feeStatus === 'undecided'
+          ? 'Sukinnect charged nothing on this and the platform never held the money — a rate on produce is an open decision in this pilot, not a settled rule.'
+          : 'Sukinnect took ' + esc(peso(p.platformFeeCentavos)) + ' on the fruit part. The rest passed between you and the other side.'}
+      </p>
+    </div>`;
+}
+
+function payStatusLabel(booking){
+  /* A settled fruit sale is genuinely unpaid as far as the platform is concerned —
+     but "Unpaid" on a job the resident has finished would read as an outstanding
+     debt. Say what the money was, in the same two words a chip can hold. */
+  if (booking.payStatus === 'unpaid' && booking.produce)
+    return FINISHED_STATES.includes(booking.status) ? 'Fruit settled' : 'Fruit on site';
+  return PAYMENT_LABELS[booking.payStatus] || PAYMENT_LABELS.unpaid;
+}
 /* Cash is a settlement route, not a phrase: it is the one method where the
    platform never holds the money, and every rule that branches on it reads this. */
 function isCashJob(booking){ return booking.payMethod === 'cash'; }
@@ -2894,6 +3229,7 @@ function authorizeBooking(booking) {
     return null;                       /* nothing is taken until the work is done */
   }
   if (!booking.pricing) return null;
+  if (!hasServiceMoney(booking)) return null;
   if (paymentsFor(booking.id).some(p => p.type === 'authorization')) return null;
   const held = Gateway.authorize(booking.pricing.customerTotalCentavos);
   if (!held.ok) throw new Error('the payment partner refused to hold this amount');
@@ -2905,6 +3241,9 @@ function captureBooking(booking) {
   const p = booking.pricing;
   if (!p) return null;
   if (isSettled(booking)) return null;
+  /* A job with no service money has nothing to capture and no collection to
+     receipt. Saying so is truer than a payment record for zero. */
+  if (!hasServiceMoney(booking)) return null;
   if (isCashJob(booking)) {
     /* The customer paid the provider on site. The platform never held a peso, so
        there is nothing to capture — only the fee it is now owed. */
@@ -3078,6 +3417,185 @@ function onRefund(booking, actor, opts) {
 
 const DISPUTES = [];
 let disputeSeq = 0;
+
+/* ── offers: the commercial phase, kept off the lifecycle ─────────────────────
+   A negotiation is not a booking state. The job is still "requested" while an
+   offer is out; what changes is a record attached to it. Every revision is kept
+   rather than overwritten, because the question a dispute asks about a negotiated
+   job is "what was offered, and what did they agree to" — and the last number
+   alone cannot answer it. */
+const OFFERS = [];
+let offerSeq = 0;
+const OFFER_STATES = {
+  proposed:   { label:'Offer made',   open:true,  actor:'provider', tone:'active'  },
+  accepted:   { label:'Accepted',     open:false, actor:'customer', tone:'good'    },
+  declined:   { label:'Declined',     open:false, actor:'customer', tone:'alert'   },
+  withdrawn:  { label:'Withdrawn',    open:false, actor:'provider', tone:'neutral' },
+  superseded: { label:'Replaced',     open:false, actor:'provider', tone:'neutral' },
+  expired:    { label:'Expired',      open:false, actor:'system',   tone:'neutral' }
+};
+function offerLabel(code){ const t = OFFER_STATES[code]; return t ? t.label : String(code || ''); }
+function offerIsOpen(o){ return !!(OFFER_STATES[o.status] && OFFER_STATES[o.status].open); }
+function offersFor(bookingId){
+  return OFFERS.filter(o => o.bookingId === bookingId)
+    .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+}
+/* The newest offer, open or not — the one a screen shows as "where this stands". */
+function currentOffer(bookingId){
+  const all = offersFor(bookingId);
+  return all.length ? all[all.length - 1] : null;
+}
+function openOfferFor(bookingId){
+  return offersFor(bookingId).filter(offerIsOpen).pop() || null;
+}
+
+/* The arithmetic of an offer, in centavos, with the two kinds of money kept apart.
+   Nothing here rounds through a float and nothing here invents a fee: the produce
+   commission is read from configuration, and when configuration says it is
+   undecided the fee is zero and the reason is carried with it. */
+function offerTotals(offer){
+  const labour = Math.max(0, Math.round(offer.labourCentavos || 0));
+  const produce = Math.max(0, Math.round(offer.produceCentavos || 0));
+  const rate = CONFIG.commissionRateDefault;
+  const labourFee = Math.round(labour * rate);
+  const produceRate = CONFIG.produceCommissionRate;
+  const produceFee = produceRate === null || produceRate === undefined
+    ? 0 : Math.round(produce * produceRate);
+  return {
+    labourCentavos: labour,
+    produceCentavos: produce,
+    /* what the platform earns — the labour part always, the goods part only if a
+       rate is actually decided */
+    platformFeeCentavos: labourFee + produceFee,
+    produceFeeUndecided: produceRate === null && produce > 0,
+    /* what changes hands. In a buy mode the provider owes the resident for the
+       fruit and the resident owes nothing for labour, so the two legs do not add
+       into one number for one party — the direction says who pays whom. */
+    customerPaysCentavos: labour + produceFee,
+    providerPaysCustomerCentavos: produce - labourFee,
+    totalCentavos: labour + produce
+  };
+}
+function offerDirection(offer){
+  const t = offerTotals(offer);
+  if (offer.mode === 'harvest_only') return 'customer_pays_for_labour';
+  if (t.providerPaysCustomerCentavos > t.customerPaysCentavos) return 'provider_pays_for_produce';
+  return 'customer_pays_for_labour';
+}
+/* One sentence, from the record. Written here so no screen can restate the money
+   in its own words and disagree with the arithmetic above. */
+function describeOffer(offer){
+  const t = offerTotals(offer);
+  const bits = [];
+  if (t.produceCentavos) {
+    const basis = { per_kg:'by the kilo', per_tree:'per tree', per_lot:'for the lot' }[offer.basis] || 'as agreed';
+    bits.push('Fruit ' + pesoShort(t.produceCentavos) + ' ' + basis
+      + (offer.quantityGrams ? ' (about ' + kgText(offer.quantityGrams) + ')' : ''));
+  }
+  if (t.labourCentavos) bits.push('Harvesting ' + peso(t.labourCentavos));
+  if (!t.labourCentavos && !t.produceCentavos) bits.push('No amount proposed yet');
+  bits.push(offer.whoHarvests === 'customer' ? 'you keep the fruit down' : 'the harvester brings it down');
+  return bits.join(' · ');
+}
+
+function makeOffer(bookingId, draft, actor){
+  const b = bookingById(bookingId);
+  if (!b) throw new GuardRejected('that job is no longer here.');
+  if (b.status !== 'requested') throw new GuardRejected('this request is no longer open for an offer.');
+  const produce = Math.max(0, Math.round(draft.produceCentavos || 0));
+  const labour = Math.max(0, Math.round(draft.labourCentavos || 0));
+  if (produce + labour <= 0) throw new GuardRejected('An offer has to name an amount.');
+  const mode = b.mode || 'harvest_only';
+  const behaviour = categoryBehaviour(providerOf(b).serviceId);
+  if (!behaviour.modes.some(m => m.id === mode)) throw new GuardRejected('this job is not a ' + mode + ' transaction.');
+  /* A second offer does not erase the first: the earlier one is marked replaced so
+     the trail still reads in order. */
+  const previous = openOfferFor(bookingId);
+  if (previous) { previous.status = 'superseded'; previous.supersededAt = new Date().toISOString(); }
+  const offer = {
+    id: 'of' + (++offerSeq), bookingId, mode,
+    by: (actor && actor.role) === 'customer' ? 'customer' : 'provider',
+    basis: draft.basis || 'per_lot',
+    quantityGrams: draft.quantityGrams ? Math.round(draft.quantityGrams) : null,
+    unitPriceCentavos: draft.unitPriceCentavos ? Math.round(draft.unitPriceCentavos) : null,
+    produceCentavos: produce, labourCentavos: labour,
+    whoHarvests: draft.whoHarvests || 'provider',
+    collection: draft.collection || '',
+    includes: draft.includes || '',
+    note: (draft.note || '').trim(),
+    validUntil: draft.validUntil || null,
+    revisionOf: previous ? previous.id : null,
+    status: 'proposed', at: new Date().toISOString(),
+    answeredAt: null, source: b.source
+  };
+  OFFERS.push(offer);
+  const t = offerTotals(offer);
+  /* The request is still a request. The offer is what the resident now has to
+     answer, and the thread says so in the same words the card will use. */
+  postMessage(b, 'provider', 'Offer: ' + describeOffer(offer));
+  pushStatusNotification(b, { to:'customer', title:'New offer received',
+    body: providerOf(b).name + ' offered ' + peso(t.totalCentavos) + ' for ' + b.summary + '.' });
+  persist();
+  return offer;
+}
+
+function answerOffer(bookingId, decision, actor){
+  const offer = openOfferFor(bookingId);
+  if (!offer) throw new GuardRejected('there is no open offer on this job.');
+  if ((actor && actor.role) === 'provider') throw new GuardRejected('only the resident can answer an offer.');
+  const b = bookingById(bookingId);
+  if (decision !== 'accept' && decision !== 'decline') throw new GuardRejected('an offer is accepted or declined.');
+  offer.answeredAt = new Date().toISOString();
+  offer.status = decision === 'accept' ? 'accepted' : 'declined';
+  if (decision === 'decline') {
+    postMessage(b, 'customer', 'I am not taking that offer.');
+    persist();
+    return offer;
+  }
+  /* Accepting is the agreement on the money. The labour leg freezes exactly the way
+     any other job's terms do — the same function, the same ledger, the same receipt.
+     The produce leg is recorded beside it and does not enter the platform's books,
+     because the platform never holds that money. */
+  const t = offerTotals(offer);
+  if (t.labourCentavos > 0) {
+    freezePricing(b, computeBreakdown({
+      baseCentavos: t.labourCentavos,
+      categoryId: providerOf(b).serviceId, inclusions: []
+    }));
+  } else {
+    b.pricing = null;
+    b.amountCentavos = 0;
+  }
+  b.produce = t.produceCentavos > 0 ? {
+    direction: offerDirection(offer),
+    amountCentavos: t.produceCentavos,
+    basis: offer.basis,
+    quantityGrams: offer.quantityGrams,
+    settledAs: 'on_site',
+    platformFeeCentavos: CONFIG.produceCommissionRate === null ? 0 : Math.round(t.produceCentavos * CONFIG.produceCommissionRate),
+    feeStatus: CONFIG.produceCommissionRate === null ? 'undecided' : 'charged'
+  } : null;
+  b.offerId = offer.id;
+  b.summary = offer.mode === 'sell_fruit'
+    ? 'Fruit sold — ' + (b.fruit && b.fruit.fruitType ? b.fruit.fruitType : 'from my trees')
+    : b.summary;
+  /* Accepting an offer does not move the lifecycle. The job is still requested
+     until the provider confirms the visit, because confirming is the provider's
+     move to make and the guard on it is theirs to answer — a schedule the resident
+     agreed to alone is not a booking. The card says so plainly. */
+  postMessage(b, 'customer', 'I accept that offer. Please confirm the visit.');
+  persist();
+  return offer;
+}
+
+/* Weight, in the unit the form stores it in. Grams are stored and kilograms are
+   shown, for the same reason centavos are: 1.5 kg written as a float is a value
+   that eventually stops being exactly one and a half. */
+function kgText(grams){
+  const g = Math.round(grams || 0);
+  if (!g) return '';
+  return g >= 1000 ? (g / 1000).toFixed(g % 1000 === 0 ? 0 : 1) + ' kg' : g + ' g';
+}
 /* ── messages are records, not painted bubbles ────────────────────────────────
    A thread belongs to the two people and the job behind it, so both sides read
    the same rows and what you type is stored rather than appended to the screen
@@ -3125,6 +3643,26 @@ const THREAD_LINES = {
   no_show:   'I made the call-out but no one was there.',
   disputed:  'I have raised this with the help desk.'
 };
+
+/* The offer that sits beside b8. Seeded rather than typed into a card, so the
+   resident's answer moves a real record and the arithmetic in offerTotals is the
+   same one the acceptance path will use. 38 kg at ₱55.00 a kilo. */
+function seedFruitOffers(){
+  if (OFFERS.some(o => o.source === 'demo')) return false;
+  if (!BOOKINGS.some(x => x.id === 'b8')) return false;
+  OFFERS.push({
+    id:'of1', bookingId:'b8', mode:'sell_fruit', by:'provider',
+    basis:'per_kg', quantityGrams:38000, unitPriceCentavos:5500,
+    produceCentavos:209000, labourCentavos:0,
+    whoHarvests:'provider', collection:'I load it myself, you just open the gate',
+    includes:'Picking and loading included. Sacks are mine.',
+    note:'Offered after I saw the tree on Tuesday.',
+    validUntil:null, revisionOf:null, status:'proposed',
+    at:isoMinutesAgo(6 * 60), answeredAt:null, source:'demo'
+  });
+  offerSeq = 1;
+  return true;
+}
 
 function seedMessages() {
   if (MESSAGES.length) return false;
@@ -3550,7 +4088,7 @@ function resetDemoData() {
 /* 5 adds payment records and payouts: the money axis of a job has to survive a
    reload exactly like the service axis does. */
 /* 6 adds dispute cases, which carry their own claim amount and outcome. */
-const SCHEMA_VERSION = 9;
+const SCHEMA_VERSION = 11;
 const STORE_KEY = 'sukinnect.snapshot.v1';
 
 const Store = (function () {
@@ -3610,6 +4148,7 @@ const SEED = {
   listings: cloneRecords(LISTINGS),
   notifications: cloneRecords(NOTIFICATIONS),
   disputes: cloneRecords(DISPUTES),
+  offers: cloneRecords(OFFERS),
   payments: cloneRecords(PAYMENTS),
   payouts: cloneRecords(PAYOUTS),
   statusEvents: cloneRecords(STATUS_EVENTS),
@@ -3630,6 +4169,7 @@ function snapshot() {
     listings: LISTINGS,
     notifications: NOTIFICATIONS,
     disputes: DISPUTES,
+    offers: OFFERS,
     payments: PAYMENTS,
     payouts: PAYOUTS,
     statusEvents: STATUS_EVENTS,
@@ -3640,7 +4180,11 @@ function snapshot() {
        15% rate with no record of who set it is not auditable (AGENTS.md 29, 31). */
     configAudit: CONFIG_AUDIT,
     profileData: state.profileData,
-    providerSettings: { availability: state.providerAvailability, emergencyDispatch: state.providerEmergencyDispatch },
+    providerSettings: { availability: state.providerAvailability, emergencyDispatch: state.providerEmergencyDispatch,
+                        /* The profile on screen and the identity that decides which
+                           bookings are "mine" have to come back together, or a reload
+                           leaves Erning's profile showing Ramil's jobs (77). */
+                        identity: CURRENT_PROVIDER_ID },
     providerProfileData: state.providerProfileData
   };
 }
@@ -3663,12 +4207,24 @@ function hydrate() {
   if (Array.isArray(snap.ledger) &&
       snap.ledger.some(e => !e.lines || e.lines.some(l => !ACCOUNTS[l.account])))
     return { restored:false, kind:Store.kind, rejected:'the ledger names an account that does not exist' };
+  /* An offer is a record with a state of its own, so it is held to the same door as
+     a booking: a dump carrying a state OFFER_STATES does not know would restore an
+     answer chip that answers nothing. */
+  if (Array.isArray(snap.offers) &&
+      snap.offers.some(o => !o || !OFFER_STATES[o.status]))
+    return { restored:false, kind:Store.kind, rejected:'an offer carries a state that does not exist' };
+  if (Array.isArray(snap.offers) &&
+      snap.offers.some(o => o.bookingId && !snap.bookings.some(b => b.id === o.bookingId)))
+    return { restored:false, kind:Store.kind, rejected:'an offer belongs to no booking' };
   replaceContents(PROVIDERS, snap.providers);
   replaceContents(BOOKINGS, snap.bookings);
   replaceContents(CUSTOMERS, snap.customers);
   replaceContents(LISTINGS, snap.listings);
   replaceContents(NOTIFICATIONS, snap.notifications);
   replaceContents(DISPUTES, snap.disputes);
+  if (snap.offers) replaceContents(OFFERS, snap.offers);
+  OFFERS.forEach(o => { const num = parseInt(String(o.id).replace(/[^0-9]/g, ''), 10);
+                        if (!Number.isNaN(num) && num > offerSeq) offerSeq = num; });
   DISPUTES.forEach(d => { const n = parseInt(String(d.id).split('-').pop(), 10); if (!Number.isNaN(n) && n > disputeSeq) disputeSeq = n; });
   replaceContents(PAYMENTS, snap.payments);
   replaceContents(PAYOUTS, snap.payouts);
@@ -3687,9 +4243,6 @@ function hydrate() {
   /* The log of every rate change comes back with the rates it describes, so an
      administrator's decision is still on the record after a reload (29, 31). */
   if (snap.configAudit) replaceContents(CONFIG_AUDIT, snap.configAudit);
-  /* The log of those changes has to come back with them, or a restored device
-     shows a rate nobody is able to account for. */
-  if (snap.configAudit) replaceContents(CONFIG_AUDIT, snap.configAudit);
   /* Ledger ids are a sequence, not a timestamp. A restored dump has to raise the
      counter past its own entries or the next event reuses an id already booked. */
   LEDGER.forEach(e => { const n = parseInt(String(e.id).replace(/[^0-9]/g, ''), 10);
@@ -3699,6 +4252,7 @@ function hydrate() {
   if (snap.providerSettings) {
     state.providerAvailability = snap.providerSettings.availability;
     state.providerEmergencyDispatch = !!snap.providerSettings.emergencyDispatch;
+    if (snap.providerSettings.identity) applyProviderIdentity(snap.providerSettings.identity);
   }
   return { restored: true, kind: Store.kind, savedAt: snap.savedAt };
 }
@@ -3712,6 +4266,8 @@ function restoreSeed() {
   replaceContents(NOTIFICATIONS, cloneRecords(SEED.notifications));
   replaceContents(DISPUTES, []);
   disputeSeq = 0;
+  replaceContents(OFFERS, []);
+  offerSeq = 0;
   replaceContents(PAYMENTS, []);
   replaceContents(PAYOUTS, []);
   paymentSeq = 0; payoutSeq = 0;
@@ -3720,6 +4276,9 @@ function restoreSeed() {
   replaceContents(MESSAGES, []);
   messageSeq = 0;
   replaceContents(LEDGER, []);
+  /* Back to the persona the file ships with, or a reset leaves the demo signed in
+     as someone the sample data was not written for. */
+  applyProviderIdentity('p1');
   Object.keys(CONFIG).forEach(k => delete CONFIG[k]);
   Object.assign(CONFIG, cloneRecords(CONFIG_DEFAULTS));
   CONFIG_AUDIT.length = 0;
@@ -3727,6 +4286,7 @@ function restoreSeed() {
   seedStatusHistory();
   seedMessages();
   seedDemoDispute();
+  seedFruitOffers();
   Store.clear();
   return persist();
 }
@@ -3786,6 +4346,9 @@ let state = {
   // whether the decline confirmation step is showing. Not a destination, so it
   // repaints the detail card in place.
   providerResponding: null,
+  /* The price a provider is typing. Like the request draft it lives in state, so a
+     re-render does not lose the number half-way through. */
+  offerDraft: null,
   providerDeclineConfirm: false,
   profileData:{
     name:'Ana Dela Cruz',
@@ -4313,7 +4876,7 @@ function providerFiltersSheet(){
     </div>`;
 }
 
-const SHEET_LABELS = { providerFilters:'Filter providers', bookingRequest:'Book an appointment', raiseCase:'Raise a case', profileSection:'Profile section' };
+const SHEET_LABELS = { providerFilters:'Filter providers', bookingRequest:'Book an appointment', raiseCase:'Raise a case', profileSection:'Profile section', makeOffer:'Make an offer' };
 
 const REQUEST_TIMES = ['8:00 AM','10:00 AM','1:00 PM','3:00 PM','5:00 PM'];
 
@@ -4486,10 +5049,225 @@ function cheapestListing(p) {
   if (!list.length) return p.rateCentavos;
   return list.reduce((min, l) => Math.min(min, l.basePriceCentavos), list[0].basePriceCentavos);
 }
+/* The mode is the first question in a pilot category, because "harvest my tree" and
+   "buy my fruit" are different transactions with different money. A normal category
+   resolves to exactly one mode, so nothing extra is asked of the six trades that
+   shipped before this one and their sheets come out unchanged. */
+function modesFor(p){
+  const beh = categoryBehaviour(p.serviceId);
+  return (beh && beh.modes.length > 1) ? beh.modes : null;
+}
+function modeRail(p, d){
+  const modes = modesFor(p);
+  if (!modes) return '';
+  return `<div class="sheet-group">
+        <div class="sheet-label">What do you want to happen</div>
+        <div class="mode-list" role="radiogroup" aria-label="What kind of transaction this is">
+          ${modes.map(m => `<button type="button" class="mode-opt${d.mode === m.id ? ' on' : ''}" role="radio"
+            aria-checked="${d.mode === m.id}" onclick="pickRequestMode('${m.id}')">
+            <span class="mo-t">${esc(m.label)}</span><span class="mo-s">${esc(m.line)}</span>
+          </button>`).join('')}
+        </div>
+        ${d.mode ? '' : '<div class="mode-hint">Choose one to see what it asks for.</div>'}
+      </div>`;
+}
+function pickRequestMode(id){
+  state.requestDraft.mode = state.requestDraft.mode === id ? null : id;
+  state.requestError = null;
+  render();
+}
+
+/* ---- the fruit description. The category record names the fields; this says how
+   each one is asked. Weight is typed in kilos and stored in grams for the same
+   reason money is stored in centavos — a float that means 1.5 stops meaning it
+   somewhere downstream. Fields marked `more` sit behind the fold so the first
+   screen stays short (51). ---- */
+const FRUIT_FIELD_UI = {
+  fruitType:     { label:'What fruit', placeholder:'Mango, calamansi, banana…', type:'text', group:'main' },
+  treeCount:     { label:'How many trees', placeholder:'1', type:'number', min:1, group:'main' },
+  estimatedQuantityGrams:
+                 { label:'About how much fruit, in kilos', placeholder:'40', type:'number', min:1,
+                   asKg:true, group:'main' },
+  treeHeightBand:{ label:'How tall is it', type:'pick', group:'main',
+                   options:['up to about 3 metres', 'about 5 metres, ladder needed',
+                             'over 8 metres', 'not sure'] },
+  readiness:     { label:'Is it ready now', type:'pick', group:'more',
+                   options:['Ready now', 'Ready within a week', 'Ready later'] },
+  accessDifficulty:{ label:'Getting to the trees', placeholder:'Back yard, gate wide for a small truck',
+                     type:'text', group:'more' },
+  notes:         { label:'Anything else about it', placeholder:'Fruit is for juice, not export grade',
+                     type:'text', group:'more' },
+  photos:        { label:'Photos of the tree', type:'photos', group:'more' },
+  ownershipConfirmed:{ label:'The fruit is mine to sell', type:'bool', group:'main' }
+};
+function fruitDraft(d){
+  if (!d.fruit) d.fruit = {};
+  return d.fruit;
+}
+/* A field name with no UI spec is skipped rather than guessed at, and the mode has
+   to be chosen first — what the description asks for depends on whether this is a
+   harvest or a sale. */
+function fruitFields(p, d){
+  if (!serviceMeta(p.serviceId).pilot || !d.mode) return [];
+  const beh = categoryBehaviour(p.serviceId);
+  return (beh.requestFields || []).filter(k => FRUIT_FIELD_UI[k]);
+}
+function fruitBlock(p, d){
+  const keys = fruitFields(p, d);
+  if (!keys.length) return '';
+  const f = fruitDraft(d);
+  const mode = modesFor(p).find(m => m.id === d.mode) || null;
+  const who = mode && mode.direction === 'customer_sells_produce' ? 'buyer' : 'harvester';
+  const head = 'Tell the ' + who + ' what you have';
+  const main = keys.filter(k => FRUIT_FIELD_UI[k].group === 'main');
+  const more = keys.filter(k => FRUIT_FIELD_UI[k].group !== 'main');
+  return `<div class="sheet-group fruit-group">
+        <div class="sheet-label">${esc(mode ? mode.label + ' — ' + head : head)}</div>
+        ${main.map(k => fruitField(k, f)).join('')}
+        ${more.length ? `<details class="why-fold fruit-more">
+          <summary>Access, timing and photos</summary>
+          <div class="fold-body">${more.map(k => fruitField(k, f)).join('')}</div>
+        </details>` : ''}
+      </div>`;
+}
+function fruitField(key, f){
+  const spec = FRUIT_FIELD_UI[key];
+  const id = 'fruit-' + key;
+  const val = f[key];
+  if (spec.type === 'pick') {
+    return `<div class="sheet-label fruit-sub">${esc(spec.label)}</div>
+      <div class="hscroll req-rail">${spec.options.map(o =>
+        requestPick(val === o, esc(o), "pickFruitField('" + key + "','" + o.replace(/'/g, '') + "')")).join('')}</div>`;
+  }
+  if (spec.type === 'bool') {
+    return `<label class="fruit-check"><input type="checkbox" id="${id}"
+      ${f.ownershipConfirmed ? 'checked' : ''} onchange="toggleFruitBool('ownershipConfirmed', this.checked)">
+      <span>${esc(spec.label)}. If the trees are not yours, say so — the buyer decides whether to go ahead.</span></label>`;
+  }
+  if (spec.type === 'photos') {
+    const names = val || [];
+    return `<div class="sheet-label fruit-sub">${esc(spec.label)}</div>
+      <label class="fruit-photo">${ic('camera', 13)} <span>${names.length ? 'Add another photo' : 'Add a photo'}</span>
+        <input type="file" accept="image/*" id="${id}" onchange="requestPhotos(this)" aria-label="Add a photo of the tree">
+      </label>
+      ${names.length ? `<div class="fruit-names">${names.map((one, i) => `<span class="chip fruit-name">${esc(one.name)}<button type="button" class="fruit-name-x" onclick="dropFruitPhoto(${i})" aria-label="Remove ${esc(one.name)}">${ic('x', 10)}</button></span>`).join('')}</div>` : ''}
+      <div class="mode-hint">This prototype keeps the picture on your device. Nothing is uploaded, so the provider sees the name you gave it, not the photo.</div>`;
+  }
+  if (spec.type === 'number') {
+    const shown = spec.asKg ? (val ? Math.round(val / 1000) : '') : (val || '');
+    return `<label class="sheet-label fruit-sub" for="${id}">${esc(spec.label)}
+      <input class="req-field" id="${id}" type="number" inputmode="numeric" min="${spec.min || 0}"
+        value="${shown}" placeholder="${esc(spec.placeholder || '')}" oninput="fruitInput('${key}', this.value)"></label>`;
+  }
+  return `<label class="sheet-label fruit-sub" for="${id}">${esc(spec.label)}
+    <input class="req-field" id="${id}" value="${esc(val || '')}" placeholder="${esc(spec.placeholder || '')}" oninput="fruitInput('${key}', this.value)"></label>`;
+}
+/* The record the provider reads before deciding. Only the fields the category
+   asks for are kept, and a value nobody typed stays absent rather than becoming an
+   empty string that a later screen has to guess the meaning of. */
+function fruitRecord(d){
+  const out = {};
+  Object.keys(FRUIT_FIELD_UI).forEach(k => {
+    const v = d.fruit ? d.fruit[k] : undefined;
+    if (v === undefined || v === null || v === '') return;
+    out[k] = v;
+  });
+  if (d.fruit && d.fruit.photos) out.photos = d.fruit.photos;
+  return out;
+}
+/* What the pilot refuses to accept, in the resident's words. A sell job without the
+   owner's say-so is how a prototype ends up brokering someone else's crop. */
+function fruitProblem(p, d, fm){
+  if (!serviceMeta(p.serviceId).pilot) return null;
+  if (!fm) return 'Choose what you want to happen first — harvesting and buying are different arrangements.';
+  const f = d.fruit || {};
+  if (!String(f.fruitType || '').trim()) return 'Say what fruit it is, so the right person is asked.';
+  if (!(f.treeCount >= 1)) return 'How many trees? The offer is priced per tree or per lot.';
+  if (fm.offerRequired && !f.ownershipConfirmed)
+    return 'Tick that the fruit is yours to sell. A buyer needs to know they are dealing with the owner.';
+  if (fm.offerRequired && !(f.estimatedQuantityGrams > 0))
+    return 'An approximate weight helps the buyer price it — kilos are enough, and they can reweigh on site.';
+  return null;
+}
+
+function fruitInput(key, value){
+  const f = fruitDraft(state.requestDraft);
+  const spec = FRUIT_FIELD_UI[key];
+  if (spec && spec.asKg) {
+    const kg = parseFloat(value);
+    f[key] = Number.isFinite(kg) && kg > 0 ? Math.round(kg * 1000) : null;
+  } else if (spec && spec.type === 'number') {
+    const num = Math.round(parseFloat(value));
+    f[key] = Number.isFinite(num) && num > 0 ? num : null;
+  } else {
+    f[key] = value;
+  }
+  if (state.requestError) {
+    state.requestError = null;
+    const note = document.getElementById('request-error');
+    if (note) note.remove();
+  }
+}
+function pickFruitField(key, value){
+  const f = fruitDraft(state.requestDraft);
+  f[key] = f[key] === value ? null : value;
+  render();
+}
+function toggleFruitBool(key, checked){
+  fruitDraft(state.requestDraft)[key] = !!checked;
+  if (state.requestError) { state.requestError = null; render(); }
+}
+/* Only the name and size are kept, for the same reason the concierge keeps only a
+   preview: a data URL would put the resident's photograph into the device snapshot,
+   which is exactly the private thing 56 says not to store, and this prototype has
+   nowhere honest to send it. */
+function requestPhotos(el){
+  const files = Array.from(el.files || []);
+  if (!files.length) return;
+  const f = fruitDraft(state.requestDraft);
+  f.photos = (f.photos || []).concat(files.map(x => ({ name: x.name, sizeBytes: x.size })));
+  render();
+}
+function dropFruitPhoto(i){
+  const f = fruitDraft(state.requestDraft);
+  f.photos = (f.photos || []).filter((x, j) => j !== i);
+  render();
+}
+
 function toggleRequestAsap() {
   state.requestDraft.asap = !state.requestDraft.asap;
   render();
 }
+/* Which of the category's transaction modes this booking is, resolved through the
+   metadata rather than a branch on the category id. A record with no mode is an
+   ordinary service job and keeps the ordinary treatment. */
+function bookingModeRecord(b){
+  if (!b || !b.mode) return null;
+  const beh = categoryBehaviour(providerOf(b).serviceId);
+  if (!beh) return null;
+  return beh.modes.find(m => m.id === b.mode) || null;
+}
+/* True while the price of this job still has to be negotiated. Not "it is free" —
+   "nobody has named a number yet", which is a different thing to tell a resident. */
+function priceByOffer(b){
+  if (!b || b.pricing || b.amountCentavos > 0) return false;
+  const m = bookingModeRecord(b);
+  return !!(m && m.offerRequired);
+}
+/* The only number a fee column may show. A settled buy job says "no service fee"
+   rather than the value of the fruit: the produce money was never a service charge,
+   and putting it in this column is how a buyer's payment turns into phantom
+   platform revenue on somebody's report (37, 59). */
+function bookingAmountText(b){
+  if (!priceByOffer(b)) return pesoShort(b.amountCentavos);
+  return b.produce ? 'No service fee' : 'Price by offer';
+}
+/* The same fact inside a sentence, lower-cased where it does not lead. */
+function bookingAmountPhrase(b){
+  if (!priceByOffer(b)) return 'indicative ' + pesoShort(b.amountCentavos);
+  return b.produce ? 'no service fee' : 'price by offer';
+}
+
 function listingRail(p, d) {
   const list = listingsOf(p.id);
   if (list.length < 2) return '';
@@ -4504,6 +5282,10 @@ function listingRail(p, d) {
 function termsCard(p, d, pay, cash) {
   const b = draftBreakdown(p, d);
   const listing = draftListing(p, d);
+  /* A buy mode has no listing price to show. Quoting one here would be the exact
+     thing 24 forbids - an estimate dressed up as the number on the card. */
+  const fm = (categoryBehaviour(p.serviceId).modes || []).find(m => m.id === d.mode);
+  if (fm && fm.offerRequired) return offerTermsCard(p, d, pay, cash, fm);
   return `<div class="row"><span>${esc(listing ? listing.title : p.service)}</span><b>${peso(b.baseCentavos)}</b></div>
           <div class="row"><span>Sukinnect service fee</span><b class="mut">nothing added to your total</b></div>
           <div class="row" style="border-top:1px solid var(--line); padding-top:8px; margin-top:4px;">
@@ -4521,6 +5303,26 @@ function termsCard(p, d, pay, cash) {
             the amount on their card.
           </p>`;
 }
+/* What the resident agrees to when the price is still to be negotiated: the visit,
+   not a number. The buyer's money is hers to offer after she has seen the trees,
+   and the words here come from the mode record rather than from this screen. */
+function offerTermsCard(p, d, pay, cash, fm){
+  return `<div class="row"><span>${esc(fm.label)}</span><b class="mut">price by offer</b></div>
+          <div class="row"><span>${esc(p.name.split(' ')[0])} comes to see the trees</span><b class="mut">no charge to look</b></div>
+          <div class="row" style="border-top:1px solid var(--line); padding-top:8px; margin-top:4px;">
+            <span style="font-weight:800; color:var(--ink);">You agree to</span>
+            <b style="font-size:var(--t-body-sm);">a visit and an offer</b>
+          </div>
+          <p>
+            You are asking ${esc(p.name.split(' ')[0])} to look at your fruit and name a price.
+            Nothing is charged now, and the amount they offer is not agreed until you accept it.
+            ${fm.direction === 'customer_sells_produce'
+              ? 'The buyer pays you for the fruit. That money is between you and them — Sukinnect does not take a fee on the fruit itself in this pilot.'
+              : 'If the fruit is not worth taking, the buyer can still say so. Nobody is obliged to buy.'}
+            If a price is offered and you decide against it, you can decline and nothing has been booked.
+          </p>`;
+}
+
 /* The tracking view reads the events the machine wrote, so a step cannot look
    finished unless something actually finished it. */
 function timelineRows(b) {
@@ -4549,7 +5351,7 @@ function cancelRow(b) {
   const late = b.status !== 'requested';
   return `<div style="margin-top:12px;">
         ${cancelWarning(b)}
-        <button type="button" class="btn sm ${late ? 'secondary' : 'danger'}" style="width:100%; margin-top:10px; border-radius:10px;" onclick="cancelBookingRequest('${b.id}')">
+        <button type="button" class="btn sm ${late || currentOffer(b.id) ? 'secondary' : 'danger'}" style="width:100%; margin-top:10px; border-radius:10px;" onclick="cancelBookingRequest('${b.id}')">
           ${late ? 'Cancel this booking' : 'Withdraw this request'}
         </button>
       </div>`;
@@ -4699,25 +5501,139 @@ function rebookProvider(providerId) {
 /* One card for every state, built from the events. The old screen had two
    hand-typed journey lists and nothing at all for the states between them, so a
    booking could be shown as "upcoming" with no idea what happens next. */
+/* ---- the offer, as the resident sees it ----
+   One card, whichever way the job stands: an open offer has to be answered, an
+   answered one is the agreement the record keeps. The words about the money come
+   from describeOffer and offerTotals so this screen cannot restate them and
+   disagree with the arithmetic (24, 54). */
+function offerMoneyLines(offer){
+  const t = offerTotals(offer);
+  const rows = [];
+  if (t.produceCentavos) {
+    const basis = { per_kg:'priced by the kilo', per_tree:'priced per tree', per_lot:'priced for the whole lot' }[offer.basis] || 'price as agreed';
+    rows.push({ k:'The fruit itself', v: pesoShort(t.produceCentavos),
+                s: basis + (offer.quantityGrams ? ' · about ' + kgText(offer.quantityGrams) : '') });
+  }
+  if (t.labourCentavos) {
+    rows.push({ k:'Harvesting', v: pesoShort(t.labourCentavos), s:'what the pickers are paid' });
+  }
+  if (t.produceFeeUndecided) {
+    rows.push({ k:'Sukinnect fee on the fruit', v:'not set', mut:true,
+                s:'This pilot does not charge on produce yet. The rate is an open decision, not a hidden one.' });
+  } else if (t.platformFeeCentavos) {
+    rows.push({ k:'Sukinnect fee', v: peso(t.platformFeeCentavos), mut:true, s:'taken from the service part, never added to your total' });
+  }
+  return rows;
+}
+/* The line under an offer's heading. describeOffer carries the money because the
+   thread needs it in one sentence; here the same number is three lines below in the
+   money table, so this states the terms instead of saying it twice. */
+function offerTermsLine(offer){
+  const bits = [];
+  if (offer.quantityGrams) bits.push('about ' + kgText(offer.quantityGrams));
+  /* The basis is stated once, in the money table beside the figure it prices. */
+  bits.push(offer.whoHarvests === 'customer' ? 'you bring the fruit down' : 'they bring it down');
+  return bits.join(' · ');
+}
+function offerCard(b){
+  const cur = currentOffer(b.id);
+  if (!cur) return '';
+  const open = offerIsOpen(cur) && b.status === 'requested';
+  const t = offerTotals(cur);
+  const who = esc(providerOf(b).name.split(' ')[0]);
+  const tone = (OFFER_STATES[cur.status] || {}).tone;
+  return `<div class="card offer-card" data-offer="${cur.id}">
+      <div class="row" style="align-items:center; gap:8px;">
+        <div style="min-width:0; flex:1;">
+          <div style="font-size:var(--t-body-sm); font-weight:800; color:var(--ink);">
+            Offer from ${who}
+          </div>
+          <div style="font-size:var(--t-caption); color:var(--mist); margin-top:1px;">${esc(offerTermsLine(cur))}</div>
+        </div>
+        ${open ? '' : `<span class="chip tone-${tone}" style="flex-shrink:0;">${esc(offerLabel(cur.status))}</span>`}
+      </div>
+
+      <div class="offer-lines">
+        ${offerMoneyLines(cur).map(r => `<div class="offer-line">
+          <span class="ol-k${r.mut ? ' mut' : ''}">${esc(r.k)}</span>
+          <span class="ol-v${r.mut ? ' mut' : ''}">${esc(r.v)}</span>
+          ${r.s ? `<span class="ol-s">${esc(r.s)}</span>` : ''}
+        </div>`).join('')}
+      </div>
+
+      ${cur.includes || cur.collection ? `<div class="offer-facts">
+        ${cur.includes ? `<div>${ic('check', 12)} ${esc(cur.includes)}</div>` : ''}
+        ${cur.collection ? `<div>${ic('map-pin', 12)} ${esc(cur.collection)}</div>` : ''}
+        <div>${ic('user', 12)} ${cur.whoHarvests === 'customer' ? 'You bring the fruit down' : who + ' brings it down'}</div>
+      </div>` : ''}
+
+      ${cur.note ? `<p class="offer-note">“${esc(cur.note)}”</p>` : ''}
+      <div class="offer-when">${agoText(cur.at)}${cur.validUntil ? ' · valid until ' + esc(cur.validUntil) : ''}</div>
+
+      ${open ? `<div class="offer-answer">
+        <button type="button" class="btn sm secondary" onclick="answerResidentOffer('${b.id}','decline')">Decline</button>
+        <button type="button" class="btn sm" onclick="answerResidentOffer('${b.id}','accept')">Accept ${esc(peso(t.produceCentavos + t.labourCentavos))}</button>
+      </div>
+      <div class="mode-hint">Accepting agrees the price, not the visit — ${who} still has to confirm it. Declining leaves your request open, and you can try another match or withdraw it below.</div>`
+        : cur.status === 'accepted' ? `<div class="mode-hint">You agreed this price ${agoText(cur.answeredAt || cur.at)}. ${esc(providerOf(b).name.split(' ')[0])} has to confirm the visit.</div>`
+        : `<div class="mode-hint">This offer was ${esc(offerLabel(cur.status).toLowerCase())}. Your request is unchanged.</div>`}
+    </div>`;
+}
+
+function answerResidentOffer(id, decision){
+  const b = bookingById(id);
+  if (!b) return;
+  try {
+    const o = answerOffer(id, decision, { role:'customer', id: CURRENT_CUSTOMER_ID });
+    const first = providerOf(b).name.split(' ')[0];
+    if (decision === 'accept'){
+      const t = offerTotals(o);
+      showToast(t.produceCentavos && t.produceFeeUndecided
+        ? 'Offer accepted — the fruit money settles between you and ' + first + ', outside the platform'
+        : 'Offer accepted — waiting for ' + first + ' to confirm the visit');
+    } else {
+      showToast('Offer declined — your request is still open');
+    }
+    render();
+  } catch (err) {
+    /* A refused move is told in the machine's words, not swallowed (49). */
+    showToast(err.message, 'error');
+  }
+}
+
 function statusCard(b) {
   const steps = timelineRows(b);
   const first = esc(providerOf(b).name.split(' ')[0]);
 
   if (b.status === 'requested') {
+    /* A provider who has made an offer has answered, whether or not that offer is
+       still waiting. Reading only the open one left this screen saying "waiting for
+       Maricel to accept" underneath an offer the resident had already accepted —
+       the same record telling two stories at once (77). */
+    const offered = currentOffer(b.id);
+    const waitingOn = !offered ? 'Waiting for ' + first + ' to accept'
+      : offerIsOpen(offered) ? 'Your answer is needed on ' + first + "'s offer"
+      : offered.status === 'accepted' ? 'Waiting for ' + first + ' to confirm the visit'
+      : 'You declined ' + first + "'s offer";
     return `<div style="background:var(--background); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:14px;">
           <div class="row" style="margin-bottom:10px;">
             <span style="font-size:var(--t-caption); font-weight:800; color:var(--ink-soft); display:flex; align-items:center; gap:5px;">
-              <span class="wait-dot"></span> Waiting for ${first} to accept
+              ${offered && offerIsOpen(offered) ? ic('inbox', 12) + ' ' + waitingOn
+                         : '<span class="wait-dot"></span> ' + waitingOn}
             </span>
-            <span style="font-size:var(--t-caption); color:var(--mist);">No charge yet</span>
+            <span style="font-size:var(--t-caption); color:var(--mist); white-space:nowrap;">No charge yet</span>
           </div>
           <div style="display:flex; flex-direction:column; gap:6px; font-size:var(--t-caption); color:var(--ink-soft);">
             ${steps}
           </div>
           <p style="font-size:var(--t-caption); color:var(--mist); line-height:1.5; margin:10px 0 0;">
-            Nothing is charged yet, and no time is fixed until the provider accepts. They can also
-            decline &mdash; you can then try another match. A request left unanswered for
-            ${CONFIG.acceptTtlMinutes} minutes lapses on its own.
+            ${!offered
+              ? `Nothing is charged yet, and no time is fixed until the provider accepts. They can also decline &mdash; you can then try another match. A request left unanswered for ${CONFIG.acceptTtlMinutes} minutes lapses on its own.`
+              : (offered && offerIsOpen(offered))
+                ? `Nothing is charged for the look. The price below is not agreed until you answer it, and nothing is booked until ${first} confirms the visit.`
+                : offered.status === 'accepted'
+                  ? `You agreed a price with ${first}. Nothing has been charged and no time is fixed until they confirm the visit.`
+                  : `You turned down ${first}'s price. Your request is still open — you can ask for a different one, or withdraw it below.`}
           </p>
           ${cancelRow(b)}
         </div>`;
@@ -4772,7 +5688,7 @@ function statusCard(b) {
 function bookingRequestSheet(){
   const p = state.selectedProvider;
   if(!p) return '';
-  const d = state.requestDraft || { service:'', dayIdx:0, timeIdx:1, addrIdx:0, payIdx:0 };
+  const d = state.requestDraft || { service:'', dayIdx:0, timeIdx:1, addrIdx:0, payIdx:0, mode:null, fruit:null };
   const days = requestDays();
   const pays = requestPaymentOptions();
   const addrs = state.profileData.savedAddresses || [state.profileData.address];
@@ -4783,7 +5699,13 @@ function bookingRequestSheet(){
     <div class="sheet-head">
       <div>
         <h2 class="sheet-title">Book ${esc(p.name.split(' ')[0])}</h2>
-        <div class="sheet-sub">Check every term below &mdash; nothing is confirmed until the provider accepts.</div>
+        <div class="sheet-sub">${(function(){
+          const beh = categoryBehaviour(p.serviceId);
+          const fm = (beh.modes || []).find(m => m.id === d.mode);
+          return fm && fm.offerRequired
+            ? 'Ask them to look and name a price &mdash; nothing is agreed until you answer their offer.'
+            : 'Check every term below &mdash; nothing is confirmed until the provider accepts.';
+        })()}</div>
       </div>
       <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close">${ic("x",15)}</button>
     </div>
@@ -4799,6 +5721,8 @@ function bookingRequestSheet(){
         </div>
       </div>
 
+      ${modeRail(p, d)}
+      ${fruitBlock(p, d)}
       <div class="sheet-group">
         <div class="sheet-label">What needs doing</div>
         <textarea id="request-service" class="req-field" rows="3" oninput="requestInput(this)" placeholder="e.g. Kitchen faucet drips all night and the joint under the sink is wet.">${esc(d.service)}</textarea>
@@ -4873,6 +5797,15 @@ function submitBookingRequest(){
     if(live){ live.focus(); live.setSelectionRange(live.value.length, live.value.length); }
     return;
   }
+  const fm = (categoryBehaviour(p.serviceId).modes || []).find(m => m.id === d.mode);
+  const fruitErr = fruitProblem(p, d, fm);
+  if (fruitErr){
+    state.requestError = fruitErr;
+    render();
+    const first = document.getElementById('fruit-fruitType');
+    if (first) first.focus();
+    return;
+  }
   state.requestError = null;
   state.requestSubmitting = true;
   render();
@@ -4897,15 +5830,20 @@ function submitBookingRequest(){
       time: d.asap ? 'Next available' : REQUEST_TIMES[d.timeIdx],
       eta: d.asap ? p.availabilityMin + ' mins' : null,
       status: 'requested',
-      /* Indicative, not agreed. The terms freeze when the provider accepts. */
-      amountCentavos: indicative.customerTotalCentavos,
+      /* Indicative, not agreed. The terms freeze when the provider accepts — unless
+         the mode says a price still has to be offered, in which case nothing is
+         priced at all until somebody answers an offer. */
+      amountCentavos: (fm && fm.offerRequired) ? 0 : indicative.customerTotalCentavos,
+      mode: serviceMeta(p.serviceId).pilot && fm ? fm.id : null,
+      fruit: serviceMeta(p.serviceId).pilot && fm ? fruitRecord(d) : null,
+      produce: null,
       barangay: me.barangay,
       lat: me.lat,
       lng: me.lng,
       notes: '',
       createdAt: new Date().toISOString(),
       source: 'live',
-      payStatus: pay.code === 'cash' ? 'pending_site' : 'unpaid',
+      payStatus: (fm && fm.offerRequired) ? 'unpaid' : (pay.code === 'cash' ? 'pending_site' : 'unpaid'),
       payMethod: pay.code,
       address: (state.profileData.savedAddresses || [state.profileData.address])[d.addrIdx]
     };
@@ -4950,6 +5888,7 @@ function cancelBookingRequest(id){
 function sheetHTML(){
   if(state.sheet === 'providerFilters') return providerFiltersSheet();
   if(state.sheet === 'bookingRequest') return bookingRequestSheet();
+  if(state.sheet === 'makeOffer') return makeOfferSheet();
   if(state.sheet === 'raiseCase') return raiseCaseSheet();
   if(state.sheet === 'profileSection') return profileSectionSheet();
   return '';
@@ -5198,6 +6137,9 @@ function loginHTML(){
         </div>
         ` : ''}
 
+        ${state.role === 'provider' && !isRegister ? `<div class="auth-hint">
+          Two demo pros to sign in as: <b>ramil@demo.ph</b> for plumbing, or
+          <b>erning@demo.ph</b> for the Fruit Harvest &amp; Buy pilot. Same app, different work.</div>` : ''}
         ${isRegister ? '' : `<button type="button" class="auth-forgot" onclick="showToast('Password reset is not part of this prototype.')">Forgot password?</button>`}
 
         <div class="auth-field" style="margin-bottom:0;">
@@ -5308,7 +6250,16 @@ function submitAuth(){
     btn.disabled = false;
     btn.classList.remove('btn-loading');
     btn.innerHTML = original;
-    showToast(isRegister ? 'Prototype build - this account is not stored' : 'Signed in to the demo environment');
+    /* The provider route is the one role where the typed address decides who you
+       become, because the demo has more than one pro to be. */
+    if (state.role === 'provider' && !isRegister) {
+      const who = signInAsProvider(value('login-email'));
+      showToast(who === 'p1'
+        ? 'Signed in to the demo environment'
+        : 'Signed in as ' + state.providerProfileData.name + ' — the fruit pilot');
+    } else {
+      showToast(isRegister ? 'Prototype build - this account is not stored' : 'Signed in to the demo environment');
+    }
     state.view='app';
     clearProfileModals();
     if(state.role==='resident') state.tab='home';
@@ -5417,10 +6368,24 @@ function adminTabHTML(){
 function residentHome(){
   /* The job that is happening now. A provider on the way, or a case being read, is
      precisely when a resident opens the app looking for this card, and the old
-     finder knew three statuses out of the machine's ten. */
+     finder knew three statuses out of the machine's ten.
+     Sorted by how far along the work is before it is sorted by time: a request that
+     is still waiting on a provider is not "in motion", and ordering on recency alone
+     let a brand-new request push the plumber who is standing in the kitchen off the
+     top of the screen — which is the one thing this card exists to avoid. */
+  const IN_MOTION = { ongoing:0, arrived:0, en_route:0, upcoming:1, disputed:2 };
   const live = bookingsForResident().filter(b => !FINISHED_STATES.includes(b.status))
-    .sort((a, b) => Date.parse(b.statusChangedAt || b.createdAt) - Date.parse(a.statusChangedAt || a.createdAt));
+    .sort((a, b) => ((IN_MOTION[a.status] === undefined ? 9 : IN_MOTION[a.status])
+                   - (IN_MOTION[b.status] === undefined ? 9 : IN_MOTION[b.status]))
+                   || (Date.parse(b.statusChangedAt || b.createdAt) - Date.parse(a.statusChangedAt || a.createdAt)));
   const active = live[0] || null;
+  /* An offer is the one thing in this app the resident can act on and nobody else
+     can, so it gets a place on the first screen. It sits under the live job rather
+     than above it: a plumber on the way outranks a price to read. */
+  const awaiting = bookingsForResident()
+    .map(x => ({ b: x, o: openOfferFor(x.id) }))
+    .filter(x => x.o && x.b.status === 'requested' && x.b.id !== (active && active.id))
+    .sort((x, y) => Date.parse(y.o.at) - Date.parse(x.o.at))[0] || null;
   const hasUnread = NOTIFICATIONS.some(n=>n.unread);
   /* The path a visit walks and the one line about what is happening both come from
      BOOKING_STATES now. They were typed a second time here — which is how a
@@ -5500,6 +6465,24 @@ function residentHome(){
       </div>
     </div>` : ''}
 
+    ${awaiting ? `
+    <div class="section-label">Needs your answer</div>
+    <div class="card" data-booking="${awaiting.b.id}" style="cursor:pointer; padding:12px 13px;">
+      <div class="row" style="align-items:flex-start; gap:10px;">
+        ${photoAvatar(providerOf(awaiting.b), 36)}
+        <div style="min-width:0; flex:1;">
+          <div style="font-weight:700; font-size:var(--t-body-sm);">${esc(awaiting.b.summary)}</div>
+          <div style="font-size:var(--t-caption); color:var(--mist); margin-top:1px; line-height:1.45;">
+            ${esc(describeOffer(awaiting.o))}
+          </div>
+        </div>
+        <span class="chip tone-active" style="flex-shrink:0;">Answer</span>
+      </div>
+      <div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:8px;">
+        Made ${agoText(awaiting.o.at)} by ${esc(providerOf(awaiting.b).name.split(' ')[0])} &middot; tap to read it
+      </div>
+    </div>` : ''}
+
     <div class="section-label" style="margin-top:16px;">Browse by service</div>
     <div class="catgrid">
       ${SERVICES.map(s=>{ const m = serviceMeta(s.id); return `<button type="button" class="cat" data-service="${s.id}"><span class="art" style="background-color:${m.bg}; color:${m.fg};">${catArt(s.id)}</span><span>${esc(s.label)}</span></button>`; }).join('')}
@@ -5522,7 +6505,7 @@ function residentHome(){
           <div style="font-size:var(--t-body); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(p.name.split(' ')[0])}</div>
           <div style="font-size:var(--t-caption); color:var(--mist); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(p.service)}</div>
           <div style="display:flex; align-items:center; justify-content:center; gap:3px; margin-top:4px;">${stars(p.rating,11)}<span style="font-size:var(--t-caption); color:var(--ink-soft); font-weight:700;">${p.rating}</span></div>
-          <div style="font-size:var(--t-caption); margin-top:5px; font-weight:800; color:var(--deep);">${last ? 'last ' + pesoShort(last.amountCentavos) : 'from ' + pesoShort(cheapestListing(p))}</div>
+          <div style="font-size:var(--t-caption); margin-top:5px; font-weight:800; color:var(--deep);">${last ? 'last ' + bookingAmountText(last) : 'from ' + pesoShort(cheapestListing(p))}</div>
         </div>`).join('')}
     </div>
   </div>`;
@@ -5888,6 +6871,8 @@ function residentProviderDetail(){
       </div>
     </div>
 
+    ${capabilityCard(p)}
+
     <div style="display:flex; gap:10px; margin-bottom:12px;">
       <button class="btn secondary" style="flex:1; background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px; font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.04);" data-chat-provider-id="${p.id}">
         ${ic("chat",14)} Chat Inquiries
@@ -6163,7 +7148,10 @@ function residentBookingDetail(){
            their "View Profile" button, pushing the one thing that answers "what is
            happening to me, and what do I do" below the fold of the card, and its
            own action (withdraw a request) below that. -->
+      ${offerCard(b)}
       ${statusCard(b)}
+      ${fruitCard(b, 'resident')}
+      ${produceRow(b)}
 
       <div style="background:var(--background); border:1px solid var(--line); border-radius:14px; padding:12px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;">
         <div style="display:flex; gap:12px; align-items:center;">
@@ -6195,9 +7183,11 @@ function residentBookingDetail(){
           <b style="font-size:var(--t-body-sm); color:var(--ink);">${esc(payStatusLabel(b))}</b>
         </div>
         <div style="margin-top:4px;">
-          <span style="color:var(--mist); font-size:var(--t-caption);">${b.status === 'requested' ? 'Indicative fee:' : 'Total Fee:'}</span><br>
-          <b style="font-size:var(--t-body-sm); color:var(--deep);">${pesoShort(b.amountCentavos)}</b>
-          ${b.status === 'requested' ? '<div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">Settled after the provider confirms the scope</div>' : ''}
+          <span style="color:var(--mist); font-size:var(--t-caption);">${priceByOffer(b) ? 'Price:' : (b.status === 'requested' ? 'Indicative fee:' : 'Total Fee:')}</span><br>
+          <b style="font-size:var(--t-body-sm); color:var(--deep);">${bookingAmountText(b)}</b>
+          ${priceByOffer(b)
+            ? '<div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">A buyer names the price after seeing the fruit</div>'
+            : (b.status === 'requested' ? '<div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">Settled after the provider confirms the scope</div>' : '')}
         </div>
         <div style="margin-top:4px;">
           <span style="color:var(--mist); font-size:var(--t-caption);">Rating:</span><br>
@@ -6271,7 +7261,7 @@ function residentBookings(){
           </div>
 
           <div style="font-size:var(--t-body-sm); font-weight:700; color:var(--ink); margin-top:6px;">
-            ${pesoShort(b.amountCentavos)}${b.myRating ? ` · you rated ${b.myRating}/5 ${ic("star",11,"filled")}` : ''}
+            ${bookingAmountText(b)}${b.myRating ? ` · you rated ${b.myRating}/5 ${ic("star",11,"filled")}` : ''}
           </div>
         </div>
       `;
@@ -6391,8 +7381,8 @@ const row = (id, title, detail) => settingsRow('residentProfileSection', id, tit
 
 function adminDashboard(){
   const ap = state.adminProfileData;
-  const k = adminCounts();
-  const rates = marketplaceRates();
+  const k = adminCounts();
+  const rates = marketplaceRates();
   const work = opsWorkload(k);
   return `
   <div class="topbar">
@@ -6918,27 +7908,318 @@ const row = (id, title, detail) => settingsRow('adminAccountSection', id, title,
    offered "Accepted" or "Under review" as though reading a status were an
    action (40, 85). */
 const JOB_VERBS = {
-  upcoming:'Accept this request', en_route:'On the way', arrived:'I have arrived',
+  upcoming:'Accept this request', en_route:'I am on the way', arrived:'I have arrived',
   ongoing:'Start the work', completed:'Mark complete', no_show:'No one is here',
   cancelled:'Decline this request', disputed:'Something went wrong with this job'
 };
 
+/* ---- what a provider may do with a job, in the order they should see it ----
+   The machine owns the lifecycle; this only decides which of its moves the screen
+   offers and what the button is called. In a negotiated mode "Accept" would freeze
+   a price the provider never named, so the offer comes first and the acceptance
+   comes back only once the resident has answered it. */
+function providerJobMoves(b){
+  const machine = nextActionFor(b, 'provider');
+  const mode = bookingModeRecord(b);
+  /* Exactly what jobActionBar used to drop: the decline, because this bar is for
+     moving the job forward. `disputed` stays — it is the provider's door to the
+     help desk, and filtering it out here closed that door on every live job. */
+  if (!mode || !mode.offerRequired || b.status !== 'requested')
+    return machine.filter(to => to !== 'cancelled').map(to => ({ kind:'move', to, label: JOB_VERBS[to] || label(to) }));
+
+  const me = providerOf(b);
+  const open = openOfferFor(b.id);
+  const cur = currentOffer(b.id);
+  const decline = machine.filter(to => to === 'cancelled').map(to => ({ kind:'move', to, label: JOB_VERBS[to] || label(to) }));
+  /* Capability is what the provider declared for this category. A job outside it is
+     refused by the person who would do it, not by a rule the platform invented —
+     so the screen says what is missing and leaves the decision theirs. */
+  if (!providerCanMode(me, mode.id)) return [{
+    kind:'note',
+    text: 'This is a ' + mode.label.toLowerCase() + ' job. Your profile does not say you '
+      + (mode.id === 'harvest_and_buy' ? 'harvest and buy' : mode.id === 'buyer' ? 'buy fruit' : 'harvest')
+      + ' — you can still decline it, or accept and arrange the part you cannot do yourself.'
+  }].concat(decline);
+  if (open) return [{ kind:'note', text:'Your offer is with ' + esc(customerOf(b).name.split(' ')[0]) + '. Nothing is booked until they answer it.' }]
+    .concat(decline);
+  if (cur && cur.status === 'accepted')
+    return machine.filter(to => to === 'upcoming')
+      .map(() => ({ kind:'move', to:'upcoming', label:'Confirm the visit' }))
+      .concat(decline.length ? [{ kind:'move', to:'cancelled', label:'Withdraw my offer' }] : []);
+  if (cur && cur.status === 'declined')
+    return [{ kind:'offer', label:'Make a new offer' }, { kind:'note',
+      text: esc(customerOf(b).name.split(' ')[0]) + ' turned down your last price. You can offer again or let them find another buyer.' }]
+      .concat(decline);
+  return [{ kind:'offer', label:'Make an offer' }].concat(decline);
+}
+
+/* ---- the offer sheet ----
+   The provider names the money. Nothing here suggests what fruit is worth: the
+   fields are blank until they fill them, and the totals are computed from what they
+   type, in centavos and whole grams, the same way the acceptance path will read
+   them (37, "do not invent fruit market prices"). */
+function offerDraft(bookingId){
+  if (!state.offerDraft || state.offerDraft.bookingId !== bookingId) {
+    const b = bookingById(bookingId);
+    const f = (b && b.fruit) || {};
+    state.offerDraft = {
+      bookingId, basis:'per_kg',
+      qtyKg: f.estimatedQuantityGrams ? String(Math.round(f.estimatedQuantityGrams / 1000)) : '',
+      trees: f.treeCount ? String(f.treeCount) : '',
+      unitPesos:'', labourPesos:'', whoHarvests:'provider',
+      collection:'', includes:'', note:''
+    };
+  }
+  return state.offerDraft;
+}
+function offerDraftUnits(d){
+  const qty = Math.round(parseFloat(d.qtyKg) * 1000);
+  if (d.basis === 'per_kg') return Number.isFinite(qty) && qty > 0 ? qty : null;
+  if (d.basis === 'per_tree') { const t = Math.round(parseFloat(d.trees)); return t > 0 ? t : null; }
+  return 1;   /* a lot is one thing, priced once */
+}
+function offerDraftTotals(d){
+  const units = offerDraftUnits(d);
+  const unit = Math.round((parseFloat(d.unitPesos) || 0) * 100);
+  const produce = d.basis === 'per_lot' ? unit
+    : (units && unit ? Math.round(units * unit / (d.basis === 'per_kg' ? 1000 : 1)) : 0);
+  const labour = Math.round((parseFloat(d.labourPesos) || 0) * 100);
+  return offerTotals({ basis:d.basis, quantityGrams: d.basis === 'per_kg' ? units : null,
+                       unitPriceCentavos: unit, produceCentavos: produce, labourCentavos: labour,
+                       whoHarvests: d.whoHarvests, mode: (bookingById(d.bookingId) || {}).mode });
+}
+/* The money summary, in one function so the sheet and the live update while typing
+   cannot show two different versions of the same total (65, 79). */
+function offerTotalsBlock(b, d, t){
+  return `<div class="req-terms">
+        <div class="row"><span>${d.basis === 'per_lot' ? 'The lot' : d.basis === 'per_tree' ? 'Trees priced' : 'Fruit you expect'}</span>
+            <b>${esc(pesoShort(t.produceCentavos))}</b></div>
+          ${t.labourCentavos ? `<div class="row"><span>Harvesting</span><b>${esc(pesoShort(t.labourCentavos))}</b></div>` : ''}
+          <div class="row" style="border-top:1px solid var(--line); padding-top:8px; margin-top:4px;">
+            <span style="font-weight:800; color:var(--ink);">${t.produceCentavos && !t.labourCentavos ? 'You pay them' : 'Total of the job'}</span>
+            <b style="font-size:var(--t-body-lg);">${esc(pesoShort(t.produceCentavos + t.labourCentavos))}</b>
+          </div>
+          ${t.produceCentavos ? `<div class="row"><span class="mut">Sukinnect fee on the fruit</span>
+            <b class="mut">${t.produceFeeUndecided ? 'not set in this pilot' : esc(pesoShort(t.produceFeeCentavos || 0))}</b></div>` : ''}
+          <div class="row"><span class="mut">Sukinnect fee on the harvesting</span>
+            <b class="mut">${t.labourCentavos ? 'taken from your share' : 'nothing yet'}</b></div>
+          <p>
+            ${t.produceCentavos && !t.labourCentavos
+              ? 'This is a purchase, not a service fee: the fruit money goes from you to ' + esc(customerOf(b).name.split(' ')[0]) + ' on site, and the platform does not hold it.'
+              : 'The harvesting part is a service fee and follows the normal rules. The fruit part settles between you, on site.'}
+            ${t.produceFeeUndecided ? ' A rate on produce has not been decided for this pilot, so none is charged on it.' : ''}
+          </p>
+        </div>`;
+}
+
+function makeOfferSheet(){
+  const d = state.offerDraft;
+  const b = d ? bookingById(d.bookingId) : null;
+  if (!b) return '';
+  const mode = bookingModeRecord(b) || {};
+  const f = b.fruit || {};
+  const t = offerDraftTotals(d);
+  const priced = t.produceCentavos + t.labourCentavos > 0;
+  const unitLabel = { per_kg:'per kilo', per_tree:'per tree', per_lot:'for the whole lot' }[d.basis];
+  return `
+    <div class="sheet-grab"></div>
+    <div class="sheet-head">
+      <div>
+        <h2 class="sheet-title">Offer on ${esc(b.summary)}</h2>
+        <div class="sheet-sub">${mode.label ? esc(mode.label) + ' · ' : ''}${esc(customerOf(b).name)} sees this as your price. Nothing is booked until they accept.</div>
+      </div>
+      <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close">${ic("x",15)}</button>
+    </div>
+    <div class="sheet-body">
+      ${f.fruitType ? `<div class="sheet-group"><div class="sheet-label">What they described</div>
+        <div class="offer-facts">
+          <div>${ic('leaf', 12)} ${esc(f.fruitType)} · ${esc(String(f.treeCount || '?'))} tree${f.treeCount === 1 ? '' : 's'}</div>
+          ${f.estimatedQuantityGrams ? `<div>${ic('weight', 12)} about ${esc(kgText(f.estimatedQuantityGrams))} expected</div>` : ''}
+          ${f.treeHeightBand ? `<div>${ic('chart', 12)} ${esc(f.treeHeightBand)}</div>` : ''}
+          ${f.accessDifficulty ? `<div>${ic('map-pin', 12)} ${esc(f.accessDifficulty)}</div>` : ''}
+        </div></div>` : ''}
+
+      <div class="sheet-group">
+        <div class="sheet-label">How you price the fruit</div>
+        <div class="hscroll req-rail">
+          ${[['per_kg','By the kilo'],['per_tree','Per tree'],['per_lot','Whole lot']].map(o =>
+            requestPick(d.basis === o[0], o[1], "pickOfferBasis('" + o[0] + "')")).join('')}
+        </div>
+      </div>
+
+      <div class="sheet-group offer-fields">
+        ${d.basis === 'per_kg' ? `<label class="sheet-label" for="offer-qty">Kilos you expect to take
+          <input class="req-field" id="offer-qty" type="number" inputmode="decimal" value="${esc(d.qtyKg)}" placeholder="38" oninput="offerInput('qtyKg', this.value)"></label>` : ''}
+        ${d.basis === 'per_tree' ? `<label class="sheet-label" for="offer-trees">Trees you are pricing
+          <input class="req-field" id="offer-trees" type="number" inputmode="numeric" value="${esc(d.trees)}" placeholder="2" oninput="offerInput('trees', this.value)"></label>` : ''}
+        <label class="sheet-label" for="offer-unit">Your price ${unitLabel === 'for the whole lot' ? 'for the lot' : unitLabel}
+          <input class="req-field" id="offer-unit" type="number" inputmode="decimal" value="${esc(d.unitPesos)}" placeholder="${d.basis === 'per_lot' ? '1500' : '55'}" oninput="offerInput('unitPesos', this.value)"></label>
+        ${mode.id !== 'sell_fruit' ? `<label class="sheet-label" for="offer-labour">What the harvesting costs
+          <input class="req-field" id="offer-labour" type="number" inputmode="decimal" value="${esc(d.labourPesos)}" placeholder="800" oninput="offerInput('labourPesos', this.value)"></label>` : ''}
+      </div>
+
+      <div class="sheet-group" id="offer-totals">${offerTotalsBlock(b, d, t)}</div>
+
+      <div class="sheet-group">
+        <div class="sheet-label">Who brings the fruit down</div>
+        <div class="hscroll req-rail">
+          ${[['provider','I harvest it'],['customer','The owner harvests it']].map(o =>
+            requestPick(d.whoHarvests === o[0], o[1], "pickOfferWho('" + o[0] + "')")).join('')}
+        </div>
+      </div>
+
+      <div class="sheet-group offer-fields">
+        <label class="sheet-label" for="offer-includes">What your price covers
+          <input class="req-field" id="offer-includes" value="${esc(d.includes)}" placeholder="Picking and loading included" oninput="offerInput('includes', this.value)"></label>
+        <label class="sheet-label" for="offer-collection">Getting to the trees
+          <input class="req-field" id="offer-collection" value="${esc(d.collection)}" placeholder="I load it myself, open the side gate" oninput="offerInput('collection', this.value)"></label>
+        <label class="sheet-label" for="offer-note">A line to them
+          <input class="req-field" id="offer-note" value="${esc(d.note)}" placeholder="I can come Thursday morning" oninput="offerInput('note', this.value)"></label>
+      </div>
+
+    </div>
+    <div class="sheet-foot">
+      <button type="button" class="btn secondary" style="flex:1; border-radius:12px;" onclick="closeSheet()">Cancel</button>
+      <button type="button" class="btn" id="send-offer-btn" style="flex:1.5; border-radius:12px;" ${priced ? '' : 'disabled'} onclick="submitOffer()">
+        ${priced ? 'Send offer ' + ic('arrow-right',12) : 'Name a price first'}
+      </button>
+    </div>`;
+}
+function pickOfferBasis(v){ offerDraft(state.offerDraft.bookingId).basis = v; render(); }
+function pickOfferWho(v){ offerDraft(state.offerDraft.bookingId).whoHarvests = v; render(); }
+function offerInput(key, value){ state.offerDraft[key] = value; updateOfferTotals(); }
+/* The totals move as the price is typed, and only the totals block is rewritten —
+   replacing the whole sheet would tear the field out from under the caret the
+   provider is still using (79). A pick, which is a decision rather than typing,
+   does re-render the sheet. */
+function updateOfferTotals(){
+  const host = document.getElementById('offer-totals');
+  const btn = document.getElementById('send-offer-btn');
+  if (!host || !btn) return;
+  const d = state.offerDraft, b = bookingById(d.bookingId);
+  const t = offerDraftTotals(d);
+  host.innerHTML = offerTotalsBlock(b, d, t);
+  btn.disabled = !(t.produceCentavos + t.labourCentavos > 0);
+}
+function openMakeOffer(bookingId){
+  offerDraft(bookingId);
+  state.sheet = 'makeOffer';
+  render();
+}
+function submitOffer(){
+  const d = state.offerDraft;
+  if (!d) return;
+  const b = bookingById(d.bookingId);
+  if (!b) return;
+  const units = offerDraftUnits(d);
+  const unit = Math.round((parseFloat(d.unitPesos) || 0) * 100);
+  const produce = d.basis === 'per_lot' ? unit
+    : (units && unit ? Math.round(units * unit / (d.basis === 'per_kg' ? 1000 : 1)) : 0);
+  const labour = Math.round((parseFloat(d.labourPesos) || 0) * 100);
+  try {
+    makeOffer(b.id, {
+      basis: d.basis,
+      quantityGrams: d.basis === 'per_kg' ? units : (b.fruit && b.fruit.estimatedQuantityGrams) || null,
+      unitPriceCentavos: unit,
+      produceCentavos: produce, labourCentavos: labour,
+      whoHarvests: d.whoHarvests, collection: d.collection, includes: d.includes, note: d.note
+    }, { role:'provider', id: CURRENT_PROVIDER_ID, name: providerOf(b).name });
+    state.sheet = null;
+    state.offerDraft = null;
+    showToast('Offer sent - ' + customerOf(b).name.split(' ')[0] + ' can accept or decline it');
+    render();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+/* What the provider has declared about their own work in this category, and what
+   the platform therefore does not know. Shown on the profile the resident reads,
+   because "harvester" without a limit is the sentence that gets someone hurt. */
+/* What the resident described about the trees. Both sides read the same record: the
+   provider cannot decide on a job they cannot see, and the resident should be able
+   to check that what was stored is what she said. The wording says who said it,
+   because nobody from Sukinnect has stood under a tree (63, 86). */
+function fruitCard(b, side){
+  const f = b && b.fruit;
+  if (!f) return '';
+  const mode = bookingModeRecord(b);
+  const rows = [];
+  if (f.fruitType) rows.push(['Fruit', f.fruitType]);
+  if (f.treeCount) rows.push(['Trees', String(f.treeCount)]);
+  if (f.estimatedQuantityGrams) rows.push([side === 'provider' ? 'They estimate' : 'You estimated', kgText(f.estimatedQuantityGrams) + ' of fruit']);
+  if (f.treeHeightBand) rows.push(['Height', f.treeHeightBand]);
+  if (f.readiness) rows.push(['Ready', f.readiness]);
+  if (f.accessDifficulty) rows.push(['Access', f.accessDifficulty]);
+  const photos = f.photos || [];
+  const tall = side === 'provider' && /over 8|ladder/i.test(f.treeHeightBand || '');
+  return `<div class="card fruit-card">
+      <div class="row" style="align-items:flex-start; gap:10px;">
+        <span class="produce-ic">${ic('leaf', 15)}</span>
+        <div style="min-width:0; flex:1;">
+          <b class="card-title">${mode ? esc(mode.label) : 'The trees'}</b>
+          <div class="fruit-said">${side === 'provider' ? 'Described by the client. No one from Sukinnect has seen the trees.' : 'What you told them about the trees.'}</div>
+        </div>
+      </div>
+      ${rows.length ? `<div class="cap-rows">${rows.map(r => `<div><span>${esc(r[0])}</span><b>${esc(r[1])}</b></div>`).join('')}</div>` : ''}
+      ${f.notes ? `<p class="cap-note">${esc(f.notes)}</p>` : ''}
+      ${photos.length ? `<div class="fruit-names">${photos.map(ph => `<span class="chip fruit-name">${esc(ph.name)}</span>`).join('')}</div>
+        <div class="fruit-said">The photos are on the client's device — this prototype does not upload them.</div>` : ''}
+      ${f.ownershipConfirmed
+        ? `<div class="fruit-own">${ic('check-circle', 12)} ${side === 'provider' ? 'The client says the fruit is theirs to sell.' : 'You confirmed the fruit is yours to sell.'}</div>`
+        : `<div class="fruit-own warn">${ic('alert-triangle', 12)} ${side === 'provider' ? 'Ownership was not confirmed on this request. Ask before anyone starts.' : 'You did not confirm the fruit is yours. Say so if it belongs to a neighbour or the land.'}</div>`}
+      ${tall ? `<div class="fruit-tall">${ic('alert-triangle', 12)} This is ladder work or higher. Take it only if you have the gear and the line for it — declining, or pricing the part you can do safely, is a normal answer.</div>` : ''}
+    </div>`;
+}
+
+function capabilityCard(p){
+  const cap = fruitCapability(p);
+  if (!cap) return '';
+  return `<div class="card card-quiet">
+      <div class="row" style="align-items:center; gap:8px;">
+        <b class="card-title" style="flex:1;">What ${esc(p.name.split(' ')[0])} says they can do</b>
+        <span class="chip tone-neutral">${esc(capabilityLabel(p))}</span>
+      </div>
+      <div class="cap-rows">
+        ${cap.specialties && cap.specialties.length ? `<div><span>Fruit</span><b>${esc(cap.specialties.join(', '))}</b></div>` : ''}
+        ${cap.equipment && cap.equipment.length ? `<div><span>Equipment they bring</span><b>${esc(cap.equipment.join('; '))}</b></div>` : ''}
+        ${cap.maxPracticalHeightBand ? `<div><span>Working height</span><b>${esc(cap.maxPracticalHeightBand)}</b></div>` : ''}
+        ${cap.transport ? `<div><span>Getting it away</span><b>${esc(cap.transport)}</b></div>` : ''}
+        ${cap.buysBy && cap.buysBy.length ? `<div><span>Buys by</span><b>${esc(cap.buysBy.join(', '))}</b></div>` : ''}
+        ${cap.accessNotes ? `<div><span>Access</span><b>${esc(cap.accessNotes)}</b></div>` : ''}
+      </div>
+      <p class="cap-note">Declared by ${esc(p.name.split(' ')[0])} and shown as such. Sukinnect has not inspected any of it, and this is not a safety certificate — ask what you need to know before you let anyone near a tree.</p>
+    </div>`;
+}
+
 function jobActionBar(b) {
-  const options = nextActionFor(b, 'provider');
-  if (!options.length) return '';
+  const moves = providerJobMoves(b);
+  if (!moves.length) return '';
   /* Every verb acts on its own, except a case: that needs a reason from a
-     person before the status may move, so it opens the form instead. */
-  const act = (to) => to === 'disputed' ? `openCaseSheet('${b.id}')` : `providerJobAction('${b.id}','${to}')`;
+     person before the status may move, so it opens the form instead. An offer is
+     not a move at all — it opens the sheet where the price gets named. */
+  const act = (m) => m.kind === 'offer' ? `openMakeOffer('${b.id}')`
+    : m.to === 'disputed' ? `openCaseSheet('${b.id}')` : `providerJobAction('${b.id}','${m.to}')`;
+  let firstButton = true;
+  const buttons = moves.filter(m => m.kind !== 'note').map(m => {
+    const html = `
+          <button type="button" class="btn ${firstButton ? '' : 'secondary'}" style="width:100%; border-radius:12px;" onclick="${act(m)}">${esc(m.label)}</button>`;
+    firstButton = false;
+    return html;
+  }).join('');
+  const notes = moves.filter(m => m.kind === 'note').map(m => `
+        <div class="move-note">${m.text}</div>`).join('');
   return `<div class="card card-lg">
       <div style="font-size:var(--t-caption); font-weight:800; color:var(--ink-soft); margin-bottom:10px;">Your next step</div>
       <div style="display:flex; flex-direction:column; gap:8px;">
-        ${options.filter(o => o !== 'cancelled').map((o, i) => `
-          <button type="button" class="btn ${i === 0 ? '' : 'secondary'}" style="width:100%; border-radius:12px;" onclick="${act(o)}">${JOB_VERBS[o] || label(o)}</button>`).join('')}
+        ${buttons}${notes}
       </div>
       <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">
         ${b.status === 'ongoing'
           ? 'Marking it complete is what releases the payment and starts the record. The client still confirms it.'
-          : 'The client sees each step the moment you press it.'}
+          : b.status === 'requested' && bookingModeRecord(b) && bookingModeRecord(b).offerRequired
+            ? 'Nothing is booked until a price is agreed. The client sees each step the moment you press it.'
+            : 'The client sees each step the moment you press it.'}
       </div>
     </div>`;
 }
@@ -7158,15 +8439,25 @@ function realRequestCard() {
       </div>
       <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5;">
         <b style="color:var(--ink);">${esc(b.summary)}</b> · ${esc(customerOf(b).name)} · Brgy. ${esc(b.barangay)}<br>
-        asked for ${esc(b.date)}, ${esc(b.time)} · indicative ${pesoShort(b.amountCentavos)}
+        asked for ${esc(b.date)}, ${esc(b.time)} · ${bookingAmountPhrase(b)}
       </div>
-      <div style="display:flex; gap:8px; margin-top:12px;">
-        <button type="button" class="btn sm" style="flex:1.4; border-radius:10px;" onclick="answerRequest('${b.id}','accept')">Accept</button>
-        <button type="button" class="btn sm secondary" style="flex:1; border-radius:10px;" onclick="openProviderBooking('${b.id}')">See the job</button>
-      </div>
-      <div style="font-size:var(--t-caption); color:var(--mist); margin-top:9px; line-height:1.5;">
-        If nobody answers in ${CONFIG.acceptTtlMinutes} minutes the request lapses and the resident is told to try another match.
-      </div>
+      ${(function(){
+        const moves = providerJobMoves(b);
+        const first = moves.filter(m => m.kind !== 'note')[0];
+        const press = !first ? '' : first.kind === 'offer'
+          ? `<button type="button" class="btn sm" style="flex:1.4; border-radius:10px;" onclick="openMakeOffer('${b.id}')">${esc(first.label)}</button>`
+          : `<button type="button" class="btn sm" style="flex:1.4; border-radius:10px;" onclick="answerRequest('${b.id}','accept')">Accept</button>`;
+        return `<div style="display:flex; gap:8px; margin-top:12px;">
+          ${press}
+          <button type="button" class="btn sm secondary" style="flex:1; border-radius:10px;" onclick="openProviderBooking('${b.id}')">See the job</button>
+        </div>
+        ${moves.filter(m => m.kind === 'note').map(m => `<div class="move-note">${m.text}</div>`).join('')}
+        <div style="font-size:var(--t-caption); color:var(--mist); margin-top:9px; line-height:1.5;">
+          ${currentOffer(b.id)
+            ? 'You have already answered this one with a price. The resident has to take it or leave it.'
+            : `If nobody answers in ${CONFIG.acceptTtlMinutes} minutes the request lapses and the resident is told to try another match.`}
+        </div>`;
+      })()}
     </div>`;
 }
 function commitListingDraft() {
@@ -7225,7 +8516,7 @@ function providerDashboard(){
             <span style="display:block; font-size:var(--t-body-sm); font-weight:700;">${esc(b.summary)}</span>
             <span style="display:block; font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${esc(customerOf(b).name)} · Brgy. ${esc(b.barangay)} · received ${agoText(b.createdAt)}</span>
           </span>
-          <span style="font-size:var(--t-caption); font-weight:800;">${pesoShort(b.amountCentavos)}</span>
+          <span style="font-size:var(--t-caption); font-weight:800;">${bookingAmountText(b)}</span>
           <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',13)}</span>
         </button>`).join('')}
     </div>` : ''}
@@ -7483,11 +8774,17 @@ function requestActionCard(b){
         <div><span style="color:var(--mist); font-size:var(--t-caption);">Received</span><br><b>${agoText(b.createdAt)}</b></div>
         <div><span style="color:var(--mist); font-size:var(--t-caption);">Requested for</span><br><b>${esc(b.date)}, ${esc(b.time)}</b></div>
         <div><span style="color:var(--mist); font-size:var(--t-caption);">Client is in</span><br><b>Brgy. ${esc(b.barangay)}</b></div>
-        <div><span style="color:var(--mist); font-size:var(--t-caption);">Indicative fee</span><br><b>${pesoShort(b.amountCentavos)}</b></div>
+        <div><span style="color:var(--mist); font-size:var(--t-caption);">${priceByOffer(b) ? 'Offer' : 'Indicative fee'}</span><br><b>${bookingAmountText(b)}</b></div>
       </div>
-      <div style="font-size:var(--t-caption); color:var(--mist); margin-top:7px;">Confirm the scope and final price with the client before you start.</div>
+      <div style="font-size:var(--t-caption); color:var(--mist); margin-top:7px;">
+        ${bookingModeRecord(b) && bookingModeRecord(b).offerRequired
+          ? 'This one is priced by offer: come to the trees, name a price, and the resident decides. Accepting now would book a number you never chose.'
+          : 'Confirm the scope and final price with the client before you start.'}
+      </div>
       <div style="display:flex; gap:8px; margin-top:12px;">
-        <button type="button" class="btn" style="flex:1.4; border-radius:10px;" id="accept-request-btn" ${busy ? 'disabled' : ''}>${busyAction === 'accept' ? `<span class="spinner"></span> Accepting&hellip;` : 'Accept request'}</button>
+        ${priceByOffer(b) && !currentOffer(b.id)
+          ? `<button type="button" class="btn" style="flex:1.4; border-radius:10px;" onclick="openMakeOffer('${b.id}')">Make an offer</button>`
+          : `<button type="button" class="btn" style="flex:1.4; border-radius:10px;" id="accept-request-btn" ${busy ? 'disabled' : ''}>${busyAction === 'accept' ? `<span class="spinner"></span> Accepting&hellip;` : currentOffer(b.id) && currentOffer(b.id).status === 'accepted' ? 'Confirm the visit' : 'Accept request'}</button>`}
         <button type="button" class="btn secondary" style="flex:1; border-radius:10px;" id="decline-request-btn" ${busy ? 'disabled' : ''}>Decline</button>
       </div>
     </div>`;
@@ -7518,7 +8815,7 @@ function providerBookings(){
           <span class="chip" style="font-size:var(--t-caption); text-transform:uppercase; background:${statusColors(b.status).bg}; color:${statusColors(b.status).fg};">${esc(label(b.status))}</span>
         </div>
         ${b.status === 'requested' ? `<div style="font-size:var(--t-caption); font-weight:800; color:var(--deep); display:flex; align-items:center; gap:5px; margin-top:4px;"><span class="wait-dot"></span> Needs your answer</div>` : ''}
-        <div style="font-size:var(--t-body-sm); font-weight:700; color:var(--ink); margin-top:6px;">${pesoShort(b.amountCentavos)}${b.status === 'requested' ? `<span style="font-size:var(--t-caption); font-weight:600; color:var(--mist);"> indicative</span>` : ''}</div>
+        <div style="font-size:var(--t-body-sm); font-weight:700; color:var(--ink); margin-top:6px;">${bookingAmountText(b)}${b.status === 'requested' && !priceByOffer(b) ? `<span style="font-size:var(--t-caption); font-weight:600; color:var(--mist);"> indicative</span>` : ''}</div>
       </div>
     `).join('')}
   </div>`;
@@ -7542,12 +8839,16 @@ function providerBookingDetail(){
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:var(--t-body-sm); line-height:1.45;">
         <div><div style="color:var(--mist);">Status</div><b style="text-transform:capitalize;">${label(booking.status)}</b></div>
         <div><div style="color:var(--mist);">${isOpen ? 'Requested slot' : 'Schedule'}</div><b>${esc(booking.date)}, ${esc(booking.time)}</b></div>
-        <div><div style="color:var(--mist);">${isOpen ? 'Indicative fee' : 'Service fee'}</div><b>${pesoShort(booking.amountCentavos)}</b></div>
+        <div><div style="color:var(--mist);">${priceByOffer(booking) ? 'Offer' : (isOpen ? 'Indicative fee' : 'Service fee')}</div><b>${bookingAmountText(booking)}</b></div>
         <div><div style="color:var(--mist);">Client phone</div><b ${onJob ? '' : 'style="font-weight:600; color:var(--ink-soft);"'}>${onJob ? esc(customerOf(booking).phone) : 'Withheld'}</b></div>
       </div>
-      ${isOpen ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:12px; padding-top:10px; border-top:1px solid var(--line);">The client was shown your starting rate. They have not been charged and no time is fixed until you accept.</div>` : ''}
+      ${isOpen ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:12px; padding-top:10px; border-top:1px solid var(--line);">${priceByOffer(booking)
+        ? 'They were shown no rate, because this job is priced by offer. Nothing is agreed until you name a price and they accept it.'
+        : 'The client was shown your starting rate. They have not been charged and no time is fixed until you accept.'}</div>` : ''}
       ${booking.cancelReason ? `<div style="font-size:var(--t-caption); color:var(--error-ink); margin-top:10px;">${esc(booking.cancelReason)}.</div>` : ''}
     </div>
+
+    ${fruitCard(booking, 'provider')}
 
     <div class="card">
       <div style="font-size:var(--t-body-sm); font-weight:800; margin-bottom:8px;">Client location</div>
@@ -7601,7 +8902,7 @@ function providerProfileHub(){
   const pp = state.providerProfileData;
 const row = (id, title, detail) => settingsRow('providerProfileSection', id, title, detail);
   const modal = state.providerProfileModal;
-  return `<div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><button onclick="state.tab='dashboard'; render();" class="back-btn" aria-label="Back">${ic("chevron-left",18)}</button><h1>Provider Profile</h1></div></div><div class="pad" style="background:var(--cloud);"><div class="card" style="text-align:center">${photoAvatar('self', 56)}<div style="font-size:var(--t-lead); font-weight:800; margin-top:10px;">${pp.name}</div><div style="font-size:var(--t-caption); color:var(--mist); margin-top:3px;">${pp.service} - Brgy. ${pp.barangay}</div><div style="display:flex; justify-content:center; gap:6px; margin-top:10px;"><span class="chip">ID Verified</span><span class="chip">Top Rated</span></div><button class="btn sm secondary" style="margin-top:10px;" onclick="providerProfileAction('edit')">Edit Professional Profile</button></div><div class="card"><div class="row"><b class="card-title">Professional status</b><span class="chip">Active</span></div><div style="font-size:var(--t-caption); line-height:1.8; margin-top:8px;">Availability: <b style="color:var(--success-ink);">${state.providerAvailability}</b><br>Trust Score: <button class="auth-switch" style="font-size:var(--t-body);" onclick="openProfileSection('provider','reputation','Reputation','Ratings, jobs and completion history')">${providerOf({providerId:CURRENT_PROVIDER_ID}).trustScore} / 100</button><br>Credentials: <b style="color:var(--success-ink);">All Valid</b></div></div><div class="card"><div class="row" style="margin-bottom:9px;"><b class="card-title">Contact and service details</b><button class="btn sm secondary" onclick="providerProfileAction('edit')">Edit</button></div><div style="font-size:var(--t-caption); line-height:1.8;">Email: <b>${pp.email}</b><br>Phone: <b>${pp.phone}</b><br>Rate: <b>${rateLabel(pp.rateCentavos, pp.rateUnit)}</b><br>Service radius: <b>${pp.serviceRadius}</b><br>Working hours: <b>${pp.workingHours}</b><br>Emergency dispatch: <b>${state.providerEmergencyDispatch ? 'Enabled' : 'Disabled'}</b><br>Payout account: <b>GCash (0918***4321)</b></div></div><div class="section-label">Service settings</div>${row('services','Services Offered', listingsOf(CURRENT_PROVIDER_ID).filter(l=>l.isActive).map(l=>l.title).join(', ') || 'Nothing listed yet')}${row('pricing','Pricing & Rates',rateLabel(pp.rateCentavos, pp.rateUnit))}${row('area','Service Area',pp.serviceRadius)}${row('hours','Working Hours',pp.workingHours)}${row('dispatch','Emergency Dispatch',state.providerEmergencyDispatch?'Enabled':'Disabled')}<div class="section-label">Professional</div>${row('credentials','Credentials & Verification','ID verified - credential status')}${row('reputation','Reputation & Trust Score', providerOf({providerId:CURRENT_PROVIDER_ID}).trustScore + ' / 100 · ' + providerOf({providerId:CURRENT_PROVIDER_ID}).rating + ' rating')}${row('portfolio','Work Portfolio','Service photos and examples')}${row('preview','Preview Public Profile','See what Residents see')}<div class="section-label">Financial</div>${row('payout','Payout & Earnings','GCash (0918***4321)') }<div class="section-label">Account</div>${row('security','Password & Sign-in','PIN enabled - 2FA enabled')}${row('notifications','Notification Preferences','Service and security alerts')}<button class="btn" style="width:100%; margin-top:12px; background:var(--surface); color:var(--error-ink); border:1px solid var(--alert); box-shadow:none;" onclick="providerProfileAction('logout')">Log Out</button></div>${modal ? `<div class="modal-layer"><div class="card modal-card"  ><div class="row"><b>${modal==='edit'?'Edit service profile':modal==='logout'?'Log out?':modal==='payout'?'Payout account':modal==='dispatch'?'Enable emergency dispatch?':modal==='add_service'?((state.listingDraft&&state.listingDraft.id)?'Edit service':'NEW SERVICE'):modal==='portfolio_add'?'Add work':'Update'}</b><button aria-label="Close" onclick="state.providerProfileModal=null; render();" style="border:0; background:transparent; font-size:var(--t-title);">&times;</button></div>${modal==='edit'?`<label class="form-label">Email (read-only)<input value="${pp.email}" readonly class="form-input-readonly"></label><label class="form-label-8">Phone Number<input id="provider-profile-phone" value="${pp.phone}" class="form-input"></label><label class="form-label-8">Service Rate (peso per unit)<input id="provider-profile-rate" type="number" min="0" step="1" inputmode="numeric" value="${toPesos(pp.rateCentavos)}" class="form-input"></label><label class="form-label-8">Service Radius<input id="provider-profile-radius" value="${pp.serviceRadius}" class="form-input"></label><label class="form-label-8">Working Hours<input id="provider-profile-hours" value="${pp.workingHours}" class="form-input"></label><button class="btn btn-block"   onclick="saveProviderProfessionalProfile()">Save Changes</button>`:modal==='dispatch'?`<div style="font-size:var(--t-caption); margin-top:12px;">You may receive urgent service requests during selected emergency hours.</div><button class="btn btn-block"   onclick="state.providerEmergencyDispatch=!state.providerEmergencyDispatch; state.providerProfileModal=null; render();">Enable</button>`:modal==='payout'?`<div style="font-size:var(--t-caption); margin-top:12px;">Current: GCash (0918***4321)<br><br>For security, confirm your password or PIN before changing payout account.</div><button class="btn btn-block"   onclick="state.providerProfileModal='saved'; render();">Continue</button>`:modal==='logout'?`<div style="font-size:var(--t-caption); margin-top:12px;">Are you sure you want to log out of your Sukinnect provider account?</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm secondary" style="flex:1;" onclick="state.providerProfileModal=null; render();">Cancel</button><button class="btn sm danger" style="flex:1;" onclick="signOut()">Log Out</button></div>`:modal==='add_service'?`<label class="form-label">Service name<input id="listing-title" class="form-input" style="margin-top:6px;" placeholder="e.g. Water heater inspection" value="${esc((state.listingDraft||{}).title||'')}"></label><label class="form-label">Price in pesos<input id="listing-price" type="number" min="100" step="1" inputmode="numeric" class="form-input" style="margin-top:6px;" value="${(state.listingDraft||{}).pricePesos||''}"></label><label class="form-label">Typical duration, minutes<input id="listing-mins" type="number" min="5" step="5" inputmode="numeric" class="form-input" style="margin-top:6px;" value="${(state.listingDraft||{}).durationMin||45}"></label>${state.profileError?`<div class="inline-error" role="alert">${esc(state.profileError)}</div>`:''}<button class="btn btn-block" onclick="commitListingDraft()">Save service</button>`:modal==='portfolio_add'?`<input aria-label="Which service this work was for" placeholder="Service" style="width:100%; min-height:var(--tap); padding:9px; margin-top:12px;"><textarea aria-label="Describe this piece of work" placeholder="Description" style="width:100%; min-height:70px; margin-top:8px; padding:9px;"></textarea><button class="btn btn-block"   onclick="state.providerProfileModal='saved'; render();">Save Work</button>`:`<div style="font-size:var(--t-caption); color:var(--success-ink); margin-top:12px;">Changes saved successfully.</div><button class="btn btn-block"   onclick="state.providerProfileModal=null; render();">Close</button>`}</div></div>`:''}`;
+  return `<div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><button onclick="state.tab='dashboard'; render();" class="back-btn" aria-label="Back">${ic("chevron-left",18)}</button><h1>Provider Profile</h1></div></div><div class="pad" style="background:var(--cloud);"><div class="card" style="text-align:center">${photoAvatar('self', 56)}<div style="font-size:var(--t-lead); font-weight:800; margin-top:10px;">${pp.name}</div><div style="font-size:var(--t-caption); color:var(--mist); margin-top:3px;">${pp.service} - Brgy. ${pp.barangay}</div><div style="display:flex; justify-content:center; gap:6px; margin-top:10px;"><span class="chip">ID Verified</span><span class="chip">Top Rated</span></div><button class="btn sm secondary" style="margin-top:10px;" onclick="providerProfileAction('edit')">Edit Professional Profile</button></div><div class="card"><div class="row"><b class="card-title">Professional status</b><span class="chip">Active</span></div><div style="font-size:var(--t-caption); line-height:1.8; margin-top:8px;">Availability: <b style="color:var(--success-ink);">${state.providerAvailability}</b><br>Trust Score: <button class="auth-switch" style="font-size:var(--t-body);" onclick="openProfileSection('provider','reputation','Reputation','Ratings, jobs and completion history')">${providerOf({providerId:CURRENT_PROVIDER_ID}).trustScore} / 100</button><br>Credentials: <b style="color:var(--success-ink);">All Valid</b></div></div><div class="card"><div class="row" style="margin-bottom:9px;"><b class="card-title">Contact and service details</b><button class="btn sm secondary" onclick="providerProfileAction('edit')">Edit</button></div><div style="font-size:var(--t-caption); line-height:1.8;">Email: <b>${pp.email}</b><br>Phone: <b>${pp.phone}</b><br>Rate: <b>${rateLabel(pp.rateCentavos, pp.rateUnit)}</b><br>Service radius: <b>${pp.serviceRadius}</b><br>Working hours: <b>${pp.workingHours}</b><br>Emergency dispatch: <b>${state.providerEmergencyDispatch ? 'Enabled' : 'Disabled'}</b><br>Payout account: <b>GCash (0918***4321)</b></div></div>${capabilityCard(providerOf({providerId:CURRENT_PROVIDER_ID}))}<div class="section-label">Service settings</div>${row('services','Services Offered', listingsOf(CURRENT_PROVIDER_ID).filter(l=>l.isActive).map(l=>l.title).join(', ') || 'Nothing listed yet')}${row('pricing','Pricing & Rates',rateLabel(pp.rateCentavos, pp.rateUnit))}${row('area','Service Area',pp.serviceRadius)}${row('hours','Working Hours',pp.workingHours)}${row('dispatch','Emergency Dispatch',state.providerEmergencyDispatch?'Enabled':'Disabled')}<div class="section-label">Professional</div>${row('credentials','Credentials & Verification','ID verified - credential status')}${row('reputation','Reputation & Trust Score', providerOf({providerId:CURRENT_PROVIDER_ID}).trustScore + ' / 100 · ' + providerOf({providerId:CURRENT_PROVIDER_ID}).rating + ' rating')}${row('portfolio','Work Portfolio','Service photos and examples')}${row('preview','Preview Public Profile','See what Residents see')}<div class="section-label">Financial</div>${row('payout','Payout & Earnings','GCash (0918***4321)') }<div class="section-label">Account</div>${row('security','Password & Sign-in','PIN enabled - 2FA enabled')}${row('notifications','Notification Preferences','Service and security alerts')}<button class="btn" style="width:100%; margin-top:12px; background:var(--surface); color:var(--error-ink); border:1px solid var(--alert); box-shadow:none;" onclick="providerProfileAction('logout')">Log Out</button></div>${modal ? `<div class="modal-layer"><div class="card modal-card"  ><div class="row"><b>${modal==='edit'?'Edit service profile':modal==='logout'?'Log out?':modal==='payout'?'Payout account':modal==='dispatch'?'Enable emergency dispatch?':modal==='add_service'?((state.listingDraft&&state.listingDraft.id)?'Edit service':'NEW SERVICE'):modal==='portfolio_add'?'Add work':'Update'}</b><button aria-label="Close" onclick="state.providerProfileModal=null; render();" style="border:0; background:transparent; font-size:var(--t-title);">&times;</button></div>${modal==='edit'?`<label class="form-label">Email (read-only)<input value="${pp.email}" readonly class="form-input-readonly"></label><label class="form-label-8">Phone Number<input id="provider-profile-phone" value="${pp.phone}" class="form-input"></label><label class="form-label-8">Service Rate (peso per unit)<input id="provider-profile-rate" type="number" min="0" step="1" inputmode="numeric" value="${toPesos(pp.rateCentavos)}" class="form-input"></label><label class="form-label-8">Service Radius<input id="provider-profile-radius" value="${pp.serviceRadius}" class="form-input"></label><label class="form-label-8">Working Hours<input id="provider-profile-hours" value="${pp.workingHours}" class="form-input"></label><button class="btn btn-block"   onclick="saveProviderProfessionalProfile()">Save Changes</button>`:modal==='dispatch'?`<div style="font-size:var(--t-caption); margin-top:12px;">You may receive urgent service requests during selected emergency hours.</div><button class="btn btn-block"   onclick="state.providerEmergencyDispatch=!state.providerEmergencyDispatch; state.providerProfileModal=null; render();">Enable</button>`:modal==='payout'?`<div style="font-size:var(--t-caption); margin-top:12px;">Current: GCash (0918***4321)<br><br>For security, confirm your password or PIN before changing payout account.</div><button class="btn btn-block"   onclick="state.providerProfileModal='saved'; render();">Continue</button>`:modal==='logout'?`<div style="font-size:var(--t-caption); margin-top:12px;">Are you sure you want to log out of your Sukinnect provider account?</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm secondary" style="flex:1;" onclick="state.providerProfileModal=null; render();">Cancel</button><button class="btn sm danger" style="flex:1;" onclick="signOut()">Log Out</button></div>`:modal==='add_service'?`<label class="form-label">Service name<input id="listing-title" class="form-input" style="margin-top:6px;" placeholder="e.g. Water heater inspection" value="${esc((state.listingDraft||{}).title||'')}"></label><label class="form-label">Price in pesos<input id="listing-price" type="number" min="100" step="1" inputmode="numeric" class="form-input" style="margin-top:6px;" value="${(state.listingDraft||{}).pricePesos||''}"></label><label class="form-label">Typical duration, minutes<input id="listing-mins" type="number" min="5" step="5" inputmode="numeric" class="form-input" style="margin-top:6px;" value="${(state.listingDraft||{}).durationMin||45}"></label>${state.profileError?`<div class="inline-error" role="alert">${esc(state.profileError)}</div>`:''}<button class="btn btn-block" onclick="commitListingDraft()">Save service</button>`:modal==='portfolio_add'?`<input aria-label="Which service this work was for" placeholder="Service" style="width:100%; min-height:var(--tap); padding:9px; margin-top:12px;"><textarea aria-label="Describe this piece of work" placeholder="Description" style="width:100%; min-height:70px; margin-top:8px; padding:9px;"></textarea><button class="btn btn-block"   onclick="state.providerProfileModal='saved'; render();">Save Work</button>`:`<div style="font-size:var(--t-caption); color:var(--success-ink); margin-top:12px;">Changes saved successfully.</div><button class="btn btn-block"   onclick="state.providerProfileModal=null; render();">Close</button>`}</div></div>`:''}`;
 }
 
 function bindTabHandlers(){
@@ -7764,6 +9065,7 @@ seedHistoricalLedger();
 seedStatusHistory();
 seedMessages();
 seedDemoDispute();
+seedFruitOffers();
 applyDueTransitions();
 render();
 </script>
