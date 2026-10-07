@@ -201,7 +201,12 @@ nothing new.
   provider's move. Every revision is kept, so a dispute can read *what was offered, and what
   did they agree to*.
 - `CONFIG.produceCommissionRate` is **`null` — undecided**. An undecided rate charges nothing
-  **and carries the reason** (`produceFeeUndecided`), so it cannot be misread as a decided zero.
+  **and carries the reason** (`produceFeeUndecided`), so it cannot be misread as a generous zero.
+- **The fruit part is chargeable only inside a visit that also harvests** (owner's decision).
+  A straight **Sell My Fruit** sale is *decided-none*: the platform takes nothing and no screen
+  implies a rate might still appear. Only **Harvest + Buy** has an open question, and its rate
+  is still unset. Three states, named apart in the data and on every screen: `charged`,
+  `undecided`, `not-charged`.
   No screen, and no report, adds a peso of produce to the platform's earnings.
 - Weight is stored in **whole grams** and typed in kilos, for the same reason money is stored
   in centavos.

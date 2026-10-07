@@ -1418,9 +1418,25 @@ suite('fruit', async () => {
   /* ---- the two legs of the money stay separate ---- */
   const offer = OFFERS[0];
   const t = app.offerTotals(offer);
-  c.check('a pure purchase earns the platform nothing while the rate is undecided',
-    CONFIG.produceCommissionRate === null && t.platformFeeCentavos === 0 && t.produceFeeUndecided === true,
+  /* The owner's rule: the fruit part is chargeable only inside a visit that also
+     harvests. A straight sale is decided-none, and no screen may imply a rate might
+     still appear on it. */
+  c.check('a straight sale is decided-none, not a rate waiting to appear',
+    CONFIG.produceCommissionRate === null && t.platformFeeCentavos === 0 &&
+    t.produceFeeWaived === true && t.produceFeeUndecided === false,
     JSON.stringify(t));
+  c.check('the combined visit is the one carrying an open rate', (() => {
+    const both = app.offerTotals({ mode:'harvest_and_buy', labourCentavos:160000, produceCentavos:660000 });
+    return both.produceFeeUndecided === true && both.produceFeeWaived === false &&
+      both.produceFeeCentavos === 0 && both.platformFeeCentavos === 16000;
+  })(), 'the undecided state must belong to harvest_and_buy alone');
+  c.check('a sale stays free even once a produce rate exists', (() => {
+    const keep = CONFIG.produceCommissionRate;
+    CONFIG.produceCommissionRate = 0.10;
+    const sold = app.offerTotals({ mode:'sell_fruit', labourCentavos:0, produceCentavos:209000 });
+    CONFIG.produceCommissionRate = keep;
+    return sold.produceFeeCentavos === 0 && sold.produceFeeWaived === true && sold.produceCharged === false;
+  })(), 'the mode gate is not honoured once a rate is set');
   c.check('the undecided rate is a decision, not an accidental zero',
     CONFIG_DEFAULTS.produceCommissionRate === null);
   c.check('the resident is never billed the fruit she is selling',
@@ -1428,16 +1444,18 @@ suite('fruit', async () => {
     JSON.stringify(t));
   c.check('the legs add to the job without merging into one number',
     t.totalCentavos === t.produceCentavos + t.labourCentavos);
-  /* a decided rate changes only the produce leg */
-  const withRate = app.offerTotals(Object.assign({}, offer, { labourCentavos: 100000, produceCentavos: 200000 }));
+  /* a decided rate charges the fruit leg, and only on the mode the rule allows */
+  const hb = { mode:'harvest_and_buy', labourCentavos:100000, produceCentavos:200000 };
+  const withRate = app.offerTotals(hb);
   CONFIG.produceCommissionRate = 0.05;
-  const decided = app.offerTotals(Object.assign({}, offer, { labourCentavos: 100000, produceCentavos: 200000 }));
-  c.check('a decided produce rate charges the produce and nothing else changes',
-    decided.platformFeeCentavos - withRate.platformFeeCentavos === 10000 &&
-    decided.customerPaysCentavos - withRate.customerPaysCentavos === 10000 &&
-    decided.produceCentavos === withRate.produceCentavos,
-    (decided.platformFeeCentavos - withRate.platformFeeCentavos) + ' vs 10000');
+  const decided = app.offerTotals(hb);
   CONFIG.produceCommissionRate = null;
+  c.check('a decided rate on a harvest-and-buy charges the fruit and nothing else',
+    decided.produceFeeCentavos === 10000 &&
+    decided.platformFeeCentavos - withRate.platformFeeCentavos === 10000 &&
+    decided.produceCentavos === withRate.produceCentavos &&
+    decided.labourCentavos === withRate.labourCentavos,
+    decided.produceFeeCentavos + ' vs 10000');
 
   /* ---- answering an offer is commercial, not lifecycle ---- */
   const b8 = app.bookingById('b8');
@@ -1445,8 +1463,9 @@ suite('fruit', async () => {
   c.check('accepting an offer does not move the booking', b8.status === 'requested', b8.status);
   c.check('it records the produce leg beside the record',
     !!b8.produce && b8.produce.amountCentavos === 209000 && b8.produce.settledAs === 'on_site');
-  c.check('the produce leg is flagged as an undecided fee, not a charged one',
-    b8.produce.feeStatus === 'undecided' && b8.produce.platformFeeCentavos === 0);
+  c.check('a settled sale records its fee as decided-none, not as pending',
+    b8.produce.feeStatus === 'not-charged' && b8.produce.platformFeeCentavos === 0,
+    b8.produce.feeStatus);
   c.check('a purchase-only job freezes no service price',
     b8.amountCentavos === 0 && !b8.pricing, JSON.stringify(b8.pricing));
   c.check('and posts nothing to the ledger', app.ledgerFor('b8').length === 0,

@@ -581,6 +581,43 @@ trusting a restore that is not the last thing the script does.
 
 ---
 
+## 16. The owner decided the produce-fee rule, so the code stopped guessing at one state
+
+Asked whether the platform should charge on the fruit itself, the answer was **only on
+Harvest + Buy**. That is a different shape from what was built: the implementation had one
+axis — *is there a rate?* — and the decision has two, *which mode may be charged* and *is a
+rate set yet*. Collapsing them is what would have made a straight sale look like it was
+waiting for a number.
+
+So the fee now has **three states, named in the data and worded apart on every screen**:
+
+| state | when | what a resident reads |
+|---|---|---|
+| `charged` | Harvest + Buy, rate set | "Sukinnect took ₱X on the fruit part" |
+| `undecided` | Harvest + Buy, rate still `null` | "a rate … is still an open decision, not a settled rule" |
+| `not-charged` | a straight sale, any rate | "charges nothing on a straight sale … by decision" |
+
+`offerTotals` is now the only place the rule lives. `answerOffer` was recomputing the fee
+from `CONFIG.produceCommissionRate` a second time — the same duplication the audits keep
+catching — and now reads `produceFeeCentavos` and `feeStatus` off the one decision instead.
+The admin intelligence card likewise reads the state **off the jobs in the window** rather
+than off the configuration, because a window of straight sales is decided-none even while a
+rate is unset for the combined case.
+
+Two things worth keeping in mind about what did *not* change: the rate itself is still
+`null`, because the owner decided **where** a fee may apply, not **how much** — inventing a
+number would have been the one thing that decision did not authorise. And the seeded demo
+offer is a `sell_fruit`, so the shipped state you walk into is `not-charged`, which is the
+case most likely to be misread as a bug rather than a rule.
+
+Verified: **322 checks passed**, up from 320, with the three checks that encoded the old
+single-axis rule rewritten rather than deleted. **15 of 15 mutants caught**, including two
+new ones — dropping the mode gate, and making an unset rate silently fall back to the service
+rate — which is the failure this decision makes possible. All three scratch suites
+(seed sweep, resident probe, end-to-end journey) were updated to the new semantics and pass.
+
+---
+
 ## Deliberately not done
 
 - **No server, no database, no framework, no CSS library, no ES modules.** The Android shell

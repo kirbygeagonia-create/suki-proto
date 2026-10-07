@@ -1645,7 +1645,10 @@ const SERVICES = [
     /* The goods are not a service fee base. Whether the platform charges on a
        produce purchase at all is an open business decision, held in CONFIG as
        undecided rather than defaulted to the service rate. */
-    commissionBasis:'labour_only'
+    /* Chargeable on the fruit only where the same visit also harvests. A straight
+       sale is decided-none; the rate for the combined case is still open and lives
+       in CONFIG.produceCommissionRate as null until the owner sets it. */
+    commissionBasis:'labour_plus_produce_on_harvest_and_buy'
   }},
 ];
 
@@ -3180,9 +3183,11 @@ function produceRow(b){
         </div>
       </div>
       <p class="produce-note">
-        ${p.feeStatus === 'undecided'
-          ? 'Sukinnect charged nothing on this and the platform never held the money — a rate on produce is an open decision in this pilot, not a settled rule.'
-          : 'Sukinnect took ' + esc(peso(p.platformFeeCentavos)) + ' on the fruit part. The rest passed between you and the other side.'}
+        ${p.feeStatus === 'charged'
+          ? 'Sukinnect took ' + esc(peso(p.platformFeeCentavos)) + ' on the fruit part. The rest passed between you and the other side.'
+          : p.feeStatus === 'undecided'
+            ? 'Sukinnect charged nothing on this and the platform never held the money. A rate on the fruit part of a harvest-and-buy is still an open decision, not a settled rule.'
+            : 'Sukinnect charges nothing on a straight sale of standing fruit, and never held the money. The fee on a job like this one is on the service part only.'}
       </p>
     </div>`;
 }
@@ -3468,15 +3473,27 @@ function offerTotals(offer){
   const rate = CONFIG.commissionRateDefault;
   const labourFee = Math.round(labour * rate);
   const produceRate = CONFIG.produceCommissionRate;
-  const produceFee = produceRate === null || produceRate === undefined
-    ? 0 : Math.round(produce * produceRate);
+  const rateSet = produceRate !== null && produceRate !== undefined;
+  /* Decided by the project owner: the platform charges on the fruit only when the
+     same visit also includes harvesting. A straight sale of standing fruit is one
+     person buying from another and Sukinnect takes nothing from it — that is a
+     decision, not a gap waiting for a number. Whether a harvest-and-buy is charged
+     on its fruit part, and at what rate, is still open, so the rate stays null and
+     nothing here invents one. */
+  const produceChargeable = offer.mode === 'harvest_and_buy' && produce > 0;
+  const produceFee = produceChargeable && rateSet ? Math.round(produce * produceRate) : 0;
   return {
     labourCentavos: labour,
     produceCentavos: produce,
-    /* what the platform earns — the labour part always, the goods part only if a
-       rate is actually decided */
+    /* what the platform earns — the labour part always, the goods part only where
+       the rule says it may, and only once a rate actually exists */
     platformFeeCentavos: labourFee + produceFee,
-    produceFeeUndecided: produceRate === null && produce > 0,
+    produceFeeCentavos: produceFee,
+    produceCharged: produceChargeable && rateSet,
+    produceFeeUndecided: produceChargeable && !rateSet,
+    /* a straight sale is decided-none. Saying "not set" there would imply a rate
+       might still appear, which is a claim the owner has already closed. */
+    produceFeeWaived: produce > 0 && !produceChargeable,
     /* what changes hands. In a buy mode the provider owes the resident for the
        fruit and the resident owes nothing for labour, so the two legs do not add
        into one number for one party — the direction says who pays whom. */
@@ -3581,8 +3598,10 @@ function answerOffer(bookingId, decision, actor){
     basis: offer.basis,
     quantityGrams: offer.quantityGrams,
     settledAs: 'on_site',
-    platformFeeCentavos: CONFIG.produceCommissionRate === null ? 0 : Math.round(t.produceCentavos * CONFIG.produceCommissionRate),
-    feeStatus: CONFIG.produceCommissionRate === null ? 'undecided' : 'charged'
+    /* Read from offerTotals rather than derived again here: two places applying the
+       same rule is how one of them ends up disagreeing with the other (65). */
+    platformFeeCentavos: t.produceFeeCentavos,
+    feeStatus: t.produceCharged ? 'charged' : (t.produceFeeUndecided ? 'undecided' : 'not-charged')
   } : null;
   b.offerId = offer.id;
   b.summary = offer.mode === 'sell_fruit'
@@ -5528,7 +5547,10 @@ function offerMoneyLines(offer){
   }
   if (t.produceFeeUndecided) {
     rows.push({ k:'Sukinnect fee on the fruit', v:'not set', mut:true,
-                s:'This pilot does not charge on produce yet. The rate is an open decision, not a hidden one.' });
+                s:'A rate on the fruit part of a harvest-and-buy is still an open decision in this pilot. Nothing is charged on it today.' });
+  } else if (t.produceFeeWaived) {
+    rows.push({ k:'Sukinnect fee on the fruit', v:'none', mut:true,
+                s:'A straight sale of standing fruit is between the two of you. The platform charges on the service part only.' });
   } else if (t.platformFeeCentavos) {
     rows.push({ k:'Sukinnect fee', v: peso(t.platformFeeCentavos), mut:true, s:'taken from the service part, never added to your total' });
   }
@@ -5597,7 +5619,7 @@ function answerResidentOffer(id, decision){
     const first = providerOf(b).name.split(' ')[0];
     if (decision === 'accept'){
       const t = offerTotals(o);
-      showToast(t.produceCentavos && t.produceFeeUndecided
+      showToast(t.produceCentavos && !t.produceCharged
         ? 'Offer accepted — the fruit money settles between you and ' + first + ', outside the platform'
         : 'Offer accepted — waiting for ' + first + ' to confirm the visit');
     } else {
@@ -7629,9 +7651,11 @@ function adminMarketplaceIntelligence(){  const f = state.adminIntFilters;
             <span class="chip tone-neutral">not in the total above</span></div>
           <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:4px;">
             ${st.produceJobs} job${st.produceJobs === 1 ? '' : 's'} in this window settled a produce purchase between a resident and a buyer.
-            The platform never held that money${st.produceFeeUndecided
-              ? ' and charges nothing on it: a rate on produce is still an open decision in this pilot, not a rule.'
-              : ' and took ' + esc(peso(st.produceFeeCentavos)) + ' on it.'}
+            The platform never held that money${st.produceFeeCentavos
+              ? ' and took ' + esc(peso(st.produceFeeCentavos)) + ' on it.'
+              : (st.produceUndecidedJobs
+                ? ' and charges nothing on it yet: a rate on the fruit part of a harvest-and-buy is still an open decision.'
+                : ' and takes nothing on a straight sale — the fee on these jobs is on the service part only, by decision.')}
           </div>
         </div>
       </div>
@@ -7692,7 +7716,10 @@ function intelligenceStats(f) {
     produceCentavos,
     produceJobs: produceJobs.length,
     produceFeeCentavos: produceFee,
-    produceFeeUndecided: CONFIG.produceCommissionRate === null,
+    /* Which state the operator should read out depends on the jobs in the window,
+       not on the configuration alone: a window of straight sales is decided-none,
+       and only a harvest-and-buy still has an open rate. */
+    produceUndecidedJobs: produceJobs.some(b => b.produce && b.produce.feeStatus === 'undecided'),
     bookings: inWindow.length,
     completed: completed.length,
     /* The rate is of jobs that have *finished*, so the denominator has to travel
@@ -7722,6 +7749,14 @@ const ADMIN_PRICING_WORDS = {
   negotiated_offer:'an agreed offer', labour_only:'labour only'
 };
 const ADMIN_CAPABILITY_WORDS = { harvester:'harvesting', buyer:'buying fruit', harvester_buyer:'both' };
+const ADMIN_COMMISSION_WORDS = {
+  labour:'the service fee',
+  labour_only:'the service part only — never the fruit itself',
+  /* The rule the owner set: the fruit part is chargeable only inside a visit that
+     also harvests. The rate itself is still undecided, and this says so. */
+  labour_plus_produce_on_harvest_and_buy:
+    'the service part always; the fruit part only on Harvest + Buy, where the rate is still undecided'
+};
 const ADMIN_SAFETY_WORDS = {
   declare_access_hazards:'what makes the approach difficult has to be said up front',
   provider_may_decline:'a provider may refuse work they cannot do safely',
@@ -7764,9 +7799,7 @@ function adminCategories(){
         <div class="cap-rows" style="margin-top:10px;">
           <div><span>How it transacts</span><b>${beh.modes.map(m => esc(m.label)).join(', ')}</b></div>
           <div><span>Priced by</span><b>${beh.pricingModels.map(m => esc(ADMIN_PRICING_WORDS[m] || m)).join(', ')}</b></div>
-          <div><span>Commission basis</span><b>${beh.commissionBasis === 'labour_only'
-            ? 'the service part only — never the fruit itself'
-            : 'the service fee'}</b></div>
+          <div><span>Commission basis</span><b>${esc(ADMIN_COMMISSION_WORDS[beh.commissionBasis] || beh.commissionBasis)}</b></div>
           ${beh.capabilities.length > 1 ? `<div><span>Providers declare</span><b>${beh.capabilities.map(x => esc(ADMIN_CAPABILITY_WORDS[x] || x)).join(', ')}</b></div>` : ''}
         </div>
         ${beh.safetyRules && beh.safetyRules.length ? `<div class="fruit-tall" style="margin-top:10px;">
@@ -8115,14 +8148,16 @@ function offerTotalsBlock(b, d, t){
             <b style="font-size:var(--t-body-lg);">${esc(pesoShort(t.produceCentavos + t.labourCentavos))}</b>
           </div>
           ${t.produceCentavos ? `<div class="row"><span class="mut">Sukinnect fee on the fruit</span>
-            <b class="mut">${t.produceFeeUndecided ? 'not set in this pilot' : esc(pesoShort(t.produceFeeCentavos || 0))}</b></div>` : ''}
+            <b class="mut">${t.produceCharged ? esc(pesoShort(t.produceFeeCentavos))
+              : (t.produceFeeUndecided ? 'rate not set' : 'none on a sale')}</b></div>` : ''}
           <div class="row"><span class="mut">Sukinnect fee on the harvesting</span>
             <b class="mut">${t.labourCentavos ? 'taken from your share' : 'nothing yet'}</b></div>
           <p>
             ${t.produceCentavos && !t.labourCentavos
               ? 'This is a purchase, not a service fee: the fruit money goes from you to ' + esc(customerOf(b).name.split(' ')[0]) + ' on site, and the platform does not hold it.'
               : 'The harvesting part is a service fee and follows the normal rules. The fruit part settles between you, on site.'}
-            ${t.produceFeeUndecided ? ' A rate on produce has not been decided for this pilot, so none is charged on it.' : ''}
+            ${t.produceFeeUndecided ? ' A rate on the fruit part of a harvest-and-buy has not been decided, so none is charged on it today.'
+              : t.produceFeeWaived ? ' Selling standing fruit carries no fee for the platform — that part is decided, not pending.' : ''}
           </p>
         </div>`;
 }
