@@ -431,10 +431,7 @@ const SCREENS = [
                         state.sheet='bookingRequest'; render();`],
   ['fruit-offer',      `state.view='app'; state.role='resident';
                         openBookingDetail(BOOKINGS.find(b=>b.id==='b8').id);`],
-  ['fruit-record',     `state.view='app'; state.role='resident';
-                        const _b = BOOKINGS.find(b=>b.id==='b8');
-                        answerOffer('b8','accept',{ role:'customer', id:CURRENT_CUSTOMER_ID });
-                        openBookingDetail(_b.id);`],
+
   ['booking-tracking', `state.view='app'; state.role='resident';
                         openBookingDetail(BOOKINGS.find(b=>b.status==='ongoing'&&b.customerId===CURRENT_CUSTOMER_ID).id);`],
   ['resident-bookings',`state.view='app'; state.role='resident'; state.tab='bookings'; render();`],
@@ -472,11 +469,7 @@ const SCREENS = [
   ['admin-trust',      `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='trust'; render();`],
   ['admin-intel',      `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='intelligence'; render();`],
   ['admin-categories', `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='categories'; render();`],
-  /* the produce split only exists once a purchase has been agreed, so the camera
-     agrees one first — the same answerOffer the resident's own button calls */
-  ['admin-intel-produce', `state.view='app'; state.role='admin';
-                        answerOffer('b8','accept',{ role:'customer', id:CURRENT_CUSTOMER_ID });
-                        state.tab='admin_dashboard'; state.adminScreen='intelligence'; render();`],
+
   ['admin-verifiers',  `state.view='app'; state.role='admin'; state.tab='admin_verifications'; state.adminProviderCategory='pending'; render();`],
   ['admin-verified',   `state.view='app'; state.role='admin'; state.tab='admin_verifications'; state.adminProviderCategory='verified'; render();`],
   ['admin-desk',       `state.view='app'; state.role='admin'; state.tab='admin_disputes'; render();`],
@@ -486,8 +479,47 @@ const SCREENS = [
                         const b=BOOKINGS.find(x=>x.status==='completed'&&x.pricing); b.completedAt=new Date().toISOString();
                         state.selectedBookingId=b.id; render(); openCaseSheet(b.id);`],
   ['empty-search',     `state.view='app'; state.role='resident'; state.tab='results';
-                        state.searchQuery='piano tuning'; state.providerFilters=blankFilters(); render();`]
+                        state.searchQuery='piano tuning'; state.providerFilters=blankFilters(); render();`],
+
+  /* ---- screens that change the data: reset first, and kept last ----
+     The whole run happens in one page session, so a screen that answers an offer
+     leaves nothing for the next one that needs one — and quietly dirties every
+     screen after it. Each of these calls the app's own reset before it sets up, so
+     it photographs the state its name claims rather than whatever ran before it. */
+  ['fruit-record',     `resetDemoData(); state.view='app'; state.role='resident';
+                        answerOffer('b8','accept',{ role:'customer', id:CURRENT_CUSTOMER_ID });
+                        openBookingDetail('b8');`],
+  ['fruit-voided',     `resetDemoData(); state.view='app'; state.role='resident';
+                        answerOffer('b8','accept',{ role:'customer', id:CURRENT_CUSTOMER_ID });
+                        attemptTransition('b8','cancelled',{ role:'provider', id:'p8' },
+                          { reason:'Could not do the job' });
+                        openBookingDetail('b8');`],
+  ['admin-intel-produce', `resetDemoData(); state.view='app'; state.role='admin';
+                        answerOffer('b8','accept',{ role:'customer', id:CURRENT_CUSTOMER_ID });
+                        state.tab='admin_dashboard'; state.adminScreen='intelligence'; render();`],
 ];
+
+/* The table is data, and data can be wrong in ways the parser will not report. A
+   missing comma between two entries does not throw — it parses the second as a
+   subscript on the first, which evaluates to undefined, and the screen simply stops
+   being measured while the tool goes on printing a count that looks like coverage.
+   This ran into exactly that: 42 entries, 40 measured, no complaint anywhere. */
+(function validateScreens(){
+  const bad = [];
+  SCREENS.forEach((entry, i) => {
+    if (!Array.isArray(entry) || entry.length !== 2 ||
+        typeof entry[0] !== 'string' || typeof entry[1] !== 'string')
+      bad.push('#' + i + ' ' + JSON.stringify(entry));
+  });
+  const names = SCREENS.map(x => x && x[0]);
+  const dupes = names.filter((n, i) => n && names.indexOf(n) !== i);
+  if (bad.length || dupes.length) {
+    console.error('SCREENS table is malformed — refusing to report a screen count.');
+    if (bad.length)    console.error('  not a [name, script] pair: ' + bad.join(', '));
+    if (dupes.length)  console.error('  duplicate names: ' + dupes.join(', '));
+    process.exit(1);
+  }
+})();
 
 async function main() {
   if (has('list')) {

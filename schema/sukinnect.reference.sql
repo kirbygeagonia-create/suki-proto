@@ -140,6 +140,20 @@ CREATE TABLE bookings (
      are written together at accept time and must never diverge — the kernel keeps
      one (pricing) as authority and derives the other. */
   customer_total_centavos INT UNSIGNED NOT NULL DEFAULT 0,
+  /* The pilot category keeps two kinds of money about one job and only one of them
+     is a service fee. `transaction_mode` says which shape the job is; the produce
+     columns record a purchase between resident and buyer that the platform never
+     holds, so they are deliberately outside `customer_total_centavos` and outside
+     the ledger. `produce_fee_status` keeps the three states apart: a rate that is
+     undecided is not a rate that was waived. */
+  transaction_mode        ENUM('harvest_only','sell_fruit','harvest_and_buy') NULL,
+  produce_amount_centavos INT UNSIGNED NULL,           -- the fruit itself, never a fee base
+  produce_quantity_grams  INT UNSIGNED NULL,           -- whole grams, as centavos are whole
+  produce_basis           ENUM('per_kg','per_tree','per_lot') NULL,
+  produce_settled_as      ENUM('on_site') NULL,
+  produce_fee_centavos    INT UNSIGNED NOT NULL DEFAULT 0,
+  produce_fee_status      ENUM('charged','undecided','not-charged') NOT NULL DEFAULT 'undecided',
+  produce_voided_at       DATETIME NULL,               -- the visit was called off; no payment happened
 
   status                 ENUM('requested','upcoming','en_route','arrived','ongoing',
                               'completed','cancelled','expired','no_show','disputed')
@@ -200,6 +214,41 @@ CREATE TABLE booking_status_events (
 ) ENGINE=InnoDB;
 
 -- ───────────────────────────────────────────────────────────────────────── money
+-- A negotiation is not a booking state. The job stays `requested` while an offer is
+-- out; what changes is this row. Every revision is kept rather than overwritten,
+-- because the question a dispute asks about a negotiated job is "what was offered,
+-- and what did they agree to" -- the last number alone cannot answer it.
+CREATE TABLE offers (
+  id                     BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  booking_id             VARCHAR(24) NOT NULL,
+  mode                   ENUM('harvest_only','sell_fruit','harvest_and_buy') NOT NULL,
+  made_by                ENUM('provider','customer') NOT NULL,
+  basis                  ENUM('per_kg','per_tree','per_lot') NOT NULL,
+  quantity_grams         INT UNSIGNED NULL,            -- whole grams, never a float kilo
+  unit_price_centavos    INT UNSIGNED NULL,            -- per kg or per tree; null for a lot
+  produce_centavos       INT UNSIGNED NOT NULL DEFAULT 0,   -- the fruit leg
+  labour_centavos        INT UNSIGNED NOT NULL DEFAULT 0,   -- the service leg; the only
+                                                            -- one commission applies to
+  who_harvests           ENUM('provider','customer') NOT NULL DEFAULT 'provider',
+  collection_note        VARCHAR(190),
+  includes               VARCHAR(190),
+  note                   VARCHAR(190),
+  status                 ENUM('proposed','accepted','declined','withdrawn',
+                               'superseded','expired') NOT NULL DEFAULT 'proposed',
+  valid_until            DATETIME NULL,                -- honoured on open, not only displayed
+  revision_of            BIGINT UNSIGNED NULL,         -- the offer this one replaced
+  closed_because         VARCHAR(24) NULL,             -- the booking move that closed it
+  at                     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  answered_at            DATETIME NULL,
+  PRIMARY KEY (id),
+  KEY offer_booking (booking_id),
+  KEY offer_open (booking_id, status),
+  CONSTRAINT offer_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+-- Only one `proposed` offer per booking may be open at a time; the kernel enforces
+-- it by marking the previous row `superseded` rather than with a unique index, so
+-- the whole trail survives. An offer closes when its booking leaves `requested`.
+
 CREATE TABLE payments (
   id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   booking_id         VARCHAR(24) NOT NULL,

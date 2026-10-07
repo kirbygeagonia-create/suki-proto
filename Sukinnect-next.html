@@ -883,6 +883,9 @@
   .produce-ic{ display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px;
     border-radius:10px; background:var(--background); color:var(--deep); flex-shrink:0; }
   .produce-note{ margin:9px 0 0; font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; }
+  .produce-voided{ display:flex; gap:7px; align-items:flex-start; margin:9px 0 0; padding:9px 11px;
+    background:var(--warning-100); border-radius:10px; font-size:var(--t-caption); line-height:1.5;
+    color:var(--warning-ink); }
   .chip.tone-active{ background:var(--deep-100); color:var(--deep); }
   .chip.tone-good{ background:var(--success-100); color:var(--success-ink); }
   .chip.tone-alert{ background:var(--error-100); color:var(--error-ink); }
@@ -3042,6 +3045,8 @@ function attemptTransition(bookingId, to, actor, opts) {
        disagree about what happened. */
     pushThreadMessage(booking, outcome.notify.to, actor, outcome.notify.body);
   }
+  closeOpenOffers(booking, to);
+  voidUnsettledProduce(booking, to);
   persist();
   return booking;
 }
@@ -3066,6 +3071,19 @@ function pushStatusNotification(booking, note) {
 function applyDueTransitions() {
   const applied = [];
   const ttl = CONFIG.acceptTtlMinutes * 60000;
+  /* An offer that says "valid until Thursday" has to stop meaning that on Thursday.
+     The card prints the deadline, so a model that never honoured it would be the app
+     making a promise the record does not keep. This runs before the accept window
+     below: once the last offer on a request closes, the request is unanswered again
+     and the lapse clock applies to it from here. */
+  OFFERS.filter(o => offerIsOpen(o) && o.validUntil && Date.now() > Date.parse(o.validUntil))
+    .forEach(o => {
+      o.status = 'expired';
+      o.answeredAt = o.answeredAt || new Date().toISOString();
+      o.closedBecause = 'validUntil';
+      applied.push({ id:o.bookingId, moved:'offer-expired' });
+    });
+
   /* The lapse clock measures how long a request waits for a provider. A fruit
      request that already carries an open offer was answered — the provider replied
      with a price instead of a yes — so expiring it here would delete a record the
@@ -3080,6 +3098,18 @@ function applyDueTransitions() {
                        Date.now() - Date.parse(b.completedAt) > grace)
     .forEach(b => { b.confirmedBy = 'auto'; applied.push({ id:b.id, moved:'auto-confirmed' }); });
   return applied;
+}
+
+/* A produce agreement settles in person, at the trees. If the job is called off
+   before that, the money never changed hands — and a record still reading "fruit you
+   were paid" would tell a resident about a payment that did not occur. The agreement
+   stays on file as what was offered and agreed, and is marked void; only the claim of
+   settlement goes. */
+function voidUnsettledProduce(booking, to){
+  if (!booking || !booking.produce || booking.produce.voided) return;
+  if (['cancelled','expired','no_show'].indexOf(to) < 0) return;
+  booking.produce.voided = true;
+  booking.produce.voidedBecause = to;
 }
 
 /* ---- what the seed owes the machine ---------------------------------------- */
@@ -3175,13 +3205,16 @@ function produceRow(b){
         <span class="produce-ic">${ic('weight', 15)}</span>
         <div style="min-width:0; flex:1;">
           <div style="font-size:var(--t-body-sm); font-weight:800; color:var(--ink);">
-            Fruit ${b.produce.direction === 'provider_pays_for_produce' ? 'you were paid' : 'you paid'} ${esc(peso(p.amountCentavos))}
+            ${p.voided
+              ? 'Fruit agreed at ' + esc(pesoShort(p.amountCentavos))
+              : 'Fruit ' + (b.produce.direction === 'provider_pays_for_produce' ? 'you were paid' : 'you paid') + ' ' + esc(peso(p.amountCentavos))}
           </div>
           <div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:2px; line-height:1.5;">
             ${esc(basis + weight)} · settled ${esc(p.settledAs === 'on_site' ? 'on site, in person' : p.settledAs)}
           </div>
         </div>
       </div>
+      ${p.voided ? `<p class="produce-voided">${ic('alert-triangle', 12)} This visit was called off, so the fruit was never bought and no money changed hands. The agreed price is kept as the record of what was offered.</p>` : ''}
       <p class="produce-note">
         ${p.feeStatus === 'charged'
           ? 'Sukinnect took ' + esc(peso(p.platformFeeCentavos)) + ' on the fruit part. The rest passed between you and the other side.'
@@ -3196,8 +3229,10 @@ function payStatusLabel(booking){
   /* A settled fruit sale is genuinely unpaid as far as the platform is concerned —
      but "Unpaid" on a job the resident has finished would read as an outstanding
      debt. Say what the money was, in the same two words a chip can hold. */
-  if (booking.payStatus === 'unpaid' && booking.produce)
+  if (booking.payStatus === 'unpaid' && booking.produce) {
+    if (booking.produce.voided) return 'No payment';
     return FINISHED_STATES.includes(booking.status) ? 'Fruit settled' : 'Fruit on site';
+  }
   return PAYMENT_LABELS[booking.payStatus] || PAYMENT_LABELS.unpaid;
 }
 /* Cash is a settlement route, not a phrase: it is the one method where the
@@ -3462,6 +3497,22 @@ function currentOffer(bookingId){
 function openOfferFor(bookingId){
   return offersFor(bookingId).filter(offerIsOpen).pop() || null;
 }
+/* An offer only means something while the request it prices is alive. When a job
+   leaves `requested` for any reason — declined, withdrawn, lapsed, a no-show — every
+   open offer on it closes with it, because a resident must not be able to agree a
+   price for a job that no longer exists, and a closed job must not carry an answer
+   nobody will ever read. Why it closed is kept, so the trail still explains itself. */
+function closeOpenOffers(booking, to){
+  if (!booking || to === 'requested') return 0;
+  const at = new Date().toISOString();
+  return OFFERS.filter(o => o.bookingId === booking.id && offerIsOpen(o))
+    .reduce((n, o) => {
+      o.status = to === 'expired' ? 'expired' : 'withdrawn';
+      o.answeredAt = o.answeredAt || at;
+      o.closedBecause = to;
+      return n + 1;
+    }, 0);
+}
 
 /* The arithmetic of an offer, in centavos, with the two kinds of money kept apart.
    Nothing here rounds through a float and nothing here invents a fee: the produce
@@ -3570,6 +3621,11 @@ function answerOffer(bookingId, decision, actor){
   if (!offer) throw new GuardRejected('there is no open offer on this job.');
   if ((actor && actor.role) === 'provider') throw new GuardRejected('only the resident can answer an offer.');
   const b = bookingById(bookingId);
+  /* The button is hidden once a job closes, but hiding is not refusing. The model has
+     to be the one that says no, or any other path could answer a dead request and
+     write a payment onto a job that will never happen. */
+  if (!b || b.status !== 'requested')
+    throw new GuardRejected('that request is closed, so its offer can no longer be answered.');
   if (decision !== 'accept' && decision !== 'decline') throw new GuardRejected('an offer is accepted or declined.');
   offer.answeredAt = new Date().toISOString();
   offer.status = decision === 'accept' ? 'accepted' : 'declined';
@@ -5606,8 +5662,16 @@ function offerCard(b){
         <button type="button" class="btn sm" onclick="answerResidentOffer('${b.id}','accept')">Accept ${esc(peso(t.produceCentavos + t.labourCentavos))}</button>
       </div>
       <div class="mode-hint">Accepting agrees the price, not the visit — ${who} still has to confirm it. Declining leaves your request open, and you can try another match or withdraw it below.</div>`
-        : cur.status === 'accepted' ? `<div class="mode-hint">You agreed this price ${agoText(cur.answeredAt || cur.at)}. ${esc(providerOf(b).name.split(' ')[0])} has to confirm the visit.</div>`
-        : `<div class="mode-hint">This offer was ${esc(offerLabel(cur.status).toLowerCase())}. Your request is unchanged.</div>`}
+        : cur.status === 'accepted' ? `<div class="mode-hint">You agreed this price ${agoText(cur.answeredAt || cur.at)}.${
+            /* The agreement is history once the job closes; promising a visit that
+               was called off is the same contradiction in the other direction. */
+            ['cancelled','expired','no_show'].indexOf(b.status) >= 0
+              ? ' The visit was called off, so the fruit was never bought.'
+              : ' ' + esc(providerOf(b).name.split(' ')[0]) + ' has to confirm the visit.'}</div>`
+        : `<div class="mode-hint">This offer was ${esc(offerLabel(cur.status).toLowerCase())}. ${
+            ['cancelled','expired','no_show'].indexOf(b.status) >= 0
+              ? 'The request is closed.'
+              : 'Your request is unchanged.'}</div>`}
     </div>`;
 }
 
@@ -6427,7 +6491,14 @@ function residentHome(){
   const stageIndex = active ? STAGES.indexOf(active.status) : -1;
   /* A case under review sits outside the path: the stepper steps aside and the
      hint says where the job actually is. */
-  const nextStep = active ? (stateHint(active.status) || active.cancelReason || label(active.status)) : '';
+  /* A request with an offer on it is not waiting for a provider any more, and the
+     needs-answer card deliberately stands aside for the active job — so if this card
+     kept quoting the state's generic hint, the one booking where her answer is the
+     whole story would be the one screen that never says so. */
+  const nextStep = active
+    ? (openOfferFor(active.id) ? 'An offer is waiting for your answer'
+       : (stateHint(active.status) || active.cancelReason || label(active.status)))
+    : '';
   /* Her own completed jobs, newest provider first, one card per provider. With no
      history yet the rail falls back to the roster rather than showing an empty
      shelf — and it says which of the two it is showing. */

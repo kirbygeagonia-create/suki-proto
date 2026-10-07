@@ -561,12 +561,15 @@ trusting a restore that is not the last thing the script does.
   suite, three of which walk the whole negotiated flow).
 - Every new rule is falsified by mutating it in the real file and requiring the intended check
   to fail: **13 of 13 mutants caught**, each followed by a restore and a re-run green.
-- `node tools/shot.cjs --measure` → **40 screens** at 360×640, 390×844 and 412×915 in app mode,
-  plus the desktop shell: zero on all nine measured categories, no horizontal overflow, no
-  console errors. Eight of those screens exist only to photograph the pilot: `fruit-sheet`,
+- `node tools/shot.cjs --measure` → **40 screens** at 390×844 and the other two sizes in app
+  mode, plus the desktop shell: zero on all nine measured categories, no horizontal overflow,
+  no console errors. Eight of those screens exist only to photograph the pilot: `fruit-sheet`,
   `fruit-harvest-sheet`, `fruit-offer`, `fruit-record`, `fruit-provider-dash`,
   `fruit-request`, `offer-sheet`, `fruit-harvest-job`, `fruit-provider-profile`,
   `admin-categories`, `admin-intel-produce`.
+  *(That figure was wrong in the safe direction and §17 explains why: the table held 42
+  entries and the tool measured 40, silently skipping two because a missing comma made the
+  parser read one entry as a subscript on the other. Nothing was overstated; coverage was.)*
 - `.qoder/tmp/fruit-journey-2.cjs` walks DISCOVER → CHOOSE MODE → DESCRIBE → REQUEST → ASSESS →
   OFFER → ACCEPT → CONFIRM → HARVEST → COMPLETE → RECORD as a person would, in both roles, and
   is what found the invented-fee defect above. It is not yet a gate suite; its three load-bearing
@@ -615,6 +618,94 @@ single-axis rule rewritten rather than deleted. **15 of 15 mutants caught**, inc
 new ones — dropping the mode gate, and making an unset rate silently fall back to the service
 rate — which is the failure this decision makes possible. All three scratch suites
 (seed sweep, resident probe, end-to-end journey) were updated to the new semantics and pass.
+
+---
+
+## 17. Walking the paths the demo does not ship
+
+Asked whether anything was left, the honest answer could not come from re-running the
+green gate — a check only reports on the state it can reach, and the shipped demo reaches
+one state per record. So an audit was written for the *unwalked* paths: what happens to an
+offer when its job is declined, lapses or is called off; what a harvest-and-buy looks like
+when it actually completes; what Home says when the offer's booking *is* the active job.
+
+**Twelve findings, four of them real defects.**
+
+**An offer outlived its request.** A provider declining a job left the offer `proposed`, and
+`answerOffer` happily accepted it — writing a produce payment onto a cancelled booking. The
+button was hidden because the card checks the status, but *hiding is not refusing*: any other
+path could still have answered a dead request. `closeOpenOffers` now runs on every machine
+move, recording *why* each offer closed, and `answerOffer` refuses a booking that is not
+`requested`.
+
+**A called-off job kept claiming a payment.** The same walk, one step further: the resident
+had agreed a price, the buyer then cancelled, and the record still read *"Fruit you were paid
+₱2,090 · settled on site"* with a payment chip of *Fruit settled* — money that never changed
+hands, asserted in the past tense. `voidUnsettledProduce` marks the agreement void on
+`cancelled`/`expired`/`no_show`; the heading becomes *"Fruit agreed at ₱2,090"*, an amber
+notice says the visit was called off and nothing was bought, and the chip reads *No payment*.
+The agreement stays on file — only the claim goes.
+
+**A deadline the UI printed and the model ignored.** `offerCard` renders "valid until …" and
+nothing anywhere honoured it, so an offer could advertise an expiry that never arrived while
+its request sat open forever (the accept-window exemption means an open offer stops the
+lapse clock). The comment even claimed offers expire on `validUntil`. `applyDueTransitions`
+now closes them first, before the accept window is evaluated — so a request whose only offer
+expired is correctly unanswered again.
+
+**Home went quiet on the one booking that needed it.** The needs-answer card deliberately
+stands aside for the active job, and the active card quoted `stateHint('requested')` — "the
+provider will answer". When the offer's booking *is* the active job, the one screen that
+should say *your answer is needed* said nothing of the kind. The hint now reads from the
+offer.
+
+**A contradiction read off a screenshot, not a hypothesis.** After the cancel fix, the
+voided screen still showed a header of CANCELLED above an offer card promising *"Maricel has
+to confirm the visit."* No check would have caught it; the text was in the right place and
+grammatically fine. The answered branch now says the visit was called off.
+
+**The reference schema had no shape for any of this.** `schema/sukinnect.reference.sql` is
+the document a backend gets built from, and it predated the pilot entirely. It now has an
+`offers` table with the two legs as separate columns, and the produce columns on `bookings`
+with `produce_fee_status` carrying the three states — because a rate that is undecided is not
+a rate that was waived, and a schema that flattens them loses the decision.
+
+Two of the original twelve were my own wrong expectations rather than defects: the harvest
+leg freezes at the quoted ₱1,600 with the fee taken from the provider's share (I had expected
+₱1,760, which would have broken the rule the money model is built on), and the expired-job
+probe hand-moved the offer array around the sweep instead of passing a deadline.
+
+Verified: **330 checks passed**, up from 322, with eight new lifecycle checks — each written
+*after* the fix and then falsified. **21 of 21 mutants caught.** All four scratch suites
+(seed sweep, resident probe, end-to-end journey, edge audit) pass, the edge audit reporting
+*no defects in the unwalked paths*. A `fruit-voided` screen was added to the camera so the
+new state is photographed rather than assumed.
+
+### The measurement tool was quietly under-reporting its own coverage
+
+Adding the voided screen is what exposed this: the camera kept reporting "across 40 screens"
+while its table held 42 entries, and the new screen simply never appeared. Two causes, both
+in the tool rather than the app.
+
+**A missing comma that JS refused to complain about.** The last entry of `SCREENS` ended
+without a comma, so the entry after it was parsed not as an element but as a *subscript* on
+the previous one — `['empty-search', …]['fruit-record', …]` — which evaluates to `undefined`.
+`node --check` passed, because the file is valid JavaScript; the array is just wrong. Any
+screen added after that point would have been silently unmeasurable, and the count it printed
+looked like a fact.
+
+**Screens that mutate state are not independent.** The run is one page session, so
+`fruit-record` answering b8's offer left nothing for `fruit-voided` or `admin-intel-produce`
+to answer — the tool caught and reported each as `SKIP`, but the skip lines were being lost
+in the noise of a grep that only asked for failures. A screen that reports nothing and a
+screen that passes are indistinguishable in a filtered log, which is how this survived three
+full sweeps.
+
+The fix is twofold: the mutating screens now call the app's own `resetDemoData()` before they
+set up, so each photographs the state its name claims, and they sit at the end of the table so
+they cannot dirty the screens before them. A check that evaluates the array literal and
+reports malformed or duplicate entries accompanies it. **42 screens, all measured, zero
+skipped.**
 
 ---
 

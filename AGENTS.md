@@ -1191,7 +1191,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 77 hard
                     and signal bars and the older per-trade palette). Untouched by the
                     rebuild; still byte-identical to main, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 9,179 lines, ONE :root block, 1,666 var() usages, 93 tokens declared
+Sukinnect-next.html— 9,294 lines, ONE :root block, 1,669 var() usages, 93 tokens declared
                     in :root with 88 of them reached. A scan for `#` + hex digits outside
                     :root finds 34 strings, and 2 of them are not colours: booking-id
                     fragments ("#8226", "#9021") that any pattern which does not require a
@@ -1206,13 +1206,13 @@ Sukinnect-next.html— 9,179 lines, ONE :root block, 1,666 var() usages, 93 toke
                     Everything that was a real violation is now a token: #fff became
                     --surface and --on-brand, the modal dim became --scrim, and the phone
                     mockup's bezel and signal bars became --device-bezel and
-                    --device-signal. Type is fully on the scale: of the 104 `font-size`
-                    declarations in the stylesheet, 103 take a var(), none is a literal px,
-                    and the 104th is `inherit` — the reset that lets an <h1> sit in a flex bar
+                    --device-signal. Type is fully on the scale: of the 105 `font-size`
+                    declarations in the stylesheet, 104 take a var(), none is a literal px,
+                    and the 105th is `inherit` — the reset that lets an <h1> sit in a flex bar
                     as the div it replaced. The 392 `font-size` declarations inside markup's
                     inline styles all take a var() too. Every screen title is now an <h1> and
                     every sheet title an <h2> — 21 and 5, the fifth being the offer sheet —
-                    because a 40-screen app with no headings has no outline for a screen
+                    because a 42-screen app with no headings has no outline for a screen
                     reader to navigate.
 
 ICONS DIVERGE BETWEEN THE TWO FILES, and a reader should not mistake that for an accident.
@@ -1228,7 +1228,7 @@ official mark is a PNG, not an icon, and it is still the only brand image on the
 The rebuild also added a real verification surface, because reading the file cannot
 see a layout: `node tools/shot.cjs` drives the machine's own Chrome headless over the
 DevTools Protocol with no npm packages, and `--measure` runs an in-page instrument
-across all 40 screens for tap targets, WCAG contrast (sampling gradients at the text's
+across all 42 screens for tap targets, WCAG contrast (sampling gradients at the text's
 own position), clipped text, off-scale fonts, content trapped under the nav, unnamed
 controls, escaping map panes, and anything painting over an open modal. A screenshot
 tool that navigates by assigning `state.*` measures a screen nobody can reach — the

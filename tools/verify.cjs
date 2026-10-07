@@ -1661,6 +1661,80 @@ suite('fruit', async () => {
       job.amountCentavos === 160000 && job.produce.amountCentavos === 660000;
   })(), 'the two legs merged or the wrong one was frozen');
 
+  /* ---- an offer only lives as long as the request it prices ----
+     Found by walking the paths the demo does not ship: a provider declining a job
+     left the offer 'proposed', so the model would have written a produce payment
+     onto a cancelled booking. Hiding the button is not refusing. */
+  c.check('a declined request closes its open offer', (() => {
+    const w = boot();
+    w.attemptTransition('b8','cancelled', { role:'provider', id:'p8' }, { reason:'Could not take it' });
+    return !w.openOfferFor('b8') && w.currentOffer('b8').status === 'withdrawn' &&
+      w.currentOffer('b8').closedBecause === 'cancelled';
+  })());
+  c.check('answering a closed request is refused by the model, not only by the UI', (() => {
+    const w = boot();
+    w.attemptTransition('b8','cancelled', { role:'provider', id:'p8' }, { reason:'Could not take it' });
+    w.OFFERS[0].status = 'proposed';                 /* force the impossible state */
+    try { w.answerOffer('b8','accept',{ role:'customer' }); return false; }
+    catch (e) { return /closed/.test(e.message); }
+  })());
+  c.check('an offer past its own deadline expires when the app is opened', (() => {
+    const w = boot();
+    w.OFFERS[0].validUntil = new Date(Date.now() - 60000).toISOString();
+    w.applyDueTransitions();
+    return w.OFFERS[0].status === 'expired' && !w.openOfferFor('b8');
+  })());
+  c.check('a deadline in the future leaves the offer answerable', (() => {
+    const w = boot();
+    w.OFFERS[0].validUntil = new Date(Date.now() + 86400000).toISOString();
+    w.applyDueTransitions();
+    return w.OFFERS[0].status === 'proposed';
+  })());
+  c.check('a called-off job stops claiming a payment that never happened', (() => {
+    const w = boot();
+    w.answerOffer('b8','accept', { role:'customer', id: w.CURRENT_CUSTOMER_ID });
+    w.attemptTransition('b8','cancelled', { role:'provider', id:'p8' }, { reason:'Could not do the job' });
+    const job = w.bookingById('b8');
+    return !!job.produce.voided && w.payStatusLabel(job) === 'No payment' &&
+      !/you were paid/.test(w.produceRow(job)) && /never bought/.test(w.produceRow(job));
+  })(), 'a cancelled job still asserted a payment');
+  /* Walked, not forced: setting the status by hand trips the closed-request guard
+     that this very suite added, which is the guard working. */
+  /* Through b10 and p7: b8's buyer Maricel is not an account anyone signs in as, so
+     the capacity guard — which asks who is signed in, correctly — refuses the walk.
+     That is the guard working, not a hole. */
+  c.check('a job that runs to completion keeps its payment claim', (() => {
+    const w = boot();
+    w.makeOffer('b10', { basis:'per_kg', quantityGrams:120000, unitPriceCentavos:5500,
+      produceCentavos:660000, labourCentavos:0, whoHarvests:'provider' }, { role:'provider' });
+    w.answerOffer('b10','accept', { role:'customer', id: w.CURRENT_CUSTOMER_ID });
+    w.applyProviderIdentity('p7');
+    ['upcoming','en_route','arrived','ongoing','completed'].forEach(to =>
+      w.attemptTransition('b10', to, { role:'provider', id:'p7' }));
+    const job = w.bookingById('b10');
+    return job.status === 'completed' && !job.produce.voided &&
+      /you were paid/.test(w.produceRow(job));
+  })());
+  /* Read off a screenshot, not off a hypothesis: the header said CANCELLED while the
+     offer card above it still promised the buyer would confirm the visit. */
+  c.check('an offer card on a closed job stops promising a visit', (() => {
+    const w = boot();
+    w.answerOffer('b8','accept', { role:'customer', id: w.CURRENT_CUSTOMER_ID });
+    w.attemptTransition('b8','cancelled', { role:'provider', id:'p8' }, { reason:'Could not do the job' });
+    const card = w.offerCard(w.bookingById('b8'));
+    return !/has to confirm the visit/.test(card) && /never bought/.test(card);
+  })(), 'the card still promised a visit for a job that was called off');
+
+  c.check('Home names an open offer as the next step when it is the active job', (() => {
+    const w = boot();
+    w.state.view='app'; w.state.role='resident'; w.state.tab='home';
+    w.BOOKINGS.filter(b => b.customerId === w.CURRENT_CUSTOMER_ID && b.id !== 'b8')
+      .forEach(b => { if (!w.FINISHED_STATES.includes(b.status)) b.status = 'completed'; });
+    const html = w.residentHome();
+    return /data-booking="b8"/.test(html) && /waiting for your answer/i.test(html) &&
+      !/Waiting for the provider to answer/.test(html);
+  })(), 'the one booking where her answer is the story was the one screen that did not say so');
+
   c.check('the catalogue admits what it cannot do',
     /does not do/.test(adm.adminCategories()) && /not available here/.test(adm.adminCategories()));
 
