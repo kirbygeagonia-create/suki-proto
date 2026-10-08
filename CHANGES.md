@@ -767,10 +767,51 @@ re-scale a lot, drop the rate from the record, delete each guard, un-inherit the
 re-freeze the service leg, silence the thread, keep the estimate in the row and in the
 operator's total, unmount the card, sever the route, repeat the headline, promise a
 confirmation, speak in the past tense — each run against the real gate with the file restored
-from memory in a `finally`. All twenty-six were caught; none survived; three needed a second
-attempt because the app file is CRLF and two of my one-line anchors turned up twice, which is
-itself the proof that the sheet and the model share the expression. The gate is at **372
-checks**, the camera at **45 screens**.
+from memory in a `finally`. All twenty-six were caught and none survived. Four more matched
+nothing the first time and had to be rewritten: one because the app file is CRLF and a
+find-string carrying a newline misses every time, two because the one-line anchor I chose
+appeared twice — which is itself the proof that the sheet and the model share the expression —
+and one because I had fixed that line in between.
+
+
+## 19. Auditing the audit: what the weighing step did not yet prove
+
+Asked to check the whole body of work, the useful question was not "is the gate green" — it is,
+and that fact has already been shown to be insufficient twice. The question is which claims in
+the last commit are **stated but not tested**, and which rules the tests themselves get wrong.
+
+**Two states were untested, and both work.** A reading surviving a reload, and a job that goes
+into dispute *after* its weight was recorded, were probed by hand first: both behave (the
+reading, its unit price and its frozen rate round-trip through `hydrate`; a disputed job hides
+the card, refuses a new reading, and stops claiming the money has been paid). Neither had a
+check, so both now do — a feature that works and is not tested is a feature that will quietly
+stop working, which is the exact failure this repo has already been caught out by once.
+
+**The bug the audit found was a real one, and it was mine.** A scale reads in grams; the field
+asks for kilos. Feeding the model 999,999 kg priced the job at ₱5.5 **billion** and nothing on
+the screen noticed. The fix warns rather than refuses — a cap would be an invented rule, and the
+two people on the site know the load while the platform has not stood under a tree — so the
+sheet now says *that is more than double the estimate of 120 kg; check you weighed in kilos, not
+grams; this is the figure they will be paid*, in amber, directly under the difference it is
+about. A new screen state, photographed and measured: `finalise-warn`.
+
+**The first version of that rule was wrong in the opposite direction, and only the mutants
+said so.** It warned on *any* reading further than half from the estimate — which fires on 31
+kilos against an agreed 120, the ordinary story of a standing tree and the single case the
+whole step exists for. It also survived a mutation that turned it into "warn on any difference",
+because no check tested the band between the estimate and double it. Both are fixed: the rule is
+one-directional now, and the checks pin 200 kg as a good season and 300 kg as a unit error.
+
+**Two things were left alone deliberately.** A free-text note on a weighing is uncapped, because
+nothing in this file is capped — the offer note, the case reason and the booking request are all
+open text, and a limit on one field would be an inconsistency dressed as a fix. And two message
+sinks render `${m.text}` unescaped in the provider's *next step* card; they are safe today
+because the only strings reaching them are written in code, so they are recorded as a latent
+hazard rather than patched blind — the note itself is escaped on every path that actually
+carries it (chat bubble, thread snippet, produce row, thread message).
+
+Gate **379 checks**, camera **46 screens**, clean at 360×640. `Sukinnect.html` still
+byte-identical to `main`.
 
 ## Deliberately not done
 

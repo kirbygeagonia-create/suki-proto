@@ -523,6 +523,17 @@ const SCREENS = [
                            moved the model would photograph a field and a total that never
                            occur together. */
                         document.getElementById('final-qty').value='31'; finalInput('qtyKg','31');`],
+  ['finalise-warn',    `resetDemoData(); applyProviderIdentity('p7');
+                        makeOffer('b10',{ basis:'per_kg', quantityGrams:120000, unitPriceCentavos:5500,
+                          produceCentavos:660000, labourCentavos:0, whoHarvests:'provider' },{ role:'provider' });
+                        answerOffer('b10','accept',{ role:'customer', id:CURRENT_CUSTOMER_ID });
+                        ['upcoming','en_route','arrived'].forEach(t =>
+                          attemptTransition('b10', t, { role:'provider', id:'p7' }));
+                        state.view='app'; state.role='provider'; state.tab='provider_booking_detail';
+                        openProviderBooking('b10'); openFinalise('b10');
+                        /* A scale reads in grams; this field asks for kilos. Typed the way a
+                           person holding a scale readout would type it. */
+                        document.getElementById('final-qty').value='31000'; finalInput('qtyKg','31000');`],
   ['fruit-weighed-record', `resetDemoData(); applyProviderIdentity('p7');
                         makeOffer('b10',{ basis:'per_kg', quantityGrams:120000, unitPriceCentavos:5500,
                           produceCentavos:660000, labourCentavos:0, whoHarvests:'provider' },{ role:'provider' });

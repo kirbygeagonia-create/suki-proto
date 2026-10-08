@@ -1,7 +1,7 @@
 # Handset pass — the thing no browser check can prove
 
-The rebuild in `Sukinnect-next.html` has been rendered in Node (372 assertions), painted in
-real Chrome at 390×844 across 45 screens, and measured for tap targets, contrast, clipping and
+The rebuild in `Sukinnect-next.html` has been rendered in Node (379 assertions), painted in
+real Chrome at 390×844 across 46 screens, and measured for tap targets, contrast, clipping and
 occlusion. None of that is a phone. Three categories are still unverified because no instrument
 can reach them: a thumb, an on-screen keyboard, and a slow device.
 
@@ -109,6 +109,12 @@ job in the inbox; `ramil@demo.ph` is still the plumbing account.
       29.5, not 30. Then correct it to 31 and check the card and the resident's row both show
       the new figure with the old one beside it. A reading that rounds on the way back in is a
       record that changes when you look at it.
+- [ ] **The unit-error warning is readable and does not bury the button.** Type `31000` into
+      the kilos field (what a person holding a scale readout would type). An amber line should
+      appear saying it is more than double the estimate. On the smallest phone you have: is the
+      line readable in one pass, and can you still reach **Record** and **Cancel** with the
+      keyboard closed? The sheet grows downward, so this is the one place where a warning could
+      push the action off the screen.
 - [ ] **The weighing is below the fold and you can find it.** On a 360-class phone the card sits
       under the map and the job notes on the provider's job screen. Scroll from the top: is it
       obvious enough that the visit is not finished until you enter what you carried?

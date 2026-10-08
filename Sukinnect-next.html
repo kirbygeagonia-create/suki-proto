@@ -914,6 +914,11 @@
   .finalise-sub{ font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:3px; }
   .finalise-delta{ display:flex; gap:6px; align-items:flex-start; margin-top:9px; padding-top:9px;
     border-top:1px solid var(--line); font-size:var(--t-caption); line-height:1.5; color:var(--text-muted); }
+  /* An implausible reading is warned about, never refused — the people on the site know
+     the load and the platform has not stood under the tree (63). */
+  .finalise-warn{ display:flex; gap:7px; align-items:flex-start; margin-top:9px; padding:9px 11px;
+    background:var(--warning-100); border-radius:10px; font-size:var(--t-caption); line-height:1.5;
+    color:var(--warning-ink); }
   .fruit-card .cap-rows{ margin-top:11px; }
   .fruit-said{ font-size:var(--t-caption); color:var(--mist); line-height:1.45; margin-top:2px; }
   .fruit-own{ display:flex; gap:7px; align-items:flex-start; margin-top:11px; padding-top:9px;
@@ -8509,11 +8514,21 @@ function finalDraftTotals(d){
     if (qty && unit) amount = Math.round(qty * unit / 1000);
   }
   const fee = p.feeStatus === 'charged' ? produceFeeOf(b.mode, amount, p.feeRate) : 0;
+  /* A scale reads in grams and this field asks for kilos, so the likeliest mistake by far
+     is a number a thousand times too big sitting on a line that tells a person what they
+     owe. Nothing here refuses it — only the two people know the real load, and a cap would
+     be an invented rule — but the sheet has to say what it looks like. Only the *over*
+     direction is warned about: carrying less than estimated is the ordinary story of a
+     standing tree, and warning on it would be noise on the one case this step exists for. */
+  const est = p.basis === 'per_tree' ? ((b.fruit && b.fruit.treeCount) || null)
+    : (p.basis === 'per_kg' ? (p.quantityGrams || null) : null);
+  const actual = p.basis === 'per_tree' ? count : qty;
+  const farAboveEstimate = !!(est && actual && actual > est * 2);
   return { basis: p.basis, unitCentavos: unit || null, quantityGrams: qty, treeCount: count,
            amountCentavos: amount, agreedCentavos: p.amountCentavos,
            differenceCentavos: amount - p.amountCentavos,
            platformFeeCentavos: fee,
-           feeStatus: p.feeStatus,
+           feeStatus: p.feeStatus, farAboveEstimate,
            valid: p.basis === 'per_lot' ? true : (p.basis === 'per_tree' ? count > 0 : qty > 0) };
 }
 function finaliseTotalsBlock(b, t){
@@ -8531,6 +8546,12 @@ function finaliseTotalsBlock(b, t){
               moved === 0 ? 'Same as the estimate' : (moved > 0 ? 'More fruit than the estimate' : 'Less fruit than the estimate')}</span>
             <b style="font-size:var(--t-body-lg);">${moved === 0 ? 'no change' : esc((moved > 0 ? '+' : '−') + pesoShort(Math.abs(moved)))}</b>
           </div>
+          ${t.farAboveEstimate ? `<div class="finalise-warn">${ic('alert-triangle', 12)}
+            <span>That is more than double the ${esc(p.basis === 'per_tree'
+              ? String((b.fruit && b.fruit.treeCount) || '?') + ' trees'
+              : 'estimate of ' + kgText(p.quantityGrams))}. Check you weighed in kilos, not grams —
+            this is the figure ${p.direction === 'provider_pays_for_produce' ? 'they will be paid' : 'you will be charged'}.</span>
+          </div>` : ''}
           ${t.unitCentavos && t.basis !== 'per_lot' ? `<div class="row"><span class="mut">Rate applied</span>
             <b class="mut">${esc(peso(t.unitCentavos))}${t.basis === 'per_kg' ? ' / kilo' : ' / tree'} — the agreed one</b></div>` : ''}
           ${t.basis === 'per_lot' ? `<div class="row"><span class="mut">Priced as a lot</span>

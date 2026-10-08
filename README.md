@@ -244,7 +244,11 @@ nothing new.
   weighed out ₱1,705*, the thread carries the sentence, and the operator's fruit figure counts
   the money that moved. The fruit fee's **state** is inherited from the agreement, never
   re-asked of `CONFIG`, so an admin deciding a rate afterwards cannot reach back and charge a
-  job that was agreed under the old answer.
+  job that was agreed under the old answer. A scale reads in grams and the field asks for
+  kilos, so a reading **more than double** the estimate is called out on the sheet — warned,
+  never refused, because a cap would be an invented rule and the two people on the site know
+  the load. Carrying *less* than estimated is the ordinary story of a standing tree and is
+  never treated as a mistake.
 - **A fee column may never show `₱0` for a job that has no price.** `bookingAmountText` says
   `Price by offer` while it is open and `No service fee` once a purchase is settled; the value
   of the crop appears only in its own labelled row.

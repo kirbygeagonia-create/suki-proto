@@ -2023,6 +2023,89 @@ suite('weighing', async () => {
       charged.produceCharged === true && charged.produceFeeUndecided === false;
   })());
 
+  /* The typo that a scale makes: it reads in grams, the field asks for kilos, and the
+     number that lands on the line telling a person what they owe is a thousand times too
+     big. Probed by hand first — the model accepted 999,999 kg and priced it at ₱5.5
+     billion with nothing on the screen noticing. */
+  c.check('a reading far above the estimate is warned about, not refused', (() => {
+    const v = walked();
+    v.openFinalise('b10');
+    v.finalInput('qtyKg', '999999');
+    const html = v.sheetHTML();
+    return v.finalDraftTotals(v.state.finalDraft).farAboveEstimate === true &&
+      /kilos, not grams/.test(html) && /more than double/.test(html) &&
+      /they will be paid/.test(html);
+  })(), 'the sheet took an absurd weight in silence');
+  /* The asymmetry is the point, and it is the mistake this audit nearly shipped: an
+     earlier draft warned on *any* reading under half the estimate, which fires on 31 of
+     an agreed 120 — the ordinary story of a standing tree, and the one case the step
+     exists for. Carrying less is normal. Carrying double is a unit error. */
+  c.check('carrying less than estimated is never treated as a mistake', (() => {
+    const v = walked();
+    v.openFinalise('b10');
+    return ['31', '10', '1'].every(kg => {
+      v.finalInput('qtyKg', kg);
+      return v.finalDraftTotals(v.state.finalDraft).farAboveEstimate === false &&
+        !/finalise-warn/.test(v.sheetHTML());
+    });
+  })(), 'the warning fired on an ordinary shortfall');
+  c.check('a reading somewhat above the estimate is not treated as a mistake', (() => {
+    const v = walked();
+    v.openFinalise('b10');
+    /* 120 kg was estimated. 200 is a good season; 300 is a scale read in grams. A rule
+       that warned on the first would be crying wolf on the sheet the buyer reads before
+       they hand over money, which is worse than the silence it replaces. */
+    v.finalInput('qtyKg', '200');
+    const plausible = v.finalDraftTotals(v.state.finalDraft).farAboveEstimate === false &&
+      !/finalise-warn/.test(v.sheetHTML());
+    v.finalInput('qtyKg', '300');
+    return plausible && v.finalDraftTotals(v.state.finalDraft).farAboveEstimate === true &&
+      /finalise-warn/.test(v.sheetHTML());
+  })(), 'the warning had no threshold, only a direction');
+  c.check('a lot is never warned about, because its weight changes no money', (() => {
+    const v = walked({ basis: 'per_lot', produce: 150000, unit: 150000 });
+    v.openFinalise('b10');
+    v.finalInput('qtyKg', '999999');
+    return v.finalDraftTotals(v.state.finalDraft).farAboveEstimate === false;
+  })());
+  c.check('the model still takes the big reading — the cap would be an invented rule', (() => {
+    const v = walked();
+    return v.finaliseProduce('b10', { quantityGrams: 999999000 }, { role:'provider' }).amountCentavos === 5499994500;
+  })(), 'a limit nobody agreed was quietly added to the weight');
+
+  /* The two states the audit walked into and found untested. */
+  c.check('a reading survives a reload with the rate that priced it', (() => {
+    const store = fakeStorage();
+    const first = boot({ storage: store });
+    first.makeOffer('b10', { basis:'per_kg', quantityGrams:120000, unitPriceCentavos:5500,
+      produceCentavos:660000, labourCentavos:0, whoHarvests:'provider' }, { role:'provider' });
+    first.answerOffer('b10','accept', { role:'customer', id: first.CURRENT_CUSTOMER_ID });
+    first.applyProviderIdentity('p7');
+    ['upcoming','en_route','arrived'].forEach(to =>
+      first.attemptTransition('b10', to, { role:'provider', id:'p7' }));
+    first.finaliseProduce('b10', { quantityGrams: 31000 }, { role:'provider' });
+    first.persist();
+    const again = boot({ storage: store });
+    again.hydrate();
+    const job = again.bookingById('b10');
+    return !!job.produce.final && job.produce.final.amountCentavos === 170500 &&
+      job.produce.unitPriceCentavos === 5500 &&
+      /weighed out at ₱1,705/.test(again.produceRow(job)) &&
+      /Weighed out · ₱1,705/.test(again.finaliseCard(job));
+  })(), 'the reading was written to the screen but not to the store');
+  c.check('a job under case review cannot have its weight edited', (() => {
+    const v = walked();
+    v.finaliseProduce('b10', { quantityGrams: 31000 }, { role:'provider' });
+    ['ongoing','completed'].forEach(to => v.attemptTransition('b10', to, { role:'provider', id:'p7' }));
+    v.openDispute('b10', { role:'customer', id: v.CURRENT_CUSTOMER_ID }, 'Fewer kilos than the weighing claimed');
+    const job = v.bookingById('b10');
+    let refused = false;
+    try { v.finaliseProduce('b10', { quantityGrams: 120000 }, { role:'provider' }); }
+    catch (err) { refused = /once the visit has started/.test(err.message); }
+    return job.status === 'disputed' && refused && v.finaliseCard(job) === '' &&
+      /you are being paid/.test(v.produceRow(job));
+  })(), 'the number under dispute could still be rewritten by the party who wrote it');
+
   return c;
 });
 
