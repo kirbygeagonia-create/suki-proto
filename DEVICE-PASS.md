@@ -1,25 +1,23 @@
 # Handset pass — the thing no browser check can prove
 
-The rebuild in `Sukinnect-next.html` has been rendered in Node (379 assertions), painted in
+The rebuild in `Sukinnect-next.html` has been rendered in Node (393 assertions), painted in
 real Chrome at 390×844 across 46 screens, and measured for tap targets, contrast, clipping and
 occlusion. None of that is a phone. Three categories are still unverified because no instrument
 can reach them: a thumb, an on-screen keyboard, and a slow device.
 
 **The Android assets copy is a third file, and `git status` cannot see it.**
-`Sukinnect-Android/app/src/main/assets/Sukinnect.html` is gitignored, so it matches neither HTML
-file in the repo and no working-tree check will ever tell you. As of this writing it holds the
-rebuild **as it stood before the offer-lifecycle fixes and the weighing step** — build and
-install right now and the device runs an older rebuild than the one you are reading about.
-
-Do not trust this paragraph. Run the comparison:
+`Sukinnect-Android/app/src/main/assets/Sukinnect.html` is gitignored, so no working-tree check
+will ever tell you which build a device is about to run. It was synced to the current rebuild on
+2026-10-08; it drifts by design, so verify rather than trust this sentence. Run the comparison
+before you build:
 
 ```
-md5sum Sukinnect.html Sukinnect-next.html Sukinnect-Android/app/src/main/assets/Sukinnect.html
+md5sum Sukinnect-next.html Sukinnect-Android/app/src/main/assets/Sukinnect.html
 ```
 
-Three different hashes means the device is not showing what you just changed. Re-syncing it is a
-promotion decision, not a step in a session — the shipped `Sukinnect.html` is still what a
-customer-facing build should carry until the owner says otherwise. To put the shipped file back:
+Two identical hashes means the device will run what you have been reading about. To put the
+shipped prototype back instead — which is what a customer-facing build should carry until the
+owner says otherwise:
 
 ```
 cp Sukinnect.html Sukinnect-Android/app/src/main/assets/Sukinnect.html
@@ -32,8 +30,8 @@ That title is there on purpose, so a phone is never showing a build you cannot n
 
 A pre-pass ran on 2026-10-07 with the instruments in this repo — headless Chrome at a phone
 viewport, a live-DOM probe (`tools/probe-caret.js`), and the Android shell's own source. It
-answered some of this list outright, narrowed others to a single question, and found **two real
-defects and one fixed one**. Everything below marked **[settled]** does not need your hands.
+answered some of this list outright, narrowed others to a single question, and found **three real
+defects — all three now fixed**. Everything below marked **[settled]** does not need your hands.
 
 | Checklist item | Status |
 |---|---|
@@ -47,23 +45,41 @@ defects and one fixed one**. Everything below marked **[settled]** does not need
 | §5 — is the unit-error warning readable without burying the buttons? | **[settled at 360px]** photographed; the amber line sits above a pinned action row. The *keyboard-open* version of this is still yours. |
 | §1 — are the controls in thumb reach? | **[measured]** at 360×640 only header-level controls (Back, Log Out, Mark all as read) sit in the top 28%; every primary action is in the lower half. Whether it *feels* right with one thumb is still yours. |
 | Accessibility names on every field | **[settled for painted screens]** the instrument now checks form controls against the browser's own `el.labels`. It found seven fields whose visible label was never associated — the booking sheet's "what needs doing", the concierge box, the results search, the seven admin rate fields — all fixed; zero nameless controls remain. |
+| §3 — hardware back from a sheet or a drill-in | **[fixed, needs the two phone-only edges]** the page now keeps one history entry per open layer and one per drill-in. See the defects below. |
+| §5 — the photo picker | **[fixed in the shell, never run on a device]** `onShowFileChooser` now exists. It compiles; that is the whole of the evidence. See the defects below. |
 
 **Two things the pre-pass could not fix, because they are not page bugs:**
 
-- **[defect] Hardware back quits the app from inside any open sheet.** The shell's
-  `onBackPressed` calls `web.canGoBack()`, and the page pushes **no** history entries at all —
-  zero `pushState`, zero `popstate`, confirmed by grep. So `canGoBack()` is false the moment the
-  app is open, and back exits. This is not a maybe; it will happen on every modal. Either the
-  page pushes a history entry per open sheet and closes it on `popstate` (page-side, ~15 lines,
-  changes navigation behaviour — needs a decision), or the shell intercepts back and asks the
-  page to close its sheet first (shell-side).
-- **[defect] Both photo controls do nothing on a device.** `MainActivity` sets a `WebViewClient`
-  and **no `WebChromeClient` at all**, and `<input type="file">` in a WebView only opens a
-  picker when the shell implements `onShowFileChooser`. So *Add a photo* on the fruit request
-  and *Upload or take a photo* in the Concierge are dead controls on the phone — they work in a
-  browser, which is every place they have ever been tested. Either add the ~20 lines to the
-  shell, or take the controls out; a prototype that shows a button which opens nothing teaches
-  a reviewer to distrust the buttons that do work.
+- **[fixed] Hardware back quit the app from inside any open sheet.** The page pushed **no**
+  history at all, so `canGoBack()` was false and back exited. The page now keeps one history
+  entry per open layer and one while you are off a root tab, and back spends them in order:
+  close the sheet, then leave the drill-in, then leave the app. Verified in real Chrome by
+  pressing back for real, and pinned by 14 checks in the `back` suite. Two edges a browser
+  cannot reach are still yours: **does back close the keyboard before it closes the sheet, and
+  does it still quit normally from a root tab?**
+- **[fixed, never run on a device] Both photo controls opened nothing.** `MainActivity` had a
+  `WebViewClient` and no `WebChromeClient`, so `onShowFileChooser` did not exist. The shell now
+  implements it, returns the picked URIs to the page, and answers `null` when the picker is
+  cancelled — without that, one cancelled attempt leaves the input dead for the rest of the
+  session. It compiles clean against `android.jar` (API 34) and that is the whole extent of what
+  has been verified: **no phone is attached here.** Confirm a picker opens from both the fruit
+  request and the Concierge, the name shows as a chip, removing it works, and cancelling once
+  does not break the next try. Expect the chip to read something like `1000004321.jpg`: Android
+  hands over a document URI and the page stores the name it carries, which is a device fact, not
+  a page bug.
+
+**The Android shell is not in git.** `.gitignore` line 2 is `Sukinnect-Android/` and
+`git ls-files Sukinnect-Android` returns nothing — the whole project, including the file chooser
+above and the assets copy below, is unversioned and exists only on the machine that edited it.
+That is a large part of why a defect this basic survived: no check, review or clone can see it.
+Tracking the shell is a decision worth making deliberately, not a step to slip in sideways.
+
+**The assets copy now matches the rebuild**, so a build today runs the weighing step and the back
+fix. They drift by design, so re-check before building:
+
+```
+md5sum Sukinnect-next.html Sukinnect-Android/app/src/main/assets/Sukinnect.html
+```
 
 Everything still unmarked below genuinely needs the handset: a thumb, a real keyboard, and a
 slow device.

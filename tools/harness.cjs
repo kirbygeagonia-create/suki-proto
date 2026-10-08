@@ -43,6 +43,9 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   'finaliseCard', 'openFinalise', 'finalDraft', 'finalDraftTotals', 'submitFinalise',
   'finalQuantityText',
   'finaliseProduceSheet', 'finaliseTotalsBlock', 'sheetHTML', 'finalInput', 'updateFinalTotals',
+  /* the Back suite drives the app through its own navigation entry points, because a
+     history handle is only worth testing if the step that created it is real */
+  'openSheet', 'closeSheet', 'openChatThread', 'stepBack', 'openLayers',
   'openDispute', 'openCaseSheet', 'submitCase', 'raiseCaseSheet', 'caseDoor', 'caseActor',
   'PAY_METHODS', 'PAYMENT_LABELS', 'TRANSITIONS', 'providerIsFreeToAccept',
   /* the thread, and the verbs the provider's card offers */
@@ -118,7 +121,26 @@ function boot({ appMode = false, storage = null } = {}) {
     createElement: () => fakeEl('created-' + ++nonce),
     addEventListener() {}
   };
-  const window = { customElements: null, addEventListener() {}, matchMedia: () => ({ matches: false, addEventListener() {} }) };
+  /* A browser keeps a session history and fires popstate when Back is pressed, and the app
+     now relies on both: a sheet pushes one entry so the phone's Back closes the sheet rather
+     than quitting. With no stub here the app's history calls would simply throw, and the
+     behaviour could not be asserted at all — so this records what was pushed and lets a test
+     press Back. back() fires popstate synchronously, which a browser does not; the app's own
+     guard makes that difference unobservable, and it is noted because a test that assumed
+     async would pass here and fail on a handset. */
+  const listeners = {};
+  const fire = (type) => (listeners[type] || []).forEach(fn => fn({ type }));
+  const history = {
+    entries: [],
+    pushState(state){ this.entries.push(state || null); },
+    replaceState(state){ if (this.entries.length) this.entries[this.entries.length - 1] = state || null; },
+    back(){ if (!this.entries.length) return; this.entries.pop(); fire('popstate'); },
+    get length(){ return this.entries.length + 1; }
+  };
+  const window = { customElements: null, history, __fire: fire,
+    addEventListener(type, fn){ (listeners[type] = listeners[type] || []).push(fn); },
+    removeEventListener() {},
+    matchMedia: () => ({ matches: false, addEventListener() {} }) };
   const location = { search: appMode ? '?app=1' : '' };
   const navigator = { userAgent: 'node-test' };
   class Image { set src(v) { this._src = v; } get src() { return this._src; } }
@@ -142,6 +164,8 @@ function boot({ appMode = false, storage = null } = {}) {
   )(window, document, location, navigator, L, Image, { log() {}, warn() {}, error() {} });
 
   ctx._document = document;
+  ctx._window = window;
+  ctx._history = history;
   ctx._els = els;
   ctx._source = src;
   return ctx;

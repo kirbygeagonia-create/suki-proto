@@ -68,6 +68,13 @@ left at its lot figure whatever it weighed, the service leg untouched, the fee's
 inherited rather than re-asked of the configuration, a correction that keeps what it replaced,
 and a screen for every one of those that a person on a phone can actually reach.
 
+A `back` suite drives the phone's only way out. The page keeps one history entry per open sheet
+and one per drill-in, so Back closes the sheet, then leaves the screen, then leaves the app — and
+a sheet dismissed by tap spends its own entry without being mistaken for a Back press. The Node
+harness grew a `history` stub and a `popstate` that fires to make any of this assertable, which is
+also its limit: a stub fires synchronously and a browser does not, so the same sequence was
+driven in real Chrome by pressing Back for real and awaiting each event.
+
 **A check that cannot fail is not a check.** Every rule above is falsified by mutating the rule
 in the real file and requiring the intended check to fail — twenty-six targeted breaks so far,
 each restoring the file from an in-memory copy in a `finally` so a crash cannot leave a mutation

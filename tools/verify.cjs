@@ -2109,6 +2109,106 @@ suite('weighing', async () => {
   return c;
 });
 
+/* ══ 17. back — the phone's only way out ═══════════════════════════════════════════
+   The shell asks the WebView "can you go back?" and the answer used to always be no,
+   because the page recorded nothing. That made the first Back press quit Sukinnect from
+   inside a half-filled form. These checks drive the history the page now keeps, through
+   the harness's own stub — which is the only reason this is testable at all. */
+suite('back', async () => {
+  const c = makeChecker();
+  const app = boot();
+  app.state.view = 'app'; app.state.role = 'resident'; app.state.tab = 'home'; app.render();
+  c.check('standing on a root tab records nothing to go back to',
+    app._history.entries.length === 0, JSON.stringify(app._history.entries.length));
+
+  app.openSheet('bookingRequest');
+  c.check('opening a sheet records one step to undo',
+    app._history.entries.length === 1 && !!app.state.sheet, JSON.stringify(app._history.entries.length));
+  app._history.back();
+  c.check('Back closes the sheet and leaves the screen under it alone',
+    app.state.sheet === null && app.state.tab === 'home' && app._history.entries.length === 0,
+    'sheet=' + app.state.sheet + ' tab=' + app.state.tab + ' entries=' + app._history.entries.length);
+
+  app.openSheet('bookingRequest');
+  app.closeSheet();
+  c.check('closing by tap spends the entry, so Back is never wasted',
+    app.state.sheet === null && app._history.entries.length === 0,
+    'entries=' + app._history.entries.length);
+
+  const v = boot();
+  v.state.view = 'app'; v.state.role = 'resident'; v.state.tab = 'home'; v.render();
+  v.openProviderDetail('p1');
+  c.check('walking into a provider records one step back out',
+    v.state.tab === 'provider_detail' && v._history.entries.length === 1,
+    'tab=' + v.state.tab + ' entries=' + v._history.entries.length);
+  v._history.back();
+  c.check('Back from a provider returns to the tab it was reached from',
+    v.state.tab === 'home' && !v.selectedProvider && v._history.entries.length === 0,
+    'tab=' + v.state.tab);
+
+  /* The case the whole feature exists for: a form half filled, deep in the app. */
+  const d = boot();
+  d.state.view = 'app'; d.state.role = 'resident'; d.state.tab = 'home'; d.render();
+  d.openProviderDetail('p1');
+  d.openSheet('bookingRequest');
+  c.check('a sheet on a drill-in records both steps',
+    d._history.entries.length === 2, JSON.stringify(d._history.entries.length));
+  d._history.back();
+  c.check('the first Back closes the sheet and keeps the screen you were on',
+    d.state.sheet === null && d.state.tab === 'provider_detail' && d._history.entries.length === 1,
+    'sheet=' + d.state.sheet + ' tab=' + d.state.tab + ' entries=' + d._history.entries.length);
+  d._history.back();
+  c.check('the second Back leaves the drill-in, and only then is the app quittable',
+    d.state.tab === 'home' && d._history.entries.length === 0,
+    'tab=' + d.state.tab + ' entries=' + d._history.entries.length);
+
+  const e = boot();
+  e.state.view = 'app'; e.state.role = 'resident'; e.state.tab = 'home'; e.render();
+  e.openProviderDetail('p1');
+  e.openSheet('bookingRequest');
+  e.closeSheet();
+  c.check('tapping the sheet away does not throw you out of the screen behind it',
+    e.state.tab === 'provider_detail' && e._history.entries.length === 1,
+    'tab=' + e.state.tab + ' entries=' + e._history.entries.length);
+
+  /* A tab switch is a move sideways, not a step down: Back should leave, not retrace
+     every tab tapped since the app opened. */
+  const f = boot();
+  f.state.view = 'app'; f.state.role = 'resident'; f.state.tab = 'home'; f.render();
+  f.state.tab = 'bookings'; f.render();
+  f.state.tab = 'messages'; f.render();
+  c.check('moving between root tabs leaves nothing to retrace',
+    f._history.entries.length === 0, JSON.stringify(f._history.entries.length));
+
+  /* Where Back lands is the tab you were actually on, and it belongs to the role you
+     are signed in as — a provider must not be dropped into a resident screen. */
+  const g = boot();
+  g.state.view = 'app'; g.state.role = 'provider'; g.state.tab = 'fsm'; g.render();
+  g.openProviderBooking('pb6');
+  c.check('a provider who came from the FSM goes back to the FSM', (() => {
+    g._history.back();
+    return g.state.tab === 'fsm';
+  })(), 'tab=' + g.state.tab);
+
+  const h = boot();
+  h.state.view = 'app'; h.state.role = 'resident'; h.state.tab = 'messages'; h.render();
+  h.openChatThread('p1', 'b1');
+  const inChat = h.state.isChatOpen === true || h.state.tab === 'chat';
+  c.check('opening a chat is a step down, so Back is not wasted on it', (() => {
+    h._history.back();
+    return inChat && h.state.tab === 'messages' && !h.state.isChatOpen;
+  })(), 'tab=' + h.state.tab + ' isChatOpen=' + h.state.isChatOpen);
+
+  /* The login screen is not inside the app; nothing there should be undoable. */
+  const i = boot();
+  i.state.view = 'login'; i.render();
+  i.state.authMode = 'register'; i.render();
+  c.check('the sign-in screen keeps no back handles', i._history.entries.length === 0,
+    JSON.stringify(i._history.entries.length));
+
+  return c;
+});
+
 (async () => {
   let total = 0, failed = 0;
   for (const { name, fn } of suites) {

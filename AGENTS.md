@@ -1193,7 +1193,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     (#1a1a1a, #171717) and its signal bars, and a good many `#fff`. Untouched by
                     the rebuild; still byte-identical to main, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 9,638 lines, ONE :root block, 1,684 var() usages, 93 tokens declared with 88
+Sukinnect-next.html— 9,745 lines, ONE :root block, 1,684 var() usages, 93 tokens declared with 88
                     of them reached. Thirty-nine hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fifteen
                     are `#fff` in the category artwork (SVG highlights, which have no token to

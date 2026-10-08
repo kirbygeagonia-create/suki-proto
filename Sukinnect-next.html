@@ -6206,6 +6206,72 @@ const ROOT_TABS = {
   admin:    ['admin_dashboard','admin_verifications','admin_disputes','profile']
 };
 
+/* ── Back ───────────────────────────────────────────────────────────────────────────
+   A sheet is a layer above a screen and a drill-in is a step below it, and a phone's Back
+   button can only undo something the page recorded. Until now the page recorded nothing:
+   the shell asks the WebView whether it can go back, the answer was always no, and the
+   first Back press quit Sukinnect from inside a half-filled form.
+
+   So the page keeps one history entry for each thing worth undoing — one while a layer is
+   open, one while you are off a root tab — and Back spends them in that order: close the
+   sheet, then leave the drill-in, and only then leave the app. Closing by tap spends the
+   entry itself, flagged so the popstate it causes is not mistaken for the user pressing
+   Back (which would throw them out of the screen they are still reading). */
+let ownedEntries = 0;
+let ignoreNextPop = 0;
+const lastRootTab = { resident: 'home', provider: 'dashboard', admin: 'admin_dashboard' };
+function openLayers(){
+  return [state.sheet, state.providerProfileModal, state.verificationModal,
+          state.adminAccountModal, state.providerDeclineConfirm ? 'decline' : '']
+    .filter(Boolean).join('|');
+}
+/* One definition of "you are on a tab, not inside something". render() needs it to decide
+   whether to replay the entrance glide, and Back needs it to decide whether there is
+   anything left to undo — an open chat sits on the Messages tab, so asking only about
+   state.tab says yes while a room is on screen. Two copies of this drifted apart once
+   already in this file's history. */
+function onRootTab(){
+  return !state.isChatOpen && (ROOT_TABS[state.role] || []).includes(state.tab);
+}
+function syncBackHandles(isRootTab){
+  const h = window.history;
+  if (!h || typeof h.pushState !== 'function') return;   /* nowhere to record a step */
+  const want = (openLayers() ? 1 : 0) +
+    (state.view === 'app' && !isRootTab ? 1 : 0);
+  try {
+    while (ownedEntries < want) { ownedEntries++; h.pushState({ sukiBack: ownedEntries }, ''); }
+    if (want < ownedEntries) {
+      const spend = ownedEntries - want;
+      ownedEntries = want;
+      ignoreNextPop += spend;
+      for (let i = 0; i < spend; i++) h.back();
+    }
+  } catch (err) { ownedEntries = want; }
+}
+function closeTopLayer(){
+  state.sheet = null;
+  state.providerProfileModal = null;
+  state.verificationModal = null;
+  state.adminAccountModal = null;
+  state.providerDeclineConfirm = false;
+}
+function stepBack(){
+  if (openLayers()) { closeTopLayer(); render(); return; }
+  if (state.view !== 'app' || onRootTab()) return;   /* nothing left to undo */
+  state.isChatOpen = false;
+  state.selectedBookingId = null;
+  state.selectedProviderBookingId = null;
+  state.selectedProvider = null;
+  state.adminScreen = 'overview';
+  state.tab = lastRootTab[state.role] || ROOT_TABS[state.role][0];
+  render();
+}
+window.addEventListener('popstate', function(){
+  if (ignoreNextPop > 0) { ignoreNextPop--; return; }   /* our own cleanup, not the user */
+  ownedEntries = Math.max(0, ownedEntries - 1);
+  stepBack();
+});
+
 function render(){
   const screen = document.getElementById('screen');
   const nav = document.getElementById('navbar');
@@ -6232,8 +6298,10 @@ function render(){
   screen._typing = changed ? null : captureTyping(screen);
 
   // An open chat is a drill-in inside the Messages tab, not the tab itself.
-  const root = !state.isChatOpen && (ROOT_TABS[state.role] || []).includes(state.tab);
+  const root = onRootTab();
   screen.dataset.root = state.view === 'app' && root ? '1' : '0';
+  /* Where Back should land when it has nothing left to close. */
+  if (state.view === 'app' && root) lastRootTab[state.role] = state.tab;
 
   // A modal belongs to the screen that raised it: if the destination
   // changed, drop any modal still flagged so it cannot re-open on a later
@@ -6253,6 +6321,7 @@ function render(){
     screen.innerHTML = splashHTML();
     screen.classList.toggle('anim', changed);
     setScreenScroll(screen, 0);
+    syncBackHandles(root);
     bootFromSplash();
     return;
   }
@@ -6266,6 +6335,7 @@ function render(){
     screen.innerHTML = loginHTML();
     screen.classList.toggle('anim', changed);
     setScreenScroll(screen, keepScroll);
+    syncBackHandles(root);
     setAuthSheetScroll(screen, keepAuth);
     bindLogin();
     return;
@@ -6286,6 +6356,7 @@ function render(){
   screen.classList.toggle('anim', changed);
   setScreenScroll(screen, keepScroll);
   bindTabHandlers();
+  syncBackHandles(root);
 }
 
 // Restores a scroll position without the smooth-scroll animation firing.
@@ -8808,7 +8879,7 @@ function jobActionBar(b) {
     return html;
   }).join('');
   const notes = moves.filter(m => m.kind === 'note').map(m => `
-        <div class="move-note">${m.text}</div>`).join('');
+        <div class="move-note">${esc(m.text)}</div>`).join('');
   return `<div class="card card-lg">
       <div style="font-size:var(--t-caption); font-weight:800; color:var(--ink-soft); margin-bottom:10px;">Your next step</div>
       <div style="display:flex; flex-direction:column; gap:8px;">
@@ -9051,7 +9122,7 @@ function realRequestCard() {
           ${press}
           <button type="button" class="btn sm secondary" style="flex:1; border-radius:10px;" onclick="openProviderBooking('${b.id}')">See the job</button>
         </div>
-        ${moves.filter(m => m.kind === 'note').map(m => `<div class="move-note">${m.text}</div>`).join('')}
+        ${moves.filter(m => m.kind === 'note').map(m => `<div class="move-note">${esc(m.text)}</div>`).join('')}
         <div style="font-size:var(--t-caption); color:var(--mist); margin-top:9px; line-height:1.5;">
           ${currentOffer(b.id)
             ? 'You have already answered this one with a price. The resident has to take it or leave it.'

@@ -860,6 +860,57 @@ this list will not ask twice.
 Gate **379 checks**; instrument now reports eleven tallies over **46 screens**, all zero, at
 360×640. `Sukinnect.html` untouched.
 
+## 21. Back, the picker, and what a stub cannot prove
+
+The four decisions put after the desk-verification of the handset pass were: close the Back
+defect page-side, implement the file chooser in the shell, sync the device assets, and escape the
+two latent text sinks. All four are done; the interesting part is what it took to believe the
+first one.
+
+**Back now means something.** The page keeps one history entry while a layer is open and one
+while you are off a root tab, and spends them in that order — close the sheet, then leave the
+drill-in, then leave the app. A sheet dismissed by tap spends its own entry, flagged so the
+`popstate` it causes is not misread as the user pressing Back; without that flag, closing a sheet
+on a drill-in would throw the reader out of the screen they were still looking at. Tab-to-tab
+moves record nothing, because a tab switch is a move sideways and Back should leave, not retrace
+every tab tapped since launch. Where Back lands is the last root tab actually stood on, per role,
+so a provider who came from the FSM returns to the FSM and never to a resident screen.
+
+**The Node harness had to grow a browser feature to test any of this.** It had no `history` and
+its fake `window` dropped every listener, so the app's history calls would simply have thrown.
+The stub records what was pushed and fires `popstate` on `back()`, which is what makes 14 checks
+possible — and it is also the limit of what it can prove, because **a stub fires `popstate`
+synchronously and a browser does not.** That difference is precisely where this design could
+break: our own `back()` on tap-close arrives later than the render that caused it, and if the
+flag has not held, a user who dismissed a sheet is navigated away from the screen they are
+reading. So the behaviour was driven in real Chrome as well, pressing Back for real and awaiting
+each `popstate`: first press closes the sheet and keeps `provider_detail`, second leaves the
+drill-in and returns home, and the tap-close path leaves no dead entry that does nothing. Five
+mutations of the mechanism — drop the flag, drop the layer term, drop the depth term, close the
+layer without re-rendering, and count an open chat as a root tab — were each caught.
+
+**That last mutant is a bug the checks found before it shipped.** `stepBack()` asked whether
+`state.tab` was a root tab, and an open chat sits *on* the Messages tab, so Back reported "nothing
+left to undo" while a room was on screen. The definition of "on a tab, not inside something"
+existed twice in the file and had quietly diverged; it is now one function both `render()` and
+Back call.
+
+**The shell grew a file chooser.** `onShowFileChooser` now hands the page a real picker and — the
+part that is easy to miss — answers `null` when the user cancels, because a callback left pending
+disables the input for the rest of the session. It compiles clean against `android.jar` API 34,
+which is the strongest claim available on a machine with no phone attached, and the doc says so in
+those terms rather than implying it was tested.
+
+**And the reason any of this was invisible for so long: `.gitignore` line 2 is
+`Sukinnect-Android/`.** `git ls-files Sukinnect-Android` returns nothing. The whole Android
+project — the shell, its manifest, the bundled HTML — is unversioned, exists only on whichever
+machine edited it last, and cannot be reviewed, diffed or cloned. A dead photo button survived
+every audit this session because no audit could see the file it lived in. Whether to track the
+shell is a real decision and is recorded as one, not made sideways.
+
+Gate **393 checks**; instrument all eleven tallies at zero across **46 screens** at 360×640;
+`Sukinnect.html` still byte-identical to `main`.
+
 ## Deliberately not done
 
 
