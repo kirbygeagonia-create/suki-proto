@@ -62,7 +62,7 @@ const PROBE = flag('probe', '');
    what a real browser actually laid out.
    -------------------------------------------------------------------------------- */
 const AUDIT_JS = `(function(){
-  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], contrast: [], overlaps: [], stretched: [], vendor: [], mapEscape: [], occluded: [], hOverflow: 0 };
+  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], contrast: [], overlaps: [], stretched: [], vendor: [], mapEscape: [], occluded: [], nameless: [], placeholderOnly: [], hOverflow: 0 };
   const vw = document.documentElement.clientWidth;
   out.hOverflow = document.documentElement.scrollWidth - vw;
   const TAP = 44;
@@ -102,6 +102,24 @@ const AUDIT_JS = `(function(){
       out.small.push({ what: text(el).slice(0, 30) || el.tagName.toLowerCase(), h: Math.round(r.height), w: Math.round(r.width),
                        boxH: Math.round(boxH), inline, cls: (el.className||'').toString().split(' ')[0] });
     if (!text(el)) out.unlabelled.push({ unlabelled: el.tagName.toLowerCase() + '.' + ((el.className||'').toString().split(' ')[0] || '-') });
+  });
+
+  /* A form control a screen reader cannot name. This is asked of the live DOM rather than
+     read out of the source, because el.labels is the browser's own answer — it counts a
+     wrapping label element, a for=, and an aria-labelledby, where a text scan has to guess
+     at all three and gets it wrong in both directions. A field whose only name is its
+     placeholder is listed separately, not failed: it does announce, but the name disappears
+     the moment anyone types, which is the worst possible moment to lose it. */
+  document.querySelectorAll('input, select, textarea').forEach(el => {
+    if (!painted(el) || vendor(el)) return;
+    if (el.type === 'hidden') return;
+    const named = (el.labels && el.labels.length) ||
+      el.getAttribute('aria-label') || el.getAttribute('aria-labelledby') ||
+      (el.closest('label') && text(el.closest('label')).trim());
+    const who = (el.tagName.toLowerCase() + '#' + (el.id || '-') +
+      '.' + (((el.className || '').toString().split(' ')[0]) || '-')).slice(0, 46);
+    if (!named && el.placeholder) out.placeholderOnly.push({ field: who, hint: el.placeholder.slice(0, 32) });
+    else if (!named) out.nameless.push({ field: who });
   });
 
   /* Anything the nav actually traps. Content sliding under a glass bar while you
@@ -730,8 +748,14 @@ async function main() {
          page answers. Half of this audit was a wrong theory about a painted box,
          and the cheap way to settle a theory is to ask the page. */
       if (PROBE) {
-        const expr = PROBE.startsWith('@') ? fs.readFileSync(path.resolve(ROOT, PROBE.slice(1)), 'utf8') : PROBE;
-        console.log('    probe → ' + JSON.stringify(await session.evaluate(`(function(){ try { return (${expr}); } catch(e){ return 'threw: ' + e.message; } })()`)));
+        /* Its own try, because a bad probe string used to be reported as "page threw" —
+           which reads as an app defect to whoever is holding the output, when the only
+           thing that broke was the question. (@file is loaded relative to the repo; a
+           bare path without the @ is evaluated as JavaScript and fails on its first ':'.) */
+        try {
+          const expr = PROBE.startsWith('@') ? fs.readFileSync(path.resolve(ROOT, PROBE.slice(1)), 'utf8') : PROBE;
+          console.log('    probe → ' + JSON.stringify(await session.evaluate(`(function(){ try { return (${expr}); } catch(e){ return 'threw: ' + e.message; } })()`)));
+        } catch (err) { console.log('    probe failed (not a page fault): ' + err.message.split('\n')[0]); }
       }
       const shot = await session.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
       const file = path.join(OUT, name + '.png');
@@ -776,12 +800,15 @@ async function main() {
     tally(off, 'font sizes off the type scale', r => r.screen + ' ' + r.size + 'px "' + r.text + '"');
     tally(over, 'content sitting under the bottom nav', r => r.screen + ' "' + r.what + '" by ' + r.underBy + 'px');
     tally(unl, 'clickable things with no accessible name', r => r.screen + '  ' + r.unlabelled);
+    tally(flat('nameless'), 'form controls a screen reader cannot name', r => r.screen + '  ' + r.field);
     tally(str, 'images drawn out of proportion', r => r.screen + '  ' + r.src + ' natural ' + r.natural + ' drawn ' + r.drawn);
     tally(flat('mapEscape'), 'map panes painted outside their own frame', r => r.screen + '  ' + r.what + ' — ' + r.why);
     tally(flat('occluded'), 'something painting on top of an open modal layer', r => r.screen + '  ' + r.what + ' at sample ' + r.at);
     const vend = flat('vendor');
     console.log('\nvendor-owned controls excluded (Leaflet attribution + markers, not ours to resize): ' +
       vend.length + (vend.length ? '  e.g. ' + [...new Set(vend.map(r => r.what || 'unlabelled <img>'))].slice(0, 4).join(' | ') : ''));
+    const weak = flat('placeholderOnly');
+    console.log('\nfields whose only name is a placeholder (it vanishes on typing; listed for review): ' + weak.length + (weak.length ? '  ' + weak.slice(0, 6).map(r => r.screen + ' ' + r.field).join(', ') : ''));
     console.log('\nsingle-line previews shortened with an ellipsis (intended, listed for review): ' + previews.length + (previews.length ? '  e.g. ' + previews.slice(0,3).map(r => '\"' + r.text + '\x22 loses ' + r.lost + 'px').join(', ') : ''));
     const hOver = manifest.filter(m => m.audit && m.audit.hOverflow > 0);
     console.log('\nhorizontal overflow (a screen wider than the phone): ' + (hOver.length ? hOver.map(m => m.name + ' +' + m.audit.hOverflow + 'px').join(', ') : 'none'));

@@ -813,6 +813,53 @@ carries it (chat bubble, thread snippet, produce row, thread message).
 Gate **379 checks**, camera **46 screens**, clean at 360×640. `Sukinnect.html` still
 byte-identical to `main`.
 
+## 20. Running the handset pass at a desk
+
+Asked to start verifying `DEVICE-PASS.md`, the first thing the check found is that no device is
+attached to this machine — so the pass itself cannot run here. What *can* run here is everything
+on that list whose cause is in the page or in the shell's own source, and separating the two is
+the difference between a 20-minute phone session and an afternoon of guessing.
+
+**One real defect, found and fixed.** The admin's search field on verified providers was the only
+`oninput` handler in the app that calls `render()`. A re-render replaces the markup, so the
+element the reader typed in is detached and focus is lost — which on a phone means the keyboard
+closes after a single character. `render()` already promised the opposite (§46, §79: an in-place
+action must not feel like a reload) and already restores scroll across a re-render, so the fix is
+the same trick one line further on: capture the focused field and its caret position before the
+rebuild, put both back after. Proven by mutation — with `restoreTyping` removed the probe reports
+`keptFocus: false`, with it in place `true`, and the old node is reported as replaced either way,
+so the check is not passing by accident.
+
+**Seven fields had a visible label that was never associated with them.** The booking sheet's
+"what needs doing", the concierge box, the results search, the admin's verified-providers search,
+two internal admin notes, and the seven per-category rate fields — whose only name was a sibling
+`<span>`, so a screen reader announced "spin button, 15" with nothing to say which trade. Fixed,
+and the instrument now checks it against the browser's own `el.labels` rather than a text scan:
+`form controls a screen reader cannot name: 0`, and a separate informational count of
+placeholder-only names, which is also 0.
+
+**Two answers came from the shell's source, not from a phone.** `setDomStorageEnabled(true)` and
+`setBackgroundColor(#F1F5FF)` settle the storage and white-flash items as far as code can; a
+`tileerror` handler, a painted-tile count and a hard 4-second timeout settle the map's offline
+handover. And two defects are now certain rather than suspected: the page pushes **no** history
+entries, so hardware back quits the app from inside every modal; and `MainActivity` sets a
+`WebViewClient` with **no `WebChromeClient`**, so `onShowFileChooser` does not exist and *both*
+photo controls — the fruit request's and the Concierge's, which the checklist never named — open
+nothing. Those two are decisions for the owner, not fixes to make quietly: one changes navigation
+behaviour, the other belongs to a project outside this repository.
+
+**The probe was wrong before the app was.** Its first version compared `document.activeElement`
+against the node it had held on to — and a re-render detaches that node, so it could only ever
+answer "lost", whether the page was broken or fixed. It also reported `nodeSurvived: true` for the
+same field, because it fell back to the detached reference when there was no id to look up. Both
+were rewritten to ask the live document instead. `tools/probe-caret.js` is committed so the class
+of bug has an instrument; the geometry probe that measured thumb reach, sheet footers at a
+keyboard-height viewport, and `inputmode` coverage stays a scratch tool because it asked questions
+this list will not ask twice.
+
+Gate **379 checks**; instrument now reports eleven tallies over **46 screens**, all zero, at
+360×640. `Sukinnect.html` untouched.
+
 ## Deliberately not done
 
 

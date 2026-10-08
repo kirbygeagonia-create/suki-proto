@@ -28,7 +28,49 @@ cp Sukinnect.html Sukinnect-Android/app/src/main/assets/Sukinnect.html
 The first check on the device: the app switcher should read **"Sukinnect — next (rebuild)"**.
 That title is there on purpose, so a phone is never showing a build you cannot name.
 
+## What was settled before the phone
+
+A pre-pass ran on 2026-10-07 with the instruments in this repo — headless Chrome at a phone
+viewport, a live-DOM probe (`tools/probe-caret.js`), and the Android shell's own source. It
+answered some of this list outright, narrowed others to a single question, and found **two real
+defects and one fixed one**. Everything below marked **[settled]** does not need your hands.
+
+| Checklist item | Status |
+|---|---|
+| §2 — does the right keyboard come up for numeric fields? | **[settled]** every numeric field in the app carries `inputmode` (`decimal` or `numeric`); the instrument found zero relying on a QWERTY pad. |
+| §2 — does the submit button disappear under the keyboard? | **[settled, page-side]** at a keyboard-height viewport (360×380) every one of the seven sheets shrinks to 304px, its body scrolls, and its action row sits flush with the bottom edge. `windowSoftInputMode="adjustResize"` is set in the manifest, so the WebView gives that height up rather than panning. |
+| §2 / §5 — does typing cost you the field? | **[settled, and fixed]** one field did this: the admin's search on verified providers called `render()` on every keystroke, which detached the input and dropped focus. `render()` now restores focus and the caret position the same way it already restores scroll. Proven both ways: with the fix the field keeps focus, without it it does not. All 46 screens now pass. |
+| §3 — white flash on cold open | **[settled in the shell]** `web.setBackgroundColor(#F1F5FF)` matches `--cloud`. Still worth eyes on, but the cause is handled. |
+| §3 — storage after force-close | **[settled in the shell]** `setDomStorageEnabled(true)` and `setAllowFileAccess(true)` are both set, and the round-trip through `hydrate` is gated. |
+| §3 — does the map caption sit there for ever offline? | **[settled]** it cannot: a `tileerror` handler, a painted-tile count, and a hard 4-second timeout all hand over to the fallback message. |
+| §5 — the weighing's numeric pad, caret and half-kilos | **[settled]** `inputmode="decimal"`, focus survives typing, and 29.5 reopens as 29.5 (a rounding bug caught and fixed the same day). |
+| §5 — is the unit-error warning readable without burying the buttons? | **[settled at 360px]** photographed; the amber line sits above a pinned action row. The *keyboard-open* version of this is still yours. |
+| §1 — are the controls in thumb reach? | **[measured]** at 360×640 only header-level controls (Back, Log Out, Mark all as read) sit in the top 28%; every primary action is in the lower half. Whether it *feels* right with one thumb is still yours. |
+| Accessibility names on every field | **[settled for painted screens]** the instrument now checks form controls against the browser's own `el.labels`. It found seven fields whose visible label was never associated — the booking sheet's "what needs doing", the concierge box, the results search, the seven admin rate fields — all fixed; zero nameless controls remain. |
+
+**Two things the pre-pass could not fix, because they are not page bugs:**
+
+- **[defect] Hardware back quits the app from inside any open sheet.** The shell's
+  `onBackPressed` calls `web.canGoBack()`, and the page pushes **no** history entries at all —
+  zero `pushState`, zero `popstate`, confirmed by grep. So `canGoBack()` is false the moment the
+  app is open, and back exits. This is not a maybe; it will happen on every modal. Either the
+  page pushes a history entry per open sheet and closes it on `popstate` (page-side, ~15 lines,
+  changes navigation behaviour — needs a decision), or the shell intercepts back and asks the
+  page to close its sheet first (shell-side).
+- **[defect] Both photo controls do nothing on a device.** `MainActivity` sets a `WebViewClient`
+  and **no `WebChromeClient` at all**, and `<input type="file">` in a WebView only opens a
+  picker when the shell implements `onShowFileChooser`. So *Add a photo* on the fruit request
+  and *Upload or take a photo* in the Concierge are dead controls on the phone — they work in a
+  browser, which is every place they have ever been tested. Either add the ~20 lines to the
+  shell, or take the controls out; a prototype that shows a button which opens nothing teaches
+  a reviewer to distrust the buttons that do work.
+
+Everything still unmarked below genuinely needs the handset: a thumb, a real keyboard, and a
+slow device.
+
 ## 1. Touch and one-handed reach — 5 min
+
+
 
 - [ ] Hold the phone in one hand. On each role's Home, reach the bottom nav, the search field,
       and the notification bell without shifting your grip.
@@ -52,8 +94,9 @@ The instrument cannot emulate this at all: `shot.cjs` measures a viewport with n
 - [ ] Chat → the message field. The send control must not disappear under the keyboard.
 - [ ] Provider → professional profile: edit a rate, then a phone number. Does the field you are
       in stay above the fold while you type?
-- [ ] Admin → configuration: change the commission rate. The field is numeric; does the right
-      keyboard come up?
+- [x] ~~Admin → configuration: change the commission rate. The field is numeric; does the right
+      keyboard come up?~~ **[settled]** every numeric field in the app carries `inputmode`; the
+      instrument found none relying on a QWERTY pad. Still glance at it, but it is not open.
 - [ ] Close the keyboard. Does the screen land back where you were, or somewhere else?
 
 ## 3. A slow device — 5 min
@@ -65,9 +108,11 @@ The instrument cannot emulate this at all: `shot.cjs` measures a viewport with n
 - [ ] Open a provider's map on a weak or offline connection. The "Loading map…" caption must
       hand over to the offline message — it must not sit there for ever, and the tiles must not
       paint outside the map frame.
-- [ ] **Hardware back** from: an open sheet, provider detail, a chat, the booking screen. The
-      shell only knows web history and this app never pushes any, so back may quit the app from
-      inside a modal. If it does, that is a real defect worth reporting, not a mistake.
+- [x] ~~**Hardware back** from: an open sheet, provider detail, a chat, the booking screen.~~
+      **[answered — it is a defect, no need to discover it twice]** the page pushes no history at
+      all, so `web.canGoBack()` is false and back quits the app from inside every modal. Confirm
+      it once so the report has a device on it, then pick the fix: page-side history entries, or
+      a shell that asks the page to close its sheet first. See the two defects at the top.
 - [ ] Create a booking, force-close the app, reopen it. The booking is still there, and the
       admin money console still says storage is available. If it says storage is unavailable on
       a real device, that is news — it has only ever worked in a browser.
@@ -88,12 +133,12 @@ This one can only be seen on a device in two places, and neither is reachable fr
 screenshot. Sign in as the **provider** with `erning@demo.ph` (any password) to get the harvest
 job in the inbox; `ramil@demo.ph` is still the plumbing account.
 
-- [ ] **The photo control.** On the fruit request sheet, open *Access, timing and photos* and
-      tap *Add a photo*. **If nothing happens, that is a finding, not a bug in the page:** an
-      `<input type="file">` inside a WebView only opens a picker if the shell implements
-      `WebChromeClient.onShowFileChooser`. The desktop Chrome camera cannot tell you this, and
-      the page has no way to know either. Report whether a picker appeared. If it did, confirm
-      the file name shows as a chip and that removing it works.
+- [x] ~~**The photo control.**~~ **[answered — it is a defect]** `MainActivity` sets a
+      `WebViewClient` and no `WebChromeClient`, so `onShowFileChooser` is never implemented and
+      **no picker can open** — on the fruit request *and* in the Concierge, which the checklist
+      did not name. They have only ever worked in a browser. Do not spend time on the chip and
+      the remove button; decide instead whether the shell grows twenty lines or the page loses
+      two controls.
 - [ ] **The totals move while you type, and nothing is buried.** As the provider, open the
       harvest-and-buy request and press *Make an offer*. Type a price per kilo. The summary
       under the fields must update on every keystroke **without the field losing focus or the
