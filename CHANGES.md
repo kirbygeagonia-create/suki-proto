@@ -792,7 +792,11 @@ checks**, the camera at **45 screens**.
   there is no "accept this weight" step, and no second reading. A resident who disagrees with
   31 kilos raises a case on the booking, which is what the dispute path is for; a prototype
   that made the buyer's scale authoritative would be inventing an evidence rule the pilot has
-  not tested.
+  not tested. **Asked directly on 2026-10-07, the owner chose this over the two alternatives**
+  (either side may record, last reading wins; or a second child record so a weight is agreed
+  only when both answer), so it is a decision and not a gap. If a real pilot needs the weight
+  attested, that is a child record beside the booking like an offer — not a fourteenth booking
+  state, and not a flag on `produce.final`.
 - **No certification, endorsement or safety verification for the pilot.** Capability is
   displayed as the provider's own declaration. `Barangay Endorsed` is not on the harvester's
   badges, and no screen implies Sukinnect inspected a harness, a ladder or a tree.
