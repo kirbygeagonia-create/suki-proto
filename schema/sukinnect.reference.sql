@@ -154,6 +154,25 @@ CREATE TABLE bookings (
   produce_fee_centavos    INT UNSIGNED NOT NULL DEFAULT 0,
   produce_fee_status      ENUM('charged','undecided','not-charged') NOT NULL DEFAULT 'undecided',
   produce_voided_at       DATETIME NULL,               -- the visit was called off; no payment happened
+  /* The rate the accepted offer was written at, and the fruit fee rate frozen with it.
+     Both are stored rather than looked up, because a measurement taken after the visit
+     has to be priced at the agreement the two people actually made — an admin deciding a
+     rate next week must not reach back and charge this job. */
+  produce_unit_price_centavos INT UNSIGNED NULL,       -- per kilo or per tree; a lot has one figure, not a rate
+  produce_fee_rate        DECIMAL(6,4) NULL,           -- NULL here means undecided, not zero
+  /* The agreement and the measurement are different facts and both survive, because the
+     difference between them is what the receipt is for. `produce_amount_centavos` stays
+     the agreed estimate; the final columns hold what was weighed at that same rate. The
+     prototype carries its correction history nested in the record (`revisedFrom`, which
+     carries its own); a real store would want a `produce_readings` table keyed by booking,
+     so a corrected reading is a row rather than an overwrite of a column. */
+  produce_final_amount_centavos INT UNSIGNED NULL,
+  produce_final_quantity_grams  INT UNSIGNED NULL,
+  produce_final_tree_count      SMALLINT UNSIGNED NULL,
+  produce_final_fee_centavos    INT UNSIGNED NULL,
+  produce_final_note            VARCHAR(255) NULL,
+  produce_final_at              DATETIME NULL,
+  produce_final_by              ENUM('customer','provider') NULL,
 
   status                 ENUM('requested','upcoming','en_route','arrived','ongoing',
                               'completed','cancelled','expired','no_show','disputed')

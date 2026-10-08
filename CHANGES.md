@@ -709,7 +709,72 @@ skipped.**
 
 ---
 
+## 18. The weighing: the last link of the pilot's own chain
+
+The brief's fruit loop is `HARVEST/COLLECT → FINALIZE QUANTITY → SETTLE`, and the build had
+stopped one step short of the end. A buyer who agreed *about 120 kilos* and carried 31 had
+nowhere to record the difference, so the only figure on the job stayed an estimate nobody had
+weighed — and the receipt, the operator's fruit total and the resident's row all repeated that
+estimate as if it were the transaction.
+
+**The rule that kept this from becoming a second pricing sheet:** a weighing applies the
+*agreed unit price* to the *actual quantity* and sets nothing. The rate is printed on the sheet
+with no field beside it; a lot priced *as a lot* keeps its figure whatever it weighed, because
+"for the whole lot" was the agreement; and the service leg is not touched at all — it was
+frozen when the provider confirmed, and a scope that genuinely changed is a new offer, not an
+edit to an accepted fee. `produce.final.serviceLegChanged: false` is stored so the claim is
+part of the record rather than a comment. A correction replaces the reading and keeps the one
+it replaced.
+
+**Writing the check for a correction surfaced the freeze bug.** The fruit fee was being
+re-derived from `CONFIG` at record time, so an admin who decided a rate *after* two people
+agreed would reach back and charge a job that was settled under the old answer — the exact
+thing the service leg's freeze exists to prevent. The accepted offer now copies its rate onto
+the produce record (`unitPriceCentavos`, `feeRate`), and a weighing prices the real amount at
+*that* rate with the fee's **state inherited, never re-asked**. `SCHEMA_VERSION` went to 12,
+because a dump written before this has no rate to price a measurement with and would silently
+have agreed with whatever was typed.
+
+**One rule, two callers.** `offerTotals` had grown the fruit-fee arithmetic inline and the
+weighing needed the same rule; two places applying a rate is how one of them ends up
+disagreeing (65). The rule is now `produceFeeOf(mode, amount, rate)` and
+`produceFeeState(mode, amount, rate)`, with the rate passed in because the platform's *current*
+rate and the rate *frozen on this booking* are both legitimate questions. `offerTotals` reads
+identically to before — the three-state checks that already existed are what prove it.
+
+**The camera found three things the gate could not see,** on a job walked to `arrived` — the
+state no shipped demo record is ever in:
+
+- The offer card still said *"Erning has to confirm the visit"* under a header reading
+  **ARRIVED**. §17 had fixed the opposite case (a called-off job promising a visit) by testing
+  for the closed statuses, which left every *open* one claiming a confirmation that had
+  already happened. The card now reads the status in three directions.
+- The fruit row asserted *"Fruit you were paid ₱1,705.00"* while the visit was still running.
+  Money that settles on site is not past tense at 10:07 AM. It now says *you are being paid*
+  until the job finishes, and the weighing made the claim specific enough to notice.
+- The weighed card's headline and its caption were the same sentence, so the figure the
+  provider had just typed appeared twice in a card with room for one of it.
+
+A fourth, unrelated, fell out of the same screenshot: a button labelled **"Chat Pro"** — a
+truncation somebody had left in the markup years of renders deep. It names the provider now.
+
+**A mutant caught a bug the checks had written but never run.** The sheet prefilled its field
+by rounding the stored grams to whole kilos, so a reading of 29.5 kg reopened as 30 and saving
+it again moved the record by half a kilo. The prefill now carries the exact figure.
+
+**Falsification.** Twenty-six targeted breaks — reprice at CONFIG, ignore the agreed rate,
+re-scale a lot, drop the rate from the record, delete each guard, un-inherit the fee state,
+re-freeze the service leg, silence the thread, keep the estimate in the row and in the
+operator's total, unmount the card, sever the route, repeat the headline, promise a
+confirmation, speak in the past tense — each run against the real gate with the file restored
+from memory in a `finally`. All twenty-six were caught; none survived; three needed a second
+attempt because the app file is CRLF and two of my one-line anchors turned up twice, which is
+itself the proof that the sheet and the model share the expression. The gate is at **372
+checks**, the camera at **45 screens**.
+
 ## Deliberately not done
+
+
 
 - **No server, no database, no framework, no CSS library, no ES modules.** The Android shell
   loads the page from `file:///android_asset/`, where module scripts are blocked by origin
@@ -722,6 +787,12 @@ skipped.**
 - **No fruit market price, and no produce commission.** `CONFIG.produceCommissionRate` is
   `null` and stays that way until the business decides it. The offer sheet's price fields are
   blank; a provider types a number, the prototype never suggests one.
+- **No counter-signature on a weighing.** The person who carried the fruit records it, and the
+  other side sees the figure, the sentence in the thread and the agreed number beside it — but
+  there is no "accept this weight" step, and no second reading. A resident who disagrees with
+  31 kilos raises a case on the booking, which is what the dispute path is for; a prototype
+  that made the buyer's scale authoritative would be inventing an evidence rule the pilot has
+  not tested.
 - **No certification, endorsement or safety verification for the pilot.** Capability is
   displayed as the provider's own declaration. `Barangay Endorsed` is not on the harvester's
   badges, and no screen implies Sukinnect inspected a harness, a ladder or a tree.

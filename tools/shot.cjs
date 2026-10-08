@@ -497,6 +497,41 @@ const SCREENS = [
   ['admin-intel-produce', `resetDemoData(); state.view='app'; state.role='admin';
                         answerOffer('b8','accept',{ role:'customer', id:CURRENT_CUSTOMER_ID });
                         state.tab='admin_dashboard'; state.adminScreen='intelligence'; render();`],
+  /* The weighing step, photographed from both sides of the same job. b10 is the
+     harvest-and-buy that p7 can actually walk, so these three set it up the way the
+     app does — offer, answer, arrive — rather than assigning a state nobody could. */
+  ['fruit-weighed',    `resetDemoData(); applyProviderIdentity('p7');
+                        makeOffer('b10',{ basis:'per_kg', quantityGrams:120000, unitPriceCentavos:5500,
+                          produceCentavos:660000, labourCentavos:0, whoHarvests:'provider' },{ role:'provider' });
+                        answerOffer('b10','accept',{ role:'customer', id:CURRENT_CUSTOMER_ID });
+                        ['upcoming','en_route','arrived'].forEach(t =>
+                          attemptTransition('b10', t, { role:'provider', id:'p7' }));
+                        finaliseProduce('b10',{ quantityGrams:31000, note:'A third was damaged and left' },{ role:'provider' });
+                        state.view='app'; state.role='provider'; state.tab='provider_booking_detail';
+                        openProviderBooking('b10'); render();
+                        document.querySelector('.finalise-card').scrollIntoView();`],
+  ['finalise-sheet',   `resetDemoData(); applyProviderIdentity('p7');
+                        makeOffer('b10',{ basis:'per_kg', quantityGrams:120000, unitPriceCentavos:5500,
+                          produceCentavos:660000, labourCentavos:0, whoHarvests:'provider' },{ role:'provider' });
+                        answerOffer('b10','accept',{ role:'customer', id:CURRENT_CUSTOMER_ID });
+                        ['upcoming','en_route','arrived'].forEach(t =>
+                          attemptTransition('b10', t, { role:'provider', id:'p7' }));
+                        state.view='app'; state.role='provider'; state.tab='provider_booking_detail';
+                        openProviderBooking('b10'); openFinalise('b10');
+                        /* Type it the way the phone does. The field deliberately keeps its
+                           own value while the totals update under it, so a script that only
+                           moved the model would photograph a field and a total that never
+                           occur together. */
+                        document.getElementById('final-qty').value='31'; finalInput('qtyKg','31');`],
+  ['fruit-weighed-record', `resetDemoData(); applyProviderIdentity('p7');
+                        makeOffer('b10',{ basis:'per_kg', quantityGrams:120000, unitPriceCentavos:5500,
+                          produceCentavos:660000, labourCentavos:0, whoHarvests:'provider' },{ role:'provider' });
+                        answerOffer('b10','accept',{ role:'customer', id:CURRENT_CUSTOMER_ID });
+                        ['upcoming','en_route','arrived'].forEach(t =>
+                          attemptTransition('b10', t, { role:'provider', id:'p7' }));
+                        finaliseProduce('b10',{ quantityGrams:31000 },{ role:'provider' });
+                        state.view='app'; state.role='resident'; openBookingDetail('b10');
+                        document.querySelector('.produce-card').scrollIntoView();`],
 ];
 
 /* The table is data, and data can be wrong in ways the parser will not report. A

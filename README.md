@@ -62,13 +62,22 @@ produce money that never reaches the service figures, an undecided commission ra
 undecided, an offer that cannot move a lifecycle, a request that was answered with a price not
 lapsing as if it had not been, and a capability that reads as declared rather than verified.
 
+A `weighing` pass holds the pilot's last link — `FINALIZE QUANTITY` — to the rule that keeps it
+from becoming a second pricing sheet: the agreed unit price applied to the actual weight, a lot
+left at its lot figure whatever it weighed, the service leg untouched, the fee's *state*
+inherited rather than re-asked of the configuration, a correction that keeps what it replaced,
+and a screen for every one of those that a person on a phone can actually reach.
+
 **A check that cannot fail is not a check.** Every rule above is falsified by mutating the rule
-in the real file and requiring the intended check to fail — `python` over a dozen targeted
-breaks, each restoring the file from an in-memory copy in a `finally` so a crash cannot leave a
-mutation behind. One earlier version of that harness died mid-run to a console-encoding error
-and poisoned its own backup; the gate then reported green on a file that still carried a
-mutation. The restore is now the last thing that runs, and the numbers below are only quoted
-from a run that ended green.
+in the real file and requiring the intended check to fail — twenty-six targeted breaks so far,
+each restoring the file from an in-memory copy in a `finally` so a crash cannot leave a mutation
+behind. One earlier version of that harness died mid-run to a console-encoding error and poisoned
+its own backup; the gate then reported green on a file that still carried a mutation. The restore
+is now the last thing that runs, and the numbers below are only quoted from a run that ended
+green. (The harness is Node now for a second reason: three of its first mutants had silently
+matched nothing, because the app file is CRLF and a find-string carrying a newline missed every
+time. An unapplied mutant is a rule nobody tested, so the count of *applied* breaks is printed
+beside the count of caught ones.)
 
 ### Look at the painted page
 
@@ -92,11 +101,26 @@ tile escaping its own frame, and any control inside an open modal that something
 sitting on top of. Vendored Leaflet chrome is counted separately, because resizing it means
 fighting vendor CSS.
 
-Both tools exist because instruments saturate. After a few rounds every check reported zero and
+These tools exist because instruments saturate. After a few rounds every check reported zero and
 the next four defects — a dashboard that contradicted itself, an ETA shown for a provider who
 had not left, a map drawn over a booking sheet, and every form field in the app rendering as a
 raw browser control — were found by reading code and looking at the screenshots, not by a
 number.
+
+```
+node tools/measure.cjs              # the static shape of the rebuild, as AGENTS.md §31 states it
+node tools/measure.cjs Sukinnect.html
+```
+
+The third instrument, and the reason it is a program: §31's numbers were quoted in prose, and
+when one was re-derived it came out three off. A count that has to be recomputed by hand, by a
+reader who is not here, drifts — so the method is code now, and the document quotes the command.
+It classifies only what a pattern can honestly decide (a trade-palette entry, an SVG paint
+attribute, the one meta tag that cannot take a variable) and **prints the rest** rather than
+explaining it, because a comment quoting a measured brand value and a hard-coded colour in
+markup are the same string to any scanner. It also counts the glyphs drawn in the file against
+every way a name can reach `ic()`, which is the check that was missing when dropping an icon
+library blanked six icons in silence.
 
 ## Architecture
 
@@ -210,6 +234,17 @@ nothing new.
   No screen, and no report, adds a peso of produce to the platform's earnings.
 - Weight is stored in **whole grams** and typed in kilos, for the same reason money is stored
   in centavos.
+- **The last link is the weighing.** `HARVEST/COLLECT → FINALIZE QUANTITY → SETTLE` is closed by
+  a recording step on the provider's job screen: they enter what was actually carried (or how
+  many trees were done) and the fruit leg is re-priced **at the rate already agreed**. It is not
+  a second pricing sheet — the unit price is shown and has no field, a lot priced *as a lot*
+  keeps its figure whatever it weighed, and the service leg is not touched, because that was
+  frozen when the visit was accepted and a scope that genuinely changed is a new offer. A
+  correction keeps the reading it replaced. Both sides see it: the row reads *agreed ₱6,600 →
+  weighed out ₱1,705*, the thread carries the sentence, and the operator's fruit figure counts
+  the money that moved. The fruit fee's **state** is inherited from the agreement, never
+  re-asked of `CONFIG`, so an admin deciding a rate afterwards cannot reach back and charge a
+  job that was agreed under the old answer.
 - **A fee column may never show `₱0` for a job that has no price.** `bookingAmountText` says
   `Price by offer` while it is open and `No service fee` once a purchase is settled; the value
   of the crop appears only in its own labelled row.
@@ -241,7 +276,7 @@ matches is a simulated flow, and the screens say so.
 | What | Where | Notes |
 |---|---|---|
 | Logo | `Sukinnect_Logo.png` | exact case. Official mark — never redrawn, recoloured, stretched or replaced. It has a white background, so change the surface around it, not the file. |
-| Icons | an inline SVG set inside `Sukinnect-next.html`; `reicon.js` (LFS) for `Sukinnect.html` | The rebuild loads no icon library: 42 glyphs are drawn in the file and every one of the 39 names the app can reach has one — whether the name is written in markup, carried by a service record, or passed to an empty state. The gate checks all three and fails if a new name arrives undrawn. Measured with reicon disabled, that set drew the same icons on every screen of all 40, so the rebuild dropped the 8 MB custom element and the four seconds of iconless paint it cost when registration lost the race. `Sukinnect.html` still uses reicon, so add a name to both files or neither. |
+| Icons | an inline SVG set inside `Sukinnect-next.html`; `reicon.js` (LFS) for `Sukinnect.html` | The rebuild loads no icon library: 43 glyphs are drawn in the file and every one of the 40 names the app can reach has one — whether the name is written in markup, carried by a service record, or passed to an empty state. The gate checks all three and fails if a new name arrives undrawn. Measured with reicon disabled, that set drew the same icons on every screen of the then-40, so the rebuild dropped the 8 MB custom element and the four seconds of iconless paint it cost when registration lost the race. `Sukinnect.html` still uses reicon, so add a name to both files or neither. |
 | Type | `fonts/` | Fraunces for display, Plus Jakarta Sans for UI. Self-hosted; no remote fonts. |
 | Photos | `avatars/` | local PNGs, mapped per persona in `PRO_PHOTOS`. Keep imagery local — the APK runs offline. |
 | Maps | `leaflet/` | vendored. Tiles come from OpenStreetMap, the one network dependency, so a map is blank with no connection. |

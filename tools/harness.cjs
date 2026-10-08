@@ -37,6 +37,12 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
      render beautifully and still pass every check. */
   'canDispute', 'creditedFor', 'isCashJob', 'payStatusLabel', 'payMethodLabel',
   'refundableCentavos', 'refundLines', 'postedCredits', 'notificationRoute',
+  /* Added with the weighing step: a rule that only a screen can trigger has to be
+     triggerable from the suite too, or the screen is the only thing that tested it. */
+  'produceFeeOf', 'produceFeeState', 'finaliseProduce', 'finalProduceLine',
+  'finaliseCard', 'openFinalise', 'finalDraft', 'finalDraftTotals', 'submitFinalise',
+  'finalQuantityText',
+  'finaliseProduceSheet', 'finaliseTotalsBlock', 'sheetHTML', 'finalInput', 'updateFinalTotals',
   'openDispute', 'openCaseSheet', 'submitCase', 'raiseCaseSheet', 'caseDoor', 'caseActor',
   'PAY_METHODS', 'PAYMENT_LABELS', 'TRANSITIONS', 'providerIsFreeToAccept',
   /* the thread, and the verbs the provider's card offers */

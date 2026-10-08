@@ -1186,39 +1186,44 @@ Store adapter, a booking state machine, a double-entry ledger, payment records b
 gateway seam, disputes, and message threads as records). Work happens in the -next file;
 §11 and §88 still apply to both. Measured with `node tools/verify.cjs` and a static scan:
 
-Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 77 hard-coded hex
-                    values outside :root (53 of them #fff, plus the phone mockup's bezel
-                    and signal bars and the older per-trade palette). Untouched by the
-                    rebuild; still byte-identical to main, and still carrying the old
+Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 tokens declared with
+                    9 never reached, and 75 hex-shaped strings outside :root: twelve in the older
+                    per-trade palette, one in <meta name="theme-color">, and sixty-two the tool
+                    prints rather than classifies — among them the phone mockup's bezel
+                    (#1a1a1a, #171717) and its signal bars, and a good many `#fff`. Untouched by
+                    the rebuild; still byte-identical to main, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 9,294 lines, ONE :root block, 1,669 var() usages, 93 tokens declared
-                    in :root with 88 of them reached. A scan for `#` + hex digits outside
-                    :root finds 34 strings, and 2 of them are not colours: booking-id
-                    fragments ("#8226", "#9021") that any pattern which does not require a
-                    colour context will match. Quote the method with the number, or the next
-                    reader will re-derive 32 and think the count drifted. The 32 real ones
-                    are, honestly: fifteen `#fff` inside the category artwork (SVG highlights,
-                    which have no token to take — they are white by definition, not a brand
-                    surface); the seven-trade SERVICE_THEME palette, two values per trade,
-                    deliberately literal (§45 — the seventh is Fruit Harvest & Buy); two
-                    measured brand hexes quoted inside a comment; and the <meta
-                    name="theme-color"> value, which cannot take a var().
+Sukinnect-next.html— 9,617 lines, ONE :root block, 1,681 var() usages, 93 tokens declared with 88
+                    of them reached. Thirty-nine hex-shaped strings sit outside :root, and the
+                    tool that counts them refuses to explain the ones it cannot decide: fifteen
+                    are `#fff` in the category artwork (SVG highlights, which have no token to
+                    take — they are white by definition, not a brand surface); fourteen are the
+                    seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
+                    (§45 — the seventh is Fruit Harvest & Buy); one is the <meta
+                    name="theme-color"> value, which cannot take a var(). The remaining nine are
+                    printed line by line, because a comment quoting a measured brand value and a
+                    hard-coded colour in markup are the same string to any scanner — and one of
+                    them (`#8226`) is a booking id, not a colour at all. That is why the count is
+                    quoted with its command: **`node tools/measure.cjs`**, which takes a file
+                    argument and measures either one the same way. A number that has to be
+                    re-derived by hand in prose drifts; this passage was three out when the tool
+                    was written, and the next reader should cite the tool rather than trust it.
                     Everything that was a real violation is now a token: #fff became
                     --surface and --on-brand, the modal dim became --scrim, and the phone
                     mockup's bezel and signal bars became --device-bezel and
-                    --device-signal. Type is fully on the scale: of the 105 `font-size`
-                    declarations in the stylesheet, 104 take a var(), none is a literal px,
-                    and the 105th is `inherit` — the reset that lets an <h1> sit in a flex bar
-                    as the div it replaced. The 392 `font-size` declarations inside markup's
+                    --device-signal. Type is fully on the scale: of the 107 `font-size`
+                    declarations in the stylesheet, 106 take a var(), none is a literal px,
+                    and the 107th is `inherit` — the reset that lets an <h1> sit in a flex bar
+                    as the div it replaced. The 393 `font-size` declarations inside markup's
                     inline styles all take a var() too. Every screen title is now an <h1> and
-                    every sheet title an <h2> — 21 and 5, the fifth being the offer sheet —
-                    because a 42-screen app with no headings has no outline for a screen
+                    every sheet title an <h2> — 21 and 6, the sixth being the weighing sheet —
+                    because a 45-screen app with no headings has no outline for a screen
                     reader to navigate.
 
 ICONS DIVERGE BETWEEN THE TWO FILES, and a reader should not mistake that for an accident.
 `Sukinnect.html` loads `reicon.js` (8 MB, Git LFS) and draws through its `<re-icon>` custom
-element. `Sukinnect-next.html` loads nothing of the sort: 42 glyphs are drawn in the file, and
-every one of the 39 names the app can reach has one. Six of those (four trade icons and two
+element. `Sukinnect-next.html` loads nothing of the sort: 43 glyphs are drawn in the file, and
+every one of the 40 names the app can reach has one. Six of those (four trade icons and two
 empty states) lived only inside the library, and dropping it blanked them silently — a name
 carried by a data row is not an `ic('name')` in markup, so the check that watched for that
 missed them. They are drawn inline now, and the gate checks all three ways a name arrives. This
@@ -1228,11 +1233,16 @@ official mark is a PNG, not an icon, and it is still the only brand image on the
 The rebuild also added a real verification surface, because reading the file cannot
 see a layout: `node tools/shot.cjs` drives the machine's own Chrome headless over the
 DevTools Protocol with no npm packages, and `--measure` runs an in-page instrument
-across all 42 screens for tap targets, WCAG contrast (sampling gradients at the text's
+across all 45 screens for tap targets, WCAG contrast (sampling gradients at the text's
 own position), clipped text, off-scale fonts, content trapped under the nav, unnamed
 controls, escaping map panes, and anything painting over an open modal. A screenshot
 tool that navigates by assigning `state.*` measures a screen nobody can reach — the
-SCREENS table walks the app's real entry points for that reason.
+SCREENS table walks the app's real entry points for that reason. The same trap has a
+second form: a setup script that moves the *model* without moving the *field* photographs
+a state nobody can reach either, which is how one screen showed a kilos input reading 120
+beside a total computed from 31 — the sheet updates only its totals on input, so the
+harness has to type into the element. Anything below the fold needs a `scrollIntoView()`
+in the entry or the picture is of the wrong card.
 
 An animated-illustration pipeline (Lottie) was installed here and then removed again:
 it added 305KB that animated nothing, because the professional artwork it was built for

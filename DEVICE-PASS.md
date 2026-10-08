@@ -1,15 +1,25 @@
 # Handset pass — the thing no browser check can prove
 
-The rebuild in `Sukinnect-next.html` has been rendered in Node (252 assertions), painted in
-real Chrome at 390×844 across 40 screens, and measured for tap targets, contrast, clipping and
+The rebuild in `Sukinnect-next.html` has been rendered in Node (372 assertions), painted in
+real Chrome at 390×844 across 45 screens, and measured for tap targets, contrast, clipping and
 occlusion. None of that is a phone. Three categories are still unverified because no instrument
 can reach them: a thumb, an on-screen keyboard, and a slow device.
 
-**The Android shell is currently staged with the rebuild.** `Sukinnect-Android/app/src/main/assets/Sukinnect.html`
-is byte-identical to `Sukinnect-next.html` (`md5 eada07167c7d17e88b454e2c1bf36ff2`), not to the
-shipped prototype. Build and install from `Sukinnect-Android/` and you are testing the rebuild.
+**The Android assets copy is a third file, and `git status` cannot see it.**
+`Sukinnect-Android/app/src/main/assets/Sukinnect.html` is gitignored, so it matches neither HTML
+file in the repo and no working-tree check will ever tell you. As of this writing it holds the
+rebuild **as it stood before the offer-lifecycle fixes and the weighing step** — build and
+install right now and the device runs an older rebuild than the one you are reading about.
 
-To put the shipped file back:
+Do not trust this paragraph. Run the comparison:
+
+```
+md5sum Sukinnect.html Sukinnect-next.html Sukinnect-Android/app/src/main/assets/Sukinnect.html
+```
+
+Three different hashes means the device is not showing what you just changed. Re-syncing it is a
+promotion decision, not a step in a session — the shipped `Sukinnect.html` is still what a
+customer-facing build should carry until the owner says otherwise. To put the shipped file back:
 
 ```
 cp Sukinnect.html Sukinnect-Android/app/src/main/assets/Sukinnect.html
@@ -72,7 +82,7 @@ The instrument cannot emulate this at all: `shot.cjs` measures a viewport with n
   or does it read as flicker? `prefers-reduced-motion` is honoured in code but only if the
   device reports it.
 
-## 5. The fruit pilot — 6 min
+## 5. The fruit pilot — 9 min
 
 This one can only be seen on a device in two places, and neither is reachable from a
 screenshot. Sign in as the **provider** with `erning@demo.ph` (any password) to get the harvest
@@ -91,6 +101,17 @@ job in the inbox; `ramil@demo.ph` is still the plumbing account.
       real-device-only failure.
 - [ ] **The Send offer button is reachable with the keyboard open** while the price field is
       focused, and it is greyed out until a number exists.
+- [ ] **Weighing out the fruit behaves like the offer sheet, not like a form submit.** As the
+      provider, walk a harvest-and-buy to *Arrived* and press *Enter kilos* (or *Enter trees*).
+      The number field must bring up the **numeric** keyboard, the totals block must update on
+      every keystroke without the caret moving, and the sheet must not jump when it does.
+- [ ] **Half a kilo stays half a kilo.** Record 29.5, then reopen the sheet: it must read
+      29.5, not 30. Then correct it to 31 and check the card and the resident's row both show
+      the new figure with the old one beside it. A reading that rounds on the way back in is a
+      record that changes when you look at it.
+- [ ] **The weighing is below the fold and you can find it.** On a 360-class phone the card sits
+      under the map and the job notes on the provider's job screen. Scroll from the top: is it
+      obvious enough that the visit is not finished until you enter what you carried?
 - [ ] **The mode step reads as three decisions, not three paragraphs.** On a 360-class phone,
       is *Harvest Only / Sell My Fruit / Harvest + Buy* scannable in one glance, and does the
       selected one look selected without relying on the blue border alone?

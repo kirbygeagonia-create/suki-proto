@@ -906,6 +906,14 @@
   .cap-rows b{ color:var(--ink); font-weight:700; }
   .cap-note{ margin:11px 0 0; font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5;
     border-top:1px solid var(--line); padding-top:9px; }
+  /* The finalising step is the provider's own entry point, and it is deliberately
+     quieter than the money cards above it: it is something to do, not a figure to
+     read. Once a reading exists it keeps the same shell so the screen does not jump
+     under the provider's thumb. */
+  .finalise-card{ padding:12px 13px; }
+  .finalise-sub{ font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:3px; }
+  .finalise-delta{ display:flex; gap:6px; align-items:flex-start; margin-top:9px; padding-top:9px;
+    border-top:1px solid var(--line); font-size:var(--t-caption); line-height:1.5; color:var(--text-muted); }
   .fruit-card .cap-rows{ margin-top:11px; }
   .fruit-said{ font-size:var(--t-caption); color:var(--mist); line-height:1.45; margin-top:2px; }
   .fruit-own{ display:flex; gap:7px; align-items:flex-start; margin-top:11px; padding-top:9px;
@@ -3198,7 +3206,13 @@ function payMethodLabel(booking){ return PAY_METHODS[booking.payMethod] || PAY_M
 function produceRow(b){
   if (!b || !b.produce) return '';
   const p = b.produce;
-  const weight = p.quantityGrams ? ' · about ' + kgText(p.quantityGrams) : '';
+  /* Two facts and both have to stay readable: what was agreed at an estimate, and what
+     was actually carried away. Until someone weighs it out the agreed figure is the only
+     number the job has, so the row says "about" — after a recording it says "weighed". */
+  const f = p.final;
+  const weight = (f && f.quantityGrams) ? ' · ' + kgText(f.quantityGrams) + ' weighed'
+    : (f && f.treeCount) ? ' · ' + f.treeCount + (f.treeCount === 1 ? ' tree' : ' trees') + ' done'
+    : p.quantityGrams ? ' · about ' + kgText(p.quantityGrams) : '';
   const basis = { per_kg:'by the kilo', per_tree:'per tree', per_lot:'for the whole lot' }[p.basis] || 'as agreed';
   return `<div class="card produce-card">
       <div class="row" style="align-items:flex-start; gap:8px;">
@@ -3207,7 +3221,10 @@ function produceRow(b){
           <div style="font-size:var(--t-body-sm); font-weight:800; color:var(--ink);">
             ${p.voided
               ? 'Fruit agreed at ' + esc(pesoShort(p.amountCentavos))
-              : 'Fruit ' + (b.produce.direction === 'provider_pays_for_produce' ? 'you were paid' : 'you paid') + ' ' + esc(peso(p.amountCentavos))}
+              : 'Fruit ' + (p.direction === 'provider_pays_for_produce'
+                  ? (FINISHED_STATES.includes(b.status) ? 'you were paid' : 'you are being paid')
+                  : (FINISHED_STATES.includes(b.status) ? 'you paid' : 'you are paying')) + ' '
+                + esc(peso(f ? f.amountCentavos : p.amountCentavos))}
           </div>
           <div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:2px; line-height:1.5;">
             ${esc(basis + weight)} · settled ${esc(p.settledAs === 'on_site' ? 'on site, in person' : p.settledAs)}
@@ -3215,6 +3232,12 @@ function produceRow(b){
         </div>
       </div>
       ${p.voided ? `<p class="produce-voided">${ic('alert-triangle', 12)} This visit was called off, so the fruit was never bought and no money changed hands. The agreed price is kept as the record of what was offered.</p>` : ''}
+      ${f ? `<div class="finalise-delta">${ic('weight', 12)}
+        <span>${f.amountCentavos === p.amountCentavos
+          ? 'Weighed out at ' + esc(pesoShort(f.amountCentavos)) + ' — the same as the agreement.'
+          : 'Agreed ' + esc(pesoShort(p.amountCentavos)) + ' at the estimate, weighed out at ' + esc(pesoShort(f.amountCentavos))}
+        · ${esc(f.by === 'customer' ? 'recorded by the client' : 'recorded by the provider')}${f.note ? ' · ' + esc(f.note) : ''}</span>
+      </div>` : ''}
       <p class="produce-note">
         ${p.feeStatus === 'charged'
           ? 'Sukinnect took ' + esc(peso(p.platformFeeCentavos)) + ' on the fruit part. The rest passed between you and the other side.'
@@ -3518,21 +3541,37 @@ function closeOpenOffers(booking, to){
    Nothing here rounds through a float and nothing here invents a fee: the produce
    commission is read from configuration, and when configuration says it is
    undecided the fee is zero and the reason is carried with it. */
-function offerTotals(offer){
-  const labour = Math.max(0, Math.round(offer.labourCentavos || 0));
-  const produce = Math.max(0, Math.round(offer.produceCentavos || 0));
-  const rate = CONFIG.commissionRateDefault;
-  const labourFee = Math.round(labour * rate);
-  const produceRate = CONFIG.produceCommissionRate;
-  const rateSet = produceRate !== null && produceRate !== undefined;
+/* The fruit leg's fee, written once. The rate arrives as an argument because two
+   different rates can legitimately be asked of it: the platform's current one, which
+   prices a new offer, and the one already frozen on a booking, which is what a later
+   measurement must still be priced at. Reading CONFIG from inside the arithmetic would
+   let an admin's change to *future* jobs rewrite money on a job that is already agreed. */
+function produceFeeOf(mode, produceCentavos, rate){
+  if (!(produceCentavos > 0) || mode !== 'harvest_and_buy') return 0;
+  if (rate === null || rate === undefined) return 0;
+  return Math.round(produceCentavos * rate);
+}
+/* The same rule as the three states the owner asked for, so a caller never has to
+   guess whether a zero means "decided free" or "not decided yet". */
+function produceFeeState(mode, produceCentavos, rate){
+  if (!(produceCentavos > 0)) return 'no-fruit';
   /* Decided by the project owner: the platform charges on the fruit only when the
      same visit also includes harvesting. A straight sale of standing fruit is one
      person buying from another and Sukinnect takes nothing from it — that is a
      decision, not a gap waiting for a number. Whether a harvest-and-buy is charged
      on its fruit part, and at what rate, is still open, so the rate stays null and
      nothing here invents one. */
-  const produceChargeable = offer.mode === 'harvest_and_buy' && produce > 0;
-  const produceFee = produceChargeable && rateSet ? Math.round(produce * produceRate) : 0;
+  if (mode !== 'harvest_and_buy') return 'not-charged';
+  return (rate === null || rate === undefined) ? 'undecided' : 'charged';
+}
+function offerTotals(offer){
+  const labour = Math.max(0, Math.round(offer.labourCentavos || 0));
+  const produce = Math.max(0, Math.round(offer.produceCentavos || 0));
+  const rate = CONFIG.commissionRateDefault;
+  const labourFee = Math.round(labour * rate);
+  const produceRate = CONFIG.produceCommissionRate;
+  const produceState = produceFeeState(offer.mode, produce, produceRate);
+  const produceFee = produceFeeOf(offer.mode, produce, produceRate);
   return {
     labourCentavos: labour,
     produceCentavos: produce,
@@ -3540,11 +3579,11 @@ function offerTotals(offer){
        the rule says it may, and only once a rate actually exists */
     platformFeeCentavos: labourFee + produceFee,
     produceFeeCentavos: produceFee,
-    produceCharged: produceChargeable && rateSet,
-    produceFeeUndecided: produceChargeable && !rateSet,
+    produceCharged: produceState === 'charged',
+    produceFeeUndecided: produceState === 'undecided',
     /* a straight sale is decided-none. Saying "not set" there would imply a rate
        might still appear, which is a claim the owner has already closed. */
-    produceFeeWaived: produce > 0 && !produceChargeable,
+    produceFeeWaived: produceState === 'not-charged',
     /* what changes hands. In a buy mode the provider owes the resident for the
        fruit and the resident owes nothing for labour, so the two legs do not add
        into one number for one party — the direction says who pays whom. */
@@ -3653,6 +3692,14 @@ function answerOffer(bookingId, decision, actor){
     amountCentavos: t.produceCentavos,
     basis: offer.basis,
     quantityGrams: offer.quantityGrams,
+    /* The rate the offer was written at, kept beside the total it produced. A record
+       with a total and no rate cannot tell what the *actual* weight would come to,
+       because the only number left to price it with is the estimate itself — and
+       `finaliseProduce` would then silently agree with whatever was typed. */
+    unitPriceCentavos: offer.unitPriceCentavos || null,
+    /* Frozen here, not re-read later: the fruit fee on this job follows the rule that
+       was in force when both sides agreed, whatever an admin decides afterwards. */
+    feeRate: t.produceCharged ? CONFIG.produceCommissionRate : null,
     settledAs: 'on_site',
     /* Read from offerTotals rather than derived again here: two places applying the
        same rule is how one of them ends up disagreeing with the other (65). */
@@ -3670,6 +3717,106 @@ function answerOffer(bookingId, decision, actor){
   postMessage(b, 'customer', 'I accept that offer. Please confirm the visit.');
   persist();
   return offer;
+}
+
+/* ---- finalising the quantity ----
+   The agreement and the measurement are different facts and both have to survive:
+   `produce.amountCentavos` is what was agreed at the estimated weight, `produce.final`
+   is what was actually taken and what it came to at the *same* unit price. Nothing here
+   sets a price — it applies the one already agreed to a number that was finally weighed.
+   The service leg is deliberately untouched: it was frozen when the provider accepted,
+   and a scope that genuinely changed is a new offer, not an edit to an agreed fee. */
+/* The quantity the way a person said it, in the unit the deal used. */
+function finalQuantityText(f){
+  return f.quantityGrams ? kgText(f.quantityGrams)
+    : (f.treeCount ? f.treeCount + (f.treeCount === 1 ? ' tree' : ' trees') : 'the lot');
+}
+function finalProduceLine(b){
+  const f = b.produce && b.produce.final;
+  if (!f) return '';
+  return 'Weighed out ' + finalQuantityText(f) + ' — ' + pesoShort(f.amountCentavos) + ' at the agreed rate.'
+    + (f.note ? ' (' + f.note + ')' : '');
+}
+function finaliseProduce(bookingId, draft, actor){
+  const b = bookingById(bookingId);
+  if (!b) throw new GuardRejected('that job is no longer here.');
+  if (!b.produce) throw new GuardRejected('there is no fruit money on this job to finalise.');
+  if (b.produce.voided) throw new GuardRejected('this visit was called off, so there is nothing to weigh.');
+  if (['arrived','ongoing','completed'].indexOf(b.status) < 0)
+    throw new GuardRejected('the fruit is only recorded once the visit has started.');
+  const p = b.produce;
+  const unit = p.unitPriceCentavos;
+  let grams = null, trees = null, amount = p.amountCentavos;
+  if (p.basis === 'per_lot') {
+    /* A lot was priced as one thing. Weighing it says what was carried, not what is
+       owed — the agreed lot figure stands unless somebody makes a new offer. */
+    grams = draft.quantityGrams ? Math.round(draft.quantityGrams) : null;
+  } else if (p.basis === 'per_tree') {
+    trees = Math.round(draft.treeCount || 0);
+    if (!(trees > 0)) throw new GuardRejected('Say how many trees were actually done.');
+    if (unit) amount = Math.round(trees * unit);
+  } else {
+    grams = Math.round(draft.quantityGrams || 0);
+    if (!(grams > 0)) throw new GuardRejected('Say how much fruit was actually taken, in kilos.');
+    if (unit) amount = Math.round(grams * unit / 1000);
+  }
+  if (!Number.isInteger(amount) || amount < 0)
+    throw new GuardRejected('the final amount came out unusable, so nothing was recorded.');
+  /* The amount moves; the fee *rule* does not. A measurement is priced at the rate
+     already frozen on this booking, never at whatever an admin has since set for
+     future jobs — and the arithmetic lives in produceFeeOf, the one place that rule
+     is written, so a preview and a save cannot disagree (65). */
+  const fee = p.feeStatus === 'charged' ? produceFeeOf(b.mode, amount, p.feeRate) : 0;
+  const previous = p.final ? JSON.parse(JSON.stringify(p.final)) : null;
+  p.final = {
+    at: new Date().toISOString(),
+    by: (actor && actor.role) === 'customer' ? 'customer' : 'provider',
+    quantityGrams: grams, treeCount: trees, amountCentavos: amount,
+    note: (draft.note || '').trim(),
+    platformFeeCentavos: fee,
+    /* The three states of the fruit fee are a decision about the category, not a
+       consequence of the weight, so a reading never changes them. */
+    feeStatus: p.feeStatus,
+    revisedFrom: previous,
+    serviceLegChanged: false
+  };
+  postMessage(b, p.final.by, finalProduceLine(b));
+  persist();
+  return p.final;
+}
+/* The provider's own entry point. Once a figure is recorded it stays on screen with
+   the agreed number beside it, because the whole point of the step is the difference. */
+function finaliseCard(booking){
+  const p = booking && booking.produce;
+  if (!p || p.voided) return '';
+  if (['arrived','ongoing','completed'].indexOf(booking.status) < 0) return '';
+  const f = p.final;
+  const basisWord = { per_kg:'kilos', per_tree:'trees', per_lot:'the lot' }[p.basis] || 'quantity';
+  if (!f) return `<div class="card finalise-card">
+      <div class="row" style="align-items:flex-start; gap:10px;">
+        <span class="produce-ic">${ic('weight', 15)}</span>
+        <div style="min-width:0; flex:1;">
+          <b class="card-title">Record what you actually took</b>
+          <div class="finalise-sub">The agreed figure was an estimate${p.quantityGrams ? ' of about ' + esc(kgText(p.quantityGrams)) : ''}.
+            Weighing the real amount re-prices the fruit at the rate you both agreed — it does not change it,
+            and it leaves the service fee exactly as it was accepted.</div>
+        </div>
+      </div>
+      <button type="button" class="btn sm" style="width:100%; margin-top:11px; border-radius:10px;"
+        onclick="openFinalise('${booking.id}')">Enter ${esc(basisWord)}</button>
+    </div>`;
+  return `<div class="card finalise-card">
+      <div class="row" style="align-items:flex-start; gap:10px;">
+        <span class="produce-ic">${ic('weight', 15)}</span>
+        <div style="min-width:0; flex:1;">
+          <b class="card-title">Weighed out · ${esc(pesoShort(f.amountCentavos))}</b>
+          <div class="finalise-sub">${esc(finalQuantityText(f))} at the agreed rate${f.note ? ' — ' + esc(f.note) : ''} · ${f.by === 'customer' ? 'recorded by the client' : 'you recorded this'} ${esc(agoText(f.at))}</div>
+          ${f.revisedFrom ? `<div class="finalise-sub">An earlier reading of ${esc(pesoShort(f.revisedFrom.amountCentavos))} was replaced, not erased.</div>` : ''}
+        </div>
+      </div>
+      <button type="button" class="btn sm secondary" style="width:100%; margin-top:10px; border-radius:10px;"
+        onclick="openFinalise('${booking.id}')">Correct the reading</button>
+    </div>`;
 }
 
 /* Weight, in the unit the form stores it in. Grams are stored and kilograms are
@@ -4172,7 +4319,11 @@ function resetDemoData() {
 /* 5 adds payment records and payouts: the money axis of a job has to survive a
    reload exactly like the service axis does. */
 /* 6 adds dispute cases, which carry their own claim amount and outcome. */
-const SCHEMA_VERSION = 11;
+/* 12 adds the unit price and the frozen fruit rate to a booking's produce leg, and the
+   weighed-out reading beside it. A dump taken before this cannot price a real quantity,
+   because the number it would price it with is the estimate — so it is discarded rather
+   than guessed at. */
+const SCHEMA_VERSION = 12;
 const STORE_KEY = 'sukinnect.snapshot.v1';
 
 const Store = (function () {
@@ -4433,6 +4584,7 @@ let state = {
   /* The price a provider is typing. Like the request draft it lives in state, so a
      re-render does not lose the number half-way through. */
   offerDraft: null,
+  finalDraft: null,
   providerDeclineConfirm: false,
   profileData:{
     name:'Ana Dela Cruz',
@@ -4960,7 +5112,7 @@ function providerFiltersSheet(){
     </div>`;
 }
 
-const SHEET_LABELS = { providerFilters:'Filter providers', bookingRequest:'Book an appointment', raiseCase:'Raise a case', profileSection:'Profile section', makeOffer:'Make an offer' };
+const SHEET_LABELS = { providerFilters:'Filter providers', bookingRequest:'Book an appointment', raiseCase:'Raise a case', profileSection:'Profile section', makeOffer:'Make an offer', finaliseProduce:'Record the actual quantity' };
 
 const REQUEST_TIMES = ['8:00 AM','10:00 AM','1:00 PM','3:00 PM','5:00 PM'];
 
@@ -5664,10 +5816,14 @@ function offerCard(b){
       <div class="mode-hint">Accepting agrees the price, not the visit — ${who} still has to confirm it. Declining leaves your request open, and you can try another match or withdraw it below.</div>`
         : cur.status === 'accepted' ? `<div class="mode-hint">You agreed this price ${agoText(cur.answeredAt || cur.at)}.${
             /* The agreement is history once the job closes; promising a visit that
-               was called off is the same contradiction in the other direction. */
+               was called off is the same contradiction in the other direction. And
+               once the provider has confirmed, promising a confirmation is a card
+               still asking for something that already happened. */
             ['cancelled','expired','no_show'].indexOf(b.status) >= 0
               ? ' The visit was called off, so the fruit was never bought.'
-              : ' ' + esc(providerOf(b).name.split(' ')[0]) + ' has to confirm the visit.'}</div>`
+              : b.status === 'requested'
+                ? ' ' + esc(providerOf(b).name.split(' ')[0]) + ' has to confirm the visit.'
+                : ' The visit is confirmed, so this is the price the fruit settles at.'}</div>`
         : `<div class="mode-hint">This offer was ${esc(offerLabel(cur.status).toLowerCase())}. ${
             ['cancelled','expired','no_show'].indexOf(b.status) >= 0
               ? 'The request is closed.'
@@ -5984,6 +6140,7 @@ function sheetHTML(){
   if(state.sheet === 'providerFilters') return providerFiltersSheet();
   if(state.sheet === 'bookingRequest') return bookingRequestSheet();
   if(state.sheet === 'makeOffer') return makeOfferSheet();
+  if(state.sheet === 'finaliseProduce') return finaliseProduceSheet();
   if(state.sheet === 'raiseCase') return raiseCaseSheet();
   if(state.sheet === 'profileSection') return profileSectionSheet();
   return '';
@@ -7303,7 +7460,7 @@ function residentBookingDetail(){
 
       <div style="display:flex; gap:10px; margin-bottom: ${b.status === 'completed' ? '12px' : '0'};">
         <button class="btn secondary" style="flex:1; background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px; font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.04);" data-chat-booking-provider-id="${providerOf(b).id}">
-          ${ic("chat",14)} Chat Pro
+          ${ic("chat",14)} Chat with ${esc(providerOf(b).name.split(' ')[0])}
         </button>
         <a class="btn secondary" href="tel:${DEMO_HOTLINE}" style="flex:1; background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px; font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.04); text-decoration:none;">
           ${ic("phone",14)} Call the Sukinnect line
@@ -7780,8 +7937,14 @@ function intelligenceStats(f) {
      not a service fee, the platform never held it, and a tile that put it beside
      "services sold" would turn a buyer's payment into marketplace revenue (37, 59). */
   const produceJobs = inWindow.filter(b => b.produce);
-  const produceCentavos = produceJobs.reduce((t, b) => t + b.produce.amountCentavos, 0);
-  const produceFee = produceJobs.reduce((t, b) => t + (b.produce.platformFeeCentavos || 0), 0);
+  /* Where a load has been weighed, the operator's fruit number is the money that
+     actually changed hands, not the estimate somebody typed before the trees were
+     picked. The agreed figure is not lost — it stays on the booking, which is the
+     only place the difference between the two means anything. */
+  const produceCentavos = produceJobs.reduce((t, b) =>
+    t + (b.produce.final ? b.produce.final.amountCentavos : b.produce.amountCentavos), 0);
+  const produceFee = produceJobs.reduce((t, b) =>
+    t + (b.produce.final ? b.produce.final.platformFeeCentavos || 0 : b.produce.platformFeeCentavos || 0), 0);
   return {
     grossCentavos: byCategory.reduce((t, r) => t + r.centavos, 0),
     produceCentavos,
@@ -8306,6 +8469,165 @@ function makeOfferSheet(){
       </button>
     </div>`;
 }
+/* ---- the finalising sheet ----
+   The unit price is shown and never editable: this step records a measurement, and a
+   field that let the number be retyped would be an offer wearing a different label. */
+function finalDraft(bookingId){
+  if (!state.finalDraft || state.finalDraft.bookingId !== bookingId) {
+    const b = bookingById(bookingId);
+    const p = (b && b.produce) || {};
+    /* A second opening starts from the last reading, not from the estimate: correcting
+       a number should not require retyping the part that was right. */
+    const last = p.final || {};
+    const grams = last.quantityGrams || p.quantityGrams || 0;
+    state.finalDraft = {
+      bookingId,
+      qtyKg: grams ? String(grams / 1000) : '',
+      trees: String((b && b.fruit && b.fruit.treeCount) || ''),
+      note: last.note || ''
+    };
+  }
+  return state.finalDraft;
+}
+/* The same arithmetic the model will apply on save, so what the provider sees while
+   typing is what the record will hold — not a preview that can disagree. */
+function finalDraftTotals(d){
+  const b = bookingById(d.bookingId);
+  const p = b && b.produce;
+  if (!p) return null;
+  const unit = p.unitPriceCentavos;
+  const grams = Math.round((parseFloat(d.qtyKg) || 0) * 1000);
+  const trees = Math.round(parseFloat(d.trees) || 0);
+  let amount = p.amountCentavos, qty = null, count = null;
+  if (p.basis === 'per_tree') {
+    count = trees > 0 ? trees : null;
+    if (count && unit) amount = Math.round(count * unit);
+  } else if (p.basis === 'per_lot') {
+    qty = grams > 0 ? grams : null;
+  } else {
+    qty = grams > 0 ? grams : null;
+    if (qty && unit) amount = Math.round(qty * unit / 1000);
+  }
+  const fee = p.feeStatus === 'charged' ? produceFeeOf(b.mode, amount, p.feeRate) : 0;
+  return { basis: p.basis, unitCentavos: unit || null, quantityGrams: qty, treeCount: count,
+           amountCentavos: amount, agreedCentavos: p.amountCentavos,
+           differenceCentavos: amount - p.amountCentavos,
+           platformFeeCentavos: fee,
+           feeStatus: p.feeStatus,
+           valid: p.basis === 'per_lot' ? true : (p.basis === 'per_tree' ? count > 0 : qty > 0) };
+}
+function finaliseTotalsBlock(b, t){
+  const p = b.produce;
+  const moved = t.differenceCentavos;
+  return `<div class="req-terms">
+          <div class="row"><span>Agreed at the estimate</span><b>${esc(pesoShort(t.agreedCentavos))}</b></div>
+          <div class="row"><span>${t.basis === 'per_lot' ? 'The lot, as agreed' : 'Weighed out'}</span>
+            <b>${esc(pesoShort(t.amountCentavos))}</b></div>
+          <div class="row" style="border-top:1px solid var(--line); padding-top:8px; margin-top:4px;">
+            <span style="font-weight:800; color:var(--ink);">${
+              /* The direction of the money flips with the mode (a sale pays the resident,
+                 a harvest-and-buy bills them for the labour), so this says what the
+                 measurement changed rather than who owes whom. */
+              moved === 0 ? 'Same as the estimate' : (moved > 0 ? 'More fruit than the estimate' : 'Less fruit than the estimate')}</span>
+            <b style="font-size:var(--t-body-lg);">${moved === 0 ? 'no change' : esc((moved > 0 ? '+' : '−') + pesoShort(Math.abs(moved)))}</b>
+          </div>
+          ${t.unitCentavos && t.basis !== 'per_lot' ? `<div class="row"><span class="mut">Rate applied</span>
+            <b class="mut">${esc(peso(t.unitCentavos))}${t.basis === 'per_kg' ? ' / kilo' : ' / tree'} — the agreed one</b></div>` : ''}
+          ${t.basis === 'per_lot' ? `<div class="row"><span class="mut">Priced as a lot</span>
+            <b class="mut">the amount stands</b></div>` : ''}
+          <div class="row"><span class="mut">Sukinnect fee on the fruit</span>
+            <b class="mut">${t.feeStatus === 'charged' ? esc(pesoShort(t.platformFeeCentavos))
+              : (t.feeStatus === 'undecided' ? 'rate not set' : 'none on a sale')}</b></div>
+          <p>
+            ${t.basis === 'per_lot'
+              ? 'This fruit was priced as a whole lot, so weighing it records what was carried and leaves the agreed figure alone. A different lot needs a new offer.'
+              : 'The rate is the one already agreed. Changing it is a new offer, not a correction here.'}
+            The service fee is not touched by this — it was set when the job was accepted.
+          </p>
+        </div>`;
+}
+function finaliseProduceSheet(){
+  const d = state.finalDraft;
+  const b = d ? bookingById(d.bookingId) : null;
+  if (!b || !b.produce) return '';
+  const t = finalDraftTotals(d);
+  const p = b.produce;
+  const qtyLabel = p.basis === 'per_tree' ? 'How many trees did you actually do'
+    : p.basis === 'per_lot' ? 'What did it weigh, in kilos (for the record)'
+    : 'What did it actually weigh, in kilos';
+  return `
+    <div class="sheet-grab"></div>
+    <div class="sheet-head">
+      <div>
+        <h2 class="sheet-title">Weigh out the fruit</h2>
+        <div class="sheet-sub">${esc(b.summary)} · recorded against the agreed rate, not repriced.</div>
+      </div>
+      <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close">${ic("x",15)}</button>
+    </div>
+    <div class="sheet-body">
+      <div class="sheet-group">
+        <label class="sheet-label" for="final-qty">${esc(qtyLabel)}
+          ${p.basis === 'per_tree'
+            ? `<input class="req-field" id="final-qty" type="number" inputmode="numeric" min="1"
+                 value="${esc(d.trees)}" placeholder="2"
+                 oninput="finalInput('trees', this.value)">`
+            : `<input class="req-field" id="final-qty" type="number" inputmode="decimal" min="0.5" step="0.5"
+                 value="${esc(d.qtyKg)}" placeholder="31" oninput="finalInput('qtyKg', this.value)">`}
+        </label>
+        <label class="sheet-label" style="margin-top:12px;" for="final-note">A line about it (optional)
+          <input class="req-field" id="final-note" value="${esc(d.note)}"
+            placeholder="Roughly a third was damaged and left" oninput="finalInput('note', this.value)"></label>
+      </div>
+      <div class="sheet-group" id="final-totals">${finaliseTotalsBlock(b, t)}</div>
+    </div>
+    <div class="sheet-foot">
+      <button type="button" class="btn secondary" style="flex:1; border-radius:12px;" onclick="closeSheet()">Cancel</button>
+      <button type="button" class="btn" id="save-final-btn" style="flex:1.5; border-radius:12px;"
+        ${t.valid ? '' : 'disabled'} onclick="submitFinalise()">
+        ${t.valid ? 'Record ' + esc(pesoShort(t.amountCentavos)) : 'Enter the quantity'}
+      </button>
+    </div>`;
+}
+function openFinalise(bookingId){
+  finalDraft(bookingId);
+  state.sheet = 'finaliseProduce';
+  render();
+}
+function finalInput(key, value){
+  state.finalDraft[key] = value;
+  updateFinalTotals();
+}
+/* Only the totals block is rewritten, so the field keeps the caret while the number
+   moves underneath it. */
+function updateFinalTotals(){
+  const host = document.getElementById('final-totals');
+  const btn = document.getElementById('save-final-btn');
+  if (!host || !btn) return;
+  const d = state.finalDraft, b = bookingById(d.bookingId);
+  const t = finalDraftTotals(d);
+  host.innerHTML = finaliseTotalsBlock(b, t);
+  btn.disabled = !t.valid;
+  btn.innerHTML = t.valid ? 'Record ' + pesoShort(t.amountCentavos) : 'Enter the quantity';
+}
+function submitFinalise(){
+  const d = state.finalDraft;
+  if (!d) return;
+  const b = bookingById(d.bookingId);
+  if (!b) return;
+  try {
+    finaliseProduce(b.id, {
+      quantityGrams: d.qtyKg ? Math.round((parseFloat(d.qtyKg) || 0) * 1000) : null,
+      treeCount: d.trees, note: d.note
+    }, { role:'provider', id: CURRENT_PROVIDER_ID, name: providerOf(b).name });
+    state.sheet = null;
+    state.finalDraft = null;
+    showToast('Recorded — the client sees the weighed amount and the agreed one');
+    render();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
 function pickOfferBasis(v){ offerDraft(state.offerDraft.bookingId).basis = v; render(); }
 function pickOfferWho(v){ offerDraft(state.offerDraft.bookingId).whoHarvests = v; render(); }
 function offerInput(key, value){ state.offerDraft[key] = value; updateOfferTotals(); }
@@ -9095,6 +9417,7 @@ function providerBookingDetail(){
       <div style="font-size:var(--t-body-sm); color:var(--ink-soft); line-height:1.5;">${esc(booking.notes || booking.request)}</div>
     </div>
 
+    ${finaliseCard(booking)}
     ${jobActionBar(booking)}
     ${receiptCard(booking)}
   </div>`;

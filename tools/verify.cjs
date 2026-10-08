@@ -1741,6 +1741,291 @@ suite('fruit', async () => {
   return c;
 });
 
+/* ══ 16. weighing — the final link of HARVEST/COLLECT → FINALIZE QUANTITY → SETTLE ══
+   The pilot's chain stopped short of the measurement: a buyer who agreed 120 kilos and
+   carried 31 had nowhere to record the difference, so the only figure on the job stayed
+   an estimate nobody had weighed. These checks hold the line that keeps the step from
+   becoming a second pricing screen. */
+suite('weighing', async () => {
+  const c = makeChecker();
+  const rules = boot();
+  const produceFeeOfOf = rules.produceFeeOf, produceFeeStateOf = rules.produceFeeState;
+  c.check('the two readers of the fee rule are both reachable from outside the file',
+    typeof produceFeeOfOf === 'function' && typeof produceFeeStateOf === 'function');
+
+  /* A job walked to the point where a recording is allowed: offered, accepted, arrived. */
+  const walked = (opts) => {
+    const w = boot();
+    if (opts && opts.rate) w.CONFIG.produceCommissionRate = opts.rate;
+    w.makeOffer('b10', { basis: opts && opts.basis || 'per_kg',
+      quantityGrams: 120000, unitPriceCentavos: opts && opts.unit || 5500,
+      produceCentavos: opts && opts.produce || 660000,
+      labourCentavos: opts && opts.labour || 0, whoHarvests: 'provider' }, { role:'provider' });
+    w.answerOffer('b10', 'accept', { role:'customer', id: w.CURRENT_CUSTOMER_ID });
+    w.applyProviderIdentity('p7');
+    ['upcoming','en_route','arrived'].forEach(to =>
+      w.attemptTransition('b10', to, { role:'provider', id:'p7' }));
+    return w;
+  };
+
+  const w1 = walked();
+  const agreed = w1.bookingById('b10').produce.amountCentavos;
+  const f1 = w1.finaliseProduce('b10', { quantityGrams: 31000, note:'A third was damaged and left' },
+    { role:'provider' });
+  c.check('the agreed rate is applied to the actual weight, not to the guess',
+    agreed === 660000 && f1.amountCentavos === 170500, agreed + ' → ' + f1.amountCentavos);
+  c.check('the agreed figure survives beside the measured one',
+    w1.bookingById('b10').produce.amountCentavos === 660000 && !!f1.revisedFrom === false);
+  c.check('the unit price the offer was written at is on the record',
+    w1.bookingById('b10').produce.unitPriceCentavos === 5500);
+  c.check('a reading is stored in whole grams and reads back in kilos',
+    f1.quantityGrams === 31000 && /31 kg/.test(w1.finalProduceLine(w1.bookingById('b10'))),
+    w1.finalProduceLine(w1.bookingById('b10')));
+
+  /* The rule that keeps this step from inventing economics. */
+  const w2 = walked({ labour: 300000 });
+  const before = JSON.stringify(w2.bookingById('b10').pricing) + '|' + w2.bookingById('b10').amountCentavos;
+  w2.finaliseProduce('b10', { quantityGrams: 31000 }, { role:'provider' });
+  c.check('weighing the fruit never touches the service leg',
+    before === JSON.stringify(w2.bookingById('b10').pricing) + '|' + w2.bookingById('b10').amountCentavos &&
+    w2.bookingById('b10').produce.final.serviceLegChanged === false,
+    w2.bookingById('b10').amountCentavos + ' after, ' + before.split('|')[1] + ' before');
+  c.check('the ledger hears nothing from a measurement — the fruit was never the platform money', (() => {
+    const v = walked({ labour: 300000 });
+    const before = JSON.stringify(v.LEDGER);
+    v.finaliseProduce('b10', { quantityGrams: 31000 }, { role:'provider' });
+    return before === JSON.stringify(v.LEDGER);
+  })(), 'a weighing moved money on the platform books');
+
+  const w3 = walked({ basis: 'per_lot', produce: 150000, unit: 150000 });
+  const f3 = w3.finaliseProduce('b10', { quantityGrams: 41000 }, { role:'provider' });
+  c.check('a lot priced as a lot is not re-scaled by its weight',
+    f3.amountCentavos === 150000 && f3.quantityGrams === 41000,
+    f3.amountCentavos + ' on 41 kg');
+
+  /* The third basis the pilot offers, walked rather than assumed. */
+  const wT = walked({ basis: 'per_tree', produce: 60000, unit: 20000 });
+  const fT = wT.finaliseProduce('b10', { treeCount: 4 }, { role:'provider' });
+  c.check('a job priced per tree comes out at the agreed price per tree',
+    fT.amountCentavos === 80000 && fT.treeCount === 4 && fT.quantityGrams === null &&
+    /4 trees/.test(wT.finalProduceLine(wT.bookingById('b10'))),
+    JSON.stringify(fT));
+  c.check('the per-tree job is asked for trees, not kilos', (() => {
+    const v = walked({ basis: 'per_tree', produce: 60000, unit: 20000 });
+    v.openFinalise('b10');
+    return /How many trees did you actually do/.test(v.sheetHTML()) &&
+      /Enter trees/.test(v.finaliseCard(v.bookingById('b10')));
+  })(), 'the per-tree job was offered the wrong unit');
+
+  /* The freeze, which is the whole reason the rate is copied onto the produce record. */
+  const w4 = walked();
+  w4.CONFIG.produceCommissionRate = 0.05;
+  const f4 = w4.finaliseProduce('b10', { quantityGrams: 31000 }, { role:'provider' });
+  c.check('a rate decided after the agreement does not reach back and charge this job',
+    f4.feeStatus === 'undecided' && f4.platformFeeCentavos === 0,
+    f4.feeStatus + ' / ' + f4.platformFeeCentavos);
+  const w5 = walked({ rate: 0.05 });
+  c.check('a job that was agreed under a rate is priced by that rate on the real weight',
+    w5.bookingById('b10').produce.feeStatus === 'charged' &&
+    w5.bookingById('b10').produce.feeRate === 0.05 &&
+    w5.finaliseProduce('b10', { quantityGrams: 31000 }, { role:'provider' }).platformFeeCentavos === 8525,
+    JSON.stringify(w5.bookingById('b10').produce.final && w5.bookingById('b10').produce.final.platformFeeCentavos));
+  const w6 = walked({ rate: 0.05 });
+  w6.CONFIG.produceCommissionRate = 0.10;
+  c.check('a heavier load under a frozen rate scales the fee and nothing else',
+    w6.finaliseProduce('b10', { quantityGrams: 200000 }, { role:'provider' }).platformFeeCentavos === 55000,
+    '200 kg at the frozen ₱55 is ₱11,000, and 5% of that is ₱550 — not 10%');
+
+  /* Where a recording is refused, and what a second one remembers. */
+  const w7 = boot();
+  w7.makeOffer('b10', { basis:'per_kg', quantityGrams:120000, unitPriceCentavos:5500,
+    produceCentavos:660000, labourCentavos:0, whoHarvests:'provider' }, { role:'provider' });
+  w7.answerOffer('b10','accept', { role:'customer', id: w7.CURRENT_CUSTOMER_ID });
+  c.check('the fruit is only weighed once the visit has started', (() => {
+    try { w7.finaliseProduce('b10', { quantityGrams: 31000 }, { role:'provider' }); return false; }
+    catch (err) { return /once the visit has started/.test(err.message); }
+  })(), 'a reading was accepted against a request nobody had visited');
+  c.check('with nothing weighed there is nothing to show on the job',
+    w7.finaliseCard(w7.bookingById('b10')) === '');
+
+  /* Through b8 and p8: a provider may call off their own visit while it is still a
+     request, which is the one path that produces a voided produce leg. */
+  const w8 = boot();
+  w8.answerOffer('b8', 'accept', { role:'customer', id: w8.CURRENT_CUSTOMER_ID });
+  w8.attemptTransition('b8', 'cancelled', { role:'provider', id:'p8' }, { reason:'Could not do the job' });
+  c.check('a called-off visit cannot be weighed out', (() => {
+    try { w8.finaliseProduce('b8', { quantityGrams: 31000 }, { role:'provider' }); return false; }
+    catch (err) { return /called off/.test(err.message); }
+  })(), 'the reading was taken on a job that never happened');
+
+  c.check('a job with no fruit money is refused, not zeroed', (() => {
+    const v = boot();
+    try { v.finaliseProduce('b1', { quantityGrams: 5000 }, { role:'provider' }); return false; }
+    catch (err) { return /no fruit money/.test(err.message); }
+  })(), 'finalise ran on a booking with no produce leg');
+
+  const w10 = walked();
+  w10.finaliseProduce('b10', { quantityGrams: 31000 }, { role:'provider' });
+  c.check('correcting a reading replaces it without erasing it', (() => {
+    const v = walked();
+    v.finaliseProduce('b10', { quantityGrams: 31000 }, { role:'provider' });
+    const again = v.finaliseProduce('b10', { quantityGrams: 29500, note:'Recounted at the gate' }, { role:'provider' });
+    return again.amountCentavos === 162250 && !!again.revisedFrom &&
+      again.revisedFrom.amountCentavos === 170500 && again.revisedFrom.quantityGrams === 31000;
+  })(), 'a second reading overwrote the first with no trace of it');
+
+  /* Read off a screenshot of a job walked past the confirmation: the offer card was
+     still asking the resident to wait for a thing that had already happened. The
+     shipped demo only ever shows the accepted-and-still-requested state, which is
+     how this survived an audit that looked at every closed status. */
+  c.check('an accepted offer stops asking for a confirmation the job already has', (() => {
+    const card = w1.offerCard(w1.bookingById('b10'));
+    return /The visit is confirmed/.test(card) && !/has to confirm the visit/.test(card);
+  })(), 'the card still promised a pending confirmation on an arrived job');
+  c.check('while the visit is not confirmed the card says exactly that', (() => {
+    const v = boot();
+    v.answerOffer('b8', 'accept', { role:'customer', id: v.CURRENT_CUSTOMER_ID });
+    return /has to confirm the visit/.test(v.offerCard(v.bookingById('b8')));
+  })(), 'the pending case lost its own sentence');
+
+  /* The other side has to learn it happened, from the record rather than a rumour. */
+  c.check('the thread carries the weighing to the resident', (() => {
+    const said = w10.MESSAGES.filter(m => m.bookingId === 'b10');
+    const last = said[said.length - 1];
+    return !!last && last.from === 'provider' && /^Weighed out 31 kg/.test(last.text) &&
+      /₱1,705 at the agreed rate/.test(last.text);
+  })(), JSON.stringify(w10.MESSAGES.filter(m => m.bookingId === 'b10').slice(-1)));
+
+  /* Screens, not just models: the row has to stop calling an estimate a payment. */
+  const rowBoth = w10.produceRow(w10.bookingById('b10'));
+  c.check('the row states the weighed amount and keeps the agreed one visible',
+    /₱1,705\.00/.test(rowBoth) && /Agreed ₱6,600/.test(rowBoth) && /weighed out at ₱1,705/.test(rowBoth) &&
+    !/about 120 kg/.test(rowBoth), rowBoth.slice(rowBoth.indexOf('finalise-delta'), rowBoth.indexOf('finalise-delta') + 240));
+  c.check('the row names who recorded it, because both people read this card',
+    /recorded by the provider/.test(rowBoth), 'the by-line was missing or spoke as one party');
+  /* Read off the same screenshot: the row asserted the fruit in the past tense while
+     the visit was still running, which is the §17 defect wearing a different hat —
+     and weighing the load made the claim more specific, not less. */
+  c.check('a fruit row does not report a payment the visit has not finished making', (() => {
+    const v = walked();
+    const mid = v.produceRow(v.bookingById('b10'));
+    ['ongoing','completed'].forEach(to => v.attemptTransition('b10', to, { role:'provider', id:'p7' }));
+    const done = v.produceRow(v.bookingById('b10'));
+    return /you are being paid/.test(mid) && !/you were paid/.test(mid) &&
+      /you were paid ₱6,600\.00/.test(done);
+  })(), 'the row claimed settled money mid-visit');
+  const cardDone = w10.finaliseCard(w10.bookingById('b10'));
+  c.check('the provider keeps a way to correct the reading after taking it',
+    /Weighed out · ₱1,705/.test(cardDone) && /Correct the reading/.test(cardDone));
+  /* Read off the screenshot: the card's headline and its caption were the same
+     sentence, so the one figure the provider had just typed appeared twice in a card
+     that had room for one of them. */
+  c.check('the weighed card states its figure once',
+    (cardDone.match(/Weighed out/g) || []).length === 1 &&
+    (cardDone.match(/₱1,705/g) || []).length === 1 &&
+    /31 kg at the agreed rate/.test(cardDone), cardDone.slice(0, 300));
+  const wPre = walked();
+  const cardOpen = wPre.finaliseCard(wPre.bookingById('b10'));
+  c.check('before the weighing the card asks for the unit the deal used',
+    /Enter kilos/.test(cardOpen) && /estimate of about 120 kg/.test(cardOpen) &&
+    /openFinalise\('b10'\)/.test(cardOpen), cardOpen.slice(0, 200));
+  c.check('the card is a real control inside the provider job screen, not a paragraph',
+    /onclick="openFinalise\('b10'\)"/.test(w1.finaliseCard(w1.bookingById('b10'))) &&
+    (() => { const src = w10._source, at = src.indexOf('function providerBookingDetail');
+      const body = src.slice(at, src.indexOf('\nfunction', at + 1));
+      return body.includes('${finaliseCard(booking)}'); })());
+
+  /* What the operator tallies has to be the money that moved. */
+  const w11 = walked();
+  const stA = w11.intelligenceStats({ category:'all', days:0 });
+  w11.finaliseProduce('b10', { quantityGrams: 31000 }, { role:'provider' });
+  const stB = w11.intelligenceStats({ category:'all', days:0 });
+  c.check('the fruit figure the operator reads is the weighed amount',
+    stA.produceCentavos === 660000 && stB.produceCentavos === 170500 && stB.produceJobs === 1,
+    stA.produceCentavos + ' agreed, ' + stB.produceCentavos + ' after the reading');
+  c.check('and the service figure is exactly the same job it was',
+    stB.grossCentavos === stA.grossCentavos, stA.grossCentavos + ' vs ' + stB.grossCentavos);
+
+  /* The preview is the save. Two arithmetic blocks that can disagree is how a screen
+     starts promising a number the record will not hold. */
+  const w12 = walked();
+  w12.openFinalise('b10');
+  w12.state.finalDraft.qtyKg = '31';
+  const preview = w12.finalDraftTotals(w12.state.finalDraft);
+  c.check('the figure on the sheet is the figure the record takes',
+    preview.amountCentavos === 170500 && preview.differenceCentavos === -489500 && preview.valid === true,
+    JSON.stringify(preview));
+  c.check('the sheet renders and says the rate is not editable here',
+    /the agreed one/.test(w12.finaliseProduceSheet()) && /not repriced/.test(w12.finaliseProduceSheet()));
+  /* Reachability, the lesson the journeys suite was built on: a function the test can
+     call is not a screen a person can open. Drive it the way the phone does. */
+  c.check('the sheet is painted by a route, not only callable from a test', (() => {
+    const v = walked();
+    v.state.view = 'app'; v.state.role = 'provider'; v.state.tab = 'provider_booking_detail';
+    v.openProviderBooking('b10');
+    v.openFinalise('b10');                 /* the card's own click handler */
+    v.finalInput('qtyKg', '31');           /* the field's own input handler */
+    const html = v.sheetHTML();            /* what renderSheet() paints with */
+    return v.state.sheet === 'finaliseProduce' && /Weigh out the fruit/.test(html) &&
+      /Agreed at the estimate/.test(html) && /₱6,600/.test(html) &&
+      /Less fruit than the estimate/.test(html) && /−₱4,895/.test(html) &&
+      /Record ₱1,705/.test(html);
+  })(), 'no route painted the sheet');
+  c.check('the save button records the reading the provider typed', (() => {
+    const v = walked();
+    v.state.view = 'app'; v.state.role = 'provider'; v.state.tab = 'provider_booking_detail';
+    v.openProviderBooking('b10');
+    v.openFinalise('b10');
+    v.state.finalDraft.qtyKg = '31';
+    v.submitFinalise();
+    const f = v.bookingById('b10').produce.final;
+    return v.state.sheet === null && !!f && f.amountCentavos === 170500 && f.by === 'provider';
+  })(), 'the button on the sheet did not write the record the sheet showed');
+  c.check('the provider job screen itself offers the weighing', (() => {
+    const v = walked();
+    v.state.view = 'app'; v.state.role = 'provider'; v.state.tab = 'provider_booking_detail';
+    v.openProviderBooking('b10');
+    v.render();
+    const html = v._document.getElementById('screen').innerHTML;
+    return /Record what you actually took/.test(html) && /Enter kilos/.test(html);
+  })(), 'the screen never showed the step that closes the chain');
+  c.check('reopening the sheet starts from the last reading, exactly', (() => {
+    const v = walked();
+    v.finaliseProduce('b10', { quantityGrams: 29500 }, { role:'provider' });
+    v.state.finalDraft = null;
+    v.openFinalise('b10');
+    return v.state.finalDraft.qtyKg === '29.5';
+  })(), 'a half-kilo reading reopened rounded up, so saving it again moved the record');
+  c.check('an empty reading cannot be saved',
+    w12.finalDraftTotals(Object.assign({}, w12.state.finalDraft, { qtyKg:'' })).valid === false);
+  c.check('a lot needs no number to be recorded',
+    (() => { const v = walked({ basis:'per_lot', produce:150000, unit:150000 });
+      v.openFinalise('b10'); return v.finalDraftTotals(v.state.finalDraft).valid === true; })());
+
+  /* The refactor the whole step leans on: one rule, two callers, same answers. */
+  c.check('the fee rule answers for a rate that was never decided',
+    produceFeeStateOf('harvest_and_buy', 100000, null) === 'undecided' &&
+    produceFeeOfOf('harvest_and_buy', 100000, null) === 0);
+  c.check('a straight sale stays decided-free even once a rate exists',
+    produceFeeStateOf('sell_fruit', 100000, 0.05) === 'not-charged' &&
+    produceFeeOfOf('sell_fruit', 100000, 0.05) === 0);
+  c.check('no fruit means no fee state to report',
+    produceFeeStateOf('harvest_and_buy', 0, 0.05) === 'no-fruit');
+  c.check('offerTotals still writes the fee through that one rule', (() => {
+    const v = boot();
+    const o = { mode:'harvest_and_buy', labourCentavos:0, produceCentavos:200000 };
+    v.CONFIG.produceCommissionRate = null;
+    const undecided = v.offerTotals(o);
+    v.CONFIG.produceCommissionRate = 0.05;
+    const charged = v.offerTotals(o);
+    return undecided.produceFeeCentavos === 0 && undecided.produceFeeUndecided === true &&
+      undecided.produceCharged === false && charged.produceFeeCentavos === 10000 &&
+      charged.produceCharged === true && charged.produceFeeUndecided === false;
+  })());
+
+  return c;
+});
+
 (async () => {
   let total = 0, failed = 0;
   for (const { name, fn } of suites) {
