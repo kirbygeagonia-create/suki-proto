@@ -299,7 +299,11 @@ const AUDIT_JS = `(function(){
        naturalWidth and returns early at zero — which is precisely what a broken
        image looks like. The category tiles are image files now, so a dangling path
        is a blank square on the front door of the app and nothing reported it. */
-    if (src && el.naturalWidth === 0) { out.broken.push({ src, why: el.complete ? 'no pixels' : 'still loading' }); return; }
+    /* complete && no pixels is a real failure. An image that has not finished is not:
+       the first version of this check reported four OpenStreetMap tiles that were
+       simply still in flight, which is a false alarm on every screen that mounts a
+       map — and a tally that cries wolf gets ignored, which is worse than no tally. */
+    if (src && el.complete && el.naturalWidth === 0) { out.broken.push({ src, why: 'no pixels' }); return; }
     const r = painted(el); if (!r) return;
     const natural = el.naturalWidth / el.naturalHeight, drawn = r.width / r.height;
     if (Math.abs(natural - drawn) / natural > 0.04)

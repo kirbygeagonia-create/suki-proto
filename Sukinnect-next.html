@@ -956,10 +956,33 @@
   }
   .rate-star:hover{ color:var(--gold); }
   .rate-star:active{transform:scale(.9);}
-  .bar{height:100%; border-radius:4px 4px 0 0;}
-  .barchart{display:flex; align-items:flex-end; gap:8px; height:110px; margin-top:14px;}
-  .barcol{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;}
-  .barlbl{font-size:var(--t-caption); color:var(--mist); margin-top:6px;}
+  /* The shared chart kit. Text stays at the 14px floor everywhere except inside the
+     SVG, where the viewBox scales it — a 10-unit label in a 320-unit-wide box
+     renders at about 12px on a 390px phone, so the axis type is set larger in the
+     drawing than the floor would suggest and is measured, not assumed.
+     (The old .bar/.barchart/.barcol/.barlbl rules were removed with the last
+     hand-styled chart; nothing renders through them any more.) */
+  .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; border:0;}
+  .chart-row{display:flex; align-items:center; gap:9px; margin:8px 0;}
+  .chart-label{flex:0 0 34%; font-size:var(--t-caption); color:var(--ink-soft); overflow-wrap:anywhere;}
+  .chart-track{flex:1; height:12px; background:var(--cloud); border-radius:99px; overflow:hidden;}
+  .chart-fill{display:block; height:100%; background:var(--brand-primary); border-radius:99px;}
+  .chart-value{flex:0 0 auto; min-width:52px; text-align:right; font-size:var(--t-caption); color:var(--ink); font-weight:700;}
+  .chart-foot{font-size:var(--t-caption); color:var(--mist); margin-top:8px; line-height:1.5;}
+  .chart-share{display:flex; align-items:center; gap:16px; margin:10px 0 4px;}
+  .chart-ring{width:96px; height:96px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;}
+  .chart-ring-hole{width:58px; height:58px; border-radius:50%; background:var(--surface); display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--ink); text-align:center;}
+  .chart-ring-hole b{font-size:var(--t-body);}
+  .chart-ring-hole span{font-size:var(--t-caption); color:var(--mist);}
+  .chart-legend{display:flex; flex-direction:column; gap:7px; font-size:var(--t-caption); color:var(--ink-soft); min-width:0;}
+  .chart-legend-row{display:flex; align-items:center; gap:7px;}
+  .chart-swatch{display:inline-block; width:9px; height:9px; border-radius:3px; flex-shrink:0;}
+  .chart-pct{color:var(--mist);}
+  .chart-empty{display:flex; align-items:center; gap:9px; min-height:64px; margin:6px 0; padding:12px;
+    background:var(--cloud); border:1px dashed var(--line); border-radius:var(--r-sm);
+    font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5;}
+  .chart-title{font-weight:700; font-size:var(--t-body-sm); color:var(--ink);}
+  .chart-sub{font-size:var(--t-caption); color:var(--mist); margin:2px 0 8px; line-height:1.5;}
   .devicebar{
     display:flex; justify-content:space-between; padding:8px 24px 2px; font-size:var(--t-caption); font-weight:600; letter-spacing:0.4px; color:var(--ink); flex-shrink:0;
   }
@@ -3992,7 +4015,139 @@ function providerDemandByBarangay(providerId, days) {
   return rows;
 }
 
+/* ---- shared chart kit ---------------------------------------------------
+   Every chart in the app is drawn here, so a card's title, period, unit, axis,
+   value labels and empty state cannot drift from one screen to the next.
+
+   Chart.js 4.5.1 was tested on this exact execution path and it works — a real
+   file:// load rendered a bar chart with axes and gridlines in ~87ms per chart.
+   It was still rejected on cost: the UMD build is 203.6KB and there is no gzip on
+   the file:// path, so every one of the 46 screens would parse it to serve about
+   six charts; and render() replaces #screen's innerHTML, which throws away the
+   canvas a live Chart instance is bound to, so every keystroke in a form on a
+   chart screen needs explicit destroy/reuse to avoid leaking instances. A shared
+   SVG renderer costs a few hundred bytes, has no lifecycle, and stays selectable
+   text rather than pixels. That reasoning and the measurement are recorded in
+   CHANGES.md so the choice can be revisited if the app grows real analytics. */
+const CHART_W = 320;
+const CHART_PAD = { l: 44, r: 10, t: 14, b: 34 };
+/* SVG text is drawn in viewBox units, so a "10" here would render at ~10px on a
+   390px phone — under the 14px floor the rest of the app was just moved to, and the
+   instrument reports it as off-scale. 14 units is the floor at this box width. */
+const CHART_FONT = 14;
+
+/* Round an axis up to a readable step. Count data gets whole ticks: the first
+   version drew 0 / 0.75 / 1 on a chart of bookings per day, which is an axis that
+   cannot exist — you cannot have three quarters of a booking. */
+function chartScale(max) {
+  if (!(max > 0)) return { top: 1, ticks: [0, 1] };
+  const integral = Number.isInteger(max);
+  const rough = max / 4;
+  const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+  let step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s * 4 >= max) || mag * 10;
+  if (integral) step = Math.max(1, Math.ceil(step));
+  const top = step * 4;
+  return { top, ticks: [0, step, step * 2, step * 3, top] };
+}
+
+/* A column chart with a labelled axis, gridlines and a value on every bar. The
+   svg is aria-hidden and the summary list carries the same numbers, because a
+   canvas or a path is not something a screen reader can read back. */
+function chartColumns(rows, opts) {
+  const o = opts || {};
+  const fmt = o.format || (v => v);
+  const live = rows.filter(r => r.value > 0).length;
+  if (!rows.length || !live) return chartEmpty(o.empty || 'Not enough sample data yet.');
+  const h = o.height || 132;
+  const inner = h - CHART_PAD.t - CHART_PAD.b;
+  const w = CHART_W - CHART_PAD.l - CHART_PAD.r;
+  const sc = chartScale(Math.max(...rows.map(r => r.value)));
+  const slot = w / rows.length;
+  const bw = Math.min(o.barWidth || 30, slot * 0.62);
+  /* At eight columns the week labels touched each other, so a dense series thins
+     its own axis rather than rotating or truncating it — a rotated label is unreadable
+     at this size and a truncated one is a lie about the period. */
+  const stride = slot < 62 ? Math.ceil(rows.length / 4) : 1;
+  const grid = sc.ticks.map(t => {
+    const y = CHART_PAD.t + inner - (t / sc.top) * inner;
+    return `<line x1="${CHART_PAD.l}" y1="${y.toFixed(1)}" x2="${CHART_W - CHART_PAD.r}" y2="${y.toFixed(1)}" stroke="var(--line)" stroke-width="1" ${t === 0 ? '' : 'stroke-dasharray="2 4"'}></line>` +
+      `<text x="${CHART_PAD.l - 6}" y="${(y + 3.5).toFixed(1)}" text-anchor="end" font-size="${CHART_FONT}" fill="var(--mist)">${esc(fmt(t))}</text>`;
+  }).join('');
+  const bars = rows.map((r, i) => {
+    const x = CHART_PAD.l + slot * i + (slot - bw) / 2;
+    /* A row may carry a second value (completed vs still open, say). Drawing it as a
+       thinner paired bar keeps one renderer for both shapes — the alternative was a
+       second function, or dropping the split, and dropping it would lose the only
+       distinction this chart exists to make. */
+    const pair = r.value2 !== undefined;
+    const one = pair ? bw / 2 - 1.5 : bw;
+    const hOf = v => Math.max(v > 0 ? 3 : 0, (v / sc.top) * inner);
+    const piece = (v, offset, tone) => {
+      const bh = hOf(v);
+      const y = CHART_PAD.t + inner - bh;
+      return `<rect x="${(x + offset).toFixed(1)}" y="${y.toFixed(1)}" width="${one.toFixed(1)}" height="${bh.toFixed(1)}" rx="3" fill="${v > 0 ? tone : 'var(--line)'}"></rect>`;
+    };
+    const topVal = pair ? Math.max(r.value, r.value2) : r.value;
+    const topY = CHART_PAD.t + inner - hOf(topVal);
+    return (pair ? piece(r.value, 0, o.tone || 'var(--brand-primary)') + piece(r.value2, one + 3, o.tone2 || 'var(--brand-secondary)')
+                 : piece(r.value, 0, o.tone || 'var(--brand-primary)')) +
+      (topVal > 0 ? `<text x="${(x + bw / 2).toFixed(1)}" y="${(topY - 5).toFixed(1)}" text-anchor="middle" font-size="${CHART_FONT}" font-weight="700" fill="var(--ink)">${esc(fmt(topVal))}</text>` : '') +
+      (i % stride === 0 ? `<text x="${(x + bw / 2).toFixed(1)}" y="${h - 12}" text-anchor="middle" font-size="${CHART_FONT}" fill="var(--mist)">${esc(r.label)}</text>` : '');
+  }).join('');
+  return `<svg viewBox="0 0 ${CHART_W} ${h}" width="100%" height="${h}" role="img" aria-label="${esc(o.aria || chartSummary(rows, fmt))}" preserveAspectRatio="xMidYMid meet">${grid}${bars}</svg>` +
+    chartSrSummary(rows, fmt);
+}
+
+/* Horizontal bars: the form that survives long Filipino place names, because the
+   label gets a column of its own instead of being rotated or truncated. */
+function chartBars(rows, opts) {
+  const o = opts || {};
+  const fmt = o.format || (v => v);
+  const top = Math.max(1, ...rows.map(r => r.value));
+  return rows.map(r => `
+    <div class="chart-row">
+      <span class="chart-label">${esc(r.label)}</span>
+      <span class="chart-track"><span class="chart-fill" style="width:${Math.round(r.value / top * 100)}%"></span></span>
+      <b class="chart-value">${esc(fmt(r.value))}</b>
+    </div>`).join('') +
+    (o.total ? `<div class="chart-foot">${esc(o.total)}</div>` : '');
+}
+
+/* A part-to-whole ring. Refuses to draw a thin sample — a share of three records
+   is a story, not a measurement — and closes the last band at 100 so rounding
+   cannot leave a gap in the ring. */
+function chartShare(parts, opts) {
+  const o = opts || {};
+  const total = parts.reduce((t, p) => t + p.value, 0);
+  if (total < (o.minSample || MIN_SHARE_SAMPLE)) return chartEmpty(o.low || `Only ${total} record${total === 1 ? '' : 's'} — too few to draw a share.`);
+  let acc = 0;
+  const bands = parts.map((p, i) => {
+    const from = Math.round(acc / total * 100);
+    acc += p.value;
+    const to = i === parts.length - 1 ? 100 : Math.round(acc / total * 100);
+    return `${p.tone} ${from}% ${to}%`;
+  }).join(', ');
+  const legend = parts.map(p => `<div class="chart-legend-row"><span class="chart-swatch" style="background:${p.tone}"></span>${esc(p.label)} <b>${p.value}</b> <span class="chart-pct">${Math.round(p.value / total * 100)}%</span></div>`).join('');
+  return `<div class="chart-share">
+    <div class="chart-ring" role="img" aria-label="${esc(o.aria || chartSummary(parts.map(p => ({ label: p.label, value: p.value })), v => v))}" style="background:conic-gradient(${bands})">
+      <div class="chart-ring-hole"><b>${esc(o.centreValue || total)}</b><span>${esc(o.centreLabel || 'total')}</span></div>
+    </div>
+    <div class="chart-legend">${legend}</div>
+  </div>`;
+}
+
+function chartEmpty(msg) {
+  return `<div class="chart-empty">${ic('chart', 18)}<span>${esc(msg)}</span></div>`;
+}
+function chartSummary(rows, fmt) {
+  return rows.map(r => `${r.label}: ${fmt(r.value)}`).join('; ');
+}
+function chartSrSummary(rows, fmt) {
+  return `<ul class="sr-only">${rows.map(r => `<li>${esc(r.label)}: ${esc(fmt(r.value))}</li>`).join('')}</ul>`;
+}
+
 /* ---- the money console ──────────────────────────────────────────────────── */
+
 function statementCard() {
   const st = platformStatement();
   const all = BOOKINGS.filter(b => b.status === 'completed' && b.pricing);
@@ -7749,24 +7904,15 @@ function adminDashboard(){
       <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',14)}</span>
     </button>
     <div class="card">
-      <div class="row" style="margin-bottom:10px;"><b class="card-title">Weekly bookings</b><span class="chip">Completed vs open</span></div>
-      <div style="height:128px; display:flex; align-items:flex-end; justify-content:space-around; gap:8px; border-bottom:1px solid var(--line); padding:0 6px 20px;">
-        ${[['Mon',62,32],['Tue',76,42],['Wed',54,28],['Thu',88,36],['Fri',100,48],['Sat',82,40],['Sun',46,24]].map(([day,completed,open]) => `
-          <div style="height:100%; display:flex; align-items:flex-end; gap:3px; position:relative; flex:1; max-width:34px;">
-            <div title="${day} completed" style="height:${completed}%; flex:1; background:var(--verified); border-radius:4px 4px 0 0;"></div>
-            <div title="${day} open" style="height:${open}%; flex:1; background:var(--brand-tint); border-radius:4px 4px 0 0;"></div>
-            <span style="position:absolute; bottom:-18px; left:50%; transform:translateX(-50%); font-size:var(--t-caption); color:var(--mist);">${day}</span>
-          </div>
-        `).join('')}
-      </div>
-      <div style="display:flex; gap:14px; margin-top:10px; font-size:var(--t-caption); color:var(--mist);"><span><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--verified); vertical-align:-1px;"></span> Completed</span><span><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--brand-tint); vertical-align:-1px;"></span> Open</span></div>
-    </div>
-    <div class="card">
       <div class="row" style="margin-bottom:10px;"><b class="card-title">Operations workload</b><span class="chip">${work.total ? work.total + ' item' + (work.total === 1 ? '' : 's') + ' waiting' : 'Nothing waiting'}</span></div>
-      ${work.total ? `<div style="display:flex; align-items:center; gap:18px;">
-        <div style="width:94px; height:94px; border-radius:50%; background:conic-gradient(${work.parts.map(p => p.tone + ' ' + p.from + '% ' + p.to + '%').join(', ')}); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><div style="width:56px; height:56px; border-radius:50%; background:var(--surface); display:flex; align-items:center; justify-content:center; text-align:center; font-size:var(--t-caption); color:var(--mist);">${work.total}<br>items</div></div>
-        <div style="display:flex; flex-direction:column; gap:7px; font-size:var(--t-caption); color:var(--ink-soft);">${work.parts.map(p => `<div><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:${p.tone}; vertical-align:-1px;"></span> ${p.label} <b>${p.items}</b></div>`).join('')}</div>
-      </div>` : `<div style="font-size:var(--t-caption); color:var(--mist);">No booking is live, no application is waiting, and no case is open.</div>`}
+      ${work.total ? chartShare(work.parts.map(p => ({ label: p.label, value: p.items, tone: p.tone })),
+          /* minSample is deliberately 1 here and 5 on the reviews ring. This is a
+             census of the queue an admin is actually facing, not a sample being
+             extrapolated into a population rate — one waiting item really is 100%
+             of the waiting items, and the legend states the count either way. */
+          { centreValue: work.total, centreLabel: 'items', minSample: 1,
+            aria: chartSummary(work.parts.map(p => ({ label: p.label, value: p.items })), v => v) })
+        : chartEmpty('No booking is live, no application is waiting, and no case is open.')}
     </div>
     <div class="card">
       <div class="row" style="margin-bottom:10px;"><b class="card-title">What the marketplace earned</b><span class="chip">From the ledger</span></div>
@@ -7780,16 +7926,16 @@ function adminDashboard(){
       <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">Each line is a sum over ledger entries, so it can be traced to the job behind it.</div>
     </div>
     <div class="card">
-      <div class="row" style="margin-bottom:10px;"><b class="card-title">Sample activity this week</b><span class="chip">Demo bookings</span></div>
-      <div style="height:112px; display:flex; align-items:flex-end; gap:6px; border-bottom:1px solid var(--line); padding:0 4px 18px;">
-        ${(() => { const days = weeklyBookings(); const max = Math.max(1, ...days.map(d => d.completed + d.open)); return days.map(d => `
-          <div style="height:100%; flex:1; display:flex; align-items:flex-end; gap:2px; position:relative; max-width:34px;">
-            <div title="${d.name}: ${d.completed} completed" style="height:${Math.round(d.completed / max * 100)}%; flex:1; background:var(--verified); border-radius:4px 4px 0 0;"></div>
-            <div title="${d.name}: ${d.open} still open" style="height:${Math.round(d.open / max * 100)}%; flex:1; background:var(--brand-tint); border-radius:4px 4px 0 0;"></div>
-            <span style="position:absolute; bottom:-18px; left:50%; transform:translateX(-50%); font-size:var(--t-caption); color:var(--mist);">${d.name}</span>
-          </div>`).join(''); })()}
-      </div>
-      <div style="display:flex; gap:14px; margin-top:8px; font-size:var(--t-caption); color:var(--mist);"><span><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--verified); vertical-align:-1px;"></span> Completed</span><span><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--brand-tint); vertical-align:-1px;"></span> Open</span></div>
+      <div class="row" style="margin-bottom:10px;"><b class="card-title">Weekly bookings</b><span class="chip">Completed vs open</span></div>
+      <div class="chart-sub">Bookings created and completed each day · this week</div>
+      ${(() => { const days = weeklyBookings();
+        return chartColumns(days.map(d => ({ label: d.name, value: d.completed, value2: d.open })), {
+          format: v => v, barWidth: 26,
+          tone: 'var(--brand-primary)', tone2: 'var(--brand-secondary)',
+          empty: 'No booking was created or completed in the last seven days on this device.',
+          aria: 'This week, completed and still-open bookings per day: ' + chartSummary(days.map(d => ({ label: d.name, value: d.completed })), v => v + ' completed'),
+        }); })()}
+      <div style="display:flex; gap:14px; margin-top:8px; font-size:var(--t-caption); color:var(--mist);"><span><span style="display:inline-block; width:9px; height:9px; border-radius:3px; background:var(--brand-primary); vertical-align:-1px;"></span> Completed</span><span><span style="display:inline-block; width:9px; height:9px; border-radius:3px; background:var(--brand-secondary); vertical-align:-1px;"></span> Still open</span></div>
       <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">Counted from the demo bookings on this device — not marketplace volume.</div>
     </div>
     <div class="card">
@@ -9131,76 +9277,41 @@ function providerDashboard(){
     <h3 style="font-size:var(--t-body); margin:0 0 8px;">Insights</h3>
 
     <div class="card">
-      <div class="row" style="margin-bottom:8px;">
-        <span style="font-weight:700; font-size:var(--t-body-sm); color:var(--ink);">Client feedback</span>
-        <span class="chip" style="font-size:var(--t-caption);">${reviewTotal} review${reviewTotal === 1 ? '' : 's'} on file</span>
-      </div>
-      ${reviewTotal === 0 ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5;">
-        No reviews on this account yet. They appear here after a client rates a completed job.
-      </div>` : ``}
-      ${reviewTotal > 0 && !enoughReviews ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.55;">
-        ${providerReviews.map(r => '<b>' + r.stars + '★</b> ' + esc(r.comment)).join('<br>')}
-        <div style="margin-top:8px; color:var(--mist);">Too few reviews to draw a share of feedback — ${reviewTotal} is not a distribution.</div>
-      </div>` : ``}
-      ${enoughReviews ? `<div style="display:flex; align-items:center; gap:16px; margin:10px 0 8px;">
-        <div role="img" aria-label="${positivePercent}% positive, ${neutralPercent}% neutral, ${negativePercent}% negative across ${reviewTotal} reviews"
-             style="width:92px; height:92px; border-radius:50%; flex-shrink:0; background:conic-gradient(var(--brand-primary) 0% ${positivePercent}%, var(--brand-secondary) ${positivePercent}% ${positivePercent + neutralPercent}%, var(--line) ${positivePercent + neutralPercent}% 100%); display:flex; align-items:center; justify-content:center;">
-          <div style="width:54px; height:54px; border-radius:50%; background:var(--surface); display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--ink);">
-            <b style="font-size:var(--t-input);">${positivePercent}%</b>
-            <span style="font-size:var(--t-caption); color:var(--mist);">positive</span>
-          </div>
-        </div>
-        <div style="display:flex; flex-direction:column; gap:7px; font-size:var(--t-caption); color:var(--ink-soft);">
-          <div><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--brand-primary); vertical-align:-1px;"></span> Positive <b>${positiveReviews}</b> of ${reviewTotal}</div>
-          <div><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--brand-secondary); vertical-align:-1px;"></span> Neutral <b>${neutralReviews}</b> of ${reviewTotal}</div>
-          <div><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--line); vertical-align:-1px;"></span> Negative <b>${negativeReviews}</b> of ${reviewTotal}</div>
-        </div>
-      </div>` : ``}
+      <div class="chart-title">Client feedback</div>
+      <div class="chart-sub">Ratings left by clients of ${esc(me.name)}, counted from the reviews on this device</div>
+      ${reviewTotal === 0 ? chartEmpty('No reviews yet. They appear here after a client rates a completed job.')
+        : !enoughReviews ? `<div class="card-body" style="padding:0;">
+          ${providerReviews.map(r => '<div class="chart-row"><span class="chart-label">' + r.stars + '★ ' + esc(r.client) + '</span><span class="chart-foot" style="margin:0;">' + esc(r.comment) + '</span></div>').join('')}
+          <div class="chart-foot">Only ${reviewTotal} review${reviewTotal === 1 ? '' : 's'} — too few to draw a share of feedback.</div>
+        </div>`
+        : chartShare([
+            { label: 'Positive (4–5★)', value: positiveReviews, tone: 'var(--brand-primary)' },
+            { label: 'Neutral (3★)', value: neutralReviews, tone: 'var(--brand-secondary)' },
+            { label: 'Negative (1–2★)', value: negativeReviews, tone: 'var(--line)' },
+          ], { centreValue: positivePercent + '%', centreLabel: 'positive',
+               aria: positiveReviews + ' of ' + reviewTotal + ' reviews were 4 stars or better' })}
     </div>
 
     <div class="card">
-      <div class="row" style="margin-bottom:8px;">
-        <span style="font-weight:700; font-size:var(--t-body-sm); color:var(--ink);">${ic("trending-up",15)} Weekly earnings</span>
-        <span class="chip" style="font-size:var(--t-caption);">Last ${earnings.length} weeks</span>
-      </div>
-      ${earningWeeks === 0 ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; padding:14px 0 6px;">
-        Nothing has settled in the last ${earnings.length} weeks on this device. A week appears here once a completed job is paid.
-      </div>` : `<div style="font-size:var(--t-caption); color:var(--mist); margin-bottom:8px;">
-        Your share of completed jobs, counted from the ledger on this device. Highest week ${pesoShort(Math.max(...earnings.map(w => w.centavos)))}.
-      </div>
-      <div style="display:flex; align-items:flex-end; gap:5px; height:76px; border-bottom:1px solid var(--line);">
-        ${earnings.map(w => { const max = Math.max(1, ...earnings.map(x => x.centavos)); return `
-          <div title="week of ${w.label}: ${peso(w.centavos)} across ${w.jobs} job${w.jobs === 1 ? '' : 's'}"
-               style="flex:1; height:${Math.max(w.centavos ? 4 : 0, Math.round(w.centavos / max * 100))}%; background:${w.centavos ? 'var(--brand-primary)' : 'var(--line)'}; border-radius:4px 4px 0 0;"></div>`; }).join('')}
-      </div>
-      <div style="display:flex; gap:5px; margin-top:6px;">
-        ${earnings.map(w => `<span style="flex:1; text-align:center; font-size:var(--t-caption); color:var(--mist);">${w.centavos ? pesoShort(w.centavos) : '·'}</span>`).join('')}
-      </div>
-      <div style="display:flex; gap:5px; margin-top:2px;">
-        ${earnings.map(w => `<span style="flex:1; text-align:center; font-size:var(--t-caption); color:var(--mist);">${w.label}</span>`).join('')}
-      </div>`}
-      <div class="demo-note">Sample records from this prototype, not live earnings.</div>
+      <div class="chart-title">Weekly earnings</div>
+      <div class="chart-sub">Your share of completed jobs, summed per week · last ${earnings.length} weeks</div>
+      ${chartColumns(earnings.map(w => ({ label: w.label, value: w.centavos })), {
+        format: v => v ? pesoCompact(v) : '0',
+        empty: 'Nothing has settled in the last ' + earnings.length + ' weeks on this device. A week appears once a completed job is paid.',
+        aria: 'Weekly earnings, last ' + earnings.length + ' weeks: ' + chartSummary(earnings.map(w => ({ label: 'week of ' + w.label, value: w.centavos })), v => peso(v)),
+      })}
+      <div class="chart-foot">Counted from the demo bookings on this device — not marketplace volume. A week with no settled job shows as zero, not as a gap.</div>
     </div>
 
     <div class="card">
-      <div class="row" style="margin-bottom:8px;">
-        <span style="font-weight:700; font-size:var(--t-body-sm); color:var(--ink);">${ic("map-pin",15)} Requests by barangay</span>
-        <span class="chip" style="font-size:var(--t-caption);">Last 30 days</span>
-      </div>
-      ${demandJobs === 0 ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; padding:14px 0 6px;">
-        No requests have reached this account in the last 30 days on this device.
-      </div>` : demand.map(d => `
-      <div style="display:flex; align-items:center; gap:9px; margin:7px 0;">
-        <span style="flex:0 0 96px; font-size:var(--t-caption); color:var(--ink-soft); overflow-wrap:anywhere;">Brgy. ${esc(d.label)}</span>
-        <span style="flex:1; height:10px; background:var(--cloud); border-radius:99px; overflow:hidden;">
-          <span style="display:block; height:100%; width:${Math.round(d.jobs / demand[0].jobs * 100)}%; background:var(--brand-primary);"></span>
-        </span>
-        <b style="flex:0 0 42px; text-align:right; font-size:var(--t-caption); color:var(--ink);">${d.jobs} job${d.jobs === 1 ? '' : 's'}</b>
-      </div>`).join('')}
-      ${demandJobs ? `<div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px; line-height:1.5;">
-        ${demandJobs} request${demandJobs === 1 ? '' : 's'} counted across ${demand.length} barangay${demand.length === 1 ? '' : 'es'}.
-      </div>` : ''}
-      <div class="demo-note">Sample records from this prototype, not marketplace volume.</div>
+      <div class="chart-title">Requests by barangay</div>
+      <div class="chart-sub">Requests this account received · last 30 days</div>
+      ${demandJobs === 0 ? chartEmpty('No requests have reached this account in the last 30 days on this device.')
+        : chartBars(demand.map(d => ({ label: 'Brgy. ' + d.label, value: d.jobs })), {
+            format: v => v + (v === 1 ? ' request' : ' requests'),
+            total: demandJobs + ' request' + (demandJobs === 1 ? '' : 's') + ' counted across ' + demand.length + ' barangay' + (demand.length === 1 ? '' : 'es') + '.',
+          })}
+      <div class="chart-foot">Sample records from this prototype, not marketplace volume.</div>
     </div>
   </div>`;
 }

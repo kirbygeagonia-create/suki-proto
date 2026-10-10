@@ -18,7 +18,7 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   'toCentavos', 'toPesos', 'computeBreakdown', 'breakdownForBooking', 'postEvent', 'settlementLines', 'settlementToProvider', 'freezePricing', 'commissionRateFor', 'CONFIG_DEFAULTS', 'CONFIG_AUDIT',
   'accountBalance', 'ledgerBalance', 'ledgerFor', 'ACCOUNTS', 'LEDGER_EVENTS',
   'PAYMENTS', 'PAYOUTS', 'PAYMENT_LABELS', 'paymentsFor', 'recordPayment', 'Gateway',
-  'earningsCard', 'jobActionBar', 'realRequestCard', 'listingsPanel', 'threadsFor',
+  'earningsCard', 'jobActionBar', 'realRequestCard', 'listingsPanel', 'threadsFor', 'adminDashboard',
   'toggleListing', 'commitListingDraft', 'bookedThisWeek', 'completionRate', 'cancellationRate', 'nextPayoutDate', 'settlementLines',
   'TRANSITIONS', 'BOOKING_STATES', 'FINISHED_STATES', 'attemptTransition', 'transitionAllowed',
   'nextActionFor', 'bookingTimeline', 'label', 'stateHint', 'recordStatusEvent', 'seedStatusHistory',
@@ -30,7 +30,7 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   'CURRENT_CUSTOMER_ID', 'CURRENT_PROVIDER_ID', 'CONFIG_DEFAULTS', 'commissionRateFor',
   'adminCounts', 'marketplaceRates', 'opsWorkload', 'intelligenceStats', 'supplyGaps', 'disputeCard', 'statementCard', 'configPanel',
   'DISPUTE_STATES', 'disputeLabel', 'caseIsOpen', 'providerCases', 'resolveCase', 'resolveDispute', 'commitConfig', 'setIntFilter', 'runPayoutNow', 'openDispute',
-  'categorySupply', 'weeklyBookings', 'providerWeeklyEarnings', 'providerDemandByBarangay', 'weekStart', 'MIN_SHARE_SAMPLE', 'adminFinanceScreen', 'ageingCard',
+  'categorySupply', 'weeklyBookings', 'providerWeeklyEarnings', 'providerDemandByBarangay', 'weekStart', 'MIN_SHARE_SAMPLE', 'chartShare', 'chartColumns', 'chartBars', 'chartEmpty', 'chartScale', 'chartSummary', 'adminFinanceScreen', 'ageingCard',
   'loginHTML', 'AUTH_ROLE_LABEL', 'DEMO_LOGIN',
   /* Added after the audit: the guards, the money readers and the case door were
      unreachable from the suite, which is exactly how a severed entry point could

@@ -1506,13 +1506,72 @@ suite('honesty', async () => {
       rows.every(r => expected[r.label] === r.jobs);
   })(), 'a barangay bar does not match its own record count');
 
+  c.check('a dense series thins its own axis labels instead of overlapping them', (() => {
+    const wide = Array.from({ length: 12 }, (_, i) => ({ label: 'W' + (i + 1), value: i + 1 }));
+    /* Counted by the axis row's own y coordinate: value labels sit above the bars and
+       both use text-anchor="middle", so counting that attribute measured the values. */
+    const axisLabels = html => (html.match(/y="120" text-anchor="middle"/g) || []).length;
+    const sparse = app.chartColumns([{ label: 'Mon', value: 2 }, { label: 'Tue', value: 3 }], { format: v => v });
+    const n = axisLabels(app.chartColumns(wide, { format: v => v }));
+    return n < wide.length && n >= 3 && axisLabels(sparse) === 2;
+  })(), 'axis labels overlap on a dense series, or the thinning breaks a sparse one');
+
+  c.check('no chart is drawn from a literal data series', (() => {
+    /* The same defect twice over, and invisible either way on screen: the provider
+       earnings line was seven hard-coded SVG points, and an admin "Weekly bookings"
+       card drew seven days of invented percentages from a typed array — sitting on the
+       same screen as the honest derived chart, indistinguishable from it. */
+    const srcTxt = app._source;
+    return !/\[\['(Mon|Tue|Wed|Thu|Fri|Sat|Sun)',\d/.test(srcTxt) &&
+      !/points="\d+,\d+ \d+,\d+ \d+,\d+/.test(srcTxt) &&
+      !/height:\$\{(completed|open|value)\}%/.test(srcTxt);
+  })(), 'a chart is being drawn from typed numbers rather than records');
+
+  c.check('the admin weekly chart renders through the shared kit', (() => {
+    const html = app.adminDashboard();
+    return /viewBox="0 0 320/.test(html) && /Weekly bookings/.test(html) &&
+      /sr-only/.test(html) && !/Sample activity this week/.test(html);
+  })(), 'the admin dashboard is not drawing its weekly chart from the kit');
+
   c.check('a thin sample is stated as a count, never drawn as a share', (() => {
     const me = app.PROVIDERS.find(p => p.id === app.CURRENT_PROVIDER_ID);
     const html = app.providerDashboard();
     const n = (me.reviews || []).length;
-    if (n >= app.MIN_SHARE_SAMPLE) return /conic-gradient/.test(html);
-    return !/conic-gradient/.test(html) && /is not a distribution/.test(html);
+    /* Asserted on the ring element rather than on any sentence: the drawing is the
+       claim being made, and the prose around it must stay free to be rewritten. */
+    if (n >= app.MIN_SHARE_SAMPLE) return /chart-ring/.test(html);
+    return !/chart-ring/.test(html) && /chart-empty|chart-row/.test(html);
   })(), 'a part-to-whole ring was drawn from fewer records than the floor');
+
+  /* No provider in the demo data holds MIN_SHARE_SAMPLE reviews, so the ring branch
+     is never reached by rendering a screen. Tested directly instead, on both sides
+     of the floor — otherwise the one path that draws a share would ship unexercised. */
+  c.check('the share ring draws only at or above the sample floor, and closes at 100%', (() => {
+    const many = app.chartShare([{ label: 'A', value: 4, tone: 'x' }, { label: 'B', value: 2, tone: 'y' }], {});
+    const few = app.chartShare([{ label: 'A', value: 1, tone: 'x' }, { label: 'B', value: 1, tone: 'y' }], {});
+    return /chart-ring/.test(many) && /100%/.test(many) && /chart-empty/.test(few) && !/chart-ring/.test(few);
+  })(), 'the ring rendered on the wrong side of the floor, or left a rounding gap');
+
+  c.check('the column chart labels its axis, values every bar, and refuses an all-zero series', (() => {
+    const drawn = app.chartColumns([{ label: 'Mon', value: 31500 }, { label: 'Tue', value: 0 }],
+      { format: v => app.pesoCompact(v) });
+    const empty = app.chartColumns([{ label: 'Mon', value: 0 }], { format: v => v, empty: 'nothing yet' });
+    return /<svg/.test(drawn) && /role="img" aria-label="/.test(drawn) &&
+      /sr-only/.test(drawn) && /₱/.test(drawn) &&
+      /chart-empty/.test(empty) && /nothing yet/.test(empty) &&
+      /* the empty state still carries a decorative glyph svg, so what must be absent
+         is a chart — asserted on the kit's own viewBox, not on the word "<svg>" */
+      !/viewBox="0 0 320/.test(empty);
+  })(), 'the column chart is missing an axis label, a value, or its empty state');
+
+  c.check('a count axis never asks for a fraction of a thing', (() => {
+    /* The first version drew 0 / 0.75 / 1 on bookings-per-day. Asserted on the scale
+       helper directly, at the sizes the app actually draws. */
+    const whole = n => app.chartScale(n).ticks.every(t => Number.isInteger(t));
+    return [1, 2, 3, 5, 7, 10, 16].every(whole) &&
+      app.chartScale(1).ticks.join(',') === '0,1,2,3,4' &&
+      app.chartScale(0).ticks.length === 2;
+  })(), 'an integer series produced a fractional tick');
 
   return c;
 });
