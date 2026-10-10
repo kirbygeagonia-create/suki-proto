@@ -1086,6 +1086,90 @@ gate enforces in the opposite direction.
   direction for P2 is agreed; its execution changes how the app looks and needs a look at the
   before/after grid first.
 
+## 25. The corrective pass: real rendered artwork, one readable font, and a chart system
+
+`SUKINNECT_CORRECTIVE_VISUAL_REDESIGN_IMPLEMENTATION_PROMPT.md` opened by rejecting the last
+approach: refining the same inline SVG a second time had produced a picture too close to the
+original, and comment edits or renamed classes would not count as a result. It required
+implementation in the same task rather than another plan. All three of its deliverables landed.
+
+**Category art is now seven PNG files.** `CAT_ART` — 133 lines of hand-drawn SVG scenes — is
+deleted, and `SERVICE_ART` maps each of the seven category ids to a file in
+`assets/category-art/`: 256×256 RGBA, 634 KB for the set, rendered at the 60 px the tile draws,
+so the source covers a 3× device. The tile markup stopped passing a background tint, because each
+render carries its own plate. `catArt()` still falls back to the functional glyph for a category
+with no file, and five new gate checks make that fallback unreachable in a shipped build: every
+id has an entry, every entry exists on disk, paths are local relative PNGs with no CDN and no
+base64, the `<img>` states its dimensions and stays out of the accessibility tree, and the old
+scene table is gone rather than merely unused.
+
+The art source was researched before it was chosen. **3Dicons is genuinely CC0-1.0** — confirmed
+through the GitHub licence API, not a landing page — and its CDN serves valid 400×400 RGBA PNGs at
+48.7 KB. It was still rejected: all 120 free slugs were enumerated and there is **no water, droplet,
+tap, faucet or pipe asset and no fruit, apple, basket or leaf asset at all**, so the set cannot
+cover the catalogue, and pairing five of its renders with two generated objects would break the
+one-collection requirement. `ASSET-LICENSES.md` records the dimensions, byte weight, the exact art
+direction used, and the reason for the choice — including the part that is uncomfortable:
+generated imagery carries no third-party licence obligation but also an unsettled exclusive right,
+which is the owner's call before any commercial release, not something to bury.
+
+**Typography became one family.** Atkinson Hyperlegible Next is self-hosted from the official
+googlefonts repository as four static WOFF2 weights, 100 KB, with `OFL.txt` and `AUTHORS.txt`
+beside them; the licence has a Reserved Font Name, so the files ship unmodified. The trial was
+measured rather than judged: switching the family alone produced **no clipped text, no contrast
+failure and no horizontal overflow across 46 screens**, and grew total content height by 112 px —
+about 2.4 px per screen. Fraunces is gone from UI headings: 12 declarations repointed to
+`--font-display`. The scale floor moved from 12 px to 14 px (`--t-caption` 12→14, `--t-body-sm`
+13→15, `--t-body` 14→16, `--t-body-lg` 15→17, `--t-lead` 17→18), and the distinct painted sizes
+are now `[14,15,16,17,18,20,22,24,30]` — the 12s and 13s no longer exist anywhere. The cost is
+stated rather than hidden: total scroll-past-fold across the 46 screens grew from 18,951 px to
+23,418 px, about 97 px per screen, and the category grid sits further down Resident Home. Nothing
+clips and nothing shrank back down, which is the behaviour WCAG asks for. The tokens are px, not
+`rem`, so browser zoom reflows the app but an OS text-scale setting does not — a known limitation,
+recorded in AGENTS.md §68.
+
+**Charts became a system, and Chart.js was tested and declined.** v4.5.1 was loaded from a real
+`file://` page in headless Chrome and it works — a bar chart with axes, ticks and gridlines in
+about 87 ms. It still lost: 203.6 KB of UMD with no gzip available on the `file://` path, parsed
+by all 46 screens to serve about six charts, and `render()` replaces `#screen`'s innerHTML, which
+discards the canvas a live Chart instance is bound to. `chartColumns`, `chartBars`, `chartShare`
+and `chartEmpty` now draw every chart in the app, with a labelled y-axis, a zero baseline, a value
+on each bar, a legend showing counts as well as percentages, `role="img"` plus an `sr-only` list
+carrying the same figures, and deliberate empty and low-sample states. The provider trio and the
+admin workload ring and weekly chart moved onto it; the hand-styled `.bar/.barchart/.barcol/.barlbl`
+CSS is deleted.
+
+**Removing the admin weekly chart found a second fabricated visualisation.** A "Weekly bookings"
+card on the same screen was drawing seven days of invented percentages from a typed array —
+`62, 76, 54, 88, 100, 82, 46` — sitting directly beside the honest derived chart, and the two were
+indistinguishable on screen. It is deleted rather than repaired, and a check now fails any chart
+drawn from a literal data series. This is the same defect class §24 fixed on the provider
+dashboard, which means the earlier "admin analytics are already honest" finding was true of the
+helpers and wrong about one card.
+
+**Three defects the instrument caught that would otherwise have shipped.** SVG text at
+`font-size="10"` put 21 labels *under* the 14 px floor the same pass had just established.
+`chartScale` drew an axis of `0 / 0.75 / 1` on a count of bookings per day — an axis that cannot
+exist. And the new broken-image tally reported four failures that were actually OpenStreetMap
+tiles still decoding, so it now requires `complete && no pixels`; a tally that cries wolf gets
+ignored, which is worse than no tally. Each has a check, and the checks were proven by putting the
+defect back — 2/2 applied and caught on the chart kit.
+
+**Also found, by the tally that asks the browser what it requested rather than grepping the
+source:** the app makes ~650 network requests across a 46-screen walkthrough, every one an
+OpenStreetMap tile from `a`/`b`/`c.tile.openstreetmap.org`. Pre-existing, and DEVICE-PASS §77
+already documents the `tileerror` handover — but it had never been measured, and it is the one
+thing in the app that is not offline.
+
+**Left as it is, deliberately.** `trending-up` and `pie-chart` are now drawn but unreachable,
+having lost their only call sites when the donut card was deleted and the chart titles were
+cleaned. They are not restored with decorative icons to satisfy a count. The chart titles carry no
+glyph, which is the better design.
+
+`node tools/verify.cjs` → **415 checks** (from 404). Sweeps clean at 390×844, 360×640, 412×915 and
+under `prefers-reduced-motion`, 46 screens each, no console errors, no horizontal overflow, no
+broken images. `git diff --quiet origin/main -- Sukinnect.html` → the shipped file is untouched.
+
 ## Deliberately not done
 
 

@@ -134,7 +134,9 @@ slow device.
       exits. Close every sheet you open both ways. Is it obvious which one you are about to hit?
 - [ ] Scroll the category chip rail sideways, then scroll the page downwards. The horizontal
       rail should not steal the vertical gesture, and vice versa.
-- [ ] Tap a category tile while its artwork is animating. Does the tap feel immediate?
+- [ ] Look at the seven category tiles. Each is now a PNG in `assets/category-art/`, loaded
+      from disk — do all seven show their picture, or is any one a blank or a broken-image
+      icon? Then tap one: the artwork must not move, scale or bounce, on press or afterwards.
 
 *Anything that fails here is a size or placement problem in the page, not a device problem.*
 
@@ -175,11 +177,14 @@ The instrument cannot emulate this at all: `shot.cjs` measures a viewport with n
 
 - `reicon.js` (8.3 MB) is still bundled and the rebuild does not load it. Deleting it from
   `assets/` shrinks the APK; put it back before running the shipped file again.
-- Headings use Fraunces and the interface uses Plus Jakarta Sans, both from `fonts/` on disk.
-  If a heading looks like the system serif, the local font is not being picked up over `file://`.
-- The category tiles animate. On the lowest-spec device you have, is the motion still readable,
-  or does it read as flicker? `prefers-reduced-motion` is honoured in code but only if the
-  device reports it.
+- The UI is one family everywhere: Atkinson Hyperlegible Next, with Plus Jakarta Sans behind
+  it, both from `fonts/` on disk. The decorative serif is gone from headings — if a heading
+  renders in the system serif or the two fonts differ between the sign-in card and a list
+  screen, the local `@font-face` is not being picked up over `file://`. The smallest text in
+  the app is 14px; anything visibly smaller than that is a bug, not a design choice.
+- The category tiles are static images and must stay that way. They no longer animate at all,
+  so there is nothing to judge for flicker; what is worth checking on the lowest-spec device
+  is whether the seven PNGs decode without a visible flash or a blank frame on first paint.
 
 ## 5. The fruit pilot — 9 min
 

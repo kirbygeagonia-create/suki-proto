@@ -1194,17 +1194,17 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 9,768 lines, ONE :root block, 1,683 var() usages, 93 tokens declared with 88
-                    of them reached. Thirty-nine hex-shaped strings sit outside :root, and the
-                    tool that counts them refuses to explain the ones it cannot decide: fifteen
-                    are `#fff` in the category artwork (SVG highlights, which have no token to
-                    take — they are white by definition, not a brand surface); fourteen are the
-                    seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
+Sukinnect-next.html— 9,764 lines, ONE :root block, 1,664 var() usages, 95 tokens declared with 90
+                    of them reached. Twenty-four hex-shaped strings sit outside :root, and the
+                    tool that counts them refuses to explain the ones it cannot decide: fourteen are
+                    the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
                     (§45 — the seventh is Fruit Harvest & Buy); one is the <meta
                     name="theme-color"> value, which cannot take a var(). The remaining nine are
                     printed line by line, because a comment quoting a measured brand value and a
                     hard-coded colour in markup are the same string to any scanner — and one of
-                    them (`#8226`) is a booking id, not a colour at all. That is why the count is
+                    them (`#8226`) is a booking id, not a colour at all. Fifteen `#fff` values that
+                    used to be counted here went away with the inline SVG scenes, which are now
+                    seven PNG files rather than painted shapes. That is why the count is
                     quoted with its command: **`node tools/measure.cjs`**, which takes a file
                     argument and measures either one the same way. A number that has to be
                     re-derived by hand in prose drifts; this passage was three out when the tool
@@ -2208,6 +2208,20 @@ The current prototype uses:
 - Plus Jakarta Sans for body/interface text
 
 Preserve this hierarchy unless there is a deliberate typography redesign.
+
+THE REBUILD HAS HAD THAT REDESIGN. `Sukinnect-next.html` now runs one sans family
+across every role — Atkinson Hyperlegible Next, self-hosted as four WOFF2 weights,
+with Plus Jakarta Sans behind it for any glyph Atkinson does not carry — and the
+decorative serif is removed from headings, sheet titles, stat numbers and the display
+size. Hierarchy comes from weight and spacing instead. This section still describes
+the shipped `Sukinnect.html`, which keeps Fraunces; the two files differ here on
+purpose, and promotion carries the redesign with the rest of the rebuild.
+
+Two rules the rebuild now holds and the gate can be made to check: no essential
+interface text below 14px (the scale floor moved from 12), and numerals live in the
+same legible face as the words beside them. The type tokens are pixel values, not
+`rem`, so browser zoom reflows the app but an operating-system text-scale setting
+does not — recorded as a known limitation, not as a decision.
 
 Use:
 - strong display type for major page titles
