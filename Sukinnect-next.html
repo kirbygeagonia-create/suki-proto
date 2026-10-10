@@ -90,10 +90,20 @@
        The steps below 20px were always in use — 13px was typed by hand sixty-four
        times and 17-18px fourteen — they simply had no names, so every screen chose
        its own. */
-    --t-caption:12px;   --t-body-sm:13px;  --t-body:14px;
-    --t-body-lg:15px;   --t-input:16px;    --t-lead:17px;
+    --t-caption:14px;   --t-body-sm:15px;  --t-body:16px;
+    --t-body-lg:17px;   --t-input:16px;    --t-lead:18px;
     --t-title:20px;     --t-num:22px;      --t-title-lg:24px;
     --t-display:30px;
+    /* One UI family everywhere. Atkinson Hyperlegible Next leads because the
+       corrective brief makes letterform distinction a requirement, and its wider
+       spacing and larger x-height are the point — the trial measured no clipped
+       text and no overflow across 46 screens. Plus Jakarta Sans stays as the
+       fallback for any glyph Atkinson does not carry. */
+    --font-ui:"Atkinson Next", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+    /* Headings used to switch to Fraunces, a decorative serif. §4 of the brief
+       removes it from UI headings and operational labels; hierarchy now comes from
+       weight and size, which is also what keeps numerals in the legible face. */
+    --font-display:var(--font-ui);
     /* System bars: zero in the desktop preview, real on a notched phone (7.1). */
     --sat:env(safe-area-inset-top, 0px);
     --sab:env(safe-area-inset-bottom, 0px);
@@ -143,13 +153,13 @@
   *{box-sizing:border-box;}
   body{
     margin:0; background:var(--brand-tint-soft); color:var(--ink);
-    font-family:"Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+    font-family:var(--font-ui);
     display:flex; align-items:flex-start; justify-content:center;
     /* dvh tracks a mobile browser's real visible height as its address bar
        hides and shows; vh keeps the fallback for engines that lack it. */
     padding:32px 12px; min-height:100vh; min-height:100dvh;
   }
-  h1,h2,h3{font-family:"Fraunces", ui-serif, serif; margin:0;}
+  h1,h2,h3{font-family:var(--font-display); margin:0;}
   .phone{
     width:390px; height:800px; background:var(--cloud);
     border-radius:36px; border:10px solid var(--device-bezel); overflow:hidden;
@@ -178,7 +188,7 @@
   /* The screen title is an <h1> so a 30-screen app has an outline a screen reader
      can navigate; the reset is what lets a heading sit in a flex bar like text. */
   h1, h2{ margin:0; font-size:inherit; font-weight:inherit; }
-  .topbar .title{font-family:"Fraunces",serif; font-size:var(--t-title); font-weight:600;}
+  .topbar .title{font-family:var(--font-display); font-size:var(--t-title); font-weight:600;}
   .topbar .sub{font-size:var(--t-body); opacity:0.78; margin-top:2px;}
   /* Root tabs - the ones the bottom nav lands on - carry a large title, the way a
      real app header does. Detail and drill-in screens stay compact so the back
@@ -407,7 +417,7 @@
   .auth-mark{ display:block; width:72px; height:72px; margin:0 auto; }
   .auth-mark img{ width:100%; height:100%; object-fit:contain; display:block; }
   .auth-wordmark{
-    font-family:"Fraunces", ui-serif, serif; font-size:var(--t-title-lg); font-weight:600;
+    font-family:var(--font-display); font-size:var(--t-title-lg); font-weight:600;
     letter-spacing:-.4px; line-height:1.1; color:var(--ink); margin-top:8px;
   }
   /* Fields are full width and left-aligned — centring a text field is centring
@@ -527,7 +537,7 @@
   }
   .splash-mark img{width:100%; height:100%; object-fit:contain; display:block;}
   .splash-name{
-    font-family:'Fraunces', ui-serif, serif; font-size:var(--t-display); font-weight:600;
+    font-family:var(--font-display); font-size:var(--t-display); font-weight:600;
     letter-spacing:-.4px; margin-top:20px;
     animation:splashRise .5s .07s cubic-bezier(.22,.9,.32,1.18) both;
   }
@@ -723,7 +733,7 @@
   .case-textarea:focus{ background:var(--surface); border-color:var(--deep); }
   .sheet-grab{ width:38px; height:4px; border-radius:var(--r-pill); background:var(--border-strong); margin:9px auto 0; flex-shrink:0; }
   .sheet-head{ padding:12px 18px 10px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-shrink:0; }
-  .sheet-title{ font-family:'Fraunces', ui-serif, serif; font-size:var(--t-title); font-weight:600; color:var(--ink); }
+  .sheet-title{ font-family:var(--font-display); font-size:var(--t-title); font-weight:600; color:var(--ink); }
   .sheet-sub{ font-size:var(--t-body); color:var(--ink-soft); margin-top:2px; line-height:1.45; }
   .sheet-close{
     width:var(--tap); height:var(--tap); margin:-6px -8px -6px 0;
@@ -923,10 +933,10 @@
     padding:11px 13px; margin-bottom:12px;
   }
   .stat-strip .f{ display:inline-flex; align-items:baseline; gap:6px; padding:2px 0; }
-  .stat-strip .f b{ font-family:'Fraunces',serif; font-size:var(--t-body-lg); font-weight:600; color:var(--deep); }
+  .stat-strip .f b{ font-family:var(--font-display); font-size:var(--t-body-lg); font-weight:600; color:var(--deep); }
   .stat-strip .f span{ font-size:var(--t-caption); color:var(--mist); }
   .stat{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px;}
-  .stat .num{font-family:"Fraunces",serif; font-size:var(--t-num); font-weight:600;}
+  .stat .num{font-family:var(--font-display); font-size:var(--t-num); font-weight:600;}
   .stat .lbl{font-size:var(--t-caption); color:var(--mist); margin-top:2px;}
   .status-pill{font-size:var(--t-caption); font-weight:700; padding:2px 8px; border-radius:999px; text-transform:uppercase;}
   .status-upcoming{background:var(--warning-100); color:var(--warning-ink);}
@@ -1348,7 +1358,7 @@
     border-bottom:1px solid rgba(255,255,255,.1);
   }
   .chat-head-name{
-    font-family:"Fraunces", ui-serif, serif; font-size:var(--t-body-lg); font-weight:600;
+    font-family:var(--font-display); font-size:var(--t-body-lg); font-weight:600;
     line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   .chat-head-sub{
@@ -6827,7 +6837,7 @@ function residentConcierge(){
           </span>
         </div>
 
-        <div style="font-family:'Fraunces',serif; font-size:var(--t-lead); font-weight:700; color:var(--ink); margin-bottom:6px;">
+        <div style="font-family:var(--font-display); font-size:var(--t-lead); font-weight:700; color:var(--ink); margin-bottom:6px;">
           Job briefing for ${sorted.label} providers
         </div>
 
@@ -6999,7 +7009,7 @@ function residentResults(){
   <div class="topbar">
     <div style="display:flex; align-items:center; gap:8px;">
       <button id="back-home-btn" class="back-btn" aria-label="Back to home">${ic("chevron-left",18)}</button>
-      <h1 style="font-family:'Fraunces',serif; font-size:var(--t-title); font-weight:600;">Find Services</h1>
+      <h1 style="font-family:var(--font-display); font-size:var(--t-title); font-weight:600;">Find Services</h1>
     </div>
     <div style="font-size:var(--t-caption); opacity:0.85;">${state.searching ? 'Matching…' : (narrowing ? list.length + ' of ' + PROVIDERS.length + ' providers' : PROVIDERS.length + ' smart matches')}</div>
   </div>
@@ -7632,7 +7642,7 @@ function residentProfileHub(){
   const rp = state.profileData;
 const row = (id, title, detail) => settingsRow('residentProfileSection', id, title, detail);
   const modal = state.residentProfileModal;
-  return `<div class="topbar" style="display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:10px;"><button onclick="state.tab='home'; render();" class="back-btn" aria-label="Back">${ic("chevron-left",18)}</button><h1>Resident Profile</h1></div><button class="btn sm" style="background:var(--brand-navy-deep); color:var(--on-brand); box-shadow:none;" onclick="residentProfileAction('logout')">Log Out</button></div><div class="pad" style="background:var(--cloud);"><div class="card" style="text-align:center">${photoAvatar('resident', 56)}<div style="font-size:var(--t-lead); font-weight:800; margin-top:10px;">${rp.name}</div><div style="font-size:var(--t-caption); color:var(--mist); margin-top:3px;">${rp.email}<br>${rp.phone}<br><span style="color:var(--success-ink);">Verified - Brgy. ${rp.barangay}</span></div><button class="btn sm secondary" style="margin-top:10px;" onclick="residentProfileAction('edit')">Edit Profile</button></div><div class="card card-quiet"><div style="font-size:var(--t-body-sm); font-weight:800; margin-bottom:9px;">Account &amp; residence details</div><div style="font-size:var(--t-caption); line-height:1.8;">Home Address: <b>${rp.address}</b><br>Barangay District: <b>Brgy. ${rp.barangay}</b><br>Emergency Contact: <b>${rp.emergencyContact}</b><br>Preferred Payment: <b>${rp.preferredPayment}</b><br>Member Since: <b>January 2025</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="residentProfileAction('edit')">Edit Profile</button></div><div style="background:var(--brand-navy); border-radius:18px; padding:16px; color:var(--on-brand); margin-bottom:16px;"><div style="font-size:var(--t-caption); font-weight:800; color:var(--brand-secondary); margin-bottom:12px;">Community activity summary</div><div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;"><button onclick="openProfileSection('resident','history','Service history','Completed and cancelled services')" style="text-align:left; background:transparent; border:0; color:var(--on-brand); cursor:pointer;"><div style="font-family:'Fraunces',serif; font-size:var(--t-title-lg);">6</div><div style="font-size:var(--t-caption);">Completed Bookings</div></button><button onclick="openProfileSection('resident','spending','Spending summary','Year-to-date by service')" style="text-align:left; background:transparent; border:0; color:var(--on-brand); cursor:pointer;"><div style="font-family:'Fraunces',serif; font-size:var(--t-title-lg);">₱2,500</div><div style="font-size:var(--t-caption);">YTD Spend</div></button></div></div><div class="section-label">My services</div>${row('history','Service History','Completed and cancelled services')}${row('saved','Saved Providers','Providers you bookmarked')}${row('warranty','Warranties & Disputes','Active warranties and cases')}<div class="section-label">My home</div>${row('home','Home & Maintenance Profile','Household items and suggested care')}${row('reminders','Maintenance Reminders','Upcoming maintenance')}<div class="section-label">Payments</div>${row('payments','Payment Methods','GCash, Cash on Arrival')}${row('receipts','Receipts & Transactions','Service payment history')}<div class="section-label">Account</div>${row('notifications','Notifications','Booking and maintenance alerts')}${row('privacy','Privacy & Security','Password and address privacy')}</div>${modal ? `<div class="modal-layer"><div class="card modal-card"  ><div class="row"><b>${modal==='edit'?'Edit profile':modal==='add_item'?'Add household item':modal==='logout'?'Log out?':'Update'}</b><button aria-label="Close" onclick="state.residentProfileModal=null; render();" style="border:0; background:transparent; font-size:var(--t-title);">&times;</button></div>${modal==='edit'?`<label class="form-label">Full Name<input id="resident-profile-name" value="${rp.name}" class="form-input"></label><label class="form-label-8">Email (read-only)<input value="${rp.email}" readonly class="form-input-readonly"></label><label class="form-label-8">Phone Number<input id="resident-profile-phone" value="${rp.phone}" class="form-input"></label><label class="form-label-8">Home Address<input id="resident-profile-address" value="${rp.address}" class="form-input"></label><label class="form-label-8">Barangay<input id="resident-profile-barangay" value="${rp.barangay}" class="form-input"></label><label class="form-label-8">Emergency Contact<input id="resident-profile-emergency" value="${rp.emergencyContact}" class="form-input"></label><button class="btn btn-block"   onclick="saveResidentProfile()">Save Changes</button>`:modal==='add_item'?`<label class="form-label">Item Type<select id="household-type" aria-label="What kind of place this address is" style="width:100%; padding:9px; margin-top:4px;"><option>Air Conditioner</option><option>Refrigerator</option><option>Water Pump</option><option>Kitchen Plumbing</option><option>Water Heater</option><option>Other</option></select></label><label class="form-label-8">Nickname<input id="household-nickname" class="form-input"></label><label class="form-label-8">Brand / Model (Optional)<input id="household-brand" class="form-input"></label><button class="btn btn-block"   onclick="state.residentHouseholdItems.push({type:document.getElementById('household-type').value,nickname:document.getElementById('household-nickname').value}); state.residentProfileModal=null; openProfileSection('resident','home','Home and maintenance profile','Household items and suggested care');">Save Item</button>`:modal==='logout'?`<div style="font-size:var(--t-caption); margin-top:12px;">Are you sure you want to log out of your Sukinnect account?</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm secondary" style="flex:1;" onclick="state.residentProfileModal=null; render();">Cancel</button><button class="btn sm danger" style="flex:1;" onclick="signOut()">Log Out</button></div>`:`<div style="font-size:var(--t-caption); color:var(--success-ink); margin-top:12px;">Changes saved successfully.</div><button class="btn btn-block"   onclick="state.residentProfileModal=null; render();">Close</button>`}</div></div>`:''}`;
+  return `<div class="topbar" style="display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:10px;"><button onclick="state.tab='home'; render();" class="back-btn" aria-label="Back">${ic("chevron-left",18)}</button><h1>Resident Profile</h1></div><button class="btn sm" style="background:var(--brand-navy-deep); color:var(--on-brand); box-shadow:none;" onclick="residentProfileAction('logout')">Log Out</button></div><div class="pad" style="background:var(--cloud);"><div class="card" style="text-align:center">${photoAvatar('resident', 56)}<div style="font-size:var(--t-lead); font-weight:800; margin-top:10px;">${rp.name}</div><div style="font-size:var(--t-caption); color:var(--mist); margin-top:3px;">${rp.email}<br>${rp.phone}<br><span style="color:var(--success-ink);">Verified - Brgy. ${rp.barangay}</span></div><button class="btn sm secondary" style="margin-top:10px;" onclick="residentProfileAction('edit')">Edit Profile</button></div><div class="card card-quiet"><div style="font-size:var(--t-body-sm); font-weight:800; margin-bottom:9px;">Account &amp; residence details</div><div style="font-size:var(--t-caption); line-height:1.8;">Home Address: <b>${rp.address}</b><br>Barangay District: <b>Brgy. ${rp.barangay}</b><br>Emergency Contact: <b>${rp.emergencyContact}</b><br>Preferred Payment: <b>${rp.preferredPayment}</b><br>Member Since: <b>January 2025</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="residentProfileAction('edit')">Edit Profile</button></div><div style="background:var(--brand-navy); border-radius:18px; padding:16px; color:var(--on-brand); margin-bottom:16px;"><div style="font-size:var(--t-caption); font-weight:800; color:var(--brand-secondary); margin-bottom:12px;">Community activity summary</div><div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;"><button onclick="openProfileSection('resident','history','Service history','Completed and cancelled services')" style="text-align:left; background:transparent; border:0; color:var(--on-brand); cursor:pointer;"><div style="font-family:var(--font-display); font-size:var(--t-title-lg);">6</div><div style="font-size:var(--t-caption);">Completed Bookings</div></button><button onclick="openProfileSection('resident','spending','Spending summary','Year-to-date by service')" style="text-align:left; background:transparent; border:0; color:var(--on-brand); cursor:pointer;"><div style="font-family:var(--font-display); font-size:var(--t-title-lg);">₱2,500</div><div style="font-size:var(--t-caption);">YTD Spend</div></button></div></div><div class="section-label">My services</div>${row('history','Service History','Completed and cancelled services')}${row('saved','Saved Providers','Providers you bookmarked')}${row('warranty','Warranties & Disputes','Active warranties and cases')}<div class="section-label">My home</div>${row('home','Home & Maintenance Profile','Household items and suggested care')}${row('reminders','Maintenance Reminders','Upcoming maintenance')}<div class="section-label">Payments</div>${row('payments','Payment Methods','GCash, Cash on Arrival')}${row('receipts','Receipts & Transactions','Service payment history')}<div class="section-label">Account</div>${row('notifications','Notifications','Booking and maintenance alerts')}${row('privacy','Privacy & Security','Password and address privacy')}</div>${modal ? `<div class="modal-layer"><div class="card modal-card"  ><div class="row"><b>${modal==='edit'?'Edit profile':modal==='add_item'?'Add household item':modal==='logout'?'Log out?':'Update'}</b><button aria-label="Close" onclick="state.residentProfileModal=null; render();" style="border:0; background:transparent; font-size:var(--t-title);">&times;</button></div>${modal==='edit'?`<label class="form-label">Full Name<input id="resident-profile-name" value="${rp.name}" class="form-input"></label><label class="form-label-8">Email (read-only)<input value="${rp.email}" readonly class="form-input-readonly"></label><label class="form-label-8">Phone Number<input id="resident-profile-phone" value="${rp.phone}" class="form-input"></label><label class="form-label-8">Home Address<input id="resident-profile-address" value="${rp.address}" class="form-input"></label><label class="form-label-8">Barangay<input id="resident-profile-barangay" value="${rp.barangay}" class="form-input"></label><label class="form-label-8">Emergency Contact<input id="resident-profile-emergency" value="${rp.emergencyContact}" class="form-input"></label><button class="btn btn-block"   onclick="saveResidentProfile()">Save Changes</button>`:modal==='add_item'?`<label class="form-label">Item Type<select id="household-type" aria-label="What kind of place this address is" style="width:100%; padding:9px; margin-top:4px;"><option>Air Conditioner</option><option>Refrigerator</option><option>Water Pump</option><option>Kitchen Plumbing</option><option>Water Heater</option><option>Other</option></select></label><label class="form-label-8">Nickname<input id="household-nickname" class="form-input"></label><label class="form-label-8">Brand / Model (Optional)<input id="household-brand" class="form-input"></label><button class="btn btn-block"   onclick="state.residentHouseholdItems.push({type:document.getElementById('household-type').value,nickname:document.getElementById('household-nickname').value}); state.residentProfileModal=null; openProfileSection('resident','home','Home and maintenance profile','Household items and suggested care');">Save Item</button>`:modal==='logout'?`<div style="font-size:var(--t-caption); margin-top:12px;">Are you sure you want to log out of your Sukinnect account?</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm secondary" style="flex:1;" onclick="state.residentProfileModal=null; render();">Cancel</button><button class="btn sm danger" style="flex:1;" onclick="signOut()">Log Out</button></div>`:`<div style="font-size:var(--t-caption); color:var(--success-ink); margin-top:12px;">Changes saved successfully.</div><button class="btn btn-block"   onclick="state.residentProfileModal=null; render();">Close</button>`}</div></div>`:''}`;
 }
 
 function adminDashboard(){
