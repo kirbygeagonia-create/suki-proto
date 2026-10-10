@@ -106,7 +106,11 @@ defects — all three now fixed**. Everything below marked **[settled]** does no
 `git ls-files Sukinnect-Android` returns nothing — the whole project, including the file chooser
 above and the assets copy below, is unversioned and exists only on the machine that edited it.
 That is a large part of why a defect this basic survived: no check, review or clone can see it.
-Tracking the shell is a decision worth making deliberately, not a step to slip in sideways.
+**Decided 2026-10-10: the shell stays local and untracked.** The owner was asked directly and chose
+to leave it out of git, so this is settled rather than outstanding — do not re-raise it, and do not
+"tidy" it by adding the directory to a commit. What follows is the consequence to live with, not a
+proposal: `git` will never show a change made here, so every shell edit has to be described in this
+file by hand, and a clone of this repository does not contain the app that runs on a phone.
 
 **The assets copy now matches the rebuild**, so a build today runs the weighing step and the back
 fix. They drift by design, so re-check before building:
