@@ -976,12 +976,36 @@ suite('hygiene', async () => {
   c.check('no artwork shape carries an animation class', !/class="ca-[a-z]/.test(body));
   /* These four existed only to move. A twinkle that cannot twinkle is a plus sign,
      speed lines behind a still parcel are three dashes, and a second ripple ring
-     stacked on the first is a doubled stroke. */
+     stacked on the first is a doubled stroke. Asserted as "at most one", because the
+     scenes they lived in have since been replaced by rendered images entirely. */
   c.check('the motion-only marks were not restored',
     !/M8 9v8M4 13h8/.test(body) && !/M2 17h6/.test(body) &&
     !/<circle cx="28" cy="11" r="2\.6"/.test(body) &&
-    (body.match(/cx="35" cy="50" rx="7" ry="2"/g) || []).length === 1,
+    (body.match(/cx="35" cy="50" rx="7" ry="2"/g) || []).length <= 1,
     'twinkle cross, speed lines, page dots or a duplicate ripple has come back');
+
+  /* The category tiles are pre-rendered image files now, so the checks that matter
+     are about the files: every category has one, it is on disk, it is referenced by a
+     local relative path, and it is not smuggled in as base64 or fetched from a CDN.
+     A tile with a missing image is a blank square on the front door of the app, and
+     nothing else in this suite would notice. */
+  const appDir = require('path').dirname(require('./harness.cjs').APP);
+  const fsx = require('fs');
+  const artMap = src.slice(src.indexOf('const SERVICE_ART = {'), src.indexOf('const CAT_ART_PX'));
+  const artPaths = [...artMap.matchAll(/([a-z]+):\s*'([^']+)'/g)].map(m => ({ id: m[1], file: m[2] }));
+  const catalogue = boot().SERVICES;
+  c.check('the art map is keyed by every category the catalogue holds',
+    catalogue.every(s => artPaths.some(a => a.id === s.id)),
+    'missing an entry for: ' + catalogue.filter(s => !artPaths.some(a => a.id === s.id)).map(s => s.id).join(','));
+  c.check('and every entry names a file that is actually on disk',
+    artPaths.length > 0 && artPaths.every(a => fsx.existsSync(require('path').join(appDir, a.file))),
+    'dangling: ' + artPaths.filter(a => !fsx.existsSync(require('path').join(appDir, a.file))).map(a => a.file).join(','));
+  c.check('category art is local — no CDN, no absolute URL, no base64 payload',
+    artPaths.every(a => /^assets\/[a-z0-9/-]+\.png$/.test(a.file)) &&
+    !/src="https?:|src="data:image/.test(src));
+  c.check('the tile image states its size and stays out of the accessibility tree',
+    /width="' \+ CAT_ART_PX \+ '" height="' \+ CAT_ART_PX/.test(src) && /alt=""/.test(src));
+  c.check('the flat SVG scene table is gone, not merely unused', !/const CAT_ART = \{/.test(src));
 
   /* The keyboard surface. Each of these was true-once-and-broke: a focus ring that
      named seventeen classes left every later control invisible, two fields set

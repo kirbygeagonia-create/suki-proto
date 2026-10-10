@@ -62,7 +62,7 @@ const PROBE = flag('probe', '');
    what a real browser actually laid out.
    -------------------------------------------------------------------------------- */
 const AUDIT_JS = `(function(){
-  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], contrast: [], overlaps: [], stretched: [], vendor: [], mapEscape: [], occluded: [], nameless: [], placeholderOnly: [], catMotion: [], hOverflow: 0 };
+  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], contrast: [], overlaps: [], stretched: [], broken: [], remote: [], vendor: [], mapEscape: [], occluded: [], nameless: [], placeholderOnly: [], catMotion: [], hOverflow: 0 };
   const vw = document.documentElement.clientWidth;
   out.hOverflow = document.documentElement.scrollWidth - vw;
   const TAP = 44;
@@ -294,10 +294,22 @@ const AUDIT_JS = `(function(){
 
   /* the official mark must keep its proportions (AGENTS.md 10) */
   document.querySelectorAll('img').forEach(el => {
-    const r = painted(el); if (!r || !el.naturalWidth) return;
+    const src = (el.getAttribute('src') || '').slice(0, 44);
+    /* A missing file used to be invisible here. The proportion test below needs
+       naturalWidth and returns early at zero — which is precisely what a broken
+       image looks like. The category tiles are image files now, so a dangling path
+       is a blank square on the front door of the app and nothing reported it. */
+    if (src && el.naturalWidth === 0) { out.broken.push({ src, why: el.complete ? 'no pixels' : 'still loading' }); return; }
+    const r = painted(el); if (!r) return;
     const natural = el.naturalWidth / el.naturalHeight, drawn = r.width / r.height;
     if (Math.abs(natural - drawn) / natural > 0.04)
-      out.stretched.push({ src: (el.getAttribute('src')||'').slice(0,26), natural: Math.round(natural*100)/100, drawn: Math.round(drawn*100)/100 });
+      out.stretched.push({ src: src.slice(0,26), natural: Math.round(natural*100)/100, drawn: Math.round(drawn*100)/100 });
+  });
+  /* The WebView loads this file off disk with no network (AGENTS.md 81), so every
+     resource the page actually fetched must be a file: or a data: URL. This asks the
+     browser what it requested rather than trusting a grep of the source. */
+  (performance.getEntriesByType('resource') || []).forEach(e => {
+    if (/^(https?|ws|wss):/i.test(e.name)) out.remote.push({ url: e.name.slice(0, 72), kind: e.initiatorType || '-' });
   });
   /* mountMap() marks every map with .map-mount so Leaflet's absolutely placed panes
      have a frame to resolve against. Leaflet does set that position itself, but
@@ -826,6 +838,8 @@ async function main() {
     tally(flat('mapEscape'), 'map panes painted outside their own frame', r => r.screen + '  ' + r.what + ' — ' + r.why);
     tally(flat('occluded'), 'something painting on top of an open modal layer', r => r.screen + '  ' + r.what + ' at sample ' + r.at);
     tally(flat('catMotion'), 'category artwork moving in the painted page', r => r.screen + '  ' + r.what);
+    tally(flat('broken'), 'images that asked for a file and got no pixels', r => r.screen + '  ' + r.src + ' — ' + r.why);
+    tally(flat('remote'), 'requests that left the device for a network', r => r.screen + '  ' + r.kind + '  ' + r.url);
     const vend = flat('vendor');
     console.log('\nvendor-owned controls excluded (Leaflet attribution + markers, not ours to resize): ' +
       vend.length + (vend.length ? '  e.g. ' + [...new Set(vend.map(r => r.what || 'unlabelled <img>'))].slice(0, 4).join(' | ') : ''));
