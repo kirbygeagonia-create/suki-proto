@@ -1425,6 +1425,71 @@ suite('honesty', async () => {
       !/To be paid with/.test(paid);
   })(), 'a held payment was described in the past tense');
 
+  /* ── the provider insights ───────────────────────────────────────────────
+     Three of these cards drew numbers that no record contained: an earnings line
+     made of seven literal SVG points under a growth percentage nobody had
+     computed, barangay bars whose tallest measured 40% of the drawn total while
+     the caption asserted 58%, and a donut of earnings by job type when a booking
+     carries no job type at all. The captions are asserted absent by string,
+     because a claim that comes back in different wording is still the same lie. */
+  const dashSrc = app._source.slice(app._source.indexOf('function providerDashboard'),
+    app._source.indexOf('function providerFSM'));
+  c.check('the invented chart claims are gone',
+    !/\+18% Growth|peaking at ₱4,200|58% of all plumbing|Where the earnings come from|feedbacks analyzed/.test(app._source));
+  c.check('no provider chart is drawn from literal geometry',
+    !/points="15,80/.test(app._source) && !/height:45px/.test(app._source) &&
+    !/conic-gradient\(var\(--brand-primary\) 0% 65%/.test(app._source));
+  c.check('the feedback card reads the signed-in provider, not a fixed one',
+    /CURRENT_PROVIDER_ID/.test(dashSrc) && !/p\.id === 'p1'/.test(dashSrc));
+
+  /* Recompute every drawn week from the records with the same predicate the
+     helper uses. Asserting only that a figure is an integer would pass while the
+     whole series was wrong, so this compares the count and the centavos per week. */
+  c.check('each earnings week equals the jobs that settled inside it', (() => {
+    const id = app.CURRENT_PROVIDER_ID;
+    const weeks = app.providerWeeklyEarnings(id, 8);
+    if (weeks.length !== 8) return false;
+    const same = weeks.every((w, i) => {
+      const from = app.weekStart(weeks.length - 1 - i).getTime();
+      const jobs = app.BOOKINGS.filter(b => b.providerId === id &&
+        b.status === 'completed' && b.pricing && b.completedAt &&
+        Date.parse(b.completedAt) >= from && Date.parse(b.completedAt) < from + 7 * 86400000);
+      return w.jobs === jobs.length &&
+        w.centavos === jobs.reduce((t, b) => t + app.settlementToProvider(b.pricing), 0);
+    });
+    /* The equality above can pass while the helper ignores status entirely, if
+       every fixture row that carries a completion stamp has settled. So force the
+       case the filter exists for: un-settle one stamped job and require the
+       series to drop. A helper that counts anything would report the same total. */
+    const probe = app.BOOKINGS.find(b => b.providerId === id && b.pricing && b.completedAt);
+    if (!probe) return false;
+    const before = weeks.reduce((t, w) => t + w.centavos, 0);
+    const was = probe.status;
+    probe.status = 'ongoing';
+    const after = app.providerWeeklyEarnings(id, 8).reduce((t, w) => t + w.centavos, 0);
+    probe.status = was;
+    return same && before > 0 && after < before;
+  })(), 'the earnings series counts jobs that have not settled');
+
+  c.check('barangay demand counts the requests that actually arrived', (() => {
+    const rows = app.providerDemandByBarangay(app.CURRENT_PROVIDER_ID, 30);
+    const since = Date.now() - 30 * 86400000;
+    const expected = app.BOOKINGS.filter(b => b.providerId === app.CURRENT_PROVIDER_ID &&
+      Date.parse(b.createdAt) >= since)
+      .reduce((m, b) => (m[b.barangay] = (m[b.barangay] || 0) + 1, m), {});
+    const total = rows.reduce((t, r) => t + r.jobs, 0);
+    return total === Object.values(expected).reduce((t, n) => t + n, 0) &&
+      rows.every(r => expected[r.label] === r.jobs);
+  })(), 'a barangay bar does not match its own record count');
+
+  c.check('a thin sample is stated as a count, never drawn as a share', (() => {
+    const me = app.PROVIDERS.find(p => p.id === app.CURRENT_PROVIDER_ID);
+    const html = app.providerDashboard();
+    const n = (me.reviews || []).length;
+    if (n >= app.MIN_SHARE_SAMPLE) return /conic-gradient/.test(html);
+    return !/conic-gradient/.test(html) && /is not a distribution/.test(html);
+  })(), 'a part-to-whole ring was drawn from fewer records than the floor');
+
   return c;
 });
 /* ══ 15. fruit — the pilot category, as the brief's checklist ═════════════════

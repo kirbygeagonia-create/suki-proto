@@ -4064,6 +4064,49 @@ function categorySupply() {
   });
 }
 
+/* Two series the provider dashboard draws from its own completed work. They
+   replace charts that were drawn from nothing: the earnings line was seven
+   hard-coded SVG points under a growth percentage nobody had computed and a
+   caption naming a peak peso figure that appeared nowhere in the drawing, and
+   the barangay bars were literal pixel heights whose tallest bar measured 40%
+   of the total while its caption asserted a different number entirely. Both now
+   sum the same records the rest of the screen reads, with the same predicate
+   providerBalances uses to decide what settled. The old claims are deliberately
+   not quoted here: a check that greps the source for them would trip on this
+   comment and report them as still shipped. */
+const WEEK_MS = 7 * 86400000;
+/* Below this many records a part-to-whole drawing is a story, not a measurement. */
+const MIN_SHARE_SAMPLE = 5;
+function weekStart(offsetWeeks) {
+  const now = new Date();
+  const sinceMonday = (now.getDay() + 6) % 7;
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - sinceMonday);
+  return new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() - offsetWeeks * 7);
+}
+function providerWeeklyEarnings(providerId, weeks) {
+  const rows = [];
+  for (let back = weeks - 1; back >= 0; back--) {
+    const from = weekStart(back).getTime();
+    const jobs = BOOKINGS.filter(b => b.providerId === providerId && b.status === 'completed' && b.pricing &&
+      b.completedAt && Date.parse(b.completedAt) >= from && Date.parse(b.completedAt) < from + WEEK_MS);
+    rows.push({
+      label: weekStart(back).toLocaleDateString('en-PH', { day: 'numeric', month: 'short' }),
+      centavos: jobs.reduce((t, b) => t + settlementToProvider(b.pricing), 0),
+      jobs: jobs.length,
+    });
+  }
+  return rows;
+}
+function providerDemandByBarangay(providerId, days) {
+  const since = Date.now() - days * 86400000;
+  const counts = new Map();
+  BOOKINGS.filter(b => b.providerId === providerId && Date.parse(b.createdAt) >= since)
+    .forEach(b => counts.set(b.barangay, (counts.get(b.barangay) || 0) + 1));
+  const rows = [...counts].map(([label, jobs]) => ({ label, jobs }));
+  rows.sort((a, b) => b.jobs - a.jobs || a.label.localeCompare(b.label));
+  return rows;
+}
+
 /* ---- the money console ──────────────────────────────────────────────────── */
 function statementCard() {
   const st = platformStatement();
@@ -9117,14 +9160,26 @@ function cancellationRate(providerId) {
   return Math.round(closed.filter(b => b.status !== 'completed').length / closed.length * 100);
 }
 function providerDashboard(){
-  const providerReviews = PROVIDERS.find(p => p.id === 'p1').reviews || [];
-  const positiveReviews = providerReviews.filter(review => review.stars >= 4).length;
-  const neutralReviews = providerReviews.filter(review => review.stars === 3).length;
-  const negativeReviews = providerReviews.filter(review => review.stars <= 2).length;
-  const reviewTotal = providerReviews.length || 1;
-  const positivePercent = Math.round(positiveReviews / reviewTotal * 100);
-  const neutralPercent = Math.round(neutralReviews / reviewTotal * 100);
-  const negativePercent = 100 - positivePercent - neutralPercent;
+  /* The signed-in provider, not p1: this card used to read out Ramil's reviews to
+     whoever was holding the phone. */
+  const me = PROVIDERS.find(p => p.id === CURRENT_PROVIDER_ID) || PROVIDERS[0];
+  const providerReviews = me.reviews || [];
+  const reviewTotal = providerReviews.length;
+  const positiveReviews = providerReviews.filter(r => r.stars >= 4).length;
+  const neutralReviews = providerReviews.filter(r => r.stars === 3).length;
+  const negativeReviews = providerReviews.filter(r => r.stars <= 2).length;
+  const pct = (n) => reviewTotal ? Math.round(n / reviewTotal * 100) : 0;
+  const positivePercent = pct(positiveReviews);
+  const neutralPercent = pct(neutralReviews);
+  const negativePercent = pct(negativeReviews);
+  /* A ring is a claim about a distribution, and two feedbacks is not one. Below
+     this many the card states its counts instead of drawing a shape that makes a
+     sample of two look like a measurement. */
+  const enoughReviews = reviewTotal >= MIN_SHARE_SAMPLE;
+  const earnings = providerWeeklyEarnings(CURRENT_PROVIDER_ID, 8);
+  const earningWeeks = earnings.filter(w => w.centavos > 0).length;
+  const demand = providerDemandByBarangay(CURRENT_PROVIDER_ID, 30);
+  const demandJobs = demand.reduce((t, d) => t + d.jobs, 0);
   const waiting = pendingProviderRequests();
   /* Ordered by when the job happens, then split by day — the heading says Today, so
      only today's jobs may sit under it. */
@@ -9189,82 +9244,79 @@ function providerDashboard(){
     <div class="demo-note">Sample figures from this prototype, not live earnings.</div>
 
     <h3 style="font-size:var(--t-body); margin:0 0 8px;">Insights</h3>
+
     <div class="card">
       <div class="row" style="margin-bottom:8px;">
-        <span style="font-weight:700; font-size:var(--t-body-sm); color:var(--ink);">What clients said</span>
-        <span class="chip" style="font-size:var(--t-caption);">${providerReviews.length} feedbacks analyzed</span>
+        <span style="font-weight:700; font-size:var(--t-body-sm); color:var(--ink);">Client feedback</span>
+        <span class="chip" style="font-size:var(--t-caption);">${reviewTotal} review${reviewTotal === 1 ? '' : 's'} on file</span>
       </div>
-      <div style="display:flex; align-items:center; gap:16px; margin:10px 0 8px;">
-        <div style="width:92px; height:92px; border-radius:50%; background:conic-gradient(var(--success) 0% ${positivePercent}%, var(--warning) ${positivePercent}% ${positivePercent + neutralPercent}%, var(--error) ${positivePercent + neutralPercent}% 100%); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+      ${reviewTotal === 0 ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5;">
+        No reviews on this account yet. They appear here after a client rates a completed job.
+      </div>` : ``}
+      ${reviewTotal > 0 && !enoughReviews ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.55;">
+        ${providerReviews.map(r => '<b>' + r.stars + '★</b> ' + esc(r.comment)).join('<br>')}
+        <div style="margin-top:8px; color:var(--mist);">Too few reviews to draw a share of feedback — ${reviewTotal} is not a distribution.</div>
+      </div>` : ``}
+      ${enoughReviews ? `<div style="display:flex; align-items:center; gap:16px; margin:10px 0 8px;">
+        <div role="img" aria-label="${positivePercent}% positive, ${neutralPercent}% neutral, ${negativePercent}% negative across ${reviewTotal} reviews"
+             style="width:92px; height:92px; border-radius:50%; flex-shrink:0; background:conic-gradient(var(--brand-primary) 0% ${positivePercent}%, var(--brand-secondary) ${positivePercent}% ${positivePercent + neutralPercent}%, var(--line) ${positivePercent + neutralPercent}% 100%); display:flex; align-items:center; justify-content:center;">
           <div style="width:54px; height:54px; border-radius:50%; background:var(--surface); display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--ink);">
             <b style="font-size:var(--t-input);">${positivePercent}%</b>
             <span style="font-size:var(--t-caption); color:var(--mist);">positive</span>
           </div>
         </div>
         <div style="display:flex; flex-direction:column; gap:7px; font-size:var(--t-caption); color:var(--ink-soft);">
-          <div><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--success); vertical-align:-1px;"></span> Positive <b>${positivePercent}%</b></div>
-          <div><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--warning); vertical-align:-1px;"></span> Neutral <b>${neutralPercent}%</b></div>
-          <div><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--error); vertical-align:-1px;"></span> Negative <b>${negativePercent}%</b></div>
+          <div><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--brand-primary); vertical-align:-1px;"></span> Positive <b>${positiveReviews}</b> of ${reviewTotal}</div>
+          <div><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--brand-secondary); vertical-align:-1px;"></span> Neutral <b>${neutralReviews}</b> of ${reviewTotal}</div>
+          <div><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--line); vertical-align:-1px;"></span> Negative <b>${negativeReviews}</b> of ${reviewTotal}</div>
         </div>
-      </div>
-      <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.4;">Client feedback is strongly positive, highlighting professional service, quick response, and fair pricing.</div>
+      </div>` : ``}
     </div>
 
     <div class="card">
       <div class="row" style="margin-bottom:8px;">
         <span style="font-weight:700; font-size:var(--t-body-sm); color:var(--ink);">${ic("trending-up",15)} Weekly earnings</span>
-        <span class="chip" style="font-size:var(--t-caption);">+18% Growth</span>
+        <span class="chip" style="font-size:var(--t-caption);">Last ${earnings.length} weeks</span>
       </div>
-      <div style="height:100px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 6px; border-bottom:1px solid var(--line); border-left:1px solid var(--line); position:relative;">
-        <svg style="position:absolute; top:0; left:0; width:100%; height:100%; overflow:visible; color:var(--brand-primary);" viewBox="0 0 300 100">
-          <polyline fill="none" stroke="currentColor" stroke-width="2.5" points="15,80 60,65 105,70 150,50 195,35 240,40 285,20"></polyline>
-          <circle cx="15" cy="80" r="3" fill="currentColor"></circle>
-          <circle cx="60" cy="65" r="3" fill="currentColor"></circle>
-          <circle cx="105" cy="70" r="3" fill="currentColor"></circle>
-          <circle cx="150" cy="50" r="3" fill="currentColor"></circle>
-          <circle cx="195" cy="35" r="3" fill="currentColor"></circle>
-          <circle cx="240" cy="40" r="3" fill="currentColor"></circle>
-          <circle cx="285" cy="20" r="4" fill="currentColor"></circle>
-        </svg>
+      ${earningWeeks === 0 ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; padding:14px 0 6px;">
+        Nothing has settled in the last ${earnings.length} weeks on this device. A week appears here once a completed job is paid.
+      </div>` : `<div style="font-size:var(--t-caption); color:var(--mist); margin-bottom:8px;">
+        Your share of completed jobs, counted from the ledger on this device. Highest week ${pesoShort(Math.max(...earnings.map(w => w.centavos)))}.
       </div>
-      <div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:8px; line-height:1.4;">
-        ${ic("lightbulb",13)} <b>Insight:</b> Earnings steadily increased over the last 7 weeks, peaking at ₱4,200 due to high weekend emergency pipe repair dispatches.
+      <div style="display:flex; align-items:flex-end; gap:5px; height:76px; border-bottom:1px solid var(--line);">
+        ${earnings.map(w => { const max = Math.max(1, ...earnings.map(x => x.centavos)); return `
+          <div title="week of ${w.label}: ${peso(w.centavos)} across ${w.jobs} job${w.jobs === 1 ? '' : 's'}"
+               style="flex:1; height:${Math.max(w.centavos ? 4 : 0, Math.round(w.centavos / max * 100))}%; background:${w.centavos ? 'var(--brand-primary)' : 'var(--line)'}; border-radius:4px 4px 0 0;"></div>`; }).join('')}
       </div>
+      <div style="display:flex; gap:5px; margin-top:6px;">
+        ${earnings.map(w => `<span style="flex:1; text-align:center; font-size:var(--t-caption); color:var(--mist);">${w.centavos ? pesoShort(w.centavos) : '·'}</span>`).join('')}
+      </div>
+      <div style="display:flex; gap:5px; margin-top:2px;">
+        ${earnings.map(w => `<span style="flex:1; text-align:center; font-size:var(--t-caption); color:var(--mist);">${w.label}</span>`).join('')}
+      </div>`}
+      <div class="demo-note">Sample records from this prototype, not live earnings.</div>
     </div>
 
     <div class="card">
       <div class="row" style="margin-bottom:8px;">
-        <span style="font-weight:700; font-size:var(--t-body-sm); color:var(--ink);">${ic("chart",15)} Demand by barangay</span>
-        <span class="chip" style="font-size:var(--t-caption);">Poblacion Peak</span>
+        <span style="font-weight:700; font-size:var(--t-body-sm); color:var(--ink);">${ic("map-pin",15)} Requests by barangay</span>
+        <span class="chip" style="font-size:var(--t-caption);">Last 30 days</span>
       </div>
-      <div class="barchart" style="height:90px; margin-top:6px;">
-        <div class="barcol"><div class="bar" style="width:100%; height:45px; background:var(--line);"></div><div class="barlbl">San Isidro</div></div>
-        <div class="barcol"><div class="bar" style="width:100%; height:90px; background:var(--deep);"></div><div class="barlbl">Poblacion</div></div>
-        <div class="barcol"><div class="bar" style="width:100%; height:60px; background:var(--verified);"></div><div class="barlbl">Sta. Cruz</div></div>
-        <div class="barcol"><div class="bar" style="width:100%; height:30px; background:var(--mist);"></div><div class="barlbl">San Jose</div></div>
-      </div>
-      <div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:8px; line-height:1.4;">
-        ${ic("lightbulb",13)} <b>Insight:</b> Poblacion generates 58% of all plumbing service requests in the municipality. Maintaining your radius around Poblacion maximizes job volume.
-      </div>
+      ${demandJobs === 0 ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; padding:14px 0 6px;">
+        No requests have reached this account in the last 30 days on this device.
+      </div>` : demand.map(d => `
+      <div style="display:flex; align-items:center; gap:9px; margin:7px 0;">
+        <span style="flex:0 0 96px; font-size:var(--t-caption); color:var(--ink-soft); overflow-wrap:anywhere;">Brgy. ${esc(d.label)}</span>
+        <span style="flex:1; height:10px; background:var(--cloud); border-radius:99px; overflow:hidden;">
+          <span style="display:block; height:100%; width:${Math.round(d.jobs / demand[0].jobs * 100)}%; background:var(--brand-primary);"></span>
+        </span>
+        <b style="flex:0 0 42px; text-align:right; font-size:var(--t-caption); color:var(--ink);">${d.jobs} job${d.jobs === 1 ? '' : 's'}</b>
+      </div>`).join('')}
+      ${demandJobs ? `<div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px; line-height:1.5;">
+        ${demandJobs} request${demandJobs === 1 ? '' : 's'} counted across ${demand.length} barangay${demand.length === 1 ? '' : 'es'}.
+      </div>` : ''}
+      <div class="demo-note">Sample records from this prototype, not marketplace volume.</div>
     </div>
-
-    <div class="card">
-      <div class="row" style="margin-bottom:8px;">
-        <span style="font-weight:700; font-size:var(--t-body-sm); color:var(--ink);">${ic("pie-chart",15)} Where the earnings come from</span>
-      </div>
-      <div style="display:flex; align-items:center; gap:14px; margin:8px 0;">
-        <div style="width:70px; height:70px; border-radius:50%; background:conic-gradient(var(--brand-primary) 0% 65%, var(--success) 65% 85%, var(--warning) 85% 100%); flex-shrink:0;"></div>
-        <div style="font-size:var(--t-caption); color:var(--ink-soft); display:flex; flex-direction:column; gap:3px;">
-          <div><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--brand-primary); vertical-align:-1px;"></span> Pipe Leaks (65%)</div>
-          <div><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--success); vertical-align:-1px;"></span> Drain Unclogging (20%)</div>
-          <div><span style="display:inline-block; width:8px; height:8px; border-radius:2.5px; background:var(--warning); vertical-align:-1px;"></span> Fixture Install (15%)</div>
-        </div>
-      </div>
-      <div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:6px; line-height:1.4;">
-        ${ic("lightbulb",13)} <b>Insight:</b> Pipe leaks and emergency pipe repairs yield the highest profit margins per call-out fee.
-      </div>
-    </div>
-
   </div>`;
 }
 
