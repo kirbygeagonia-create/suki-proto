@@ -1,6 +1,6 @@
 # Handset pass — the thing no browser check can prove
 
-The rebuild in `Sukinnect-next.html` has been rendered in Node (393 assertions), painted in
+The rebuild in `Sukinnect-next.html` has been rendered in Node (394 assertions), painted in
 real Chrome at 390×844 across 46 screens, and measured for tap targets, contrast, clipping and
 occlusion. None of that is a phone. Three categories are still unverified because no instrument
 can reach them: a thumb, an on-screen keyboard, and a slow device.

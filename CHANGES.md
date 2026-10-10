@@ -966,6 +966,38 @@ Gate **394 checks**; the instrument adds a twelfth tally (form controls with no 
 and a separate informational count of placeholder-only names), both zero across 46 screens at
 360×640 and 390×844. `Sukinnect.html` still byte-identical to `main`.
 
+## 23. Verification sweep across everything, and a claim that could not be checked
+
+Everything built since §18 was re-verified end to end rather than assumed still working: the gate
+(394 checks), a syntax pass over every tool and the extracted application script, the layout
+instrument over all 46 screens at 360×640, 390×844, 412×915 and desktop, the git state, and the
+device-assets identity. A falsification sweep then broke six invariants on purpose — the ledger's
+balance assertion, the fruit rate's freeze, the weighing's status guard, the `popstate` listener,
+the receipt's tense, and `screenHeader`'s `<h1>` — and all six were caught, so the instruments are
+not merely green, they are still connected to the code.
+
+**The one real finding was in the documentation, and it was a claim nobody could check.**
+`Sukinnect.html` was described as "byte-identical to main" in AGENTS.md and three times in this
+file. It is not, and cannot be, on Windows: `.gitattributes` says `* text=auto`, so git stores LF
+in the object and checks out CRLF, and the working file's 4,706 CRLF pairs make its md5 differ
+from the blob's while their content is identical. The statement was true in intent and false as
+written — and the obvious way to verify it, hashing the file against `git show main:Sukinnect.html`,
+returns a mismatch, so an auditor following the claim literally would conclude the shipped file had
+been edited when it had not. §31 now says *identical to main* and gives the command that proves it
+(`git diff --quiet origin/main -- Sukinnect.html`), and warns that the same normalisation applies
+to every text file here. `DEVICE-PASS.md`'s assertion count was also one behind.
+
+This is the fourth time this project has caught its own prose drifting from its code — after the
+token counts, the glyph counts and the "every screen title is an `<h1>`" claim. Three of those four
+were fixed by moving the assertion out of a sentence and into a check. This one cannot be checked
+by the gate, because it is about git's storage rather than the page, so it is fixed by naming the
+command next to the claim every time.
+
+**What this sweep did not re-do:** the domain audit behind §12–§14 was not repeated from scratch,
+and the design findings §22 lists as deliberately unapplied — the provider list's identical
+primary buttons, the pills that look tappable, the nested cards, the prose-heavy screens — remain
+open by choice, not by oversight.
+
 ## Deliberately not done
 
 

@@ -1191,7 +1191,8 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     per-trade palette, one in <meta name="theme-color">, and sixty-two the tool
                     prints rather than classifies — among them the phone mockup's bezel
                     (#1a1a1a, #171717) and its signal bars, and a good many `#fff`. Untouched by
-                    the rebuild; still byte-identical to main, and still carrying the old
+                    the rebuild; still identical to main — see the note below on how to prove
+                    that, and still carrying the old
                     gradient-hero sign-in.
 Sukinnect-next.html— 9,754 lines, ONE :root block, 1,681 var() usages, 93 tokens declared with 88
                     of them reached. Thirty-nine hex-shaped strings sit outside :root, and the
@@ -1224,6 +1225,22 @@ Sukinnect-next.html— 9,754 lines, ONE :root block, 1,681 var() usages, 93 toke
                     itself with a name in a div): the screens pass in tools/verify.cjs now fails
                     if any app screen paints no <h1>, so the claim is enforced rather than
                     remembered.
+
+HOW TO PROVE THE SHIPPED FILE IS UNTOUCHED — and why "byte-identical" is the wrong words.
+`.gitattributes` declares `* text=auto`, so git stores LF in the object and this repository
+checks out CRLF on Windows: `Sukinnect.html` on disk has 4,706 CRLF pairs and the committed blob
+has none, which makes their md5s differ by design while their content is identical. The claim
+"byte-identical to main" was repeated in this file and the change log for weeks and is false as
+literally written; an auditor running `md5sum Sukinnect.html <(git show main:Sukinnect.html)`
+would get a mismatch and conclude the invariant had been broken when it had not. The command that
+actually proves it:
+
+```
+git diff --quiet origin/main -- Sukinnect.html && echo unchanged
+```
+
+Say "identical to main" and name that command. Do not reach for a hash comparison on any text
+file in this repository — the same normalisation silently applies to all of them.
 
 ICONS DIVERGE BETWEEN THE TWO FILES, and a reader should not mistake that for an accident.
 `Sukinnect.html` loads `reicon.js` (8 MB, Git LFS) and draws through its `<re-icon>` custom
