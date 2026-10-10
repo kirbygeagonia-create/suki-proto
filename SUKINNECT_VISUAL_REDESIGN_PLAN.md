@@ -312,7 +312,10 @@ only for status. One-shot entrance only if it survives `prefers-reduced-motion`.
 ### 8.1 Motion probe (the tool that answers F1)
 
 `node tools/shot.cjs --only=resident-home --probe=@probe-cat-static.js` — reads computed style on
-the live page, so it catches CSS animations, transitions and hover rules together.
+the live page, so it catches CSS animations, transitions and hover rules together. That probe file
+was scratch and is not in the repository; it no longer needs to be, because the same question is now
+one of the `--measure` tallies ("category artwork moving in the painted page") and runs over all 46
+screens on every camera pass.
 
 ```
 normal:          motion:false  liveAnimations:33  every tile 3–4 animated parts
@@ -344,15 +347,22 @@ unnamed clickables **0** · unnameable form controls **0** · stretched images *
 escaping their frame **0** · anything over an open modal **0** · horizontal overflow **none** ·
 10 distinct painted font sizes. (Excluded as vendor-owned: 32 Leaflet controls.)
 
-### 8.3 Screenshot paths (gitignored, `.shots*/`)
+### 8.3 Screenshots — reviewed, then cleared
 
-- `.shots-plan/` — all 46 baseline screens, 390×844 @2x, with `--measure`
-- `.shots-plan-rm/` — Resident Home under emulated reduced motion
-- `.shots-plan-tall/` — Provider dashboard at 390×1900, so the Insights cards are in frame
+The baseline and after captures this section cites were reviewed and then deleted; the
+`.shots*/` directories named below **no longer exist on disk**. They are 11 MB per 46-screen
+run, they are gitignored so nothing can recover them from the repository, and every finding
+they carried is now recorded in the text above and in CHANGES.md §24. Regenerate any of them
+with:
 
-These are the "before" set. Implementation writes "after" to **new** directories; nothing here is
-overwritten. They are scratch and will be deleted once the work is reviewed (they are 11 MB per
-46-screen run and have already filled the disk once).
+```
+node tools/shot.cjs --measure --out=.shots-plan            # all 46, 390x844 @2x
+node tools/shot.cjs --only=resident-home --reduced-motion --out=.shots-plan-rm
+node tools/shot.cjs --only=provider-dash --height=1900 --out=.shots-plan-tall   # the Insights cards
+```
+
+P2 will need a fresh before/after pair of the category grid; take both at the time of that
+work rather than trusting anything written here.
 
 ---
 
