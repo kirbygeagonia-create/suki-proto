@@ -26,6 +26,40 @@ cp Sukinnect.html Sukinnect-Android/app/src/main/assets/Sukinnect.html
 The first check on the device: the app switcher should read **"Sukinnect — next (rebuild)"**.
 That title is there on purpose, so a phone is never showing a build you cannot name.
 
+## Building it — done here on 2026-10-09, so the phone session starts from a known APK
+
+The shell has never been compiled until now, and "the Java looks right" is not the same claim as
+"an APK builds and contains what you changed". Both are now established:
+
+```
+cd Sukinnect-Android
+JAVA_HOME="C:/Program Files/Eclipse Adoptium/jdk-21.0.12.101-hotspot" \
+  ~/.gradle/wrapper/dists/gradle-8.14.3-all/*/gradle-8.14.3/bin/gradle.bat --offline :app:assembleDebug
+# BUILD SUCCESSFUL in 50s
+adb install -r app/build/outputs/apk/debug/Sukinnect-1.1-debug.apk
+```
+
+There is **no gradle wrapper in this project** — no `gradlew`, no `gradle/wrapper/` — so the build
+depends on whatever Gradle happens to be installed. It was run here with the 8.14.3 distribution
+already in `~/.gradle`, which is the version the project's `.gradle/` directory was written by. A
+fresh machine with Android Studio may resolve a different one. Adding the wrapper would make this
+reproducible; that is a change to the untracked project, so it is flagged rather than done.
+
+What was verified about the artifact, not assumed:
+
+| Check | Result |
+|---|---|
+| `:app:assembleDebug` | **BUILD SUCCESSFUL**, 34 tasks |
+| `assets/Sukinnect.html` inside the APK | **byte-identical to the current `Sukinnect-next.html`** (719,156 bytes, md5 `85cbd81f…`) — and *not* to `Sukinnect.html` |
+| The weighing step in that HTML | present (`finaliseProduce`) |
+| The Back handles in that HTML | present (`syncBackHandles`) |
+| The file chooser in `classes.dex` | `setWebChromeClient`, `onShowFileChooser`, `onReceiveValue`, "Choose a photo" all found |
+| Repo pollution | none — `Sukinnect-Android/` is gitignored, `git status` stayed clean |
+
+One expected warning, not introduced here: `onBackPressed` is deprecated since API 33. It still
+works at `targetSdk 34`; Android's predictive back will want `OnBackInvokedCallback` eventually,
+and that needs `androidx.activity`, which this shell deliberately does not use.
+
 ## What was settled before the phone
 
 A pre-pass ran on 2026-10-07 with the instruments in this repo — headless Chrome at a phone

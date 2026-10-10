@@ -998,6 +998,18 @@ and the design findings §22 lists as deliberately unapplied — the provider li
 primary buttons, the pills that look tappable, the nested cards, the prose-heavy screens — remain
 open by choice, not by oversight.
 
+**Then the shell was actually built.** The file chooser had been compile-checked with `javac`
+against `android.jar`, which proves the syntax and nothing else. A real `:app:assembleDebug` with
+the cached Gradle 8.14.3 finished in 50 seconds, and the artifact was then opened rather than
+trusted: the `assets/Sukinnect.html` inside it is byte-identical to the current rebuild (so the
+phone will run the weighing step and the Back handles, both confirmed present in that copy), it is
+*not* the shipped file, and `classes.dex` carries `setWebChromeClient`, `onShowFileChooser`,
+`onReceiveValue` and the chooser's own label. The build left no repo files, because
+`Sukinnect-Android/` is gitignored — which is also the reason the project has no gradle wrapper:
+nothing inside that directory is versioned, so nothing was ever forced to become reproducible. The
+build recipe, the wrapper gap and the expected `onBackPressed` deprecation are recorded in
+`DEVICE-PASS.md`. The remaining step needs a phone; everything that did not, now has been done.
+
 ## Deliberately not done
 
 
