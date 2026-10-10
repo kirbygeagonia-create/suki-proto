@@ -1170,6 +1170,15 @@ glyph, which is the better design.
 under `prefers-reduced-motion`, 46 screens each, no console errors, no horizontal overflow, no
 broken images. `git diff --quiet origin/main -- Sukinnect.html` → the shipped file is untouched.
 
+**Where the evidence is, and how to get it back.** `.shots-before/` and `.shots-after/` hold all 46
+screens either side of this pass, and `.shots-compare/` holds labelled before|after stitches of
+Resident Home, the provider dashboard and the admin console. All three are gitignored, so they are
+scratch: they exist on the machine that made them and nowhere else. The "before" set was rebuilt by
+checking out `6f9bf45` — the last commit before this brief — capturing it, and restoring `HEAD`, so
+it is the real prior state rather than a description of it. Reproduce any of it with
+`node tools/shot.cjs --measure --out=.shots-after` and, for the pair,
+`git checkout 6f9bf45 -- Sukinnect-next.html fonts/` before capturing `.shots-before`.
+
 ## Deliberately not done
 
 
