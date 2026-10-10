@@ -911,6 +911,61 @@ shell is a real decision and is recorded as one, not made sideways.
 Gate **393 checks**; instrument all eleven tallies at zero across **46 screens** at 360×640;
 `Sukinnect.html` still byte-identical to `main`.
 
+## 22. A design audit, and the difference between consistent and correct
+
+All 46 screens were shot fresh at 390×844 and counted in the painted DOM — gradients per screen,
+card kinds, chip and stat density, button roles, logo uses, prose weight, service-colour
+saturation — and then read. The instrument has measured this app's legibility for a while and
+reports zero on everything it can see, so this pass was about the things it cannot: whether the
+design has a hierarchy, whether it repeats itself, and whether the documentation still describes
+it.
+
+**What holds up, with numbers.** 85 gradients across 46 screens, and exactly **one of them is on
+a card** — §32's discipline is real, not asserted. The logo appears 3 times in the whole app
+(splash and the two sign-in states) and nowhere else, which is what §10 asks. Zero emoji. Ten
+distinct painted font sizes, all on the scale. Home's 208 saturated non-blue accents are all tile
+artwork, which §45 sanctions and which reads as secondary because brand blue still owns the
+search button, the navigation and the progress rail.
+
+**Four objective defects, fixed.**
+
+- **The resident's booking detail hand-rolled a header the provider's screen got from a shared
+  helper.** Result: one screen, two names — `Booking Details` in Title Case on a `<div>`,
+  `Booking details` in an `<h1>` on the other side of the same booking. Migrated onto
+  `screenHeader()`, with the status chip moving into its `action` slot. Verified against a
+  screenshot: same gradient, same bar, one fewer way to be wrong.
+- **The receipt said "How it was paid · GCash (0912**\*\*6789)" three rows under "Held, not yet
+  paid."** Past tense for money that has only been authorised — the same class of defect §17 and
+  §19 chased down the produce row and the offer card, surviving here because no one had
+  photographed a held booking. The label now follows `isSettled()`: *Paid with* or *To be paid
+  with*, checked against both states of the demo data. The first attempt at the wording was
+  three characters longer than what it replaced and pushed both halves of the row onto two
+  lines, which a screenshot caught and the shorter label does not.
+- **The admin dashboard stated two of its own numbers twice.** "Cases open for review — 1" in the
+  queue and "Cases open — 1" in the stat grid; the same for applications. A check existed here
+  that enforced agreement between the two copies, and it is the wrong rule: a fact written twice
+  can only ever be consistent or contradictory, while a fact written once cannot be either. The
+  duplicate tiles are gone and the check now asserts the duplication cannot return. The heading
+  over them said "This week" above counts taken from every demo record with no date filter
+  anywhere, so it says what they are.
+- **The chat room had no heading**, and AGENTS.md §31 claimed every screen title was an `<h1>`.
+  That sentence has now been found false three separate times in three different numbers, so the
+  claim moved out of the prose and into the screens pass, which fails if any app screen paints
+  no `<h1>`.
+
+**What the audit found and did not touch, because it is judgment about a brand that is not
+mine.** The provider list renders four or five identical full-width primary buttons, so §70's
+pecking order collapses on the one screen with the most of them; Home's **Answer** and the list's
+**Normal** / **Credentials: Valid** are large pills that look tappable and are not, which is the
+same ambiguity from the other side; the booking detail is a card containing four cards; and five
+screens carry 275–390 words. Those are redesigns of screens already approved once, and one such
+"improvement" has been reverted before, so they are listed in this file rather than applied to
+it.
+
+Gate **394 checks**; the instrument adds a twelfth tally (form controls with no accessible name,
+and a separate informational count of placeholder-only names), both zero across 46 screens at
+360×640 and 390×844. `Sukinnect.html` still byte-identical to `main`.
+
 ## Deliberately not done
 
 

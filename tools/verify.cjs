@@ -167,6 +167,12 @@ suite('screens', async () => {
       const ho = (html.match(/<h[1-4]\b/g) || []).length;
       const hc = (html.match(/<\/h[1-4]>/g) || []).length;
       if (ho !== hc) broken.push(label() + '  headings unbalanced: ' + ho + ' against ' + hc);
+      /* AGENTS.md §31 has claimed "every screen title is an <h1>" while two screens
+         painted a bare <div> instead — the resident's booking detail and the chat room.
+         A claim about the structure of every screen belongs in the pass that visits every
+         screen, not in a paragraph that nobody re-measures. */
+      if (state.view === 'app' && !/<h1\b/.test(html))
+        broken.push(label() + '  paints no <h1> — nothing for a screen reader to navigate by');
     } catch (err) { broken.push(label() + '  throws ' + err.message); }
   }
   const SCREENS = [['resident', 'home'], ['resident', 'bookings'], ['resident', 'messages'],
@@ -1329,14 +1335,19 @@ suite('honesty', async () => {
     .map(([n, shown, , truth]) => n + ': list shows ' + shown + ' but the records hold ' + truth);
   c.check('the attention list counts from the records', disagreeing.length === 0, disagreeing.join(' | '));
 
-  const tileWrong = pairs.filter(([, , alsoShown, truth]) => alsoShown !== null && alsoShown !== truth)
-    .map(([n, , alsoShown, truth]) => n + ': tile shows ' + alsoShown + ' against ' + truth);
-  c.check('and the stat tiles agree with it', tileWrong.length === 0, tileWrong.join(' | '));
-
-  c.check('both places were actually found to compare',
-    pairs.every(([n, shown, also, truth]) => shown !== null && (also !== null || n === 'credentials')) &&
+  /* The stat grid used to repeat two of the queue's numbers to the digit, and the check
+     here enforced agreement between the two copies. That was the weaker rule: a dashboard
+     that states one fact twice can only ever be consistent or contradictory, while a
+     dashboard that states it once cannot. So the tiles are gone and this asserts the
+     duplication cannot come back. */
+  c.check('the attention queue is the only place those counts appear',
+    said(/(\d+)\s+Applications to review/i) === null &&
+    said(/(\d+)\s+Cases open(?!\s+for)/i) === null,
+    'the stat grid repeats a count the queue already carries');
+  c.check('the queue numbers were actually found to compare',
+    pairs.every(([, shown]) => shown !== null) &&
     pairs.every(([, , , truth]) => Number.isInteger(truth)),
-    pairs.map(([n, shown, also]) => n + '=' + shown + '/' + also).join(', '));
+    pairs.map(([n, shown]) => n + '=' + shown).join(', '));
 
   /* The analytics card was the last screen typing its own percentages: 82%, 68% and
      74% in the markup, the third of them contradicted two tiles above it (one case
@@ -1376,6 +1387,20 @@ suite('honesty', async () => {
   c.check('no percentage on the dashboard is a literal in the markup',
     !/<b>\d{1,3}%<\/b>/.test(app._source.slice(app._source.indexOf('function adminDashboard'),
       app._source.indexOf('function adminDashboard') + 24000)));
+
+  /* Found by looking at a screenshot of a held booking, not by a rule anyone had
+     written: the receipt said "How it was paid · GCash (0912***6789)" three rows under
+     "Held, not yet paid". The tense now follows the ledger, so a receipt cannot report a
+     payment the platform has only authorised. */
+  c.check('a receipt states the tense of its money from the ledger', (() => {
+    const v = boot();
+    const held = v.receiptCard(v.bookingById('b2'));
+    const paid = v.receiptCard(v.bookingById('b3'));
+    return !v.isSettled(v.bookingById('b2')) && /To be paid with/.test(held) &&
+      !/>\s*Paid with\s*</.test(held) &&
+      v.isSettled(v.bookingById('b3')) && /Paid with/.test(paid) &&
+      !/To be paid with/.test(paid);
+  })(), 'a held payment was described in the past tense');
 
   return c;
 });

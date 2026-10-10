@@ -1193,7 +1193,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     (#1a1a1a, #171717) and its signal bars, and a good many `#fff`. Untouched by
                     the rebuild; still byte-identical to main, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 9,745 lines, ONE :root block, 1,684 var() usages, 93 tokens declared with 88
+Sukinnect-next.html— 9,754 lines, ONE :root block, 1,681 var() usages, 93 tokens declared with 88
                     of them reached. Thirty-nine hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fifteen
                     are `#fff` in the category artwork (SVG highlights, which have no token to
@@ -1214,11 +1214,16 @@ Sukinnect-next.html— 9,745 lines, ONE :root block, 1,684 var() usages, 93 toke
                     --device-signal. Type is fully on the scale: of the 108 `font-size`
                     declarations in the stylesheet, 107 take a var(), none is a literal px,
                     and the 108th is `inherit` — the reset that lets an <h1> sit in a flex bar
-                    as the div it replaced. The 393 `font-size` declarations inside markup's
-                    inline styles all take a var() too. Every screen title is now an <h1> and
-                    every sheet title an <h2> — 21 and 6, the sixth being the weighing sheet —
-                    because a 46-screen app with no headings has no outline for a screen
-                    reader to navigate.
+                    as the div it replaced. The 392 `font-size` declarations inside markup's
+                    inline styles all take a var() too. Every screen in the app now opens with
+                    an <h1> and every sheet with an <h2> — 22 and 6, the sixth being the weighing
+                    sheet — because a 46-screen app with no headings has no outline for a screen
+                    reader to navigate. This sentence was false when it was first written, and
+                    stayed false for two screens (the resident's booking detail hand-rolled a bare
+                    <div> where the provider's used the shared header, and the chat room titled
+                    itself with a name in a div): the screens pass in tools/verify.cjs now fails
+                    if any app screen paints no <h1>, so the claim is enforced rather than
+                    remembered.
 
 ICONS DIVERGE BETWEEN THE TWO FILES, and a reader should not mistake that for an accident.
 `Sukinnect.html` loads `reicon.js` (8 MB, Git LFS) and draws through its `<re-icon>` custom

@@ -45,7 +45,7 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   'finaliseProduceSheet', 'finaliseTotalsBlock', 'sheetHTML', 'finalInput', 'updateFinalTotals',
   /* the Back suite drives the app through its own navigation entry points, because a
      history handle is only worth testing if the step that created it is real */
-  'openSheet', 'closeSheet', 'openChatThread', 'stepBack', 'openLayers',
+  'openSheet', 'closeSheet', 'openChatThread', 'stepBack', 'openLayers', 'receiptCard',
   'openDispute', 'openCaseSheet', 'submitCase', 'raiseCaseSheet', 'caseDoor', 'caseActor',
   'PAY_METHODS', 'PAYMENT_LABELS', 'TRANSITIONS', 'providerIsFreeToAccept',
   /* the thread, and the verbs the provider's card offers */

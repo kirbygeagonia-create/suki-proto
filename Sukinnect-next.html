@@ -5726,7 +5726,11 @@ function receiptCard(b) {
          broke across two, so the figure and its percentage no longer read as one
          fact, and the long label pushed them both around. -->
       <div class="row"><span class="mut">Sukinnect fee <span class="mut">from their share</span></span><b class="mut" style="white-space:nowrap;">${peso(p.commissionCentavos)} · ${Math.round(p.commissionRate * 100)}%</b></div>
-      <div class="row"><span class="mut">How it was paid</span><b class="mut">${esc(payMethodLabel(b))}</b></div>
+      <!-- The tense follows the ledger, not the receipt's existence. A job whose money is
+           only authorised reads "Held, not yet paid" a few rows above this, and a line
+           saying "How it was paid" underneath it was the same defect §17 and §19 fixed on
+           other screens, surviving here because nothing photographed a held booking. -->
+      <div class="row"><span class="mut">${isSettled(b) ? 'Paid with' : 'To be paid with'}</span><b class="mut">${esc(payMethodLabel(b))}</b></div>
       ${cash ? `<div style="font-size:var(--t-caption); color:var(--mist); margin-top:6px; line-height:1.5;">
         Handed over on site — Sukinnect never held this money. Only our own fee can be reversed here; the visit itself is settled between you.</div>` : ''}
       ${rows.length ? `<div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--line); font-size:var(--t-caption); color:var(--mist); line-height:1.7;">
@@ -7391,7 +7395,7 @@ function residentChatRoom(){
       <button type="button" onclick="closeChatRoom()" class="back-btn" aria-label="Back to messages">${ic("chevron-left",18)}</button>
       ${isPro ? serviceAvatar(activeChat, 38, '') : photoAvatar('customer', 38)}
       <div style="min-width:0;">
-        <div class="chat-head-name">${esc(activeChat.name)}</div>
+        <h1 class="chat-head-name">${esc(activeChat.name)}</h1>
         <div class="chat-head-sub">
           ${isPro ? ic(activeChatService.icon,12) + ' Verified ' + esc(activeChat.service)
                   : ic('user',12) + ' Client · ' + esc(activeChat.barangay || 'no barangay on file')}
@@ -7501,13 +7505,14 @@ function residentBookingDetail(){
   const statusText = label(b.status).toUpperCase();
 
   return `
-  <div style="background:var(--grad-hero); color:var(--on-brand); padding:16px 18px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.1);">
-    <div style="display:flex; align-items:center; gap:10px;">
-      <button onclick="state.tab='bookings'; render();" class="back-btn" aria-label="Back to bookings">${ic("chevron-left",18)}</button>
-      <div style="font-family:'Fraunces',serif; font-size:var(--t-title); font-weight:600;">Booking Details</div>
-    </div>
-    <span style="background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.32); color:var(--on-brand); font-size:var(--t-caption); font-weight:800; padding:4px 12px; border-radius:999px; text-transform:uppercase; letter-spacing:0.5px;">${statusText}</span>
-  </div>
+  ${screenHeader('Booking details', {
+    back: "state.tab='bookings'; render();", backLabel: 'Back to bookings',
+    /* The status chip rides in the bar's action slot rather than the bar being
+       hand-rolled around it, so this screen and the provider's job screen — the same
+       booking seen from two sides — cannot drift in casing, in spacing, or in whether
+       the title is a heading at all. They had already done all three. */
+    action: `<span style="background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.32); color:var(--on-brand); font-size:var(--t-caption); font-weight:800; padding:4px 12px; border-radius:999px; text-transform:uppercase; letter-spacing:0.5px; flex-shrink:0;">${statusText}</span>`
+  })}
 
   <div class="pad" style="background:var(--cloud);">
     
@@ -7797,13 +7802,17 @@ function adminDashboard(){
       <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',14)}</span>
     </button>
 
-    <h3 style="font-size:var(--t-body); margin:20px 0 8px;">This week</h3>
+    <h3 style="font-size:var(--t-body); margin:20px 0 8px;">Roster and volume</h3>
     <div class="statgrid">
       <button type="button" class="stat" onclick="state.tab='admin_verifications'; state.adminProviderCategory='verified'; render();"><div class="num">${k.verified}</div><div class="lbl">Verified providers, demo roster</div></button>
       <button type="button" class="stat" onclick="state.tab='admin_dashboard'; state.adminScreen='intelligence'; render();" aria-label="Open marketplace intelligence, where the ${k.open} live bookings are counted"><div class="num">${k.open}</div><div class="lbl">Live bookings</div></button>
-      <button type="button" class="stat${k.pendingVerification ? ' tone-warn' : ''}" onclick="state.tab='admin_verifications'; state.adminProviderCategory='pending'; render();"><div class="num">${k.pendingVerification}</div><div class="lbl">Applications to review</div></button>
-      <button type="button" class="stat${k.liveCases ? ' tone-alert' : ''}" onclick="state.tab='admin_disputes'; render();"><div class="num">${k.liveCases}</div><div class="lbl">Cases open</div></button>
     </div>
+    <!-- Two tiles used to sit here repeating, to the digit, the two queue rows above
+         them: "Cases open 1" under "Cases open for review 1", and the same for
+         applications. A number shown twice is not emphasis, and §29 asks what each
+         statistic corresponds to — these corresponded to a row already on screen. The
+         heading said "This week" as well, over counts taken from every demo record with
+         no date filter anywhere, which is the same claim the caption below corrects. -->
     <div style="font-size:var(--t-caption); color:var(--mist); margin:6px 0 4px;">Counted from the demo records on this device — a sample marketplace, not a live one.</div>
 
     <div class="card" style="margin-top:14px">
