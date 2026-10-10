@@ -1,8 +1,11 @@
 # Sukinnect visual redesign plan — category art, iconography, data visualisation
 
-**Status: PROPOSAL. No application code has been modified.**
+**Status: P0 and P1 approved and IMPLEMENTED (2026-10-10). P2 approved in direction, not yet
+authorised. P3, P4 and D3 remain open.**
 Written 2026-10-10 against `SUKINNECT_GRAB_INSPIRED_VISUAL_REDESIGN_PROMPT.md`.
-Implementation begins only after the project owner approves a scope below.
+Owner's answers: implement **P0 + P1 first**; **refine** the scenes rather than redraw them;
+**compute** the weekly earnings series and let it be thin; **commit** the prompt-file swap.
+See CHANGES.md §24 for what landed and what the falsifiers proved.
 
 ---
 

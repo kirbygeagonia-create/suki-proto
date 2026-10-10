@@ -1010,7 +1010,84 @@ nothing inside that directory is versioned, so nothing was ever forced to become
 build recipe, the wrapper gap and the expected `onBackPressed` deprecation are recorded in
 `DEVICE-PASS.md`. The remaining step needs a phone; everything that did not, now has been done.
 
+## 24. The Grab-inspired brief, a plan first, and the two defects inside it
+
+`SUKINNECT_GRAB_INSPIRED_VISUAL_REDESIGN_PROMPT.md` arrived with an operating rule: investigate,
+write the proposal, stop. `SUKINNECT_VISUAL_REDESIGN_PLAN.md` is that proposal. The owner approved
+**P0 (static category art) and P1 (chart honesty)** and deferred the taste-sensitive phases. The
+brief's own baseline was checked rather than trusted, and one premise was already stale: it warned
+that the rebuild "should not need `reicon.js`", which it stopped needing in §20.
+
+### P0 — the artwork was moving
+
+A live `getComputedStyle` probe of the painted Resident Home reported **33 infinite animations**
+across the seven category tiles, three to four moving parts per tile. The prompt's non-negotiable
+rule was being broken on every open of the app's front door. Reduced motion already froze them
+(`iteration-count:1`, duration `1e-05s`), which is an escape hatch for people who ask for one — not
+a licence to move artwork for everyone else.
+
+The file had also been arguing with itself. `:355` said *"The category scenes move"* and `:393`,
+four declarations after the rules that make them move, said *"The scenes are still."* One of those
+sentences had been written and never reconciled with the other.
+
+Removed: 14 `@keyframes`, the 15 `.cat .ca-*` animation rules, the `transform-box` rule that existed
+only so a rotating drum would not orbit the tile, the 26 animation classes and 4 `animation-delay`
+styles inside `CAT_ART`, and every transform that moved the tile or its art — including the
+`.cat:hover .art{scale(1.08)}` and the pressed `scale(.96)`, which carry the illustration with them.
+The pressed state is now edge, shadow and fill. The `@media (hover:none)` block lost two selectors
+that had become dead.
+
+Freezing then exposed four marks whose only meaning had been movement, and they went with it: a
+twinkle that is now just a plus sign on the cleaning bottle, two dots that no longer rise off the
+tutoring page, speed lines behind a parcel that stays put, and a second ripple ring stacked exactly
+on the first. The grid reads cleaner than it did while animated — fewer parts, same information.
+
+Four gate checks, each proven by breaking its rule: **5/5 mutants applied and caught**. The camera
+gained a tally that counts moving category artwork in the painted page, because a source grep cannot
+distinguish a class with no rule from a rule with a typo. That tally reported **7** when an animation
+rule was deliberately re-added and **0** without it.
+
+### P1 — three charts were saying things no record says
+
+| Card | Was | Now |
+|---|---|---|
+| Weekly earnings | seven literal SVG points, a "+18% Growth" chip, a caption naming a ₱4,200 peak that appears nowhere in the drawing | eight real weeks summed from settled jobs, per-week values, the highest week labelled, a period on the chip |
+| Demand by barangay | literal pixel heights 45/90/60/30 — the tallest bar measures **40%** of the drawn total while the caption asserted **58%** | counted from `BOOKINGS` in a stated 30-day window, with the count beside every bar and the total beneath |
+| Where the earnings come from | a 65/20/15 donut of earnings by job type, and a booking carries no job type | deleted, not guessed at |
+| Client feedback | pinned to `p1` whoever was signed in, drawing a confident 100%-positive ring from **two** reviews | reads the signed-in provider; below a five-record floor it lists the reviews and says a sample that small is not a distribution |
+
+`MIN_SHARE_SAMPLE = 5` is the only new rule the app invents, and it invents it in the *restraining*
+direction. Neutral series stopped borrowing the semantic palette: green and amber meant success and
+warning on those cards only by accident.
+
+Six gate checks. **The first run of the falsifier caught 3 of 4 applied mutants**, and the one that
+escaped was the important one: the earnings reconciliation compared the helper against a filter
+identical to its own, so when the demo data happened to contain no job that was stamped complete but
+not settled, removing the status filter changed nothing the check could see. It now un-settles a
+stamped booking inside the test and requires the series to drop — a value on each side of the line.
+**6/6 mutants applied and caught** after that.
+
+### Verified
+
+`node tools/verify.cjs` → **404 checks passed** (394 before this work). `node tools/measure.cjs
+Sukinnect-next.html` → 9,768 lines, one `:root`, 1,683 `var()` uses. `node tools/shot.cjs --measure`
+→ 46 screens, no console errors, every defect tally 0 including the new motion tally.
+`git diff --quiet origin/main -- Sukinnect.html` → the shipped file is untouched. AGENTS.md §31 and
+§46 were corrected: §31 claimed the tiles "are drawn SVG with CSS motion", which is now a rule the
+gate enforces in the opposite direction.
+
+### Found and not fixed
+
+- Two demo records carry `barangay:'Barangay 4'`, so every screen that prefixes the value renders
+  **"Brgy. Barangay 4"**. A label defect in the data, not in the visual system, and outside the
+  approved scope. Flagged, not touched.
+- P2 (refine the seven scenes into one construction grammar), P3 (normalise nine icon sizes onto a
+  scale, and `aria-hidden` on `ic()`), and P4 (shared chart helpers) remain unapproved. The
+  direction for P2 is agreed; its execution changes how the app looks and needs a look at the
+  before/after grid first.
+
 ## Deliberately not done
+
 
 
 

@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 9,754 lines, ONE :root block, 1,681 var() usages, 93 tokens declared with 88
+Sukinnect-next.html— 9,768 lines, ONE :root block, 1,683 var() usages, 93 tokens declared with 88
                     of them reached. Thirty-nine hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fifteen
                     are `#fff` in the category artwork (SVG highlights, which have no token to
@@ -1257,7 +1257,10 @@ see a layout: `node tools/shot.cjs` drives the machine's own Chrome headless ove
 DevTools Protocol with no npm packages, and `--measure` runs an in-page instrument
 across all 46 screens for tap targets, WCAG contrast (sampling gradients at the text's
 own position), clipped text, off-scale fonts, content trapped under the nav, unnamed
-controls, escaping map panes, and anything painting over an open modal. A screenshot
+controls, escaping map panes, anything painting over an open modal, and whether any
+category artwork is moving in the painted page — which is the one thing a source grep
+cannot prove, because a class with no rule and a rule with a typo both read fine as text.
+A screenshot
 tool that navigates by assigning `state.*` measures a screen nobody can reach — the
 SCREENS table walks the app's real entry points for that reason. The same trap has a
 second form: a setup script that moves the *model* without moving the *field* photographs
@@ -1268,7 +1271,7 @@ in the entry or the picture is of the wrong card.
 
 An animated-illustration pipeline (Lottie) was installed here and then removed again:
 it added 305KB that animated nothing, because the professional artwork it was built for
-never arrived. The category tiles are drawn SVG with CSS motion.
+never arrived. The category tiles are drawn SVG, and they are static: see §46.
 
 The legacy teal and gold values survive only as documented aliases (--ink, --deep,
 --gold, --verified) so existing call sites resolve to the new palette. The two tokens
@@ -1667,6 +1670,23 @@ Use the Sukinnect brand palette for:
 ---
 
 # 46. CURRENT MOTION PRINCIPLES
+
+SERVICE-CATEGORY ILLUSTRATIONS NEVER MOVE. This is an explicit project-owner rule and
+it overrides any contrary guidance elsewhere in this file, in old prompts, or in CSS
+that still exists. No CSS `animation`, no SVG `<animate>`, no JavaScript loop, no
+hover or pressed transform on the tile or on anything inside its artwork, and no
+animated shadow or highlight. Dimension is achieved with layered shapes, restrained
+gradients, fixed highlights and contact shadows. The rule holds whether or not the
+device asks for reduced motion — reduced motion is an escape hatch for people who want
+it, not a reason to move artwork for everyone else.
+
+Three checks enforce it: the gate fails on any `.cat` rule carrying `animation` or
+`transform`, on any `@keyframes ca*`, and on any artwork shape carrying an animation
+class; the camera counts moving category nodes in the painted page across all screens.
+The file once ran 33 infinite animations over the seven tiles while two adjacent
+comments disagreed about whether the scenes moved at all.
+
+Everything else in this section still applies to non-category motion.
 
 The existing prototype already includes deliberate work to avoid:
 - white flashes
