@@ -730,13 +730,18 @@ async function main() {
       await sleep(120);
       /* Say what was actually photographed. A filename is a claim about the pixels
          in it, and without this the tool can silently shoot the wrong screen.
-         querySelector returns the first match in DOCUMENT order, not in the order
-         of the selector list, so the layers are asked one at a time instead: a
-         sheet or dialog on top outranks the screen behind it. */
+         querySelector returns the first match in DOCUMENT order, not in the order of
+         the selector list, so the layers are asked one at a time: a sheet on top
+         outranks the screen behind it. The last two fallbacks exist because the root
+         tabs carry a bare <h1> with no class on it — the resident's name, not a page
+         heading — so the tool printed "(untitled)" over a screen that does have a
+         title, and a column of lies teaches you to stop reading the column.
+         "(untitled)" now means genuinely no heading was found. */
       const seen = await session.evaluate(`(function(){
          const t = document.querySelector('.sheet .sheet-title') || document.querySelector('.chat-head-name') ||
                    document.querySelector('.auth-sheet .auth-wordmark') || document.querySelector('#screen .topbar .title') ||
-                   document.querySelector('#screen .card-title');
+                   document.querySelector('#screen .card-title') || document.querySelector('#screen h1') ||
+                   document.querySelector('#screen h2');
          const a = document.querySelector('.sheet, .auth-sheet, .chat-list');
          const el = a || document.getElementById('screen');
          return { title: t ? t.textContent.trim().replace(/\\s+/g,' ').slice(0,40) : '(untitled)',
