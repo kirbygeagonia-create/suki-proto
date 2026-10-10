@@ -960,6 +960,29 @@ suite('hygiene', async () => {
   /* retired markup should stay retired */
   c.check('no hidden cards are shipped', !/<div class="card" style="display:none;">/.test(body));
 
+  /* Category artwork is static by owner's rule, not by taste: the picture is what
+     tells a plumber from an electrician, and this app once ran 33 infinite
+     animations over the seven tiles. A CSS-only guard would not hold — the motion
+     lived in both the stylesheet and the markup, and the file also carried two
+     comments that disagreed about whether it moved. So all three ways it came back
+     are checked: the keyframes, the rules, and the classes on the shapes. */
+  const catRules = [...css.matchAll(/(\.cat[a-z-]*(?:[^{}]*))\{([^{}]*)\}/g)]
+    .map(m => ({ sel: m[1].replace(/\s+/g, ' ').trim(), decl: m[2] }))
+    .filter(r => /\.cat\b|\.cat\s|\.cat:|\.cat\./.test(r.sel));
+  const catAnimatedRules = catRules.filter(r => /animation|transform/.test(r.decl));
+  c.check('no category-tile rule animates or transforms', catAnimatedRules.length === 0,
+    catAnimatedRules.map(r => r.sel).join(' | '));
+  c.check('the category keyframes stay deleted', !/@keyframes ca[A-Z]/.test(css));
+  c.check('no artwork shape carries an animation class', !/class="ca-[a-z]/.test(body));
+  /* These four existed only to move. A twinkle that cannot twinkle is a plus sign,
+     speed lines behind a still parcel are three dashes, and a second ripple ring
+     stacked on the first is a doubled stroke. */
+  c.check('the motion-only marks were not restored',
+    !/M8 9v8M4 13h8/.test(body) && !/M2 17h6/.test(body) &&
+    !/<circle cx="28" cy="11" r="2\.6"/.test(body) &&
+    (body.match(/cx="35" cy="50" rx="7" ry="2"/g) || []).length === 1,
+    'twinkle cross, speed lines, page dots or a duplicate ripple has come back');
+
   /* The keyboard surface. Each of these was true-once-and-broke: a focus ring that
      named seventeen classes left every later control invisible, two fields set
      outline:none inline where no rule could reach them, and one booking card was a

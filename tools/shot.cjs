@@ -62,7 +62,7 @@ const PROBE = flag('probe', '');
    what a real browser actually laid out.
    -------------------------------------------------------------------------------- */
 const AUDIT_JS = `(function(){
-  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], contrast: [], overlaps: [], stretched: [], vendor: [], mapEscape: [], occluded: [], nameless: [], placeholderOnly: [], hOverflow: 0 };
+  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], contrast: [], overlaps: [], stretched: [], vendor: [], mapEscape: [], occluded: [], nameless: [], placeholderOnly: [], catMotion: [], hOverflow: 0 };
   const vw = document.documentElement.clientWidth;
   out.hOverflow = document.documentElement.scrollWidth - vw;
   const TAP = 44;
@@ -120,6 +120,22 @@ const AUDIT_JS = `(function(){
       '.' + (((el.className || '').toString().split(' ')[0]) || '-')).slice(0, 46);
     if (!named && el.placeholder) out.placeholderOnly.push({ field: who, hint: el.placeholder.slice(0, 32) });
     else if (!named) out.nameless.push({ field: who });
+  });
+
+  /* Category artwork must be still — an owner's rule, and the one thing a source
+     grep cannot prove: a class with no rule, or a rule with a typo, both read fine
+     in text. Ask the painted page instead. A reduced-motion page reports a duration
+     of 1e-05s and one iteration, which is the app honouring a preference, so only a
+     loop that actually runs counts as motion. */
+  document.querySelectorAll('.cat, .cat *').forEach(el => {
+    const s = getComputedStyle(el);
+    const runs = s.animationName && s.animationName !== 'none' &&
+      parseFloat(s.animationDuration) > 0.01 && s.animationIterationCount !== '1';
+    const moves = /transform/.test(s.transitionProperty || '') && parseFloat(s.transitionDuration) > 0.01;
+    if (runs || moves) {
+      out.catMotion.push({ what: (el.getAttribute('class') || el.tagName) +
+        (runs ? ' animation:' + s.animationName : '') + (moves ? ' transition:transform' : '') });
+    }
   });
 
   /* Anything the nav actually traps. Content sliding under a glass bar while you
@@ -809,6 +825,7 @@ async function main() {
     tally(str, 'images drawn out of proportion', r => r.screen + '  ' + r.src + ' natural ' + r.natural + ' drawn ' + r.drawn);
     tally(flat('mapEscape'), 'map panes painted outside their own frame', r => r.screen + '  ' + r.what + ' — ' + r.why);
     tally(flat('occluded'), 'something painting on top of an open modal layer', r => r.screen + '  ' + r.what + ' at sample ' + r.at);
+    tally(flat('catMotion'), 'category artwork moving in the painted page', r => r.screen + '  ' + r.what);
     const vend = flat('vendor');
     console.log('\nvendor-owned controls excluded (Leaflet attribution + markers, not ours to resize): ' +
       vend.length + (vend.length ? '  e.g. ' + [...new Set(vend.map(r => r.what || 'unlabelled <img>'))].slice(0, 4).join(' | ') : ''));
