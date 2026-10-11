@@ -1274,9 +1274,11 @@ And a third form, found on 2026-10-10: **a screen can be missing from the table 
 The admin's fourth nav item is "Account", it dispatches through the same `tab='profile'`
 branch the other two roles use, and it had never been photographed or measured — the
 "46 screens" figure was accurate and complete for everything except the one screen that
-held the admin's editable name, phone and office. It is `admin-account` now, and the count
-is 47. A table of entry points is only as good as its coverage, so when a role gains a
-destination the table has to gain it in the same change.
+held the admin's editable name, phone and office. It is `admin-account` now — the count went 46 →
+47, and to 49 when two profile modules were added after the resident-history pass found that no
+sheet reached through `openProfileSection` had ever been photographed either. A table of entry
+points is only as good as its coverage, so when a role gains a destination the table has to gain
+it in the same change.
 
 TYPED TEXT NEVER BECOMES MARKUP, and the gate enforces it rather than remembering it.
 `esc()` covers `& < > " '`; `jsStr()` exists for the one context `esc()` cannot serve —

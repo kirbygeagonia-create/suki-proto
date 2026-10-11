@@ -1547,4 +1547,14 @@ confirmed through `aapt dump badging`, embedded page `cmp`-identical to source. 
 not touched, so 449/449 still passes and the 49-screen sweep is unchanged. `Sukinnect.html`
 remains identical to `origin/main`.
 
+**The fourth decision — Resident Home — was chosen, measured, and then reversed on the
+measurement.** The owner picked "grid above the status cards", the reorder declined in §26. Before
+inverting a documented design rationale, `tools/probe-home-order.js` measured what the reorder
+would actually change: the grid **already** rises when nothing is live, `gridTop` 605 → 421 with
+three tiles fully on screen instead of zero. So the change would only affect the case where a job
+**is** in motion — the case the comment above that markup exists to serve, "a job in motion is the
+reason the app was opened". Put back with those numbers, the decision became: leave the order
+alone. Worth recording as the one place this session where an approved change turned out to be
+aimed at a problem the code already solved, and the cost of checking was one probe.
+
 
