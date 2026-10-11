@@ -1179,6 +1179,45 @@ it is the real prior state rather than a description of it. Reproduce any of it 
 `node tools/shot.cjs --measure --out=.shots-after` and, for the pair,
 `git checkout 6f9bf45 -- Sukinnect-next.html fonts/` before capturing `.shots-before`.
 
+## 26. Post-corrective audit: a floor the charts were breaking, and a fold the type pass had cost
+
+A fresh audit of the state §25 shipped, since that pass replaced the artwork, the whole type scale
+and every chart at once. Two defects, one of them mine and one of them an instrument blind spot.
+
+**The 14px floor did not apply inside charts.** SVG text is drawn in viewBox units and scaled to the
+element's width, so a chart declaring 14px *paints* 13.3px on a 360px phone. Every HTML string had
+been moved above the floor while every chart label sat below it, and the off-scale-font check could
+not see this because it reads computed style, which always reports the declared value. Chart text
+now declares 15 units and the svg is capped at its viewBox width so it never upscales: 14.3px at
+360, 15px above that. The camera gained a tally that computes `declared × (rendered width / viewBox
+width)` for every `<text>` — it reports 10 when the old size goes back and 0 with the fix.
+
+**The type pass had pushed the category grid entirely off screen.** Measured against the bottom nav,
+not the viewport edge, at 390×640: before any of this the grid started at y=510 with three tiles
+peeking above the nav; after §25 it started at 585 with **zero visible** — the app's main discovery
+affordance required a scroll on every phone shorter than 844px. The brief had explicitly warned
+against this. Whitespace tightening alone recovered 13px of the 88, so the owner chose to compact
+the two status cards rather than reorder the screen or shrink the art.
+
+Active booking and Needs your answer are now one `.homerow` each — avatar, title, sub-line, status
+chip — with the stage dots and payment chip on their own line, and the next-step sentence dropped
+from the card. The grid top went from 585 to **487**, which is 23px higher than the original, and
+three tiles peek above the nav again. A fully visible row at 360/390 was never true on this app and
+is not claimed; that would need the reorder that was declined.
+
+Two bugs the compaction itself introduced, caught by looking at the render rather than at the diff:
+single-line ellipsis truncation was severe enough that "Kitchen faucet keeps leaking" read as
+"Kitchen faucet keep…" and looked broken, so the title now clamps to two lines; and the stage dots
+disappeared entirely, because their spans are `flex:1` inside a `.mini-steps` that had become a
+flex item with no basis and was collapsing to zero width — it now gets `flex:1 1 96px`.
+
+Left alone by choice: `trending-up` and `pie-chart` remain drawn but unreachable, per the owner's
+answer — they are not being re-added as decoration to satisfy a coverage count.
+
+`node tools/verify.cjs` → **415 checks**. Sweeps clean at 360×640, 390×844 and 412×915 and under
+reduced motion: no clipped text, no tap targets under 44px, nothing under the nav, no horizontal
+overflow, no broken images, no chart text under the floor.
+
 ## Deliberately not done
 
 
