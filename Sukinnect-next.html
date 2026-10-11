@@ -203,14 +203,14 @@
      scroller has to end above it. Screens used to hand-write `padding-bottom:40px`
      — less than the bar — which is how a real control (the case button, a profile
      row, a config field) could end up permanently behind the nav. */
-  .pad{ padding:14px 14px calc(var(--nav-h) + var(--s-7) + var(--sab)); }
+  .pad{ padding:12px 14px calc(var(--nav-h) + var(--s-7) + var(--sab)); }
   /* Screens that end in a sticky action bar need the bar cleared as well — 62px
      of nav plus a 50px call-to-action, which is what two screens were hand-tuning
      as 80px and 130px. */
   .pad-cta{ padding-bottom:calc(var(--nav-h) + var(--cta-h) + var(--s-7) + var(--sab)); }
   .card{
     background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md);
-    padding:12px 13px; margin-bottom:10px;
+    padding:11px 13px; margin-bottom:8px;
   }
   /* Sixteen cards typed the same three declarations over .card. The radius was
      already var(--r-md) and the border already var(--line) — so this is the card,
@@ -274,7 +274,7 @@
   .card-body{ font-size:var(--t-body); line-height:1.8; margin-top:9px; }
   .section-label{
     font-size:var(--t-caption); font-weight:800; color:var(--mist);
-    margin:18px 0 8px;
+    margin:14px 0 7px;
   }
   .modal-layer{
     position:fixed; inset:0; background:var(--scrim); z-index:50;
@@ -4034,7 +4034,7 @@ const CHART_PAD = { l: 44, r: 10, t: 14, b: 34 };
 /* SVG text is drawn in viewBox units, so a "10" here would render at ~10px on a
    390px phone — under the 14px floor the rest of the app was just moved to, and the
    instrument reports it as off-scale. 14 units is the floor at this box width. */
-const CHART_FONT = 14;
+const CHART_FONT = 15;
 
 /* Round an axis up to a readable step. Count data gets whole ticks: the first
    version drew 0 / 0.75 / 1 on a chart of bookings per day, which is an axis that
@@ -4094,7 +4094,7 @@ function chartColumns(rows, opts) {
       (topVal > 0 ? `<text x="${(x + bw / 2).toFixed(1)}" y="${(topY - 5).toFixed(1)}" text-anchor="middle" font-size="${CHART_FONT}" font-weight="700" fill="var(--ink)">${esc(fmt(topVal))}</text>` : '') +
       (i % stride === 0 ? `<text x="${(x + bw / 2).toFixed(1)}" y="${h - 12}" text-anchor="middle" font-size="${CHART_FONT}" fill="var(--mist)">${esc(r.label)}</text>` : '');
   }).join('');
-  return `<svg viewBox="0 0 ${CHART_W} ${h}" width="100%" height="${h}" role="img" aria-label="${esc(o.aria || chartSummary(rows, fmt))}" preserveAspectRatio="xMidYMid meet">${grid}${bars}</svg>` +
+  return `<svg viewBox="0 0 ${CHART_W} ${h}" width="100%" style="max-width:${CHART_W}px" height="${h}" role="img" aria-label="${esc(o.aria || chartSummary(rows, fmt))}" preserveAspectRatio="xMidYMid meet">${grid}${bars}</svg>` +
     chartSrSummary(rows, fmt);
 }
 

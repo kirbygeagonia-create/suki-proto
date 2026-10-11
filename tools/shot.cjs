@@ -62,7 +62,7 @@ const PROBE = flag('probe', '');
    what a real browser actually laid out.
    -------------------------------------------------------------------------------- */
 const AUDIT_JS = `(function(){
-  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], contrast: [], overlaps: [], stretched: [], broken: [], remote: [], vendor: [], mapEscape: [], occluded: [], nameless: [], placeholderOnly: [], catMotion: [], hOverflow: 0 };
+  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], contrast: [], overlaps: [], stretched: [], broken: [], remote: [], svgSmall: [], vendor: [], mapEscape: [], occluded: [], nameless: [], placeholderOnly: [], catMotion: [], hOverflow: 0 };
   const vw = document.documentElement.clientWidth;
   out.hOverflow = document.documentElement.scrollWidth - vw;
   const TAP = 44;
@@ -136,6 +136,22 @@ const AUDIT_JS = `(function(){
       out.catMotion.push({ what: (el.getAttribute('class') || el.tagName) +
         (runs ? ' animation:' + s.animationName : '') + (moves ? ' transition:transform' : '') });
     }
+  });
+
+  /* SVG text is drawn in viewBox units and then scaled to the element's width, so a
+     chart that declares 15px can PAINT 13.3px on a narrow phone. The off-scale-font
+     check above reads computed style, which always reports the declared value — it
+     could not see this, and the app's own 14px floor was quietly broken inside every
+     chart for a whole pass before a probe caught it. */
+  document.querySelectorAll('svg text').forEach(t => {
+    const host = t.ownerSVGElement; if (!host) return;
+    const vb = host.viewBox && host.viewBox.baseVal; if (!vb || !vb.width) return;
+    const w = host.getBoundingClientRect().width; if (!w) return;
+    const declared = parseFloat(t.getAttribute('font-size')) || parseFloat(getComputedStyle(t).fontSize);
+    if (!declared) return;
+    const rendered = Math.round(declared * (w / vb.width) * 10) / 10;
+    if (rendered < 14) out.svgSmall.push({ text: (t.textContent || '').trim().slice(0, 16),
+      declared: declared, rendered: rendered, box: Math.round(w) });
   });
 
   /* Anything the nav actually traps. Content sliding under a glass bar while you
@@ -844,6 +860,7 @@ async function main() {
     tally(flat('catMotion'), 'category artwork moving in the painted page', r => r.screen + '  ' + r.what);
     tally(flat('broken'), 'images that asked for a file and got no pixels', r => r.screen + '  ' + r.src + ' — ' + r.why);
     tally(flat('remote'), 'requests that left the device for a network', r => r.screen + '  ' + r.kind + '  ' + r.url);
+    tally(flat('svgSmall'), 'chart text that paints below the 14px floor', r => r.screen + '  "' + r.text + '" declares ' + r.declared + 'px, paints ' + r.rendered + 'px');
     const vend = flat('vendor');
     console.log('\nvendor-owned controls excluded (Leaflet attribution + markers, not ours to resize): ' +
       vend.length + (vend.length ? '  e.g. ' + [...new Set(vend.map(r => r.what || 'unlabelled <img>'))].slice(0, 4).join(' | ') : ''));
