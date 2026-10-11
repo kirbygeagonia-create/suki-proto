@@ -57,9 +57,9 @@ What was verified about the artifact, not assumed:
 
 | Check | Result |
 |---|---|
-| `:app:assembleDebug` | **BUILD SUCCESSFUL**, 34 tasks. Output `Sukinnect-1.2-preview.2-debug.apk`, 4,588,944 bytes, `versionCode 4`, `versionName 1.2-preview.2` |
+| `:app:assembleDebug` | **BUILD SUCCESSFUL**. Output `Sukinnect-1.2-preview.3-debug.apk`, 4,591,128 bytes, `versionCode 5`, `versionName 1.2-preview.3` |
 | Launcher label | `aapt dump badging`: **'Sukinnect · preview'** on this debug APK, and still **'Sukinnect'** on the Oct-1 release APK — the override is debug-scoped, measured on both artifacts |
-| `assets/Sukinnect.html` inside the APK | `cmp` says **identical to `Sukinnect-next.html`** (715,877 bytes at the `.2` build) |
+| `assets/Sukinnect.html` inside the APK | `cmp` says **identical to `Sukinnect-next.html`** (721,990 bytes at the `.3` build) |
 | The seven category PNGs inside the APK | `cmp` says identical to `assets/category-art/*.png`, and they sit at `assets/assets/category-art/` because the WebView root mirrors the repo root |
 | The four Atkinson weights inside the APK | `cmp` says identical, and `unzip -v` says **Stored** — `noCompress 'woff2'` is doing its job |
 | Every path the bundled page asks for | `check-assets.cjs --apk`: **48 of 48 resolve** |
@@ -244,6 +244,15 @@ The instrument cannot emulate this at all: `shot.cjs` measures a viewport with n
 
 ## 4. Worth a look, not pass/fail
 
+- **Profile dates come from `toLocaleDateString('en-PH', …)`**, which is new since the last build
+  and is the one thing here that depends on the device's ICU data rather than the page. Open
+  Profile → Service History and Receipts on the phone: a finished job must read like
+  "Sep 7, 2026", not "2026-09-07", not "Sep 7, 2026 AD", and never blank. A blank there means the
+  locale tag is unsupported and the format should be pinned in the page instead of asked for.
+- The resident's "Account activity" tiles and the spending card now read **2 completed / ₱590
+  paid**, because they are computed from the bookings on the device. They are not wrong because
+  they differ from the old screenshot — the old numbers were invented. If a phone shows
+  different figures, that means its local storage holds different bookings, which is the point.
 - `reicon.js` (8.3 MB) is still bundled and the rebuild does not load it. Deleting it from
   `assets/` shrinks the APK; put it back before running the shipped file again.
 - The UI is one family everywhere: Atkinson Hyperlegible Next, with Plus Jakarta Sans behind

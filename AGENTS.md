@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 9,775 lines, ONE :root block, 1,663 var() usages, 94 tokens declared with 91
+Sukinnect-next.html— 9,935 lines, ONE :root block, 1,674 var() usages, 94 tokens declared with 91
                     of them reached. Twenty-five hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1293,6 +1293,21 @@ booking text had been escaped all along — and `node tools/probe-injection.js` 
 browser building real elements out of a name field on 5 of 5 cases before the fix and 0 of
 10 after, across all three roles. `node tools/falsify-escaping.cjs` proves the guards:
 6 mutants applied, 6 caught, against the 10 checks the pass added (415 → 425).
+
+THE APP HAS ONE HISTORY, AND IT IS THE RECORDS. The resident's profile modules used to carry a
+second one: a faucet job described as completed, rated five and paid ₱850 on September 12 when
+the same booking is ongoing, unrated and ₱365 with payment pending on the screen behind it, and a
+₱2,500 year-to-date across four trades where the records hold two finished jobs worth ₱590. The
+admin's provider-management profile had its own three invented bookings. `residentSectionBody`
+now derives from `residentFinished` / `residentPaid` / `bookingTotal` / `residentSpendByService` /
+`warrantyEndsAt`, and the checks that hold it in place do not compare helpers to each other: they
+void a payment *inside the test* and require the total to move by exactly that job's money, then
+render the module and require every `₱` figure in the markup to be one the records produce.
+`node tools/falsify-history.cjs` — 6 mutants applied, 6 caught (425 → 434). Two of those mutants
+were wrong first: dropping the pay-status filter does not put an unpaid booking on a receipt,
+because an *ongoing* job never reaches the finished set, and a mutant that renames a function
+fires every check except the one it was written for. Where a module has no record behind it —
+saved providers, maintenance reminders — it says so plainly rather than naming something.
 
 An animated-illustration pipeline (Lottie) was installed here and then removed again:
 it added 305KB that animated nothing, because the professional artwork it was built for

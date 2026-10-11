@@ -1659,6 +1659,75 @@ suite('honesty', async () => {
       app.chartScale(0).ticks.length === 2;
   })(), 'an integer series produced a fractional tick');
 
+  /* ── the resident's own history, read from the records ───────────────────────
+     These modules used to carry a parallel past: a faucet job described as completed, rated
+     five and paid on September 12 for ₱850, when the same booking is in progress, dated
+     Oct 11, priced ₱365 and unpaid — and a ₱2,500 year-to-date across four trades where the
+     records hold two finished jobs worth ₱590. §77 names this exactly: a receipt claiming
+     Paid on a transaction the app elsewhere shows as pending. §86 forbids presenting
+     invented figures as the person's own activity. */
+  const appSrc = require('fs').readFileSync(require('./harness.cjs').APP, 'utf8');
+  const retiredClaims = ['₱2,500', 'September 12, 2026', 'Kitchen Faucet Repair', 'Active until September 19',
+    'Due October 10', 'Air Conditioner Cleaning', 'Warranty active',
+    /* The same class in the admin's provider-management profile: three jobs this provider is
+       said to have completed that no record holds. Found only because the check written for
+       the resident copy happened to look for the phrase. */
+    'Pipe Leak Repair', 'Emergency Valve Repair'];
+  const stillThere = retiredClaims.filter(s => appSrc.includes(s));
+  c.check('the invented resident history is gone from the file', stillThere.length === 0, stillThere.join(' | '));
+
+  const finished = app.residentFinished();
+  const paid = app.residentPaid();
+  c.check('a receipt is only ever a finished job whose money changed hands', (() => {
+    const faucet = app.bookingById('b1');
+    return paid.length > 0
+      && paid.every(b => b.status === 'completed' && ['captured', 'collected'].includes(b.payStatus))
+      && finished.every(b => b.status === 'completed')
+      && !paid.includes(faucet) && faucet.status === 'ongoing';
+  })(), 'the receipt set drew from a booking that is not paid');
+
+  /* Reconciliation, not agreement by coincidence: stop one job being paid and the total has
+     to move by exactly that job's money. A card that typed its own figure would survive. */
+  const sumOf = list => list.reduce((s, b) => s + app.bookingTotal(b), 0);
+  const spendBefore = sumOf(app.residentPaid());
+  const b3 = app.bookingById('b3');
+  const wasPay = b3.payStatus;
+  b3.payStatus = 'voided';
+  const spendAfter = sumOf(app.residentPaid());
+  const splitAfter = app.residentSpendByService(app.residentPaid()).reduce((s, x) => s + x.centavos, 0);
+  b3.payStatus = wasPay;
+  c.check('the spending total follows the records when a job stops being paid',
+    spendAfter === spendBefore - app.bookingTotal(b3) && spendBefore !== spendAfter,
+    'before ' + spendBefore + ', after ' + spendAfter);
+  c.check('the per-trade breakdown adds back to the total it is shown under',
+    sumOf(app.residentPaid()) === app.residentSpendByService(app.residentPaid()).reduce((s, x) => s + x.centavos, 0)
+      && splitAfter === spendAfter,
+    'the split and the headline disagreed');
+
+  /* Helpers agreeing with the records is not the same claim as the card printing them. */
+  const spendingHtml = app.residentSectionBody('spending');
+  const derived = new Set([app.pesoShort(spendBefore)]
+    .concat(app.residentSpendByService(app.residentPaid()).map(x => app.pesoShort(x.centavos))));
+  const stray = [...new Set((spendingHtml.match(/₱[\d,]+/g) || []))].filter(m => !derived.has(m));
+  c.check('every peso figure on the spending card is one the records produce',
+    stray.length === 0 && derived.size > 0, 'stray: ' + stray.join(', '));
+
+  const receiptsHtml = app.residentSectionBody('receipts');
+  c.check('no receipt names a booking that has not been paid',
+    !receiptsHtml.includes(app.bookingById('b1').summary) && receiptsHtml.includes(app.bookingById('b3').summary),
+    'the faucet booking is ongoing and unpaid; it must not appear as a receipt');
+
+  c.check('the warranty window is computed, never typed', (() => {
+    const ends = app.warrantyEndsAt(b3).getTime();
+    const expected = Date.parse(b3.completedAt) + app.CONFIG.warrantyDays * 86400000;
+    return ends === expected;
+  })(), 'warrantyEndsAt did not equal completedAt + CONFIG.warrantyDays');
+
+  c.check('the saved module names no provider nobody saved',
+    /section === 'saved' \? emptyState\(/.test(appSrc), 'the saved section still asserts a list');
+  c.check('the payments module says the method is a label, not a linked account',
+    /not a linked account/.test(appSrc) && /No card or wallet number is stored/.test(appSrc));
+
   return c;
 });
 /* ══ 15. fruit — the pilot category, as the brief's checklist ═════════════════

@@ -1317,3 +1317,65 @@ reports `leaked: 0` on every screen — widening `esc()` to emit `&#39;` did not
 front of a reader. `Sukinnect.html` remains identical to `origin/main`
 (`git diff --quiet origin/main -- Sukinnect.html`).
 
+---
+
+## 28. The second audit: the app had two histories, and only one of them was true
+
+§77 and §86 were the last dimensions verified only by the existing `honesty` suite passing
+rather than re-audited figure by figure. They were worth the pass: the suite covers dashboards,
+charts, queues and receipts, and nothing at all covered **the profile modules in any role**.
+
+**The resident's profile carried a parallel past.** "Service History" named a *Kitchen Faucet
+Repair* as completed, rated five and paid on September 12 for ₱850. The booking it describes
+(b1) is **ongoing**, dated Oct 11, priced **₱365**, unrated, and its payment is `pending_site` —
+which the home screen says in the same tap. "Receipts & Transactions" repeated it as **Paid**.
+That is §77's named failure verbatim, on a financial record. "Spending Summary" totalled ₱2,500
+across Plumbing, Cleaning, Delivery and Electrical; the records hold **two** finished jobs worth
+**₱590** — Cleaning ₱515 and Delivery ₱75 — and **no completed plumbing or electrical work at
+all**, while silently dropping b6 (₱480, captured, disputed) so it was not even a consistent
+alternative definition. "Warranties & Disputes" showed a warranty on the invented job and **no
+word about the one case that is actually open** (DS-2026-0001, b6, ₱480). "Saved Providers"
+named a provider the resident cannot have saved — there is no saved-provider record anywhere in
+the app. "Maintenance Reminders" said *Air Conditioner Cleaning — Due October 10*, which is
+yesterday. And the hub's header tiles read **6 completed / ₱2,500 YTD** against a real 2 and
+₱590, under a heading that called them "Community activity".
+
+`residentSectionBody` now derives from the records: `residentFinished()`, `residentPaid()`,
+`bookingTotal()`, `residentSpendByService()`, `warrantyEndsAt()`. History and receipts list the
+two paid jobs with their real dates, providers, amounts, the resident's own ratings and
+`payStatusLabel` — one status copy, not a second one. Warranty shows the 7-day window computed
+from `completedAt + CONFIG.warrantyDays` and then the actual open case. Spending prints the
+derived total with its job count and per-trade split. Saved and reminders are honest empty
+states, and payments says plainly that the method is a label rather than a linked account, which
+is what §23 requires of anything that looks like a wallet.
+
+**A second invented history turned up in the admin role.** `adminProviderManagementProfile`'s
+"Recent bookings" listed three jobs — *Kitchen Faucet Repair – Ana D. – Sep 8 – ₱850 –
+Completed*, *Pipe Leak Repair*, *Emergency Valve Repair* — none of which any record holds. It
+was found **only because the check written for the resident copy happened to search the whole
+file for the phrase**. It now lists that provider's real bookings, newest first, with an empty
+state when there are none.
+
+**Nine checks added, 425 → 434**, and `tools/falsify-history.cjs` proves them: 6 mutants applied,
+6 caught. Two of the six were wrong before they were right, and both corrections were the gate's
+doing. Dropping the `payStatus` filter did not put an unpaid booking on a receipt — b1 is
+*ongoing*, so it never reaches the finished set — and it failed the reconciliation check instead;
+widening only the pay statuses then broke nothing at all for the same reason. A mutant that
+renames a function fires every check except the one it was written for, so the last one was
+re-cut to stop filtering on both axes.
+
+**The reconciliation checks are the part worth keeping.** `spendBefore` is computed, b3's payment
+is voided *inside the test*, and the total has to move by exactly that job's money — a card that
+typed its own figure would survive every other check and fail that one. And because helpers
+agreeing with the records is not the same claim as the page printing them, two checks render the
+module and read the money out of the markup: every `₱` figure on the spending card must be one
+the records produce, and no receipt may name the ongoing faucet job.
+
+Verified after: 434/434, 47 screens clean at 390×844 with 0 clipped text, 0 contrast failures, 0
+entity leaks and 18 sub-44px controls (unchanged), `probe-resident-modules.js` reporting
+`mismatch: none` with the painted total equal to the derived one, and the rebuilt
+`Sukinnect-1.2-preview.3-debug.apk` (4,591,128 bytes, `versionCode 5`) carrying a page `cmp` says
+is identical to the source. `:app:packageDebug` hit the stale `zip-cache` handle again; one retry
+cleared it, which is now what DEVICE-PASS.md says to do.
+
+
