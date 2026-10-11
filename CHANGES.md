@@ -1257,3 +1257,63 @@ overflow, no broken images, no chart text under the floor.
   marker, not a record.
 - **`Sukinnect.html` is still the shipped file,** and `Sukinnect-Android/app/src/main/assets/`
   still holds a separate copy. Promotion and re-syncing are a decision, not a step.
+
+---
+
+## 27. Full audit: typed text that became markup, and a screen no instrument had ever seen
+
+The brief was "check if there is more to address". The instruments said no: gate 415/415, and a
+camera sweep at 360×640, 390×844 and 412×915 reporting 0 contrast failures, 0 clipped text, 0
+broken images, 0 moving category artwork, 0 console errors, 9 painted font sizes all ≥14px and no
+horizontal overflow at any of the three. So the audit went to where the instruments are blind.
+
+**Typed text was becoming markup, in every role.** `esc()`'s own comment states the rule —
+"anything that came from the user is echoed back into the interface, so it stays data and never
+becomes markup" — and chat and booking text obey it. The profile objects never did.
+`tools/audit-escaping.cjs` resolves the writable fields from the page's own
+`X.field = el.value` assignments rather than from a list of names, then reads every interpolation
+with real brace matching: **45 sites painted a profile value raw**, 31 of them fields a keyboard
+can write, including `value="${rp.name}"` where a double quote escapes the attribute entirely.
+`settingsRow` was the worst of them: it carried a label through an inline `onclick` and defended
+it with `replace(/'/g,'&#39;')`, which does nothing about a double quote, and `&#39;` inside an
+attribute decodes back into the quote it was meant to stop.
+
+This was not left as a code-reading claim. `tools/probe-injection.js` puts a marker in each field,
+re-renders and counts elements the browser built out of it: **5 of 5 before the fix.** After:
+**0 of 10**, across resident, provider and admin. `esc()` now also covers `'`, and `jsStr()`
+handles the one context `esc()` cannot — text travelling into an inline handler, which is two
+languages at once. 415 → **425 checks**, and `tools/falsify-escaping.cjs` shows 6 mutants applied,
+6 caught. The first version of the check only knew the alias spelling `rp.x`; a mutant using
+`state.profileData.x` walked straight through it, which is how the direct read on the resident
+Home greeting — the most-seen line in the app — was found.
+
+**One mutant was wrong, not the guard.** It targeted `preferredPayment` and the gate stayed green,
+which reads exactly like a dead checker. It was not dead: that field is never assigned from an
+input, so it is outside the rule. Re-cut against a genuinely writable field, it was caught.
+
+**A screen had never been photographed.** The admin's fourth nav item is "Account", it dispatches
+through the same `tab='profile'` branch as the other two roles, and it was not in the SCREENS
+table. "46 screens" was true and complete for everything except the screen holding the admin's
+editable name, phone and office. It is `admin-account` now — 47 — and it measures clean: 0 small
+targets, 0 contrast failures, 0 unlabelled controls.
+
+**Two smaller things.** `.stars.on-dark .fill` painted #FFB800 at **3.14:1** on the header it
+actually sits on — over the 3:1 floor a graphic needs by 0.14 — while `--rating-on-dark` (#FFD25E,
+3.80:1) had been derived for that purpose and never referenced. Its comment said #FFB800 was "only
+4.1:1" on navy; on navy it measures **11.66:1**, so the note that justified the token described a
+problem that was never there. The token is wired in and the comment now says what measures true.
+And `--deep-700`, a legacy alias whose stated reason for existing was "so existing call sites
+resolve", had no call site; it is gone. `--info` stays declared and unused, because §31 mandates
+the token — the finding there is that no surface uses the info semantic, not that the token is
+wrong.
+
+**AGENTS.md §31 was caught doing the thing §31 warns about.** The passage that ends "the next
+reader should cite the tool rather than trust it" had three numbers out: 108 stylesheet
+`font-size`s (measured 116), 392 in markup (371), 40 reachable glyph names (38). All re-measured,
+and the tiles are now described as the seven PNGs they are rather than the inline SVG they were.
+
+Verified after the change: 425/425, all 47 screens clean at 390×844, and `tools/probe-entities.js`
+reports `leaked: 0` on every screen — widening `esc()` to emit `&#39;` did not put an entity in
+front of a reader. `Sukinnect.html` remains identical to `origin/main`
+(`git diff --quiet origin/main -- Sukinnect.html`).
+

@@ -546,6 +546,11 @@ const SCREENS = [
   ['admin-desk',       `state.view='app'; state.role='admin'; state.tab='admin_disputes'; render();`],
   ['admin-provider',   `state.view='app'; state.role='admin'; state.tab='admin_provider_profile';
                         state.selectedAdminProvider='p1'; state.adminProviderSection='overview'; render();`],
+  /* The admin's fourth nav item is "Account", and it renders adminProfile() through the same
+     tab='profile' dispatch the other two roles use. It sat out every camera run since the
+     table was written — 46 screens never included it — and it is the screen that holds the
+     admin's editable name, phone and office. */
+  ['admin-account',    `state.view='app'; state.role='admin'; state.tab='profile'; render();`],
   ['case-sheet',       `state.view='app'; state.role='resident'; state.tab='booking_detail';
                         const b=BOOKINGS.find(x=>x.status==='completed'&&x.pricing); b.completedAt=new Date().toISOString();
                         state.selectedBookingId=b.id; render(); openCaseSheet(b.id);`],

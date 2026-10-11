@@ -1194,12 +1194,12 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 9,764 lines, ONE :root block, 1,664 var() usages, 95 tokens declared with 90
-                    of them reached. Twenty-four hex-shaped strings sit outside :root, and the
+Sukinnect-next.html— 9,775 lines, ONE :root block, 1,663 var() usages, 94 tokens declared with 91
+                    of them reached. Twenty-five hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
                     (§45 — the seventh is Fruit Harvest & Buy); one is the <meta
-                    name="theme-color"> value, which cannot take a var(). The remaining nine are
+                    name="theme-color"> value, which cannot take a var(). The remaining ten are
                     printed line by line, because a comment quoting a measured brand value and a
                     hard-coded colour in markup are the same string to any scanner — and one of
                     them (`#8226`) is a booking id, not a colour at all. Fifteen `#fff` values that
@@ -1208,17 +1208,18 @@ Sukinnect-next.html— 9,764 lines, ONE :root block, 1,664 var() usages, 95 toke
                     quoted with its command: **`node tools/measure.cjs`**, which takes a file
                     argument and measures either one the same way. A number that has to be
                     re-derived by hand in prose drifts; this passage was three out when the tool
-                    was written, and the next reader should cite the tool rather than trust it.
+                    was written, three out again a week later while saying exactly that, and the
+                    next reader should cite the tool rather than trust it.
                     Everything that was a real violation is now a token: #fff became
                     --surface and --on-brand, the modal dim became --scrim, and the phone
                     mockup's bezel and signal bars became --device-bezel and
-                    --device-signal. Type is fully on the scale: of the 108 `font-size`
-                    declarations in the stylesheet, 107 take a var(), none is a literal px,
-                    and the 108th is `inherit` — the reset that lets an <h1> sit in a flex bar
-                    as the div it replaced. The 392 `font-size` declarations inside markup's
+                    --device-signal. Type is fully on the scale: of the 116 `font-size`
+                    declarations in the stylesheet, 115 take a var(), none is a literal px,
+                    and the 116th is `inherit` — the reset that lets an <h1> sit in a flex bar
+                    as the div it replaced. The 371 `font-size` declarations inside markup's
                     inline styles all take a var() too. Every screen in the app now opens with
                     an <h1> and every sheet with an <h2> — 22 and 6, the sixth being the weighing
-                    sheet — because a 46-screen app with no headings has no outline for a screen
+                    sheet — because a 47-screen app with no headings has no outline for a screen
                     reader to navigate. This sentence was false when it was first written, and
                     stayed false for two screens (the resident's booking detail hand-rolled a bare
                     <div> where the provider's used the shared header, and the chat room titled
@@ -1245,7 +1246,7 @@ file in this repository — the same normalisation silently applies to all of th
 ICONS DIVERGE BETWEEN THE TWO FILES, and a reader should not mistake that for an accident.
 `Sukinnect.html` loads `reicon.js` (8 MB, Git LFS) and draws through its `<re-icon>` custom
 element. `Sukinnect-next.html` loads nothing of the sort: 43 glyphs are drawn in the file, and
-every one of the 40 names the app can reach has one. Six of those (four trade icons and two
+every one of the 38 names the app can reach has one. Six of those (four trade icons and two
 empty states) lived only inside the library, and dropping it blanked them silently — a name
 carried by a data row is not an `ic('name')` in markup, so the check that watched for that
 missed them. They are drawn inline now, and the gate checks all three ways a name arrives. This
@@ -1255,7 +1256,7 @@ official mark is a PNG, not an icon, and it is still the only brand image on the
 The rebuild also added a real verification surface, because reading the file cannot
 see a layout: `node tools/shot.cjs` drives the machine's own Chrome headless over the
 DevTools Protocol with no npm packages, and `--measure` runs an in-page instrument
-across all 46 screens for tap targets, WCAG contrast (sampling gradients at the text's
+across all 47 screens for tap targets, WCAG contrast (sampling gradients at the text's
 own position), clipped text, off-scale fonts, content trapped under the nav, unnamed
 controls, escaping map panes, anything painting over an open modal, and whether any
 category artwork is moving in the painted page — which is the one thing a source grep
@@ -1269,9 +1270,34 @@ beside a total computed from 31 — the sheet updates only its totals on input, 
 harness has to type into the element. Anything below the fold needs a `scrollIntoView()`
 in the entry or the picture is of the wrong card.
 
+And a third form, found on 2026-10-10: **a screen can be missing from the table entirely.**
+The admin's fourth nav item is "Account", it dispatches through the same `tab='profile'`
+branch the other two roles use, and it had never been photographed or measured — the
+"46 screens" figure was accurate and complete for everything except the one screen that
+held the admin's editable name, phone and office. It is `admin-account` now, and the count
+is 47. A table of entry points is only as good as its coverage, so when a role gains a
+destination the table has to gain it in the same change.
+
+TYPED TEXT NEVER BECOMES MARKUP, and the gate enforces it rather than remembering it.
+`esc()` covers `& < > " '`; `jsStr()` exists for the one context `esc()` cannot serve —
+text carried into an inline `onclick`, where the attribute is HTML and what the browser
+hands the JavaScript parser after decoding it is a string literal, so quoting for HTML
+alone leaves a double quote that closes the attribute. `settingsRow` and `emptyState`
+escape what they paint, so a value passed to either is safe at the sink. The check that
+holds this together resolves the writable fields from the page's own
+`X.field = el.value` assignments and then reads every interpolation with real brace
+matching, because a list of field names goes stale the moment someone adds a field and a
+stale list reads as clean. It found 45 sites painting a profile value raw — every profile
+field in all three roles, 31 of them fields a keyboard can actually write, while chat and
+booking text had been escaped all along — and `node tools/probe-injection.js` showed the
+browser building real elements out of a name field on 5 of 5 cases before the fix and 0 of
+10 after, across all three roles. `node tools/falsify-escaping.cjs` proves the guards:
+6 mutants applied, 6 caught, against the 10 checks the pass added (415 → 425).
+
 An animated-illustration pipeline (Lottie) was installed here and then removed again:
 it added 305KB that animated nothing, because the professional artwork it was built for
-never arrived. The category tiles are drawn SVG, and they are static: see §46.
+never arrived. The category tiles are seven PNG files under `assets/category-art/`, and
+they are static: see §46.
 
 The legacy teal and gold values survive only as documented aliases (--ink, --deep,
 --gold, --verified) so existing call sites resolve to the new palette. The two tokens

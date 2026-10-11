@@ -932,6 +932,92 @@ suite('hygiene', async () => {
   c.check('no control claims success it does not deliver', congratulating.length === 0,
     congratulating.map(t => t.slice(0, 60)).join(' | '));
 
+  /* ── the escaping rule, pinned ─────────────────────────────────────────────
+     esc()'s own comment says anything from a keyboard stays data and never becomes markup.
+     That held for chat and booking text and never held for the profile objects: 44 sites
+     painted a persisted, typed value straight into markup, and tools/probe-injection.js
+     showed the browser building real elements out of a name field. A fix that is not pinned
+     is a fix that comes back the next time someone adds an editable field — which this app
+     does on purpose.
+
+     It resolves the aliases from the page's own `X.field = el.value` assignments rather than
+     from a list of field names, because a list goes stale the moment a field is added and a
+     stale list reads as clean. */
+  const writable = new Set();
+  for (const m of body.matchAll(/(state\.[A-Za-z]+)\.([A-Za-z_$][\w$]*)\s*=\s*[A-Za-z_$][\w$.]*\.value/g)) {
+    writable.add(m[1] + '.' + m[2]);
+  }
+  const pAlias = {};
+  for (const m of body.matchAll(/(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*(state\.[A-Za-z]+)\b/g)) {
+    if (!pAlias[m[1]]) pAlias[m[1]] = m[2];
+  }
+  /* The object path is itself a way to read the same field, and a page that mostly uses an
+     alias can gain one direct read at any time — so both spellings are prefixes to match. */
+  for (const target of new Set(Object.values(pAlias))) pAlias[target] = target;
+  c.check('the page declares fields a keyboard can write', writable.size >= 10, writable.size + ' found');
+
+  const SAFE_RETURN = ['esc', 'peso', 'pesoShort', 'rateLabel', 'label', 'chartSrSummary', 'Number', 'String', 'Math'];
+  const SAFE_SINK = ['settingsRow', 'row', 'emptyState'];
+  const untilMatch = (s, from, open, close) => {
+    let d = 0;
+    for (let i = from; i < s.length; i++) { if (s[i] === open) d++; else if (s[i] === close) { d--; if (!d) return i; } }
+    return s.length;
+  };
+  const guardedSpans = (expr) => {
+    const spans = [];
+    for (const f of [...SAFE_RETURN, ...SAFE_SINK]) {
+      let at = -1;
+      while ((at = expr.indexOf(f + '(', at + 1)) >= 0) {
+        if (at && /[\w$.]/.test(expr[at - 1])) continue;
+        spans.push([at, untilMatch(expr, at + f.length, '(', ')') + 1]);
+      }
+    }
+    return spans;
+  };
+  const leaks = [];
+  let paintedFields = 0;
+  for (let i = 0; i < body.length - 1; i++) {
+    if (body[i] !== '$' || body[i + 1] !== '{') continue;
+    const end = untilMatch(body, i + 1, '{', '}');
+    const expr = body.slice(i + 2, end);
+    const spans = guardedSpans(expr);
+    for (const [a, target] of Object.entries(pAlias)) {
+      const re = new RegExp('\\b' + a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\.([A-Za-z_$][\\w$]*)', 'g');
+      for (const m of expr.matchAll(re)) {
+        if (!writable.has(target + '.' + m[1])) continue;
+        paintedFields++;
+        if (!spans.some(([s, e]) => m.index >= s && m.index < e)) {
+          leaks.push(target + '.' + m[1] + ' at line ' + (body.slice(0, i).split('\n').length + (src.slice(0, src.indexOf('<script>')).split('\n').length)));
+        }
+      }
+    }
+    i = end;
+  }
+  c.check('no keyboard-writable field is painted without escaping', leaks.length === 0,
+    leaks.slice(0, 4).join(' | ') + ' (' + leaks.length + ' of ' + paintedFields + ')');
+  c.check('the rule has something to bite on', paintedFields >= 25, paintedFields + ' writable reads into markup');
+
+  /* esc() alone cannot serve an inline handler: the attribute is HTML and the decoded content
+     is a JavaScript string, so a double quote survives esc() and closes the attribute. */
+  c.check("esc() covers the apostrophe as well as the double quote",
+    /\[&<>"'\]/.test(body), 'character class not found');
+  c.check('settingsRow quotes its handler instead of patching quotes into it',
+    /function settingsRow[\s\S]{0,700}onclick="\$\{act\}"/.test(body) && /jsStr\(title\)/.test(body) && /jsStr\(detail\)/.test(body),
+    'act must be built from jsStr()');
+  c.check('settingsRow escapes what it paints',
+    /jr-t">\$\{esc\(title\)\}<[\s\S]{0,80}jr-s">\$\{esc\(detail\)\}/.test(body));
+  c.check('emptyState escapes the words it is handed',
+    /empty-title">\$\{esc\(title\)\}[\s\S]{0,60}empty-body">\$\{esc\(body\)\}/.test(body));
+  const jsStrBody = ((/function jsStr\(v\)\{([\s\S]{0,240}?)\n\}/.exec(body) || [, ''])[1]);
+  c.check('jsStr exists and escapes for both languages',
+    /JSON\.stringify/.test(jsStrBody) && /esc\(/.test(jsStrBody) && /replace\(\/'\/g/.test(jsStrBody),
+    jsStrBody.trim().slice(0, 90) || 'jsStr() not found');
+
+  /* A token derived for one surface and never wired in is a fix that was declared, not made. */
+  c.check('the on-dark rating uses the tint derived for it',
+    /\.stars\.on-dark \.fill\{ color:var\(--rating-on-dark\); \}/.test(css));
+  c.check('the legacy alias with no call site is gone', !/--deep-700/.test(css));
+
   /* The inline set is the only icon path the rebuild takes: a missing glyph is an
      empty square on every screen, with no custom element left to catch it. Names
      reach ic() three ways — written in markup, carried by a record, or passed to

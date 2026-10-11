@@ -57,14 +57,23 @@ What was verified about the artifact, not assumed:
 
 | Check | Result |
 |---|---|
-| `:app:assembleDebug` | **BUILD SUCCESSFUL**, 34 tasks. Output `Sukinnect-1.2-preview-debug.apk`, 4,588,572 bytes, `versionCode 3`, `versionName 1.2-preview` |
+| `:app:assembleDebug` | **BUILD SUCCESSFUL**, 34 tasks. Output `Sukinnect-1.2-preview.2-debug.apk`, 4,588,944 bytes, `versionCode 4`, `versionName 1.2-preview.2` |
 | Launcher label | `aapt dump badging`: **'Sukinnect · preview'** on this debug APK, and still **'Sukinnect'** on the Oct-1 release APK — the override is debug-scoped, measured on both artifacts |
-| `assets/Sukinnect.html` inside the APK | `cmp` says **identical to `Sukinnect-next.html`** (714,750 bytes) |
+| `assets/Sukinnect.html` inside the APK | `cmp` says **identical to `Sukinnect-next.html`** (715,877 bytes at the `.2` build) |
 | The seven category PNGs inside the APK | `cmp` says identical to `assets/category-art/*.png`, and they sit at `assets/assets/category-art/` because the WebView root mirrors the repo root |
 | The four Atkinson weights inside the APK | `cmp` says identical, and `unzip -v` says **Stored** — `noCompress 'woff2'` is doing its job |
 | Every path the bundled page asks for | `check-assets.cjs --apk`: **48 of 48 resolve** |
-| The bundled page, painted | `tools/shot.cjs --file=<the assets copy> --width=360 --height=640 --measure`: 46 screens, **0 images that got no pixels, 0 console errors**, 9 painted font sizes all ≥14px, 0 moving category artwork, and **every measured field equal to the same run against the repo source** |
+| The bundled page, painted | `tools/shot.cjs --file=<the assets copy> --width=360 --height=640 --measure`: 46 screens then, **47 now**, **0 images that got no pixels, 0 console errors**, 9 painted font sizes all ≥14px, 0 moving category artwork, and **every measured field equal to the same run against the repo source** |
 | Scratch left behind | none — the capture directories this pass wrote were deleted. The only tracked edits are `tools/shot.cjs` (the `--file=` flag) and this file |
+
+**Two build notes from 2026-10-10/11, both learned the hard way.** Rebuilding replaces the
+previous debug APK in place — `Sukinnect-1.1-debug.apk` and then `Sukinnect-1.2-preview-debug.apk`
+were each removed by the next build, so a bench that wants two builds side by side has to copy the
+first one out before making the second. And `:app:packageDebug` failed twice on a stale handle over
+`app/build/intermediates/incremental/packageDebug/tmp/debug/zip-cache` with **no Java process
+running** — the directory was empty, `rm -rf` on that one path cleared it, and the build succeeded
+afterwards. If that error appears, it is build scratch, not the project: delete the `tmp` directory
+rather than hunting for a process to kill.
 
 The painted-page row is what the `--file=` flag added to `tools/shot.cjs` exists for. The
 camera could previously photograph only `Sukinnect-next.html` at the repo root, where
@@ -205,6 +214,13 @@ The instrument cannot emulate this at all: `shot.cjs` measures a viewport with n
       keyboard come up?~~ **[settled]** every numeric field in the app carries `inputmode`; the
       instrument found none relying on a QWERTY pad. Still glance at it, but it is not open.
 - [ ] Close the keyboard. Does the screen land back where you were, or somewhere else?
+- [ ] **Type an apostrophe into your own name.** Profile → Edit profile → put `D'Amore` in Full
+      Name and save. It must read `D'Amore` on the home greeting, the profile card and the row
+      that opens the sheet — not `D&#39;Amore`, and not a name that has swallowed the words after
+      it. Chrome proves the escaping holds for a straight `'`; **a handset keyboard usually
+      inserts a typographic `’` instead**, and autocorrect may rewrite what you typed after the
+      first character. Do the same with a `"` in Home Address. This is the one place where the
+      device's own text handling can produce a character the browser tests never sent.
 
 ## 3. A slow device — 5 min
 
