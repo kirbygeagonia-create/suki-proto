@@ -29,7 +29,6 @@ const os = require('os');
 const { spawn } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
-const APP_FILE = path.join(ROOT, 'Sukinnect-next.html');
 
 const argv = process.argv.slice(2);
 const flag = (name, dflt) => {
@@ -37,6 +36,12 @@ const flag = (name, dflt) => {
   return hit ? hit.split('=')[1] : dflt;
 };
 const has = (name) => argv.includes('--' + name);
+
+/* --file lets the camera run against a *bundled* copy rather than the repo source.
+   The Android shell resolves every relative path against file:///android_asset/, so
+   the APK's page sits one layout deeper than the repo's — only photographing the
+   copy that actually ships can prove the images and fonts are where it will look. */
+const APP_FILE = path.resolve(ROOT, flag('file', 'Sukinnect-next.html'));
 
 const WIDTH = parseInt(flag('width', '390'), 10);
 const HEIGHT = parseInt(flag('height', '844'), 10);

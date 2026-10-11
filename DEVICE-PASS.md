@@ -1,42 +1,50 @@
 # Handset pass — the thing no browser check can prove
 
-The rebuild in `Sukinnect-next.html` has been rendered in Node (394 assertions), painted in
-real Chrome at 390×844 across 46 screens, and measured for tap targets, contrast, clipping and
-occlusion. None of that is a phone. Three categories are still unverified because no instrument
-can reach them: a thumb, an on-screen keyboard, and a slow device.
+The rebuild in `Sukinnect-next.html` has been rendered in Node (415 assertions), painted in
+real Chrome at 360×640 and 390×844 across 46 screens, and measured for tap targets, contrast,
+clipping and occlusion. None of that is a phone. Three categories are still unverified because no
+instrument can reach them: a thumb, an on-screen keyboard, and a slow device.
 
 **The Android assets copy is a third file, and `git status` cannot see it.**
 `Sukinnect-Android/app/src/main/assets/Sukinnect.html` is gitignored, so no working-tree check
-will ever tell you which build a device is about to run. It was synced to the current rebuild on
-2026-10-08; it drifts by design, so verify rather than trust this sentence. Run the comparison
-before you build:
+will ever tell you which build a device is about to run. It was re-synced to the current rebuild
+on 2026-10-10; it drifts by design, so verify rather than trust this sentence. Do not reach for
+`md5sum` against `git show` — `.gitattributes` stores LF and this machine checks out CRLF, so a
+hash comparison against a committed blob mismatches by design (see `AGENTS.md` §31). Between two
+files on disk a hash is fine, and there is now a tool that checks more than the one file:
 
 ```
-md5sum Sukinnect-next.html Sukinnect-Android/app/src/main/assets/Sukinnect.html
+node Sukinnect-Android/tools/check-assets.cjs            # the source tree
+node Sukinnect-Android/tools/check-assets.cjs --apk <file.apk>   # inside a built APK
 ```
 
-Two identical hashes means the device will run what you have been reading about. To put the
-shipped prototype back instead — which is what a customer-facing build should carry until the
-owner says otherwise:
+It reads every local path out of the bundled page — including the ones built by concatenation,
+like `avatars/avatar-` + `n`, which it expands against the loop's own bound — and fails on any
+that is not there. A missing PNG does not fail a Gradle build; it ships and the phone shows a
+blank tile, which is the failure this exists to catch. Its own checks were proved the usual way:
+`node Sukinnect-Android/tools/falsify-assets.cjs` mutates the bundle three ways and requires the
+checker to notice each time (3 mutants applied, 3 caught as of 2026-10-10).
 
-```
-cp Sukinnect.html Sukinnect-Android/app/src/main/assets/Sukinnect.html
-```
+**The first check on the device is the app-switcher title.** A debug install reads
+**"Sukinnect · preview"**; a release build still reads "Sukinnect". This is worth one line because
+it did not use to be true: this document told the reader to identify the rebuild by its launcher
+title from the day it was written until 2026-10-10, when the label was found to be plain
+`Sukinnect` in `res/values/app.xml` for every build type. The debug override now lives in
+`app/src/debug/res/values/app.xml`, so the word "preview" cannot reach a Play-bound build. Note
+that one `applicationId` means one install: installing this **replaces** the customer build rather
+than sitting beside it, which is why the version code went up as well as the name.
 
-The first check on the device: the app switcher should read **"Sukinnect — next (rebuild)"**.
-That title is there on purpose, so a phone is never showing a build you cannot name.
+## Building it — re-built 2026-10-10 for the rebuild's assets; first compiled 2026-10-09
 
-## Building it — done here on 2026-10-09, so the phone session starts from a known APK
-
-The shell has never been compiled until now, and "the Java looks right" is not the same claim as
-"an APK builds and contains what you changed". Both are now established:
+"the Java looks right" is not the same claim as "an APK builds and contains what you changed",
+and neither is the same claim as "the page inside it finds its images". All three are now
+established, on the assets as they ship rather than as they sit in the repo:
 
 ```
 cd Sukinnect-Android
-JAVA_HOME="C:/Program Files/Eclipse Adoptium/jdk-21.0.12.101-hotspot" \
-  ~/.gradle/wrapper/dists/gradle-8.14.3-all/*/gradle-8.14.3/bin/gradle.bat --offline :app:assembleDebug
-# BUILD SUCCESSFUL in 50s
-adb install -r app/build/outputs/apk/debug/Sukinnect-1.1-debug.apk
+~/.gradle/wrapper/dists/gradle-8.14.3-all/*/gradle-8.14.3/bin/gradle --offline :app:assembleDebug
+# BUILD SUCCESSFUL in 54s — 34 actionable tasks
+adb install -r app/build/outputs/apk/debug/Sukinnect-1.2-preview-debug.apk
 ```
 
 There is **no gradle wrapper in this project** — no `gradlew`, no `gradle/wrapper/` — so the build
@@ -49,16 +57,59 @@ What was verified about the artifact, not assumed:
 
 | Check | Result |
 |---|---|
-| `:app:assembleDebug` | **BUILD SUCCESSFUL**, 34 tasks |
-| `assets/Sukinnect.html` inside the APK | **byte-identical to the current `Sukinnect-next.html`** (719,156 bytes, md5 `85cbd81f…`) — and *not* to `Sukinnect.html` |
-| The weighing step in that HTML | present (`finaliseProduce`) |
-| The Back handles in that HTML | present (`syncBackHandles`) |
-| The file chooser in `classes.dex` | `setWebChromeClient`, `onShowFileChooser`, `onReceiveValue`, "Choose a photo" all found |
-| Repo pollution | none — `Sukinnect-Android/` is gitignored, `git status` stayed clean |
+| `:app:assembleDebug` | **BUILD SUCCESSFUL**, 34 tasks. Output `Sukinnect-1.2-preview-debug.apk`, 4,588,572 bytes, `versionCode 3`, `versionName 1.2-preview` |
+| Launcher label | `aapt dump badging`: **'Sukinnect · preview'** on this debug APK, and still **'Sukinnect'** on the Oct-1 release APK — the override is debug-scoped, measured on both artifacts |
+| `assets/Sukinnect.html` inside the APK | `cmp` says **identical to `Sukinnect-next.html`** (714,750 bytes) |
+| The seven category PNGs inside the APK | `cmp` says identical to `assets/category-art/*.png`, and they sit at `assets/assets/category-art/` because the WebView root mirrors the repo root |
+| The four Atkinson weights inside the APK | `cmp` says identical, and `unzip -v` says **Stored** — `noCompress 'woff2'` is doing its job |
+| Every path the bundled page asks for | `check-assets.cjs --apk`: **48 of 48 resolve** |
+| The bundled page, painted | `tools/shot.cjs --file=<the assets copy> --width=360 --height=640 --measure`: 46 screens, **0 images that got no pixels, 0 console errors**, 9 painted font sizes all ≥14px, 0 moving category artwork, and **every measured field equal to the same run against the repo source** |
+| Scratch left behind | none — the capture directories this pass wrote were deleted. The only tracked edits are `tools/shot.cjs` (the `--file=` flag) and this file |
+
+The painted-page row is what the `--file=` flag added to `tools/shot.cjs` exists for. The
+camera could previously photograph only `Sukinnect-next.html` at the repo root, where
+`assets/category-art/plumbing.png` resolves one level deep. Inside the APK the same page resolves
+it against `file:///android_asset/`, one level *deeper*. A pass over the repo source could not have
+seen a bundle with every image in the wrong place — which is precisely the bug this build was
+exposed to, and it is now measured rather than reasoned about.
+
+**Dead weight this build carries, left in place on purpose.** `assets/reicon.js` is 8,344,694
+bytes on disk, 2,490,872 inside the APK — **54% of the file an install pulls down** — and the
+bundled page never loads it: the rebuild draws 43 inline glyphs and the only two mentions of
+reicon in it are comments. The four Fraunces woff2 files (253,384 bytes) are unreferenced too,
+since the type pass moved every role onto Atkinson. They were kept because this one `assets/`
+directory serves both pages: the shipped `Sukinnect.html` still loads reicon and still sets
+headings in Fraunces, so dropping either from the bundle means the same tree can no longer produce
+a customer APK without a second sync step. Taking them out is a promotion decision, not a build
+decision, and either way it is one line of `ignoreAssetsPattern` or one `mv`.
+
+**Everything changed in the untracked project on 2026-10-10, since `git` will not show any of
+it.** Four things, all reversible:
+
+1. `app/src/main/assets/` re-synced: `Sukinnect.html` ← the current rebuild; seven PNGs into the
+   new `assets/category-art/`; four `font-atkinson-next-*.woff2` plus `ATKINSON-OFL.txt` and
+   `ATKINSON-AUTHORS.txt` into `fonts/` (the OFL text travels with the fonts it licences);
+   `fonts/fonts.css` replaced. Nothing was deleted — the old Fraunces and Jakarta weights are
+   still there, and `reicon.js` was not touched.
+2. The two files that were overwritten are in `Sukinnect-Android/web-assets-backup-20261010/`,
+   outside `app/src/main/assets` so they cannot be packaged: `Sukinnect.html` (719,156 bytes — the
+   2026-10-09 sync of the rebuild, which is what the Oct-9 APK carried) and `fonts/fonts.css`
+   (the Fraunces-era sheet, which is what was there before the type pass — `grep -c Atkinson`
+   returns 0). To put that state back:
+   `cp -r Sukinnect-Android/web-assets-backup-20261010/. Sukinnect-Android/app/src/main/assets/`
+   — verified to lay down exactly those two paths. It does **not** restore a shipped-prototype
+   bundle; for that, copy the repo's `Sukinnect.html` over instead, as the older version of this
+   section described.
+3. `app/build.gradle`: `versionCode` 2 → 3, `versionName` '1.1' → '1.2-preview'.
+4. `app/src/debug/res/values/app.xml`: new, debug-only `app_name`.
+
+Two new files sit alongside them, both in the untracked project because both are about the
+artifact rather than the page: `tools/check-assets.cjs` and `tools/falsify-assets.cjs`.
 
 One expected warning, not introduced here: `onBackPressed` is deprecated since API 33. It still
 works at `targetSdk 34`; Android's predictive back will want `OnBackInvokedCallback` eventually,
 and that needs `androidx.activity`, which this shell deliberately does not use.
+
 
 ## What was settled before the phone
 
@@ -164,11 +215,13 @@ The instrument cannot emulate this at all: `shot.cjs` measures a viewport with n
 - [ ] Open a provider's map on a weak or offline connection. The "Loading map…" caption must
       hand over to the offline message — it must not sit there for ever, and the tiles must not
       paint outside the map frame.
-- [x] ~~**Hardware back** from: an open sheet, provider detail, a chat, the booking screen.~~
-      **[answered — it is a defect, no need to discover it twice]** the page pushes no history at
-      all, so `web.canGoBack()` is false and back quits the app from inside every modal. Confirm
-      it once so the report has a device on it, then pick the fix: page-side history entries, or
-      a shell that asks the page to close its sheet first. See the two defects at the top.
+- [ ] **Hardware back** from: an open sheet, provider detail, a chat, the booking screen.
+      **[the defect is fixed — this is now a real check, not a discovery]** the page used to push
+      no history at all, so `canGoBack()` was false and back quit the app from inside every
+      modal; it now keeps one entry per open layer and one per drill-in, verified in real Chrome
+      by pressing back for real and pinned by 14 checks in the `back` suite. What a browser
+      cannot answer is the two device edges: **does back close the keyboard before it closes the
+      sheet, and does it still quit normally from a root tab?**
 - [ ] Create a booking, force-close the app, reopen it. The booking is still there, and the
       admin money console still says storage is available. If it says storage is unavailable on
       a real device, that is news — it has only ever worked in a browser.
@@ -192,12 +245,14 @@ This one can only be seen on a device in two places, and neither is reachable fr
 screenshot. Sign in as the **provider** with `erning@demo.ph` (any password) to get the harvest
 job in the inbox; `ramil@demo.ph` is still the plumbing account.
 
-- [x] ~~**The photo control.**~~ **[answered — it is a defect]** `MainActivity` sets a
-      `WebViewClient` and no `WebChromeClient`, so `onShowFileChooser` is never implemented and
-      **no picker can open** — on the fruit request *and* in the Concierge, which the checklist
-      did not name. They have only ever worked in a browser. Do not spend time on the chip and
-      the remove button; decide instead whether the shell grows twenty lines or the page loses
-      two controls.
+- [ ] **The photo control.** **[the shell now answers it — this is the check that cannot be made
+      any other way]** `MainActivity` used to set a `WebViewClient` and no `WebChromeClient`, so
+      `onShowFileChooser` did not exist and **no picker could open** — on the fruit request *and*
+      in the Concierge. The shell implements it now, and this APK carries that shell. It has still
+      never run on a device: compiling is the whole of the evidence. Press it in both places and
+      report: does a picker open, does the chosen photo appear, does **cancelling** leave the
+      control working (an unanswered request is the classic way to kill every later attempt
+      silently), and does the remove button remove?
 - [ ] **The totals move while you type, and nothing is buried.** As the provider, open the
       harvest-and-buy request and press *Make an offer*. Type a price per kilo. The summary
       under the fields must update on every keystroke **without the field losing focus or the
