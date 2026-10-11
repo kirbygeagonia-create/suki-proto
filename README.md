@@ -37,6 +37,18 @@ money, one shared booking record, a ledger, a booking state machine, payments, p
 an admin money console. `Sukinnect.html` stays the shipped prototype until that work is
 approved. Both files sit side by side so you can compare the same flow in two tabs.
 
+### Launch on Netlify
+
+The Netlify homepage serves `Sukinnect-next.html`. The repository's `netlify.toml`
+publishes the root directory and rewrites `/` to that file, so the existing local
+fonts, logo, illustrations, avatars and Leaflet assets keep their relative paths.
+No build command or package installation is required for this static prototype.
+
+Open `/?app=1` for the full-viewport phone layout without the desktop frame.
+`Sukinnect-next.html` and the original `Sukinnect.html` remain directly accessible.
+This deployment still runs the demo prototype; it does not add production
+authentication, shared server-side storage or real payment processing.
+
 ## Verify
 
 ```
