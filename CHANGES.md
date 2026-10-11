@@ -1439,4 +1439,57 @@ leaks and 18 sub-44px controls unchanged, rebuilt as `Sukinnect-1.2-preview.4-de
 (4,594,740 bytes, `versionCode 6`) with the embedded page `cmp`-identical to source.
 `Sukinnect.html` remains identical to `origin/main`.
 
+---
+
+## 30. The tap floor: the instrument was wrong before the controls were
+
+The 18 sub-44px controls had been left alone by an earlier decision. That is reversed here, and
+the first thing the reversal found was that the number had never been trustworthy.
+
+**The camera computed the answer and then ignored it.** Its tap check walked three ancestors
+looking for a taller box, carried a comment saying "a 23px input inside a 56px pill is a 56px
+target — only count it when nothing around it is big enough to hit", stored the result in `boxH`,
+and then measured `r.height` — the control's own box — without ever consulting it. So the list
+mixed two different things. Asking the live DOM which wrappers can actually deliver a tap (a
+`<label>` forwards to its control; a `<button>`, `<a>`, `<summary>` or anything with its own
+handler does; an inert `div` does not) moved the count from 19 to **17 genuinely small**, and the
+two that dropped out were a checkbox and a hidden file input sitting inside real `<label>`s, which
+were never defects at all.
+
+**All 17 were reachable only at their own size.** The search pill is 56px of wrapper padding and
+border around a **23px input in a plain div** — tapping the padding focuses nothing, so the target
+really was 23px. Seven commission-rate inputs were 32px, the chat field 42px, the trust-score
+disclosure 29px, two admin roster searches 20px.
+
+Every fix raises the control, not a box around it: `min-height:var(--tap)` on the input itself.
+That choice was made so the screen does not grow, and measured rather than asserted — the pill
+stays **56px** (44 + 5 + 5 + 2) and the category grid's top edge stays at **605px** with the same
+three tiles partly visible, because the last time anything on Resident Home got taller the grid
+lost its place on the first screen and only a measurement found it. The two screens that do change
+change by +84px on a scrolling admin table and +15px on one header row; the back button's row
+absorbed its 30→44 with no movement at all.
+
+**One of the 30px buttons was asking to be 44.** Two hand-rolled copies of `.back-btn` existed;
+one declared `width:var(--tap); height:var(--tap)` and then, later in the *same* `style`
+attribute, `width:30px; height:30px`. The later declaration wins, so a button written at the tap
+token measured 30. Both now use the shared class, and the gate refuses a `style` attribute that
+declares the same size twice.
+
+**A card contradicted the records built last pass.** Reviewing the screenshot taken to check the
+trust-score disclosure's new height showed the provider profile saying **"Credentials: All
+Valid"** in green while the list one scroll below it reported two documents expiring soon.
+`credentialSummaryFor` now counts the flagged documents, picks the tone, and distinguishes clean
+from expiring from expired on both sides of each threshold.
+
+**6 checks added, 443 → 449**; `tools/falsify-tap-and-summary.cjs` — 4 mutants applied, 4 caught.
+Two of my own checks were wrong before they were right: the duplicate-size pattern let `[^"]*`
+run across whole CSS rules and reported two false hits on `.notif-btn` and `.back-btn`, and a
+credential-summary check was written into the hygiene suite, which has no `app` binding, so the
+suite crashed on `app is not defined`.
+
+Verified: 449/449, 49 screens at 360×640 and 390×844 with **0 sub-44px controls**, 0 clipped text,
+0 contrast failures, 0 broken images, 0 moving artwork and 0 console errors at both. Rebuilt as
+`Sukinnect-1.2-preview.5-debug.apk` (4,595,092 bytes, `versionCode 7`), embedded page
+`cmp`-identical to source. `Sukinnect.html` remains identical to `origin/main`.
+
 

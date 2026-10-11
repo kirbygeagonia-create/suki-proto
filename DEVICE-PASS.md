@@ -57,9 +57,9 @@ What was verified about the artifact, not assumed:
 
 | Check | Result |
 |---|---|
-| `:app:assembleDebug` | **BUILD SUCCESSFUL**. Output `Sukinnect-1.2-preview.4-debug.apk`, 4,594,740 bytes, `versionCode 6`, `versionName 1.2-preview.4` |
+| `:app:assembleDebug` | **BUILD SUCCESSFUL**. Output `Sukinnect-1.2-preview.5-debug.apk`, 4,595,092 bytes, `versionCode 7`, `versionName 1.2-preview.5` |
 | Launcher label | `aapt dump badging`: **'Sukinnect · preview'** on this debug APK, and still **'Sukinnect'** on the Oct-1 release APK — the override is debug-scoped, measured on both artifacts |
-| `assets/Sukinnect.html` inside the APK | `cmp` says **identical to `Sukinnect-next.html`** (731,822 bytes at the `.4` build) |
+| `assets/Sukinnect.html` inside the APK | `cmp` says **identical to `Sukinnect-next.html`** (732,855 bytes at the `.5` build) |
 | The seven category PNGs inside the APK | `cmp` says identical to `assets/category-art/*.png`, and they sit at `assets/assets/category-art/` because the WebView root mirrors the repo root |
 | The four Atkinson weights inside the APK | `cmp` says identical, and `unzip -v` says **Stored** — `noCompress 'woff2'` is doing its job |
 | Every path the bundled page asks for | `check-assets.cjs --apk`: **48 of 48 resolve** |

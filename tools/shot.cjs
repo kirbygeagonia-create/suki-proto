@@ -95,17 +95,24 @@ const AUDIT_JS = `(function(){
        not 44. Only box-shaped controls are held to the tap floor. */
     const inline = getComputedStyle(el).display === 'inline';
     if (inline && r.height >= 24 - 0.6) return;
-    /* A 23px input inside a 56px pill is a 56px target — the wrapper takes the
-       touch. Only count it when nothing around it is big enough to hit. */
-    let boxH = r.height;
+    /* A 23px input inside a 56px pill is a 56px target only if the pill forwards the touch.
+       A <label> does — the browser activates its control. So does an ancestor <button>, <a>
+       or <summary>, or anything with its own handler. An inert div wrapping padding over the
+       page background does not: the only place you can hit is the control itself. The first
+       version of this walked the ancestors, computed the bigger box, printed its own comment
+       about the pill, and then measured the control anyway. */
+    const forwards = (w) => w.tagName === 'LABEL' ? w.control === el
+      : (/^(BUTTON|A|SUMMARY)$/.test(w.tagName) || !!w.onclick || !!w.getAttribute('onclick'));
+    let reachH = r.height, reachW = r.width, via = 'self';
     for (let p = el.parentElement, up = 0; p && up < 3; p = p.parentElement, up++) {
-      const pr = painted(p); if (!pr) continue;
-      if (pr.height > boxH) boxH = pr.height;
-      if (boxH >= TAP) break;
+      const pr = painted(p); if (!pr || !forwards(p)) continue;
+      if (pr.height > reachH) { reachH = pr.height; via = p.tagName.toLowerCase(); }
+      if (pr.width > reachW) reachW = pr.width;
+      if (reachH >= TAP) break;
     }
-    if (r.height < TAP - 0.6 || r.width < 28)
+    if (reachH < TAP - 0.6 || reachW < 28)
       out.small.push({ what: text(el).slice(0, 30) || el.tagName.toLowerCase(), h: Math.round(r.height), w: Math.round(r.width),
-                       boxH: Math.round(boxH), inline, cls: (el.className||'').toString().split(' ')[0] });
+                       boxH: Math.round(reachH), inline, via, cls: (el.className||'').toString().split(' ')[0] });
     if (!text(el)) out.unlabelled.push({ unlabelled: el.tagName.toLowerCase() + '.' + ((el.className||'').toString().split(' ')[0] || '-') });
   });
 

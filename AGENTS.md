@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 10,074 lines, ONE :root block, 1,680 var() usages, 94 tokens declared with 91
+Sukinnect-next.html— 10,090 lines, ONE :root block, 1,685 var() usages, 94 tokens declared with 91
                     of them reached. Twenty-five hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1219,7 +1219,7 @@ Sukinnect-next.html— 10,074 lines, ONE :root block, 1,680 var() usages, 94 tok
                     as the div it replaced. The 371 `font-size` declarations inside markup's
                     inline styles all take a var() too. Every screen in the app now opens with
                     an <h1> and every sheet with an <h2> — 22 and 6, the sixth being the weighing
-                    sheet — because a 47-screen app with no headings has no outline for a screen
+                    sheet — because a 49-screen app with no headings has no outline for a screen
                     reader to navigate. This sentence was false when it was first written, and
                     stayed false for two screens (the resident's booking detail hand-rolled a bare
                     <div> where the provider's used the shared header, and the chat room titled
@@ -1335,6 +1335,25 @@ midnight formats as the **previous day** on a machine west of UTC, so a record r
 rendered "Verified Mar 13, 2026". Every number in the panel was correct. `parseDay()` treats a
 date-only value as a local day, and the gate now asserts that the day which goes in is the day
 that comes out.
+
+NO CONTROL IS BELOW THE 44px TAP FLOOR, and the instrument that measures this was itself wrong
+first. The camera walked three ancestors looking for a taller box, printed a comment about "a 23px
+input inside a 56px pill", and then reported the control's own height anyway without consulting
+the number it had computed. Once it asks whether the wrapper can actually deliver the tap — a
+`<label>` forwards to its control, a `<button>`/`<a>`/`<summary>` or anything with its own
+handler does, an inert `div` does not — the count of genuinely small controls was 17, not 19: two
+of the reported ones were checkboxes inside real labels. All 17 were fixed by giving the control
+itself `min-height:var(--tap)`, which left the search pill at exactly 56px and the category grid
+top at exactly 605px, so the floor was met without the screen growing — the regression that bit
+this app the last time anything on Resident Home got taller. Two hand-rolled 30px copies of
+`.back-btn` became the shared class; one of them declared `width:var(--tap)` and then
+`width:30px` later in the same `style` attribute, which is why a 44px button measured 30.
+`node tools/falsify-tap-and-summary.cjs` — 4 mutants applied, 4 caught (443 → 449).
+
+The same pass caught a card on the provider profile reading **"Credentials: All Valid"** in green
+while the list one scroll below it showed two documents expiring soon — the §77 class again, found
+by looking at a screenshot taken for a different reason. `credentialSummaryFor` now counts the
+flagged documents and picks the tone.
 
 An animated-illustration pipeline (Lottie) was installed here and then removed again:
 it added 305KB that animated nothing, because the professional artwork it was built for

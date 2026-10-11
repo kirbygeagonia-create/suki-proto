@@ -1018,6 +1018,32 @@ suite('hygiene', async () => {
     /\.stars\.on-dark \.fill\{ color:var\(--rating-on-dark\); \}/.test(css));
   c.check('the legacy alias with no call site is gone', !/--deep-700/.test(css));
 
+  /* ── the 44px tap floor, and the credential summary that contradicted its own list ──
+     Seventeen controls measured under the floor once the instrument stopped crediting a
+     wrapper that cannot forward a tap. The search pill is 56px of padding around a 23px
+     input in an inert div, so the target really was 23px; giving the input the floor left
+     the pill at 56px and the category grid exactly where it was. */
+  const tapRules = [
+    ['.search-wrapper input min-height', /\.search-wrapper input\{[^}]*min-height:var\(--tap\)/],
+    ['chat input min-height', /id="chat-input"[^\n]*?min-height:var\(--tap\)/],
+    ['commission rate inputs min-height', /width:62px; min-height:var\(--tap\)/],
+    ['admin roster search min-height', /width:100%; min-height:var\(--tap\); border:0/],
+    ['auth-switch min-height', /\.auth-switch\{[^}]*min-height:var\(--tap\)/],
+  ];
+  const missingTap = tapRules.filter(([, re]) => !re.test(src)).map(([n]) => n);
+  c.check('every control raised to the tap floor still declares it', missingTap.length === 0, missingTap.join(' | '));
+  c.check('no hand-rolled 30px back button survives', !/width:30px; height:30px/.test(src)
+    && /class="back-btn" onclick="state\.tab='admin_verifications'; state\.adminProviderCategory='verified'/.test(src));
+  /* Scoped to a style attribute on purpose: the first cut of this pattern let [^"]* run across
+     whole CSS rules and reported two false hits, because a rule that sets width and a later
+     media query that overrides it are not "the same attribute declaring a size twice". */
+  c.check('a style attribute does not declare the same size twice',
+    !/style="[^"]*width:var\(--tap\)[^"]*width:[0-9]+px/.test(src) &&
+    !/style="[^"]*height:var\(--tap\)[^"]*height:[0-9]+px/.test(src),
+    'a later width silently overrode the tap token, which is how a 44px button measured 30');
+
+  c.check('the profile card no longer asserts a fixed credential state', !/All Valid<\/b>/.test(src));
+
   /* The inline set is the only icon path the rebuild takes: a missing glyph is an
      empty square on every screen, with no custom element left to catch it. Names
      reach ic() three ways — written in markup, carried by a record, or passed to
@@ -1791,6 +1817,31 @@ suite('honesty', async () => {
   c.check('a date-only value formats as the same day it names',
     /Mar 14, 2026/.test(app.shortDate('2026-03-14')) && /Jan 1, 2026/.test(app.shortDate('2026-01-01')),
     app.shortDate('2026-03-14'));
+
+  c.check('the credential summary agrees with the credential list', (() => {
+    const p1 = app.credentialSummaryFor('p1');
+    const creds = app.credentialsOf('p1');
+    const flagged = creds.filter(c => app.credentialState(c).code !== 'valid').length;
+    /* p1 has two documents inside the warning window, so the profile card must say so rather
+       than "All Valid"; p3 is clean; p4 has one already expired. */
+    return flagged > 0
+      && p1.label === flagged + ' of ' + creds.length + ' expiring soon'
+      && p1.tone === 'var(--warning-ink)'
+      && app.credentialSummaryFor('p3').label.startsWith('All ')
+      && app.credentialSummaryFor('p4').tone === 'var(--error-ink)';
+  })(), 'the profile card contradicted its own credential list');
+
+  /* Both sides of the summary's thresholds, so it cannot pass by always warning. */
+  c.check('the credential summary distinguishes clean, expiring and expired', (() => {
+    const clean = app.credentialSummaryFor('p3');
+    const target = app.credentialsOf('p3').find(c => c.expiresAt);
+    const was = target.expiresAt;
+    target.expiresAt = new Date(Date.now() - 9 * 86400000).toISOString().slice(0, 10);
+    const after = app.credentialSummaryFor('p3');
+    target.expiresAt = was;
+    return clean.tone === 'var(--success-ink)' && after.tone === 'var(--error-ink)'
+      && app.credentialSummaryFor('p3').tone === 'var(--success-ink)';
+  })(), 'the summary did not change when a document expired');
 
   const unsourced = ['Expires in 23 days', 'ID Verification - ', 'Last active: 2 hours ago',
     'Failed login attempt', 'PROVIDERS.slice(0, 4)', 'adminVerifiedPerformance', 'meta.active',
