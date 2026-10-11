@@ -1492,4 +1492,59 @@ Verified: 449/449, 49 screens at 360×640 and 390×844 with **0 sub-44px control
 `Sukinnect-1.2-preview.5-debug.apk` (4,595,092 bytes, `versionCode 7`), embedded page
 `cmp`-identical to source. `Sukinnect.html` remains identical to `origin/main`.
 
+---
+
+## 31. Four decisions taken: the bundle halved, and the target SDK became the riskiest item
+
+The standing open items were put to the owner as multiple choice. Three came back "do it", one
+came back "hold", and one of the three is the most likely thing in this whole session to break on
+a phone.
+
+**Promotion: held.** `Sukinnect.html` stays identical to `origin/main` and the rebuild stays in
+`Sukinnect-next.html` until the handset pass has run. Correct call — the three things the pass
+exists to catch (a thumb, an on-screen keyboard, a slow device) are the three no instrument here
+can reach, and 449 checks are not evidence about a phone.
+
+**The produce rate: stays `null`.** It was already honest — `produceFeeUndecided` is an explicit
+state read by four screens, so the UI says "rate not set" rather than showing a number invented to
+fill a gap.
+
+**`reicon.js` left the bundle and the APK halved.** 8,344,694 bytes on disk, 2,490,872 compressed,
+54% of the file an install pulled down, and the bundled page never loads it. It was **moved** to
+`Sukinnect-Android/web-assets-offline/`, not deleted: the shipped `Sukinnect.html` still needs the
+library and one `mv` puts that build back. The debug APK went 4,595,092 → **2,104,798 bytes**, and
+`check-assets.cjs --apk` still resolves 48 of 48 paths, so nothing the page asks for went with it.
+The four dead Fraunces weights (253,384 bytes) stayed — same reasoning, one twentieth the prize.
+
+**The Gradle wrapper exists now**, and the claim is tested rather than filed: `gradlew`,
+`gradlew.bat`, `gradle-wrapper.jar` and `.properties` were generated from the cached 8.14.3 and
+the build was re-run **through them**. The project had had no wrapper since it began, so every
+"it builds here" quietly depended on whichever Gradle was installed.
+
+**`targetSdk` 34 → 36.** Play requires the current API level for new submissions and, since
+2026-08-31, that is 36 — 35 would not have been enough either. The consequence is behavioural, not
+cosmetic: at 35+ the window draws edge to edge and the shell's two `setStatusBarColor` calls become
+no-ops, so `MainActivity` gained `applySystemBarInsets()`, padding the WebView from the system
+bars, the display cutout **and the IME**. `ime()` is the part that matters — `adjustResize` is what
+kept the chat and the booking sheet above the keyboard at 34, and that guarantee does not carry
+forward on its own. **It compiles and has never run on a device**, so §2 of the handset checklist
+was rewritten to lead with it: header clear of the status bar, nav clear of the gesture pill, and
+what the padding does *while* the keyboard is open, because double-spacing and a jumping header are
+the likely failure shapes.
+
+**The category art review became a decision document rather than a second dossier.**
+`ASSET-LICENSES.md` already held the prompt template, the dimensions and the researched-and-rejected
+CC0 source; what it lacked was the question stated once with a price on each answer. It now opens
+with three positions — accept it, commission the same seven objects to the spec that is already
+written, or search again for a consistent licensed set — and says plainly that the copyright status
+of machine-generated imagery is unsettled and that none of it is legal advice. The claim that a
+swap is "one edit" was **verified rather than repeated**: `SERVICE_ART` really is the only code
+that names a file, but the Android bundle keeps its own copy at `assets/assets/category-art/` and
+git cannot see it, so the swap is three steps and the doc now says so.
+
+Built as `Sukinnect-1.2-preview.6-debug.apk` (`versionCode 8`), 2,104,798 bytes, targetSdk 36
+confirmed through `aapt dump badging`, embedded page `cmp`-identical to source. The page itself was
+not touched, so 449/449 still passes and the 49-screen sweep is unchanged. `Sukinnect.html`
+remains identical to `origin/main`.
+
 

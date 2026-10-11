@@ -42,22 +42,24 @@ established, on the assets as they ship rather than as they sit in the repo:
 
 ```
 cd Sukinnect-Android
-~/.gradle/wrapper/dists/gradle-8.14.3-all/*/gradle-8.14.3/bin/gradle --offline :app:assembleDebug
-# BUILD SUCCESSFUL in 54s — 34 actionable tasks
-adb install -r app/build/outputs/apk/debug/Sukinnect-1.2-preview-debug.apk
+./gradlew --offline :app:assembleDebug
+# BUILD SUCCESSFUL in 34s
+adb install -r app/build/outputs/apk/debug/Sukinnect-1.2-preview.6-debug.apk
 ```
 
-There is **no gradle wrapper in this project** — no `gradlew`, no `gradle/wrapper/` — so the build
-depends on whatever Gradle happens to be installed. It was run here with the 8.14.3 distribution
-already in `~/.gradle`, which is the version the project's `.gradle/` directory was written by. A
-fresh machine with Android Studio may resolve a different one. Adding the wrapper would make this
-reproducible; that is a change to the untracked project, so it is flagged rather than done.
+**There is a Gradle wrapper now.** Until 2026-10-11 this project had no `gradlew` and no
+`gradle/wrapper/`, so the build depended on whatever Gradle happened to be installed and a fresh
+machine with Android Studio could resolve a different one. `gradlew`, `gradlew.bat`,
+`gradle-wrapper.jar` and `gradle-wrapper.properties` were generated from the cached 8.14.3
+distribution, and the command above was run through them — so the version is pinned in the
+project now. It is still an untracked project: the wrapper lives inside `Sukinnect-Android/` and
+git will never show it.
 
 What was verified about the artifact, not assumed:
 
 | Check | Result |
 |---|---|
-| `:app:assembleDebug` | **BUILD SUCCESSFUL**. Output `Sukinnect-1.2-preview.5-debug.apk`, 4,595,092 bytes, `versionCode 7`, `versionName 1.2-preview.5` |
+| `:app:assembleDebug` | **BUILD SUCCESSFUL**. Output `Sukinnect-1.2-preview.6-debug.apk`, **2,104,798 bytes** (was 4,595,092 before reicon.js left the bundle), `versionCode 8`, `versionName 1.2-preview.6` |
 | Launcher label | `aapt dump badging`: **'Sukinnect · preview'** on this debug APK, and still **'Sukinnect'** on the Oct-1 release APK — the override is debug-scoped, measured on both artifacts |
 | `assets/Sukinnect.html` inside the APK | `cmp` says **identical to `Sukinnect-next.html`** (732,855 bytes at the `.5` build) |
 | The seven category PNGs inside the APK | `cmp` says identical to `assets/category-art/*.png`, and they sit at `assets/assets/category-art/` because the WebView root mirrors the repo root |
@@ -112,38 +114,54 @@ it against `file:///android_asset/`, one level *deeper*. A pass over the repo so
 seen a bundle with every image in the wrong place — which is precisely the bug this build was
 exposed to, and it is now measured rather than reasoned about.
 
-**Dead weight this build carries, left in place on purpose.** `assets/reicon.js` is 8,344,694
-bytes on disk, 2,490,872 inside the APK — **54% of the file an install pulls down** — and the
-bundled page never loads it: the rebuild draws 43 inline glyphs and the only two mentions of
-reicon in it are comments. The four Fraunces woff2 files (253,384 bytes) are unreferenced too,
-since the type pass moved every role onto Atkinson. They were kept because this one `assets/`
-directory serves both pages: the shipped `Sukinnect.html` still loads reicon and still sets
-headings in Fraunces, so dropping either from the bundle means the same tree can no longer produce
-a customer APK without a second sync step. Taking them out is a promotion decision, not a build
-decision, and either way it is one line of `ignoreAssetsPattern` or one `mv`.
+**`reicon.js` is no longer in the bundle, and the APK halved.** It was 8,344,694 bytes on disk,
+2,490,872 compressed — **54% of the file an install pulled down** — and the bundled page never
+loaded it: the rebuild draws 43 inline glyphs and the only mention of reicon in the page is a
+comment. Removing it took the debug APK from 4,595,092 bytes to **2,104,798**. It was moved to
+`Sukinnect-Android/web-assets-offline/reicon.js`, outside `app/src/main/assets` so it cannot be
+packaged, and it is **not deleted** — the shipped `Sukinnect.html` still loads the library, so
+putting it back is one `mv` before building that file. The four unreferenced Fraunces woff2
+(253,384 bytes) were left alone: same reasoning, smaller prize.
 
-**Everything changed in the untracked project on 2026-10-10, since `git` will not show any of
-it.** Four things, all reversible:
+**targetSdk went from 34 to 36, and that is the riskiest change in this build.** Play requires
+the current API level for new submissions and updates, and as of 2026-08-31 that is 36. The
+consequence is behavioural, not cosmetic: at targetSdk 35+ the window is drawn **edge to edge**
+and `setStatusBarColor` / `setNavigationBarColor` stop doing anything, so `MainActivity` now
+pads the WebView from the system-bar insets instead of painting the bars. `ime()` is included in
+those pads deliberately, because `adjustResize` is what kept the chat and the booking sheet above
+the keyboard at 34 and that guarantee is not carried forward automatically. **None of this has
+run on a device — it compiles, and that is the whole of the evidence.** Section 2 below is now
+the most important part of this checklist.
+
+**Everything changed in the untracked project, since `git` will not show any of it.** All of it
+lives inside `Sukinnect-Android/`, which is gitignored by the owner's decision, so this list is
+the only record.
 
 1. `app/src/main/assets/` re-synced: `Sukinnect.html` ← the current rebuild; seven PNGs into the
    new `assets/category-art/`; four `font-atkinson-next-*.woff2` plus `ATKINSON-OFL.txt` and
    `ATKINSON-AUTHORS.txt` into `fonts/` (the OFL text travels with the fonts it licences);
    `fonts/fonts.css` replaced. Nothing was deleted — the old Fraunces and Jakarta weights are
-   still there, and `reicon.js` was not touched.
-2. The two files that were overwritten are in `Sukinnect-Android/web-assets-backup-20261010/`,
-   outside `app/src/main/assets` so they cannot be packaged: `Sukinnect.html` (719,156 bytes — the
-   2026-10-09 sync of the rebuild, which is what the Oct-9 APK carried) and `fonts/fonts.css`
-   (the Fraunces-era sheet, which is what was there before the type pass — `grep -c Atkinson`
-   returns 0). To put that state back:
+   still there.
+2. The two files that were overwritten on 2026-10-10 are in
+   `Sukinnect-Android/web-assets-backup-20261010/`, outside `app/src/main/assets` so they cannot
+   be packaged: `Sukinnect.html` (719,156 bytes — the 2026-10-09 sync of the rebuild, which is
+   what the Oct-9 APK carried) and `fonts/fonts.css` (the Fraunces-era sheet, which is what was
+   there before the type pass — `grep -c Atkinson` returns 0). To put that state back:
    `cp -r Sukinnect-Android/web-assets-backup-20261010/. Sukinnect-Android/app/src/main/assets/`
    — verified to lay down exactly those two paths. It does **not** restore a shipped-prototype
-   bundle; for that, copy the repo's `Sukinnect.html` over instead, as the older version of this
-   section described.
-3. `app/build.gradle`: `versionCode` 2 → 3, `versionName` '1.1' → '1.2-preview'.
-4. `app/src/debug/res/values/app.xml`: new, debug-only `app_name`.
-
-Two new files sit alongside them, both in the untracked project because both are about the
-artifact rather than the page: `tools/check-assets.cjs` and `tools/falsify-assets.cjs`.
+   bundle; for that, copy the repo's `Sukinnect.html` over instead.
+3. `app/src/main/assets/reicon.js` **moved out** to
+   `Sukinnect-Android/web-assets-offline/reicon.js` on 2026-10-11, so it is no longer packaged.
+   To build the shipped prototype again: `mv Sukinnect-Android/web-assets-offline/reicon.js
+   Sukinnect-Android/app/src/main/assets/reicon.js`.
+4. `app/build.gradle`: `versionCode` 2 → 8, `versionName` '1.1' → '1.2-preview.6',
+   **`targetSdk` 34 → 36**.
+5. `app/src/debug/res/values/app.xml`: new, debug-only `app_name` = "Sukinnect · preview".
+6. `MainActivity.java`: `applySystemBarInsets()` added, plus the `Build` and `WindowInsets`
+   imports. This is the edge-to-edge compensation for item 4 and it is **device-unverified**.
+7. `gradlew`, `gradlew.bat`, `gradle/wrapper/`: new, generated 2026-10-11.
+8. `tools/check-assets.cjs`, `tools/falsify-assets.cjs`: new. Both are about the artifact rather
+   than the page, which is why they live here and not in `tools/` at the repo root.
 
 One expected warning, not introduced here: `onBackPressed` is deprecated since API 33. It still
 works at `targetSdk 34`; Android's predictive back will want `OnBackInvokedCallback` eventually,
@@ -234,6 +252,20 @@ slow device.
 
 The instrument cannot emulate this at all: `shot.cjs` measures a viewport with no keyboard in it.
 
+**Read this first if you only do one section.** This build moved `targetSdk` from 34 to 36, and at
+35+ the window is drawn edge to edge: the two `setStatusBarColor` calls in the shell are now no-ops
+and `MainActivity` pads the WebView from the system-bar insets instead, `ime()` included. That is
+the mechanism that keeps the keyboard from covering anything, and it has never run on a phone. If
+the header sits under the status bar, or the send button hides behind the keyboard, that is this
+change and nothing else — and it is worth reporting even if it looks like a small visual thing,
+because it decides whether the targetSdk bump can stay.
+
+- [ ] **The status bar.** On the very first screen: is the app's own header fully below the
+      phone's clock and battery icons, with no text under them? Same check at the bottom — the
+      Home / Bookings / Messages / Profile bar should sit above the gesture pill, not under it.
+- [ ] **Then with the keyboard open.** Tap a field. Does the header stay clear of the status bar
+      *while* the keyboard is up? Padding the WebView with the IME inset can fight `adjustResize`
+      and produce double spacing, a header that jumps, or a screen that shrinks twice.
 - [ ] Booking sheet → the "what needs doing" field. With the keyboard open, can you still see
       what you typed **and** reach the submit button?
 - [ ] Concierge → describe the problem. Same question.

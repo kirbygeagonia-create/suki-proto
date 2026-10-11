@@ -1,5 +1,45 @@
 # Category artwork — provenance and licence
 
+## The open question, stated once, with the cost of each answer
+
+These seven images are machine-generated. The licence position is therefore not "who do we owe
+attribution to" (nobody) but "do we hold an enforceable exclusive right in them" — which is
+unsettled in several jurisdictions, including the United States, where the Copyright Office has
+declined protection for purely machine-generated output while granting it where there is
+sufficient human authorship in selection and arrangement. The Philippines follows a
+registration-and-originality framework of its own. **Nothing in this file is legal advice, and
+the decision is the owner's.** Three positions, with what each costs:
+
+1. **Accept it and ship.** Cost: nothing now. Risk: if the mark ever needs to be enforced against
+   a copycat, the seven tiles may not be the thing you can point at. The logo is a separate
+   matter — `Sukinnect_Logo.png` is a human-made asset and is not in question here.
+2. **Commission the same seven objects from a human illustrator.** Cost: one illustration
+   commission, and the spec already exists — the prompt block below is a complete art direction
+   (subject, camera, materials, key light, shadow, tint, no text, 256 px on a rounded square),
+   so the brief is written. This is the option the rest of this file was prepared for.
+3. **Find a consistent openly-licensed set covering all seven.** Cost: the search, which was
+   already done once and failed — see the 3Dicons record below. The blocker was coverage
+   (no plumbing, no produce) and it would need repeating against a different library.
+
+### If you choose option 2 or 3, the swap is three steps, verified rather than assumed
+
+`category-art` is referenced from exactly one place in the code, so filenames can change freely:
+
+1. Replace the seven PNGs in `assets/category-art/` (any names, as long as they are 256×256 RGBA
+   and the tile still renders at 60 CSS px — 256 covers a 3× device).
+2. Edit `SERVICE_ART` in `Sukinnect-next.html`. That map is the only code that names a file;
+   nothing else in the page, the gate or the tools hard-codes a category filename.
+3. Re-sync the Android bundle, which holds its own copy at
+   `Sukinnect-Android/app/src/main/assets/assets/category-art/` — the WebView root mirrors the
+   repo root, so the directory is doubled. This step is easy to miss because `git status` cannot
+   see it: the Android tree is untracked.
+
+Then `node tools/verify.cjs` fails if any category has no file on disk, and
+`node tools/shot.cjs --measure` reports any image that asked for a file and got no pixels across
+all screens, so a half-finished swap cannot pass quietly.
+
+## What these are
+
 Seven pre-rendered soft-3D images, one per service category, replacing the inline SVG
 scene family that was previously the primary art on the Resident Home grid.
 
