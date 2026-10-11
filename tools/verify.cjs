@@ -1717,6 +1717,88 @@ suite('honesty', async () => {
     !receiptsHtml.includes(app.bookingById('b1').summary) && receiptsHtml.includes(app.bookingById('b3').summary),
     'the faucet booking is ongoing and unpaid; it must not appear as a receipt');
 
+  /* ── credentials and verification are records now ──────────────────────────
+     Three screens asserted document statuses, an expiry date and a verified-since date that no
+     record held, and the admin's "needs attention" tile counted a verdict typed into a table.
+     The first check below is the one that was hiding all of it: bookingsForProvider took no
+     parameter, so every per-provider figure in the console was the signed-in provider's figure. */
+  c.check('bookingsForProvider honours the id it is handed', (() => {
+    const a = app.bookingsForProvider('p1');
+    const b = app.bookingsForProvider('p2');
+    return a.length > 0 && b.length > 0
+      && a.every(x => x.providerId === 'p1') && b.every(x => x.providerId === 'p2');
+  })(), 'two different ids returned the same provider rows');
+
+  /* Both sides of the threshold, because a one-sided test survives a rule that fires too often. */
+  const DAY = 86400000;
+  const iso = d => new Date(Date.now() + d * DAY).toISOString().slice(0, 10);
+  c.check('a credential reads its state from its own expiry date', (() => {
+    const warn = app.CONFIG.credentialWarnDays;
+    return app.credentialState({ expiresAt: null }).code === 'valid'
+      && app.credentialState({ expiresAt: iso(warn) }).code === 'expiring'
+      && app.credentialState({ expiresAt: iso(warn + 1) }).code === 'valid'
+      && app.credentialState({ expiresAt: iso(-1) }).code === 'expired'
+      && app.credentialState({ expiresAt: iso(0) }).code === 'expiring';
+  })(), 'the warning window did not have two sides');
+
+  c.check('the verified roster is a record, not a slice of the array', (() => {
+    const list = app.verifiedProviderList();
+    const byStatus = app.PROVIDERS.filter(p => p.verification && p.verification.status === 'verified');
+    /* The old definition was PROVIDERS.slice(0, 4), which happened to name four real
+       providers. Equal-by-length is not equal-by-content: the slice and the record disagree
+       about who is on it, and that disagreement is the whole point. */
+    return list.length === byStatus.length
+      && list.every(p => p.verification.status === 'verified')
+      && list.map(p => p.id).join(',') === byStatus.map(p => p.id).join(',')
+      && list.map(p => p.id).join(',') !== app.PROVIDERS.slice(0, list.length).map(p => p.id).join(',');
+  })(), 'verified did not match the status records, or matched a positional slice');
+  c.check('the suspended and pending providers are excluded by their record',
+    app.verifiedProviderList().every(p => p.id !== 'p4' && p.id !== 'p7')
+      && app.adminProviderMeta(app.PROVIDERS.find(p => p.id === 'p4')).account === 'Suspended'
+      && app.adminProviderMeta(app.PROVIDERS.find(p => p.id === 'p7')).account === 'Awaiting review');
+
+  /* The badge that used to count a string. Take one document on a currently-clean provider past
+     its expiry and the count has to move by one. p3 is the target because its worst state is
+     'valid' today; p8 was the first pick and it is already counted, which is why the first cut
+     of this test could never have passed however correct the code was. */
+  c.check('the expiring-credential badge counts documents, and follows them', (() => {
+    if (app.worstCredentialState('p3') !== 'valid') return false;
+    const before = app.expiringProviderCount();
+    const target = app.credentialsOf('p3').find(c => c.expiresAt);
+    if (!target) return false;
+    const was = target.expiresAt;
+    target.expiresAt = new Date(Date.now() - 5 * DAY).toISOString().slice(0, 10);
+    const during = app.expiringProviderCount();
+    const worstDuring = app.worstCredentialState('p3');
+    target.expiresAt = was;
+    return during === before + 1 && worstDuring === 'expired' && app.worstCredentialState('p3') === 'valid';
+  })(), 'the badge did not move when a document expired');
+
+  c.check('the admin profile states reasons rather than a verdict', (() => {
+    const m = app.adminProviderMeta(app.PROVIDERS.find(p => p.id === 'p2'));
+    return Array.isArray(m.reasons) && m.complaints === app.openCasesFor('p2').length
+      && !('performance' in m);
+  })(), 'meta still carries an unsourced verdict');
+  c.check('the provider sees its own documents, from the records', (() => {
+    const html = app.providerSectionBody('credentials');
+    const names = app.credentialsOf('p1').map(c => c.name);
+    return names.length > 0 && names.every(n => html.includes(n));
+  })(), 'the credentials module does not list the records');
+
+  /* A date-only ISO string parsed as UTC midnight formats as the previous day on a machine west
+     of UTC — which is how a record reading 2026-03-14 rendered "Verified Mar 13, 2026". Only
+     found by looking at the screenshot; every number in it was correct. */
+  c.check('a date-only value formats as the same day it names',
+    /Mar 14, 2026/.test(app.shortDate('2026-03-14')) && /Jan 1, 2026/.test(app.shortDate('2026-01-01')),
+    app.shortDate('2026-03-14'));
+
+  const unsourced = ['Expires in 23 days', 'ID Verification - ', 'Last active: 2 hours ago',
+    'Failed login attempt', 'PROVIDERS.slice(0, 4)', 'adminVerifiedPerformance', 'meta.active',
+    'meta.performance'];
+  const found = unsourced.filter(s => appSrc.includes(s));
+  c.check('no screen asserts a security or document state nothing records',
+    found.length === 0, found.join(' | '));
+
   c.check('the warranty window is computed, never typed', (() => {
     const ends = app.warrantyEndsAt(b3).getTime();
     const expected = Date.parse(b3.completedAt) + app.CONFIG.warrantyDays * 86400000;

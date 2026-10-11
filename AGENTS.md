@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 9,935 lines, ONE :root block, 1,674 var() usages, 94 tokens declared with 91
+Sukinnect-next.html— 10,074 lines, ONE :root block, 1,680 var() usages, 94 tokens declared with 91
                     of them reached. Twenty-five hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1256,7 +1256,7 @@ official mark is a PNG, not an icon, and it is still the only brand image on the
 The rebuild also added a real verification surface, because reading the file cannot
 see a layout: `node tools/shot.cjs` drives the machine's own Chrome headless over the
 DevTools Protocol with no npm packages, and `--measure` runs an in-page instrument
-across all 47 screens for tap targets, WCAG contrast (sampling gradients at the text's
+across all 49 screens for tap targets, WCAG contrast (sampling gradients at the text's
 own position), clipped text, off-scale fonts, content trapped under the nav, unnamed
 controls, escaping map panes, anything painting over an open modal, and whether any
 category artwork is moving in the painted page — which is the one thing a source grep
@@ -1308,6 +1308,33 @@ were wrong first: dropping the pay-status filter does not put an unpaid booking 
 because an *ongoing* job never reaches the finished set, and a mutant that renames a function
 fires every check except the one it was written for. Where a module has no record behind it —
 saved providers, maintenance reminders — it says so plainly rather than naming something.
+
+CREDENTIALS AND VERIFICATION ARE RECORDS NOW (schema 13). Before this the only thing the app knew
+about a document was a bare name in `PROVIDERS[].credentials`, and three screens asserted statuses
+that nothing owned: a provider's own profile claimed "NBI Clearance — Valid" for a provider whose
+record says Police Cleared, "Barangay Clearance — Expires in 23 days", and an admin roster said
+"Verified since March 14, 2026". There is now a `CREDENTIALS` record set (name, issuer, kind,
+expiresAt — null means the document does not expire) and `PROVIDERS[].verification`
+(status, verifiedAt, reviewer). `credentialState` reads the expiry against
+`CONFIG.credentialWarnDays`, `worstCredentialState` lets one expired document decide the
+provider's row, and the verified roster is `verifiedProviderList()` rather than
+`PROVIDERS.slice(0, 4)`.
+
+The reason the admin console was the place this festered: `bookingsForProvider()` took **no
+parameter at all**, so `completionRate(providerId)` and `cancellationRate(providerId)` declared an
+argument, ignored it, and returned the signed-in provider's rows. Every per-provider figure in the
+admin console was p1's figure wearing another name — the typed `adminProviderMeta` table (96%
+completion, 4% cancellation, trust 94/100, 2 complaints for p1, where the records say 50%, 50%,
+96 and none) hid the bug because its numbers looked plausible. The table is gone; the verdict
+labels with it ("Performance", "last active", "response time" — no record says any of those) and
+`adminProviderMeta` now returns figures plus a `reasons` list of conditions a record actually
+asserts. `node tools/falsify-trust.cjs` — 6 mutants applied, 6 caught.
+
+One bug in that work was found only by reading a screenshot: a `YYYY-MM-DD` value parsed as UTC
+midnight formats as the **previous day** on a machine west of UTC, so a record reading 2026-03-14
+rendered "Verified Mar 13, 2026". Every number in the panel was correct. `parseDay()` treats a
+date-only value as a local day, and the gate now asserts that the day which goes in is the day
+that comes out.
 
 An animated-illustration pipeline (Lottie) was installed here and then removed again:
 it added 305KB that animated nothing, because the professional artwork it was built for

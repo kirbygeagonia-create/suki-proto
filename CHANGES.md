@@ -1378,4 +1378,65 @@ entity leaks and 18 sub-44px controls (unchanged), `probe-resident-modules.js` r
 is identical to the source. `:app:packageDebug` hit the stale `zip-cache` handle again; one retry
 cleared it, which is now what DEVICE-PASS.md says to do.
 
+---
+
+## 29. The trust pass: credentials became records, and a dropped argument was why
+
+The remaining item from §28 was the persona flavour that contradicted no record. Investigating it
+found something worse: **three claims no record could support at all**, in the one domain the
+product is built on.
+
+**Nothing owned a credential status.** `PROVIDERS[].credentials` is a bare array of names —
+`['TESDA NC II Plumbing', 'Barangay Cleared', 'Master Plumber Apprentice', 'Police Cleared']`. No
+expiry, no issuer, no state. Yet the provider's own profile asserted "ID Verification — Verified",
+"TESDA Plumbing NC II — Valid", **"NBI Clearance — Valid"** (p1 has no NBI record; p3 does) and
+**"Barangay Clearance — Expires in 23 days"**. The admin roster said "Verified since March 14,
+2026". And `verifiedProviders` was `PROVIDERS.slice(0, 4)` — verified by array position, out of
+eight providers.
+
+**A dropped argument is why the admin console could hold that for so long.**
+`bookingsForProvider()` takes no parameter; it always returns `CURRENT_PROVIDER_ID`'s rows.
+`completionRate(providerId)` and `cancellationRate(providerId)` declare an argument and call it
+anyway. So every per-provider figure in the admin console was p1's figure wearing another name —
+including the recent-bookings list added in §28, which had been silently showing p1's jobs for
+every provider. The typed `adminProviderMeta` table hid that by looking plausible: for p1 it
+claimed 96% completion, 4% cancellation, trust 94/100 and 2 complaints, where the records give
+**50%, 50%, trustScore 96, and zero open cases** (the one dispute is on p2). The provider signing
+in sees its own real numbers; the admin looking at that provider sees different ones.
+
+**What landed.** `CREDENTIALS` is a record set now (name, issuer, kind, `expiresAt`, where null
+means the document does not expire — a TESDA certificate, unlike a barangay clearance), and every
+provider carries `verification: {status, verifiedAt, reviewer}`. `credentialState` reads an expiry
+against `CONFIG.credentialWarnDays`; `worstCredentialState` lets one expired document decide a
+provider's row; the roster is `verifiedProviderList()`; the expiring badge is
+`expiringProviderCount()`. `adminProviderMeta` returns figures plus a `reasons` list of conditions
+a record actually asserts, and the unsourced verdicts went with it — **Performance, last-active and
+response time are removed rather than derived**, because no record says when a provider opened the
+app and computing a judgement from a different number does not make it sourced. The admin's Active
+Sessions and Login Activity cards, which listed other devices and a failed login the prototype
+cannot know about, now say plainly that no session or authentication record exists.
+`SCHEMA_VERSION` goes 12 → 13, so a device holding the old snapshot resets.
+
+**9 checks added, 434 → 443**, and `tools/falsify-trust.cjs` proves them: 6 mutants applied,
+6 caught. Two of my own checks were wrong before they were right. The roster check carried a
+double-negative condition that could not evaluate properly; and the badge test picked p8, which is
+already counted as expiring, so it could never have passed however correct the code was — it now
+picks p3, whose worst state is genuinely `valid`, and requires the count to move by one and return.
+
+**One bug was only visible in a screenshot.** A date-only `YYYY-MM-DD` parsed as UTC midnight
+formats as the previous day west of UTC, so `2026-03-14` rendered **"Verified Mar 13, 2026"** —
+every figure around it correct, the day wrong. `parseDay()` treats a date-only value as a local
+day, and the gate now asserts that the day which goes in is the day that comes out.
+
+**Coverage, again.** No profile module had ever been photographed — the SCREENS table held no
+entry opened through `openProfileSection` at all, which is how the §28 history survived a suite
+that renders every screen it knows about. `resident-spending` and `provider-credentials` are in the
+table now: 49 screens. Both measure clean, and the credential list was read by eye after the date
+fix.
+
+Verified: 443/443, the sweep at 390×844 clean with 0 clipped text, 0 contrast failures, 0 entity
+leaks and 18 sub-44px controls unchanged, rebuilt as `Sukinnect-1.2-preview.4-debug.apk`
+(4,594,740 bytes, `versionCode 6`) with the embedded page `cmp`-identical to source.
+`Sukinnect.html` remains identical to `origin/main`.
+
 

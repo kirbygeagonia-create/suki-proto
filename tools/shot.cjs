@@ -535,6 +535,15 @@ const SCREENS = [
   ['provider-job',     `state.view='app'; state.role='provider'; state.tab='bookings'; render();
                         openProviderBooking(pendingProviderRequests()[0].id);`],
   ['provider-profile', `state.view='app'; state.role='provider'; state.tab='profile'; render();`],
+  /* The profile modules open as sheets, and until now no sheet like this was in the table at
+     all — so the resident's spending card and the provider's new credential list had never been
+     photographed or measured, which is exactly how the invented history survived a suite that
+     renders every screen it knows about. */
+  ['resident-spending',  `state.view='app'; state.role='resident'; state.tab='profile'; render();
+                          openProfileSection('resident','spending','Spending summary','Paid, by service');`],
+  ['provider-credentials', `state.view='app'; state.role='provider';
+                          state.tab='profile'; render();
+                          openProfileSection('provider','credentials','Credentials','Documents on file');`],
   ['admin-dash',       `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='overview'; render();`],
   ['admin-finance',    `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='finance'; render();`],
   ['admin-trust',      `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='trust'; render();`],

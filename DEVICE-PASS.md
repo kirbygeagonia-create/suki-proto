@@ -57,9 +57,9 @@ What was verified about the artifact, not assumed:
 
 | Check | Result |
 |---|---|
-| `:app:assembleDebug` | **BUILD SUCCESSFUL**. Output `Sukinnect-1.2-preview.3-debug.apk`, 4,591,128 bytes, `versionCode 5`, `versionName 1.2-preview.3` |
+| `:app:assembleDebug` | **BUILD SUCCESSFUL**. Output `Sukinnect-1.2-preview.4-debug.apk`, 4,594,740 bytes, `versionCode 6`, `versionName 1.2-preview.4` |
 | Launcher label | `aapt dump badging`: **'Sukinnect · preview'** on this debug APK, and still **'Sukinnect'** on the Oct-1 release APK — the override is debug-scoped, measured on both artifacts |
-| `assets/Sukinnect.html` inside the APK | `cmp` says **identical to `Sukinnect-next.html`** (721,990 bytes at the `.3` build) |
+| `assets/Sukinnect.html` inside the APK | `cmp` says **identical to `Sukinnect-next.html`** (731,822 bytes at the `.4` build) |
 | The seven category PNGs inside the APK | `cmp` says identical to `assets/category-art/*.png`, and they sit at `assets/assets/category-art/` because the WebView root mirrors the repo root |
 | The four Atkinson weights inside the APK | `cmp` says identical, and `unzip -v` says **Stored** — `noCompress 'woff2'` is doing its job |
 | Every path the bundled page asks for | `check-assets.cjs --apk`: **48 of 48 resolve** |
@@ -74,6 +74,36 @@ first one out before making the second. And `:app:packageDebug` failed twice on 
 running** — the directory was empty, `rm -rf` on that one path cleared it, and the build succeeded
 afterwards. If that error appears, it is build scratch, not the project: delete the `tmp` directory
 rather than hunting for a process to kill.
+
+**This build resets the phone's stored demo state.** `SCHEMA_VERSION` went 12 → 13 when
+credentials and verification became records, and a snapshot from 12 has no `verification` on any
+provider — so the app discards it and reseeds. If you had been part-way through a booking on the
+old build, it will not be there. That is expected, not a storage bug; note it in the report only if
+the app *keeps* resetting after you have made something on this build.
+
+### 3b. Credentials and verification — 3 min, new since the trust pass
+
+These three screens are the reason the pass exists. They used to assert document states nothing
+recorded, and the admin's numbers for a provider disagreed with that provider's own screen.
+
+- [ ] **Provider → Profile → Credentials.** It must list the documents on file with their issuer
+      and expiry, and each status must be consistent with the day it is read: Ramil's Barangay
+      Clearance and Police Clearance should be **Expiring soon**, his two TESDA/association
+      certificates **Valid** ("does not expire"). Nothing may say "NBI Clearance" for this
+      provider — that document belongs to the cleaner, not the plumber. Tap each row and check the
+      date arithmetic is the same on the phone as in the header.
+- [ ] **The verified date.** The header reads "Verified Mar 14, 2026 by admin:raquel". If your
+      phone shows **Mar 13**, the date-shift fix did not survive the device's locale — that is a
+      real finding, because it was found once already on a desktop browser and every number
+      around it looked correct.
+- [ ] **Admin → Providers → a verified provider → Performance, then Account.** Completion and
+      cancellation must be the same figures that provider sees on its own profile, not the numbers
+      the old typed table carried (the plumber used to be shown as 96% / 4% to the admin and 50% /
+      50% to itself). "Needs a look" must list reasons — an open case, a document expiring, a
+      suspended account — and never a bare verdict like "Normal" or "Monitor".
+- [ ] **Admin → Account → Active Sessions and Login Activity.** Both must say plainly that the
+      prototype keeps no record, rather than naming a second device or a failed login. If either
+      lists a session, that is a fabricated security claim back in the UI.
 
 The painted-page row is what the `--file=` flag added to `tools/shot.cjs` exists for. The
 camera could previously photograph only `Sukinnect-next.html` at the repo root, where
