@@ -2140,6 +2140,46 @@ suite('honesty', async () => {
       why: 'un-filing a document left the count at ' + now + ' and the pill at "' + nowPill + '"' };
   })());
 
+  /* Both detail screens used to answer an unknown id with the first record in the list.
+     The provider's job screen then showed one client's door and phone under another
+     client's heading, and the admin console showed the plumber's record under whichever
+     provider had been clicked — and any test that passed the wrong id measured a record
+     nobody could reach, which is how a suite can be green over a screen that lies. */
+  verdict('an id outside the account shows nothing rather than someone else', (() => {
+    const paint = () => (app.render(), app._document.getElementById('screen').innerHTML);
+    app.state.view = 'app'; app.state.role = 'provider'; app.state.tab = 'provider_booking_detail';
+    app.state.providerProfileModal = null; app.state.profileSheet = null; app.state.sheet = null;
+    const own = app.bookingsForProvider();
+    const stranger = app.BOOKINGS.find(b => b.customerId && !own.some(x => x.id === b.id)
+      && b.customerId !== (own[0] || {}).customerId);
+    const other = own.find(b => b.status === 'upcoming') || own[0];
+    const phoneOf = (b) => { const c = app.customerOf(b); return c && c.phone ? c.phone : ''; };
+    app.state.selectedProviderBookingId = stranger ? stranger.id : 'zzz';
+    const notFound = paint();
+    app.state.selectedProviderBookingId = other.id;
+    const found = paint();
+    /* The leak to test is in the not-found screen — the found one is an accepted job and
+       is entitled to the door and the number. (An earlier draft of this check asserted
+       the opposite and failed against an app that was right.) */
+    const leaks = [other.address, other.summary, phoneOf(other)]
+      .filter(Boolean).filter(s => notFound.includes(s));
+    const showsOwn = found.includes(other.address) && /Client location/.test(found);
+    const saidSo = /not on this account/.test(notFound) && leaks.length === 0;
+
+    app.state.role = 'admin'; app.state.tab = 'admin_provider_profile';
+    app.state.selectedAdminProvider = 'nobody';
+    const adminMiss = paint();
+    app.state.selectedAdminProvider = 'p2';
+    const adminHit = paint();
+    return { ok: saidSo && showsOwn && /No provider carries that id/.test(adminMiss)
+        && !adminMiss.includes('Ramil') && adminHit.includes('Jerico'),
+      why: !saidSo ? 'the provider screen leaked ' + leaks.join(', ') + ' into the not-found card'
+        : !showsOwn ? 'the real job stopped showing its own client location'
+        : !/No provider carries that id/.test(adminMiss) ? 'the admin console answered a foreign id with someone else’s provider'
+        : adminMiss.includes('Ramil') ? 'the not-found screen still paints the fallback provider'
+        : 'the real id stopped rendering' };
+  })());
+
   const unsourced = ['Expires in 23 days', 'ID Verification - ', 'Last active: 2 hours ago',
     /* The verification console's typed claims. Each of these was painted as a fact about
        an applicant while no record held it. The last two carry their trailing comma on

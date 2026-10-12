@@ -8660,7 +8660,16 @@ function adminProviderInsights(){
 }
 
 function adminProviderManagementProfile(){
-  const provider = PROVIDERS.find(item => item.id === state.selectedAdminProvider) || PROVIDERS[0];
+  const provider = PROVIDERS.find(item => item.id === state.selectedAdminProvider) || null;
+  /* Same rule as the provider's job screen: an id the roster does not hold used to fall
+     back to PROVIDERS[0], so the console showed the plumber's bookings, credentials and
+     verdict under whichever provider the admin had actually clicked. */
+  if (!provider) return `
+  ${screenHeader('Provider management', { back: "state.tab='admin_verifications'; state.adminProviderCategory='verified'; render();", backLabel: 'Back to verified providers' })}
+  <div class="pad" style="background:var(--cloud);">
+    ${emptyState('alert-triangle', 'No provider carries that id', 'The roster has no record to manage here. Open a provider from the verified list.')}
+  </div>`;
+
   const meta = adminProviderMeta(provider);
   const section = state.adminProviderSection || 'overview';
   const note = state.adminProviderNotes[provider.id] || '';
@@ -10130,7 +10139,17 @@ function providerBookings(){
 }
 
 function providerBookingDetail(){
-  const booking = findProviderBooking(state.selectedProviderBookingId) || bookingsForProvider()[0];
+  const booking = findProviderBooking(state.selectedProviderBookingId);
+  /* An id outside this account's inbox used to fall back to the first job in the list.
+     The screen then painted one client's door and phone number under another client's
+     heading, and any test that passed the wrong id measured a record nobody could reach.
+     A booking the provider cannot open is not a booking; say so. */
+  if (!booking) return `
+  ${screenHeader('Booking details', { back: "state.tab='bookings'; render();", backLabel: 'Back to bookings' })}
+  <div class="pad" style="background:var(--cloud);">
+    ${emptyState('alert-triangle', 'That job is not on this account', 'This provider’s inbox has no booking with that reference, so there is nothing here to show. Open a job from Bookings.')}
+  </div>`;
+
   const isOpen = booking.status === 'requested';
   // Only a job this account took is entitled to the client's door and number. A
   // request has no agreement yet and a closed record no longer needs the visit.

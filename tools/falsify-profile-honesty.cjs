@@ -22,6 +22,7 @@ const PREVIEW = 'the public preview is the signed-in provider, not a fixed one';
 const METHOD = 'the change-method sheet offers the methods on the record';
 const BADGES = 'the profile card shows the badges its provider actually holds';
 const PREF = 'the preferences card offers no switch it cannot turn';
+const NOTFOUND = 'an id outside the account shows nothing rather than someone else';
 
 const mutants = [
   { name: 'Edit Pricing goes back to an action nothing branches on',
@@ -79,6 +80,16 @@ const mutants = [
     from: `modal==='add_payment'?'Change payment method':`,
     to: ``,
     expect: REACH },
+  /* The two silent fallbacks. Each mutant puts one back and expects the not-found check
+     to catch a screen answering a foreign id with somebody else's record. */
+  { name: 'the provider job screen falls back to the first job again',
+    from: 'const booking = findProviderBooking(state.selectedProviderBookingId);',
+    to: 'const booking = findProviderBooking(state.selectedProviderBookingId) || bookingsForProvider()[0];',
+    expect: NOTFOUND },
+  { name: 'the admin profile falls back to the first provider again',
+    from: 'const provider = PROVIDERS.find(item => item.id === state.selectedAdminProvider) || null;',
+    to: 'const provider = PROVIDERS.find(item => item.id === state.selectedAdminProvider) || PROVIDERS[0];',
+    expect: NOTFOUND },
 ];
 
 const base = gate();

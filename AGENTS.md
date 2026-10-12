@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 10,404 lines, ONE :root block, 1,713 var() usages, 94 tokens declared with 91
+Sukinnect-next.html— 10,423 lines, ONE :root block, 1,715 var() usages, 94 tokens declared with 91
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1448,6 +1448,22 @@ subset run reports three contrast failures on the admin header's translucent "In
 the full 57-screen sweep reports as zero — the sampler's answer depends on what was painted earlier
 in the run, so a subset's contrast line is unproven in both directions and the full sweep is the
 number to quote.
+
+A DETAIL SCREEN NEVER ANSWERS AN UNKNOWN ID WITH SOMEBODY ELSE'S RECORD. `providerBookingDetail()`
+fell back to `bookingsForProvider()[0]` and `adminProviderManagementProfile()` to `PROVIDERS[0]`, so
+a reference the account does not hold rendered a real, unrelated record with no indication it was
+not the one asked for. Neither is reachable by a tap — the ids come from the lists — which is
+exactly why they survived: the only thing they break is a test that passes the wrong id, and a test
+silently measuring a different record is worse than no test. Both now return an honest not-found
+screen, and the check asserts both halves: the foreign id leaks no other client's address, summary
+or phone, **and** a legitimate id still shows its own client location — the positive control that
+stops the check passing by rendering nothing. The same sweep also closed the reverse of a rule the
+gate already had: `tools/audit-handler-reachability.cjs` checks every function named in an
+`onclick`/`onchange` against the page's definitions — 71 handlers, all 71 resolve — where the gate
+had only ever proved that no defined function is unreferenced, which catches a dead function and
+misses a dead button. And the privacy promise the resident's card makes was measured rather than
+assumed: for every booking the provider can actually open, a `requested` job shows a lock card and
+"Withheld", and only an accepted one shows the door and the number.
 
 An animated-illustration pipeline (Lottie) was installed here and then removed again:
 it added 305KB that animated nothing, because the professional artwork it was built for

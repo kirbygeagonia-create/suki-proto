@@ -1774,3 +1774,50 @@ the layer and then finds its panel with `root.querySelector('.sheet')`, which th
 DOM does not implement. The probe was deleted rather than fixed, because a check that reports
 five defects that do not exist is worse than the gap it was written to close; the real browser
 is the instrument for overlays.
+
+---
+
+## 36. Two screens answered an unknown id with somebody else's record
+
+Asked a fifth time, the hunt went to the two areas the instruments had never covered: every
+click handler resolving to a function that exists, and the privacy promises the app makes about
+itself.
+
+**Handlers: clean.** `tools/audit-handler-reachability.cjs` collects every function named inside
+an `onclick`/`onchange` attribute and checks it against the page's top-level definitions.
+**71 distinct handlers, all 71 resolve.** The gate had always proved the other direction — that
+no defined function is unreferenced — which is how a dead function gets noticed and a dead button
+does not.
+
+**Privacy: the rule holds, and the probe that said otherwise was wrong.** The resident's card
+promises "your exact address is shared only when a booking is active" and "your phone number is
+visible to a provider once they accept". Measured across every booking the provider can open, the
+gate is real: `pb6` and `pb7` (requested) show a lock card and "Withheld"; accepted jobs show the
+door and the number. Two rows looked like violations until the lookup was checked — `b8` and `b10`
+are **not in the provider's inbox at all**, and the screen had answered them by falling back to
+`bookingsForProvider()[0]`. The probe had painted one client's job under another's reference and
+reported the reference's data as missing.
+
+**That fallback was the actual defect, in two places.** `providerBookingDetail()` substituted the
+first job in the inbox and `adminProviderManagementProfile()` substituted `PROVIDERS[0]`, so an
+unknown id rendered a real, unrelated record with no indication it was not the one asked for.
+Neither is reachable by a tap — the ids come from the lists — which is precisely why they survived:
+the only thing they break is a test that passes the wrong id, and a test that silently measures a
+different record is worse than no test. Both now return an honest not-found screen, and the gate
+check asserts both halves: the foreign id shows nothing and leaks no other client's address,
+summary or phone, **and** a legitimate id still shows its own client location — the positive
+control that keeps the check from passing by rendering nothing at all.
+
+**After:** gate 464 → **465 checks, all passing**; camera still **60 screens**, tap floor /
+contrast / clipped / off-scale / moving artwork / console errors all 0.
+`tools/falsify-profile-honesty.cjs` — **11 mutants applied, 11 caught**, the two new ones putting
+each fallback back.
+
+**Two more self-corrections worth recording, because both were mine.** The first draft of the
+not-found check asserted that the *legitimately opened* job must not contain its own client's
+address — the leak it should have tested for was in the not-found screen — and it failed against
+an app that was right. And `add-not-found-screens.cjs` converted the joined file with a global
+`\n` → `\r\n`, which re-converted every line ending that was already CRLF and wrote the file back
+with a stray carriage return on all 10,403 lines; `fix-double-cr.cjs --write` collapsed them and
+the hygiene check that pass 34 added caught it on the same run, which is the first time that guard
+has paid for itself. The script now works in LF throughout and converts once.
