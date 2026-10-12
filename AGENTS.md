@@ -1194,15 +1194,15 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 10,119 lines, ONE :root block, 1,694 var() usages, 94 tokens declared with 91
-                    of them reached. Twenty-five hex-shaped strings sit outside :root, and the
+Sukinnect-next.html— 10,370 lines, ONE :root block, 1,707 var() usages, 94 tokens declared with 91
+                    of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
                     (§45 — the seventh is Fruit Harvest & Buy); one is the <meta
-                    name="theme-color"> value, which cannot take a var(). The remaining ten are
+                    name="theme-color"> value, which cannot take a var(). The remaining nine are
                     printed line by line, because a comment quoting a measured brand value and a
                     hard-coded colour in markup are the same string to any scanner — and one of
-                    them (`#8226`) is a booking id, not a colour at all. Fifteen `#fff` values that
+                    them (`#9021`) is a booking id, not a colour at all. Fifteen `#fff` values that
                     used to be counted here went away with the inline SVG scenes, which are now
                     seven PNG files rather than painted shapes. That is why the count is
                     quoted with its command: **`node tools/measure.cjs`**, which takes a file
@@ -1216,7 +1216,7 @@ Sukinnect-next.html— 10,119 lines, ONE :root block, 1,694 var() usages, 94 tok
                     --device-signal. Type is fully on the scale: of the 116 `font-size`
                     declarations in the stylesheet, 115 take a var(), none is a literal px,
                     and the 116th is `inherit` — the reset that lets an <h1> sit in a flex bar
-                    as the div it replaced. The 371 `font-size` declarations inside markup's
+                    as the div it replaced. The 394 `font-size` declarations inside markup's
                     inline styles all take a var() too. Every screen in the app now opens with
                     an <h1> and every sheet with an <h2> — 22 and 6, the sixth being the weighing
                     sheet — because a 49-screen app with no headings has no outline for a screen
@@ -1256,7 +1256,7 @@ official mark is a PNG, not an icon, and it is still the only brand image on the
 The rebuild also added a real verification surface, because reading the file cannot
 see a layout: `node tools/shot.cjs` drives the machine's own Chrome headless over the
 DevTools Protocol with no npm packages, and `--measure` runs an in-page instrument
-across all 52 screens for tap targets, WCAG contrast (sampling gradients at the text's
+across all 56 screens for tap targets, WCAG contrast (sampling gradients at the text's
 own position), clipped text, off-scale fonts, content trapped under the nav, unnamed
 controls, escaping map panes, anything painting over an open modal, and whether any
 category artwork is moving in the painted page — which is the one thing a source grep
@@ -1283,7 +1283,7 @@ it in the same change.
 And a fourth form of the same trap: **a screen can sit one tap below a screen that is covered.**
 The profile *sheets* were photographed; the modals their own buttons open were not, so the 24×25px
 `×` that closes every one of them had never met the tap floor, and no source grep could have found
-it. Those three screens are in the table now (52), reached by `clickPainted()` — which finds the
+it. Those three screens are in the table now, reached by `clickPainted()` — which finds the
 button the app actually painted and clicks it, so a control whose handler went away fails the shot by
 name instead of photographing a state nobody can enter. That helper exposed one more thing about the
 walk: it assigned `state.role` over whatever sheet the previous screen left open, and the app pays
@@ -1291,6 +1291,13 @@ its Back debt with real `history.back()` calls, which on a `file://` page is a n
 took the target down for three screens before the walk was made to `clearModals()` first, the way
 the app's own bottom navigation does. A harness that reaches a screen the user cannot reach is
 measuring a fiction, and here it was also crashing the browser.
+
+The same gap existed one screen over, and it is worth naming because it survived four passes: the
+admin's provider-verification **review** was in no table at all — a whole destination reached by
+tapping "Open verification" on a pending applicant, never photographed, never measured, and the last
+place in the app still typing its own facts. Its request picker and document preview are in the
+table with it (56 screens). The rule after any pass: a destination behind a button counts as a
+destination, and a screen the camera has never painted is a screen nobody has checked.
 
 TYPED TEXT NEVER BECOMES MARKUP, and the gate enforces it rather than remembering it.
 `esc()` covers `& < > " '`; `jsStr()` exists for the one context `esc()` cannot serve —
@@ -1397,6 +1404,28 @@ its dates with `toISOString().slice(0,10)` — a **UTC** calendar date — while
 measures from the local midnight `parseDay` returns, so on a GMT-11 machine the two disagree by a day
 at the boundary and a check that had passed for weeks failed against an app that had not changed.
 Build the day, then read the day, in the same frame of reference.
+
+APPLICATIONS AND THEIR DOCUMENTS ARE RECORDS NOW (schema 14). The admin's verification console was
+the last screen that asserted everything and stored nothing: five document rows written once and
+shown to all three applicants — so the cleaning applicant was handed the electrician's TESDA NC II —
+a date of birth identical for all three, six green checks no record had performed, a "5 of 5" header
+over four itemised documents, a seeded activity list stamped `Sep 8, 9:14 AM`, and five actions that
+appended `Sep 9, 2:45 PM` whatever hour the button was pressed. The applicants existed twice: the
+roster called Maria `maria` with `docs:'4/5'`, the review called her `LS-PV-0024` with `docs:4`.
+There is now one `PENDING_APPLICANTS` record carrying the application number, contact details and
+`submittedAt`; `APPLICATION_DOCS` holds one row per applicant per document, and a row with no
+`submittedAt` **is** what outstanding means, so the count is `3 of 4` and the wait is counted rather
+than parsed out of a phrase. The required set is the four the screen already named — identity, NBI
+clearance, barangay clearance, and the qualification for the trade applied for — with each
+applicant's own. One persisted review record per applicant replaces five screen-local bags that were
+wiped whenever the admin opened someone else, so a note written on one applicant can no longer be
+painted on the next, and every action appends `{ at: Date.now() }`. Approving is refused while a
+document is outstanding, names which, and on approval writes status, time and reviewer, persists,
+and takes the applicant out of the queue — the decision survives a reload and `reopenReview()`
+undoes it. Two lessons from the checks: a check that calls `persist()` itself passes even when the
+action saves nothing (its own mutant missed until the check stopped performing the step), and a
+typed-claim needle matching `docs:'4/5'` in a *comment* that explains the old shape is a needle
+matching prose — the surviving ones carry their trailing comma.
 
 An animated-illustration pipeline (Lottie) was installed here and then removed again:
 it added 305KB that animated nothing, because the professional artwork it was built for

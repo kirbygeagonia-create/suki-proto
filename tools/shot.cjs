@@ -572,6 +572,20 @@ const SCREENS = [
   ['admin-categories', `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='categories'; render();`],
 
   ['admin-verifiers',  `state.view='app'; state.role='admin'; state.tab='admin_verifications'; state.adminProviderCategory='pending'; render();`],
+  /* The review screen was in no table at all — a whole destination, reached by tapping
+     "Open verification" on a pending applicant, that had never been photographed. Its
+     modals now carry checkboxes and selects, so they are reached by clicking the painted
+     button rather than by assigning the state. */
+  ['admin-review', `state.view='app'; state.role='admin'; state.tab='admin_verifications'; render();
+                          openProviderVerification('maria');`],
+  ['admin-review-complete', `state.view='app'; state.role='admin'; state.tab='admin_verifications'; render();
+                          openProviderVerification('joel');`],
+  ['admin-review-request', `state.view='app'; state.role='admin'; state.tab='admin_verifications'; render();
+                          openProviderVerification('maria');
+                          clickPainted(/Action\\(.request.\\)/, 'the request-update button');`],
+  ['admin-review-document', `state.view='app'; state.role='admin'; state.tab='admin_verifications'; render();
+                          openProviderVerification('maria');
+                          clickPainted(/Action\\(.document.,/, 'the open-document button');`],
   ['admin-verified',   `state.view='app'; state.role='admin'; state.tab='admin_verifications'; state.adminProviderCategory='verified'; render();`],
   ['admin-desk',       `state.view='app'; state.role='admin'; state.tab='admin_disputes'; render();`],
   ['admin-provider',   `state.view='app'; state.role='admin'; state.tab='admin_provider_profile';

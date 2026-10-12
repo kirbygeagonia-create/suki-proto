@@ -59,13 +59,13 @@ What was verified about the artifact, not assumed:
 
 | Check | Result |
 |---|---|
-| `:app:assembleDebug` | **BUILD SUCCESSFUL**. Current output `Sukinnect-1.2-preview.7-debug.apk`, **2,105,566 bytes**, `versionCode 9`, `versionName 1.2-preview.7` — the profile-honesty build. The previous one, `Sukinnect-1.2-preview.6-debug.apk`, was **2,104,798 bytes** (was 4,595,092 before reicon.js left the bundle) |
+| `:app:assembleDebug` | **BUILD SUCCESSFUL**. Current output `Sukinnect-1.2-preview.8-debug.apk`, **2,111,574 bytes**, `versionCode 10`, `versionName 1.2-preview.8` — the verification-records build. Before it: `.7` at 2,105,566 bytes (profile honesty), `.6` at 2,104,798 (was 4,595,092 before reicon.js left the bundle) |
 | Launcher label | `aapt dump badging`: **'Sukinnect · preview'** on this debug APK, and still **'Sukinnect'** on the Oct-1 release APK — the override is debug-scoped, measured on both artifacts |
-| `assets/Sukinnect.html` inside the APK | `cmp` says **byte-identical to `Sukinnect-next.html`** — 735,292 bytes at the `.7` build (732,855 at `.5`). Compared with `cmp`, not with a hash: `.gitattributes` normalises line endings, so a hash match is the wrong question for a text file here |
+| `assets/Sukinnect.html` inside the APK | `cmp` says **byte-identical to `Sukinnect-next.html`** — 751,283 bytes at the `.8` build (735,292 at `.7`, 732,855 at `.5`). Compared with `cmp`, not with a hash: `.gitattributes` normalises line endings, so a hash match is the wrong question for a text file here |
 | The seven category PNGs inside the APK | `cmp` says identical to `assets/category-art/*.png`, and they sit at `assets/assets/category-art/` because the WebView root mirrors the repo root |
 | The four Atkinson weights inside the APK | `cmp` says identical, and `unzip -v` says **Stored** — `noCompress 'woff2'` is doing its job |
 | Every path the bundled page asks for | `check-assets.cjs --apk`: **48 of 48 resolve** |
-| The bundled page, painted | `tools/shot.cjs --file=<the assets copy> --width=360 --height=640 --measure`: 46 screens then, 47, then 49, **52 now** — the three newest are the modals behind the profile sheets, where the 24×25px close `×` was found. **0 images that got no pixels, 0 console errors**, 9 painted font sizes all ≥14px, 0 moving category artwork, 0 controls under the tap floor, and **every measured field equal to the same run against the repo source** |
+| The bundled page, painted | `tools/shot.cjs --file=<the assets copy> --width=360 --height=640 --measure`: 46 screens then, 47, then 49, 52, **56 now** — the newest are the modals behind the profile sheets, where the 24×25px close `×` was found, and the admin's verification review with its request picker and document preview, which had been in no table at all. **0 images that got no pixels, 0 console errors**, 9 painted font sizes all ≥14px, 0 moving category artwork, 0 controls under the tap floor, and **every measured field equal to the same run against the repo source** |
 | Scratch left behind | none — the capture directories this pass wrote were deleted. The only tracked edits are `tools/shot.cjs` (the `--file=` flag) and this file |
 
 **Two build notes from 2026-10-10/11, both learned the hard way.** Rebuilding replaces the
@@ -133,6 +133,34 @@ browser renders a `<select>` and a `<input>` the way Chrome wants to, not the wa
       the top-right of the sheet, with the sheet still open underneath. Tap it and confirm you land
       back on the section you came from, not on the profile list.
 
+### 3d. The verification queue — 4 min, new since the records build
+
+The admin's review screen was rebuilt on records in `.8`: one applicant record, per-person document
+rows, and decisions that persist. On a phone the thing to test is not the arithmetic but whether the
+queue behaves like a queue under the conditions a bench has no equivalent for — a thumb, a back
+gesture, and an app killed mid-review.
+
+- [ ] **Open verification on Maria Santos.** The header must read `Application LS-PV-0024`, the
+      progress **3 of 4**, and the four rows must be Government ID, NBI Clearance (Not submitted),
+      Barangay Clearance and Service qualification — with **her** electrical NC II, not a certificate
+      belonging to somebody else. If the screen shows five documents, or a TESDA row that matches
+      another applicant's trade, the records did not reach the build.
+- [ ] **Approval is unavailable while NBI Clearance is outstanding.** That sentence has to be
+      visible **above** the three buttons, not below them or off the bottom of the screen — it was
+      painted under the sticky bar first and nobody saw it until a screenshot did. Tap the dimmed
+      Approve anyway: nothing should happen, and nothing should be recorded.
+- [ ] **Request update → Record request, then leave the screen and come back.** The row must now
+      read as requested, the queue pill should say `1 document requested`, and the activity list
+      should carry the entry **stamped with the time you actually pressed the button** — compare it
+      with the phone's clock. A `Sep 9, 2:45 PM` on any entry means a typed timestamp came back.
+- [ ] **Approve Joel Aquino** (all four filed). He must leave the pending queue, the dashboard's
+      pending count must fall by one, and reopening the app must **not** put him back. Then
+      `Reopen this application` and confirm he returns.
+- [ ] **Kill the app while a review modal is open** and reopen it. The decision list should show
+      only what was actually recorded; a note typed into the box and never saved must not appear,
+      and a saved note must. Notes are per applicant now — open Liza Ramos and confirm none of
+      Maria's notes or status is painted on her.
+
 The painted-page row is what the `--file=` flag added to `tools/shot.cjs` exists for. The
 camera could previously photograph only `Sukinnect-next.html` at the repo root, where
 `assets/category-art/plumbing.png` resolves one level deep. Inside the APK the same page resolves
@@ -180,9 +208,9 @@ the only record.
    `Sukinnect-Android/web-assets-offline/reicon.js` on 2026-10-11, so it is no longer packaged.
    To build the shipped prototype again: `mv Sukinnect-Android/web-assets-offline/reicon.js
    Sukinnect-Android/app/src/main/assets/reicon.js`.
-4. `app/build.gradle`: `versionCode` 2 → 8 → **9**, `versionName` '1.1' → '1.2-preview.6' →
-   **'1.2-preview.7'**, **`targetSdk` 34 → 36**. The `.7` build is the one that carries the
-   profile-honesty pass, and it is the build the three checks below are about.
+4. `app/build.gradle`: `versionCode` 2 → 8 → 9 → **10**, `versionName` '1.1' → '1.2-preview.6' →
+   '1.2-preview.7' → **'1.2-preview.8'**, **`targetSdk` 34 → 36**. The `.8` build carries the
+   verification records, and it is the build section 3d is about.
 5. `app/src/debug/res/values/app.xml`: new, debug-only `app_name` = "Sukinnect · preview".
 6. `MainActivity.java`: `applySystemBarInsets()` added, plus the `Build` and `WindowInsets`
    imports. This is the edge-to-edge compensation for item 4 and it is **device-unverified**.

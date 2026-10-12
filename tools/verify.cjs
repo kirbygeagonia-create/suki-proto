@@ -1072,6 +1072,17 @@ suite('hygiene', async () => {
   /* retired markup should stay retired */
   c.check('no hidden cards are shipped', !/<div class="card" style="display:none;">/.test(body));
 
+  /* The patch scripts in tools/ write LF and convert to CRLF on the way in. A literal that
+     already spelled \r\n came out as \r\r\n — JavaScript ignores it, the "count of CR equals
+     count of LF" tally still balanced, and the gate stayed green while the file quietly grew
+     stray carriage returns that show up later as an unexplainable diff. */
+  const raw = require('fs').readFileSync(require('./harness.cjs').APP, 'utf8');
+  c.check('the file carries no doubled carriage return',
+    (raw.match(/\r\r\n/g) || []).length === 0
+      && (raw.match(/\r/g) || []).length === (raw.match(/\n/g) || []).length,
+    (raw.match(/\r\r\n/g) || []).length + ' × \\r\\r\\n, CR ' + (raw.match(/\r/g) || []).length
+      + ' against LF ' + (raw.match(/\n/g) || []).length);
+
   /* Category artwork is static by owner's rule, not by taste: the picture is what
      tells a plumber from an electrician, and this app once ran 33 infinite
      animations over the seven tiles. A CSS-only guard would not hold — the motion
@@ -2023,7 +2034,81 @@ suite('honesty', async () => {
         : 'the card still offers the compact switch' };
   })());
 
+  /* The admin's verification console used to be the last screen in the app that said
+     everything and stored nothing: five document rows typed once and shown to all three
+     applicants (so the cleaner was handed the electrician's NC II), a date of birth
+     identical for all three, six green checks no record performed, a seeded activity list
+     stamped 'Sep 8, 9:14 AM', and five actions that appended 'Sep 9, 2:45 PM' whatever
+     hour the button was actually pressed. */
+  verdict('the verification queue is a record, not a screen state', (() => {
+    const store = fakeStorage();
+    const a = boot({ storage: store });
+    a.state.view = 'app'; a.state.role = 'admin';
+    const before = a.pendingApplicantList().length;
+    a.openProviderVerification('joel');
+    a.verificationAction('approved');
+    const after = a.pendingApplicantList().length;
+    /* No persist() here on purpose: the app writing its own decision is part of what is
+       being tested. A check that saves the state itself passes even when the action
+       records nothing, which is how this one first escaped its own mutant. */
+    const b = boot({ storage: store });
+    const r = b.hydrate();
+    const reloaded = b.pendingApplicantList().length;
+    /* An applicant with a document outstanding cannot be approved, and says which one. */
+    b.openProviderVerification('maria');
+    b.verificationAction('approved');
+    const refused = b.reviewOf('maria').status === 'pending' && /outstanding/.test(b.state.profileError || '');
+    return { ok: before === 3 && after === 2 && r.restored !== false && reloaded === 2 && refused,
+      why: 'approve ' + before + '→' + after + ', reload ' + reloaded
+        + (refused ? '' : ', and an incomplete applicant was approved anyway') };
+  })());
+
+  verdict('a review action is stamped with the time it happened', (() => {
+    app.state.view = 'app'; app.state.role = 'admin';
+    app.openProviderVerification('liza');
+    app.verificationAction('note', 'Called about the missing clearance.');
+    const e = app.reviewOf('liza').activity.slice(-1)[0];
+    const age = e ? (Date.now() - e.at) / 1000 : -1;
+    app.render();
+    const html = app._document.getElementById('screen').innerHTML;
+    return { ok: age >= 0 && age < 5 && !/Sep [0-9]+, [0-9]:/.test(html) && /\d{1,2}:\d{2} (AM|PM)/.test(html),
+      why: age < 0 ? 'the action recorded no entry' : age >= 5 ? 'stamped ' + age + 's ago'
+        : 'the painted activity carries no real clock time' };
+  })());
+
+  verdict('each applicant is shown the qualification they hold', (() => {
+    const q = id => app.applicationDocs(id).find(d => d.kind === 'qualification').detail;
+    const all = app.PENDING_APPLICANTS.map(a => q(a.id));
+    const distinct = new Set(all).size === all.length;
+    /* The electrician's certificate must not be the one painted on the cleaner. */
+    const maria = q('maria'), liza = q('liza');
+    return { ok: distinct && /Electrical/.test(maria) && !/Electrical/.test(liza),
+      why: distinct ? 'the electrician’s certificate is shown for another trade'
+        : 'one qualification row shared by several applicants: ' + all.join(' | ') };
+  })());
+
+  verdict('the document count moves with the rows behind it', (() => {
+    const a = app.PENDING_APPLICANTS.find(x => x.id === 'maria');
+    const was = app.applicationDocsSubmitted('maria');
+    const pill = app.applicantIssue(a).label;
+    const row = app.APPLICATION_DOCS.find(d => d.appId === 'maria' && d.kind === 'barangay');
+    const held = row.submittedAt;
+    row.submittedAt = null;
+    const now = app.applicationDocsSubmitted('maria');
+    const nowPill = app.applicantIssue(a).label;
+    row.submittedAt = held;
+    return { ok: now === was - 1 && nowPill !== pill && /1 document|2 documents/.test(nowPill),
+      why: 'un-filing a document left the count at ' + now + ' and the pill at "' + nowPill + '"' };
+  })());
+
   const unsourced = ['Expires in 23 days', 'ID Verification - ', 'Last active: 2 hours ago',
+    /* The verification console's typed claims. Each of these was painted as a fact about
+       an applicant while no record held it. The last two carry their trailing comma on
+       purpose: a comment elsewhere in this file explains the old shape in prose, and a
+       scanner that cannot tell a quoted explanation from a live literal is one that gets
+       deleted. */
+    'May 12, 1994', '**** **** 4821', "'Sep 8, 9:14 AM", "push('Sep 9, 2:",
+    'Email and mobile verified', 'Name matches Government ID', "docs:'4/5',", "days:'1 day ago',",
     'Failed login attempt', 'PROVIDERS.slice(0, 4)', 'adminVerifiedPerformance', 'meta.active',
     'meta.performance'];
   const found = unsourced.filter(s => appSrc.includes(s));

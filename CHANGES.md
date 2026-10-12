@@ -1634,3 +1634,65 @@ place, which is how the payment picker opened as "Update".
 (`NBI Clearance`, `Identity information`) are `<input type="checkbox">` with no handler and no state
 behind them, while `state.verificationDocStatus` sits unused next to them — a real wiring job on a
 different surface, not a copy edit. The handset pass, and promotion behind it, are unchanged.
+
+---
+
+## 33. The verification console: the last screen that said everything and stored nothing
+
+§32 closed the profile modals and named one thing still open — a checkbox in the admin's
+verification modal that answered to nothing. It was the visible end of it. The whole review
+screen was typed: five document rows written once and shown to all three applicants, so the
+cleaning applicant was handed the electrician's TESDA NC II; a date of birth identical for all
+three; six green checks no record had performed; a progress header reading "5 of 5" above four
+itemised documents; a roster counting out of five while the screen listed four; a seeded activity
+list stamped `Sep 8, 9:14 AM`; and five actions that appended `Sep 9, 2:45 PM` whatever hour the
+button was actually pressed. The applicants themselves existed twice — the roster called Maria
+`maria` with `docs:'4/5'`, the review called her `LS-PV-0024` with `docs:4`, and the screen header
+printed the second while the row that opened it used the first.
+
+**Two decisions, taken as options.** The required-document set becomes the four the screen already
+names — identity, NBI clearance, barangay clearance, and the qualification for the trade applied
+for — so the phantom fifth slot goes away rather than being invented into existence, and each
+applicant's qualification is their own. And an approval is a decision: it records status, time and
+reviewer, and takes the applicant out of the pending queue.
+
+**What the records look like now.** `PENDING_APPLICANTS` carries the application number, contact
+details and `submittedAt`; `APPLICATION_DOCS` holds one row per applicant per document with
+`submittedAt` and an optional `expiry`, and a missing row means outstanding — that is the only
+definition of the count the roster prints, which is now `3 of 4`. The wait is counted from
+`submittedAt` instead of parsed back out of a `'1 day ago'` string. One review record per applicant
+(`verificationReviews`, persisted, schema **14**) replaces five screen-local bags that were wiped
+whenever the admin opened someone else, so a note written on one applicant can no longer be painted
+on the next. Every action appends `{ at: Date.now() }`, and the timeline before anyone acts is the
+application's own dates rather than an invented hour. The document preview shows the row's own
+filing and says plainly that no image is stored. Approving is refused while a document is
+outstanding, and says which one.
+
+**Measured after:** gate 456 → **461 checks, all passing**; camera 52 → **56 screens** — the review
+screen had been in no table at all, so a whole destination reached by tapping "Open verification"
+had never been photographed, along with its request picker and its document preview. Tap floor 0,
+contrast 0, clipped 0, moving artwork 0, console errors 0. `tools/probe-verification-flow.js` drives
+the flow rather than reading the markup: **18 of 18** hold, including "Maria cannot be approved with
+a document outstanding", "approving removes the applicant from the pending queue", "the approval
+survives a reload" and "Liza has no note of hers". `tools/falsify-verification-records.cjs` —
+**6 mutants applied, 6 caught**.
+
+**Two of the six checks were wrong before they were right, and both are worth the paragraph.** The
+queue check called `a.persist()` itself after the action, so it passed even with `persist()` deleted
+from `verificationAction` — a check that performs the step under test proves nothing; the mutant was
+MISSED, and the fix was to stop the check from saving. And the typed-claim scan flagged
+`docs:'4/5'` from a *comment* in the app that explains the old shape, which is the same trap
+`measure.cjs` documents for hex colours: a needle that matches prose is a needle that gets removed.
+Both needles now carry their trailing comma.
+
+**One defect this pass introduced and now guards against.** The patch scripts write LF and convert
+to CRLF on the way in; a literal that already spelled `\r\n` came out as `\r\r\n`. JavaScript
+ignores it, the "CR count equals LF count" tally still balanced, and the gate stayed green with two
+stray carriage returns in the file. `tools/fix-double-cr.cjs` collapses them and the hygiene suite
+now asserts none exist, with the CR and LF counts compared as a second opinion.
+
+**Found on the bench, not in code:** the reason approval is unavailable was painted *below* the
+sticky action bar, so the one moment it is needed is the moment it is off screen — it now sits
+inside the bar, above the buttons. And the request picker's checkboxes measured 44px because the
+input itself was raised to the tap floor; the box is 20px again with the label row carrying the
+tap, which is what the instrument accepts and what the eye expects.

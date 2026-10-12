@@ -33,6 +33,7 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   'categorySupply', 'weeklyBookings', 'providerWeeklyEarnings', 'providerDemandByBarangay', 'weekStart', 'MIN_SHARE_SAMPLE', 'chartShare', 'chartColumns', 'chartBars', 'chartEmpty', 'chartScale', 'chartSummary', 'adminFinanceScreen', 'ageingCard',
   'residentFinished', 'residentPaid', 'bookingTotal', 'residentSpendByService', 'warrantyEndsAt', 'shortDate', 'residentSectionBody',
   'adminProviderMeta', 'credentialState', 'credentialsOf', 'worstCredentialState', 'verifiedProviderList', 'expiringProviderCount', 'bookingsForProvider', 'providerSectionBody', 'adminSectionBody', 'openCasesFor', 'credentialSummaryFor', 'closedJobCount',
+  'PENDING_APPLICANTS', 'APPLICATION_DOCS', 'APPLICATION_DOC_KINDS', 'applicationDocs', 'applicationDocsSubmitted', 'applicationDocsOutstanding', 'applicationDocLabel', 'applicantWaitDays', 'applicantWaitLabel', 'applicantIssue', 'pendingApplicantList', 'reviewOf', 'reviewStatusLine', 'reviewTimeline', 'verificationApplication', 'verificationAction', 'openProviderVerification', 'reopenReview', 'docsOutstanding',
   'loginHTML', 'AUTH_ROLE_LABEL', 'DEMO_LOGIN',
   /* Added after the audit: the guards, the money readers and the case door were
      unreachable from the suite, which is exactly how a severed entry point could

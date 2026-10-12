@@ -1805,12 +1805,114 @@ const CREDENTIALS = [
   {id:'cr18', providerId:'p8', name:'Farm Workers Association Card', issuer:'FWA', kind:'qualification', expiresAt:null},
 ];
 
+/* Three people waiting on a decision. The count of documents and how long someone has
+   waited used to be typed here ('4/5', '1 day ago') and typed again, differently, on the
+   review screen (docs:4, id:'LS-PV-0024') — two copies of the same applicant that
+   disagreed about both the number and the identifier. Both are derived now: the count
+   from APPLICATION_DOCS below, the wait from submittedAt. */
 const PENDING_APPLICANTS = [
-  {id:'maria', initials:'MS', name:'Maria Santos', service:'Electrical Specialist', days:'1 day ago', barangay:'Poblacion', docs:'4/5', priority:'High Priority', priorityColor:'var(--warning-100)', priorityText:'var(--warning-ink)', issue:'Missing NBI Clearance', issueColor:'var(--error-100)', issueText:'var(--error-ink)'},
-  {id:'joel', initials:'JA', name:'Joel Aquino', service:'Appliance Specialist', days:'2 days ago', barangay:'San Isidro', docs:'5/5', priority:'Normal Priority', priorityColor:'var(--warning-100)', priorityText:'var(--warning-ink)', issue:'All documents submitted', issueColor:'var(--success-100)', issueText:'var(--success-ink)'},
-  {id:'liza', initials:'LR', name:'Liza Ramos', service:'Cleaning Specialist', days:'3 days ago', barangay:'Sta. Cruz', docs:'3/5', priority:'For Initial Review', priorityColor:'var(--brand-tint-soft)', priorityText:'var(--brand-primary-dark)', issue:'2 documents to review', issueColor:'var(--warning-100)', issueText:'var(--warning-ink)'},
+  {id:'maria', applicationId:'LS-PV-0024', initials:'MS', name:'Maria Santos', service:'Electrical Specialist', serviceId:'electrical', barangay:'Poblacion', submittedAt:'2026-10-10', email:'maria.santos@example.com', phone:'+63 917 321 8844', address:'Blk 8 Lot 4, Mabini St., Poblacion', priority:'High Priority', priorityColor:'var(--warning-100)', priorityText:'var(--warning-ink)'},
+  {id:'joel', applicationId:'LS-PV-0025', initials:'JA', name:'Joel Aquino', service:'Appliance Specialist', serviceId:'appliance', barangay:'San Isidro', submittedAt:'2026-10-09', email:'joel.aquino@example.com', phone:'+63 918 442 1102', address:'24 Sampaguita St., San Isidro', priority:'Normal Priority', priorityColor:'var(--warning-100)', priorityText:'var(--warning-ink)'},
+  {id:'liza', applicationId:'LS-PV-0026', initials:'LR', name:'Liza Ramos', service:'Cleaning Specialist', serviceId:'cleaning', barangay:'Sta. Cruz', submittedAt:'2026-10-08', email:'liza.ramos@example.com', phone:'+63 919 552 4471', address:'15 Orchid St., Sta. Cruz', priority:'For Initial Review', priorityColor:'var(--brand-tint-soft)', priorityText:'var(--brand-primary-dark)'},
 ];
-const docsOutstanding = () => PENDING_APPLICANTS.filter(a => a.docs !== '5/5').length;
+/* The four documents an applicant has to put up. The review screen itemised exactly
+   these four while the roster counted out of five, and the same four rows were shown for
+   all three applicants — so the cleaning applicant was handed the electrician's TESDA
+   NC II. The qualification row is per person now. A row with no submittedAt is
+   outstanding, which is the only definition of the count the roster prints. */
+const APPLICATION_DOC_KINDS = [
+  { kind:'identity',      label:'Government ID' },
+  { kind:'nbi',           label:'NBI Clearance' },
+  { kind:'barangay',      label:'Barangay Clearance' },
+  { kind:'qualification', label:'Service qualification' },
+];
+const APPLICATION_DOCS = [
+  {appId:'maria', kind:'identity',      detail:'Philippine National ID', submittedAt:'2026-10-10'},
+  {appId:'maria', kind:'nbi',           detail:'NBI clearance certificate', submittedAt:null},
+  {appId:'maria', kind:'barangay',      detail:'Poblacion business clearance', submittedAt:'2026-10-10'},
+  {appId:'maria', kind:'qualification', detail:'TESDA Electrical Installation and Maintenance NC II', submittedAt:'2026-10-10', expiresAt:'2028-03-14'},
+  {appId:'joel',  kind:'identity',      detail:'Philippine Identification System card', submittedAt:'2026-10-09'},
+  {appId:'joel',  kind:'nbi',           detail:'NBI clearance certificate', submittedAt:'2026-10-09'},
+  {appId:'joel',  kind:'barangay',      detail:'San Isidro business clearance', submittedAt:'2026-10-09'},
+  {appId:'joel',  kind:'qualification', detail:'Manufacturer authorisation — split-type air conditioning', submittedAt:'2026-10-09'},
+  {appId:'liza',  kind:'identity',      detail:'Unified Multi-Purpose ID', submittedAt:'2026-10-08'},
+  {appId:'liza',  kind:'nbi',           detail:'NBI clearance certificate', submittedAt:null},
+  {appId:'liza',  kind:'barangay',      detail:'Sta. Cruz clearance', submittedAt:null},
+  {appId:'liza',  kind:'qualification', detail:'Household cleaning practice certificate', submittedAt:'2026-10-08'},
+];
+/* Read through the kind list, so an applicant with a missing row still shows the
+   requirement rather than silently shortening the set. */
+function applicationDocs(appId){
+  return APPLICATION_DOC_KINDS.map(k => {
+    const row = APPLICATION_DOCS.find(d => d.appId === appId && d.kind === k.kind);
+    return { kind:k.kind, label:k.label, detail:row ? row.detail : 'No document filed',
+             submittedAt:row ? row.submittedAt : null, expiresAt:row ? row.expiresAt : null };
+  });
+}
+function applicationDocsSubmitted(appId){ return applicationDocs(appId).filter(d => d.submittedAt).length; }
+function applicationDocsOutstanding(appId){ return applicationDocs(appId).filter(d => !d.submittedAt); }
+function applicationDocLabel(kind){
+  const k = APPLICATION_DOC_KINDS.find(x => x.kind === kind);
+  return k ? k.label : 'Document';
+}
+function applicantWaitDays(a){
+  return Math.max(0, Math.round((Date.now() - parseDay(a.submittedAt)) / 86400000));
+}
+function applicantWaitLabel(a){
+  const d = applicantWaitDays(a);
+  return d <= 0 ? 'today' : d === 1 ? '1 day ago' : d + ' days ago';
+}
+/* The roster's status pill, from the rows and the decision rather than from a typed
+   sentence that could disagree with either. */
+function applicantIssue(a){
+  const decision = reviewOf(a.id).status;
+  if (decision === 'verified')  return { label:'Verified — ready to activate', bg:'var(--success-100)', ink:'var(--success-ink)' };
+  if (decision === 'rejected')  return { label:'Rejected', bg:'var(--error-100)', ink:'var(--error-ink)' };
+  const out = applicationDocsOutstanding(a.id).length;
+  if (!out) return { label:'All documents submitted', bg:'var(--success-100)', ink:'var(--success-ink)' };
+  if (decision === 'update requested') return { label:out + ' document' + (out === 1 ? '' : 's') + ' requested', bg:'var(--warning-100)', ink:'var(--warning-ink)' };
+  return { label:out + ' document' + (out === 1 ? '' : 's') + ' outstanding', bg:'var(--warning-100)', ink:'var(--warning-ink)' };
+}
+const docsOutstanding = () => PENDING_APPLICANTS.filter(a => applicationDocsOutstanding(a.id).length > 0).length;
+/* An applicant stays in the queue until the decision is made on this device; the roster
+   reads the same record the review screen writes, so approving one moves the count. */
+function pendingApplicantList(){
+  return PENDING_APPLICANTS.filter(a => reviewOf(a.id).status !== 'verified');
+}
+/* One review record per applicant, persisted with the rest of state. It replaces five
+   loose bags (verificationStatus, verificationNote, verificationActivity,
+   verificationDocStatus and a per-screen modal) that were reset when the admin opened a
+   different applicant — so a note written on one person was painted on the next. */
+function blankReview(){ return { status:'pending', docs:{}, note:'', activity:[], requestedAt:null, decidedAt:null, reviewer:null, reason:'' }; }
+function reviewOf(appId){
+  if (!state.verificationReviews[appId]) state.verificationReviews[appId] = blankReview();
+  return state.verificationReviews[appId];
+}
+/* One list of the decisions a review record may hold: the label map, the door hydrate
+   checks at, and the queue filter all read it, so a fourth status cannot be added in one
+   place and silently render as "Pending Review" in the other two. */
+const REVIEW_STATUSES = ['pending', 'update requested', 'verified', 'rejected'];
+const REVIEW_STATUS_LABELS = { pending:'Pending Review', 'update requested':'Update Requested',
+  verified:'Verified', rejected:'Rejected' };
+function reviewStatusLine(status){ return REVIEW_STATUS_LABELS[status] || 'Pending Review'; }
+/* Stamped when the action happens. The five places this is called used to push a
+   literal 'Sep 9, 2:45 PM' string, so the activity log named a time that was not the
+   time — whatever hour the admin actually pressed the button. */
+function logReview(appId, text){
+  reviewOf(appId).activity.push({ at: Date.now(), text });
+}
+/* The timeline before anyone acts on this device is the record's own history: when the
+   application came in and when each document was filed. Nothing here is invented. */
+function reviewTimeline(appId){
+  const a = PENDING_APPLICANTS.find(x => x.id === appId);
+  const r = reviewOf(appId);
+  if (r.activity.length) return r.activity.slice();
+  const seed = [{ at: parseDay(a.submittedAt) + 3600000, text:'Application submitted' }];
+  applicationDocs(appId).filter(d => d.submittedAt).forEach(d =>
+    seed.push({ at: parseDay(d.submittedAt) + 7200000, text: d.label + ' filed' }));
+  return seed.sort((x, y) => x.at - y.at);
+}
+
 const SELF_PHOTOS = { resident:'avatars/avatar-03.png', admin:'avatars/ADMIN.png', self:'avatars/PLUMBER.png' };
 
 // Warm the image cache for every avatar up front. On file:// URLs an <img>
@@ -4419,7 +4521,12 @@ function resetDemoData() {
    A stored snapshot from 12 has no verification on any provider, so the admin's verified list
    would silently read as empty rather than wrong — but it would read differently to the same
    person on a fresh install, which is the thing worth avoiding. A device holding 12 resets. */
-const SCHEMA_VERSION = 13;
+/* 14 moves the verification review onto records: one applicant record instead of two
+   disagreeing copies, per-applicant document rows instead of a typed count, and one
+   review record per applicant in place of five screen-local bags. A dump from 13 carries
+   a note and a status with no applicant attached to them, which is the one thing this
+   screen must not get wrong, so a device holding 13 starts again. */
+const SCHEMA_VERSION = 14;
 const STORE_KEY = 'sukinnect.snapshot.v1';
 
 const Store = (function () {
@@ -4516,7 +4623,12 @@ function snapshot() {
                            bookings are "mine" have to come back together, or a reload
                            leaves Erning's profile showing Ramil's jobs (77). */
                         identity: CURRENT_PROVIDER_ID },
-    providerProfileData: state.providerProfileData
+    providerProfileData: state.providerProfileData,
+    /* A verification decision that lived only in the screen was no decision at all: the
+       admin approved someone, the roster agreed for the length of the session, and a
+       reload put the applicant back in the queue with no trace of the approval. */
+    verificationReviews: state.verificationReviews,
+    adminDocRequests: state.adminDocRequests
   };
 }
 
@@ -4580,6 +4692,19 @@ function hydrate() {
                         if (!Number.isNaN(n) && n > ledgerSeq) ledgerSeq = n; });
   if (snap.profileData) Object.assign(state.profileData, snap.profileData);
   if (snap.providerProfileData) Object.assign(state.providerProfileData, snap.providerProfileData);
+  /* A review record carries a status the queue branches on, so it is held to the same
+     door as a booking: a dump naming a decision no screen can render would leave an
+     applicant in a state nothing explains. */
+  if (snap.verificationReviews && typeof snap.verificationReviews === 'object'
+      && !Object.keys(snap.verificationReviews).some(k => !REVIEW_STATUSES.includes(
+        (snap.verificationReviews[k] || {}).status || 'pending'))) {
+    Object.keys(snap.verificationReviews).forEach(k => {
+      state.verificationReviews[k] = Object.assign(blankReview(), snap.verificationReviews[k]);
+    });
+  } else if (snap.verificationReviews) {
+    return { restored:false, kind:Store.kind, rejected:'a verification review carries a decision that does not exist' };
+  }
+  if (Array.isArray(snap.adminDocRequests)) state.adminDocRequests = snap.adminDocRequests.slice();
   if (snap.providerSettings) {
     state.providerAvailability = snap.providerSettings.availability;
     state.providerEmergencyDispatch = !!snap.providerSettings.emergencyDispatch;
@@ -4724,10 +4849,8 @@ let state = {
   adminProviderCategory:'verified',
   selectedVerificationId:null,
   verificationModal:null,
-  verificationDocStatus:{},
-  verificationNote:'',
-  verificationActivity:[],
-  verificationStatus:'Pending Review',
+  verificationDocKind:null,
+  verificationReviews:{},
   adminScreen:'overview',
   adminAuditLog:[],
   adminAlertState:{},
@@ -8224,7 +8347,6 @@ const ADMIN_SORTS = [['newest','Newest first'], ['rating','Highest rating'], ['j
 // An applicant has no rating and no completed jobs, so the pending queue sorts on
 // the one thing it really has: how long it has been waiting.
 const ADMIN_PENDING_SORTS = [['newest','Newest submitted'], ['longest','Longest waiting']];
-const waitDays = d => { const n = parseInt(String(d).replace(/[^0-9]/g, ''), 10); return Number.isNaN(n) ? 0 : n; };
 
 function cycleAdminPendingSort(){
   const i = ADMIN_PENDING_SORTS.findIndex(s => s[0] === state.adminPendingSort);
@@ -8538,9 +8660,13 @@ function adminVerifications(){
   const verifiedProviders = verifiedProviderList();
   /* Sorted into a new array: the shared roster must keep its own order, or the
      last sort an admin used would leak into the dashboard's counts. */
-  const pendingDetails = PENDING_APPLICANTS.slice().sort((a,b) => state.adminPendingSort === 'longest'
-    ? waitDays(b.days) - waitDays(a.days)
-    : waitDays(a.days) - waitDays(b.days));
+  /* Sorted out of the record list, and filtered by it: approving an applicant on the
+     review screen used to change nothing outside that screen, so the queue kept the
+     person it had just declared verified. The wait is counted from submittedAt rather
+     than parsed back out of a '1 day ago' string. */
+  const pendingDetails = pendingApplicantList().sort((a,b) => state.adminPendingSort === 'longest'
+    ? applicantWaitDays(b) - applicantWaitDays(a)
+    : applicantWaitDays(a) - applicantWaitDays(b));
   const pendingProviders = pendingDetails.map(a => a.name + ' - ' + a.service);
   const category = state.adminProviderCategory || 'verified';
   const providerQuery = (state.adminVerifiedSearch || '').toLowerCase();
@@ -8593,9 +8719,9 @@ function adminVerifications(){
     ${pendingDetails.map((provider, index) => `
       <div class="card" style="padding:10px; margin-bottom:10px">
         <div class="row" style="align-items:flex-start;"><div style="display:flex; gap:10px; align-items:center;"><img class="img-avatar" src="${VERIF_PHOTOS[provider.id]}" alt="${provider.name}" style="width:38px; height:38px;"><div><b class="card-title">${provider.name}</b><div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${provider.service}</div></div></div><div style="display:flex; gap:5px; align-items:center;"><span style="font-size:var(--t-caption); background:${provider.priorityColor}; color:${provider.priorityText}; padding:4px 7px; border-radius:999px;">${provider.priority}</span><span class="chip" style="font-size:var(--t-caption);">Review</span></div></div>
-        <div style="display:flex; gap:12px; font-size:var(--t-caption); color:var(--mist); margin:8px 0;"><span>Submitted ${provider.days}</span><span>${provider.barangay}</span></div>
-        <div style="display:flex; justify-content:space-between; align-items:center; font-size:var(--t-caption); margin-bottom:5px;"><span>Documents ${provider.docs}</span><span style="background:${provider.issueColor}; color:${provider.issueText}; padding:4px 7px; border-radius:999px;">${provider.issue}</span></div>
-        <div style="height:6px; background:var(--line); border-radius:99px; overflow:hidden; margin-bottom:8px;"><div style="width:${provider.docs === '5/5' ? '100' : provider.docs === '4/5' ? '80' : '60'}%; height:100%; background:${provider.docs === '5/5' ? 'var(--deep)' : 'var(--gold)'};"></div></div>
+        <div style="display:flex; gap:12px; font-size:var(--t-caption); color:var(--mist); margin:8px 0;"><span>Submitted ${applicantWaitLabel(provider)}</span><span>${provider.barangay}</span></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:var(--t-caption); margin-bottom:5px;"><span>Documents ${applicationDocsSubmitted(provider.id)} of ${APPLICATION_DOC_KINDS.length}</span><span style="background:${applicantIssue(provider).bg}; color:${applicantIssue(provider).ink}; padding:4px 7px; border-radius:999px;">${applicantIssue(provider).label}</span></div>
+        <div style="height:6px; background:var(--line); border-radius:99px; overflow:hidden; margin-bottom:8px;"><div style="width:${Math.round(applicationDocsSubmitted(provider.id) / APPLICATION_DOC_KINDS.length * 100)}%; height:100%; background:${applicationDocsOutstanding(provider.id).length ? 'var(--gold)' : 'var(--deep)'};"></div></div>
         <div style="display:flex; gap:6px;">${state.adminDocRequests.includes(provider.id) ? `<div style="flex:1; font-size:var(--t-caption); color:var(--warning-ink); background:var(--warning-100); border-radius:8px; padding:9px 10px; font-weight:700;">${ic('clock',12)} Documents requested · awaiting upload</div>` : `<button class="btn sm" style="flex:1;" onclick="openProviderVerification('${provider.id}')">Open verification</button><button class="btn sm secondary" style="flex:1;" onclick="askForDocuments('${provider.id}', '${provider.name}')">Request documents</button>`}</div>
       </div>
     `).join('')}
@@ -8615,68 +8741,193 @@ function adminDisputes(){  const open = DISPUTES.filter(d => caseIsOpen(d));
   </div>`;
 }
 
+/* The roster and the review screen used to carry separate copies of the same three
+   people, and they disagreed: the roster called Maria 'maria' with docs:'4/5' while the
+   review called her 'LS-PV-0024' with docs:4, so "Application #…" and the row that opened
+   it named the same person two different ways. One record now, read by both. */
 function verificationApplication(){
-  const applications = {
-    maria:{id:'LS-PV-0024', name:'Maria Santos', service:'Electrical Specialist', barangay:'Poblacion', days:'1 day ago', docs:4, priority:'High Priority', phone:'+63 917 321 8844', email:'maria.santos@example.com', address:'Blk 8 Lot 4, Mabini St., Poblacion'} ,
-    joel:{id:'LS-PV-0025', name:'Joel Aquino', service:'Appliance Specialist', barangay:'San Isidro', days:'2 days ago', docs:5, priority:'Normal Priority', phone:'+63 918 442 1102', email:'joel.aquino@example.com', address:'24 Sampaguita St., San Isidro'},
-    liza:{id:'LS-PV-0026', name:'Liza Ramos', service:'Cleaning Specialist', barangay:'Sta. Cruz', days:'3 days ago', docs:3, priority:'For Initial Review', phone:'+63 919 552 4471', email:'liza.ramos@example.com', address:'15 Orchid St., Sta. Cruz'}
-  };
-  return applications[state.selectedVerificationId] || applications.maria;
+  return PENDING_APPLICANTS.find(a => a.id === state.selectedVerificationId) || PENDING_APPLICANTS[0];
 }
 
 function openProviderVerification(id){
-  const sameApplication = state.selectedVerificationId === id;
+  /* Per applicant now: the note, the status and the activity used to be three single
+     slots that this function wiped whenever the admin opened someone else, so a note
+     written on Maria was cleared by looking at Joel — and whatever was left over was
+     painted on whoever was opened next. */
   state.selectedVerificationId = id;
   state.verificationModal = null;
-  if(!sameApplication) {
-    state.verificationStatus = 'Pending Review';
-    state.verificationNote = '';
-    state.verificationActivity = [];
-  }
   state.tab = 'verification_review';
-  if(!state.verificationActivity.length) state.verificationActivity = ['Sep 8, 9:14 AM - Application submitted','Sep 8, 9:15 AM - Email verified','Sep 8, 9:16 AM - Mobile number verified','Sep 8, 9:17 AM - Government ID uploaded','Sep 8, 9:20 AM - TESDA credential uploaded','Sep 8, 9:22 AM - Barangay Clearance uploaded'];
   render();
 }
 
 function verificationAction(action, value){
-  if(action === 'document') state.verificationModal = 'document';
+  const app = verificationApplication();
+  const review = reviewOf(app.id);
+  const adminName = state.adminProfileData.name;
+  /* Every branch used to push a literal 'Sep 9, 2:45 PM - …' into the activity list, so
+     the log named a time that had nothing to do with when the button was pressed.
+     logReview stamps the moment; shortDate and clockText render it. */
+  if(action === 'document') { state.verificationDocKind = value || null; state.verificationModal = 'document'; }
+  if(action === 'flag') { state.verificationDocKind = value || null; state.verificationModal = 'flag'; }
   if(action === 'request') state.verificationModal = 'request';
-  if(action === 'flag') state.verificationModal = 'flag';
   if(action === 'reject') state.verificationModal = 'reject';
-  if(action === 'note') { state.verificationNote = value || 'Internal review note saved.'; state.verificationActivity.push('Sep 9, 2:35 PM - Internal review note added'); state.verificationModal = 'note_saved'; }
-  if(action === 'request_sent') { state.verificationStatus = 'Update Requested'; state.verificationActivity.push('Sep 9, 2:40 PM - NBI Clearance requested by Administrator'); state.verificationModal = 'request_sent'; }
-  if(action === 'approve_confirm') { state.verificationModal = 'approve_confirm'; }
-  if(action === 'approved') { state.verificationStatus = 'Verified'; state.verificationModal = 'approved'; state.verificationActivity.push('Sep 9, 2:45 PM - Provider approved by Administrator'); }
-  if(action === 'rejected') { state.verificationStatus = 'Rejected'; state.verificationModal = 'rejected'; state.verificationActivity.push('Sep 9, 2:45 PM - Application rejected by Administrator'); }
+  if(action === 'approve_confirm') state.verificationModal = 'approve_confirm';
+  if(action === 'note'){
+    const text = String(value || '').trim();
+    if (!text) { state.profileError = 'Write the note before saving it — an empty note records nothing.'; render(); return; }
+    state.profileError = null;
+    review.note = text;
+    logReview(app.id, 'Internal review note added by ' + adminName);
+    state.verificationModal = 'note_saved';
+  }
+  if(action === 'request_sent'){
+    const kinds = (Array.isArray(value) && value.length) ? value : applicationDocsOutstanding(app.id).map(d => d.kind);
+    if (!kinds.length) { state.profileError = 'Nothing is outstanding, so there is nothing to request.'; render(); return; }
+    state.profileError = null;
+    review.status = 'update requested';
+    review.requestedAt = Date.now();
+    if (!state.adminDocRequests.includes(app.id)) state.adminDocRequests.push(app.id);
+    logReview(app.id, 'Requested ' + kinds.map(applicationDocLabel).join(', ') + ' from the applicant');
+    adminLog('Verification documents requested', app.name, kinds.map(applicationDocLabel).join(', '));
+    state.verificationModal = 'request_sent';
+  }
+  if(action === 'approved'){
+    const out = applicationDocsOutstanding(app.id);
+    if (out.length) { state.profileError = 'Cannot approve: ' + out.map(d => d.label).join(', ') + ' still outstanding.'; render(); return; }
+    review.status = 'verified';
+    review.decidedAt = Date.now();
+    review.reviewer = adminName;
+    logReview(app.id, 'Application approved by ' + adminName);
+    adminLog('Provider verification approved', app.name, 'Application ' + app.applicationId);
+    state.verificationModal = 'approved';
+  }
+  if(action === 'rejected'){
+    const reason = String(value || '').trim();
+    if (!reason) { state.profileError = 'A rejection needs a reason before it can be recorded.'; render(); return; }
+    state.profileError = null;
+    review.status = 'rejected';
+    review.decidedAt = Date.now();
+    review.reviewer = adminName;
+    review.reason = reason;
+    logReview(app.id, 'Application rejected by ' + adminName + ': ' + reason);
+    adminLog('Provider verification rejected', app.name, reason);
+    state.verificationModal = 'rejected';
+  }
+  if(action === 'doc_state'){
+    const kind = state.verificationDocKind;
+    if (!kind) { state.profileError = 'Open a document before changing its review state.'; render(); return; }
+    review.docs[kind] = review.docs[kind] === 'verified' ? null : 'verified';
+    logReview(app.id, applicationDocLabel(kind) + (review.docs[kind] ? ' marked verified by ' + adminName : ' returned to unreviewed'));
+  }
+  /* Every branch that changed a record writes it. The screen used to keep its note, its
+     status and its activity in memory only, so a decision looked real until the app was
+     reopened. */
+  persist();
+  render();
+}
+
+/* Three small handlers, each reading the controls its own modal painted. The buttons
+   below used to call verificationAction('rejected') with no argument at all, so the reason
+   the admin picked was dropped on the floor and the record said only "Rejected". */
+function sendDocumentRequest(){
+  const kinds = applicationDocs(state.selectedVerificationId)
+    .filter(d => !d.submittedAt)
+    .filter(d => { const el = document.getElementById('request-' + d.kind); return el && el.checked; })
+    .map(d => d.kind);
+  const note = document.getElementById('request-message');
+  const review = reviewOf(state.selectedVerificationId);
+  review.requestMessage = note ? note.value.trim() : '';
+  verificationAction('request_sent', kinds);
+}
+function rejectApplication(){
+  const sel = document.getElementById('reject-reason');
+  const note = document.getElementById('reject-note');
+  const reason = [sel ? sel.value : '', note ? note.value.trim() : ''].filter(Boolean).join(' — ');
+  verificationAction('rejected', reason);
+}
+function flagDocument(){
+  const kind = state.verificationDocKind;
+  const app = verificationApplication();
+  const review = reviewOf(app.id);
+  if (!kind) { state.profileError = 'Open a document before flagging it.'; render(); return; }
+  const sel = document.getElementById('flag-issue');
+  const note = document.getElementById('flag-note');
+  const why = [sel ? sel.value : '', note ? note.value.trim() : ''].filter(Boolean).join(' — ');
+  state.profileError = why ? null : 'Choose or write what is wrong with this document.';
+  if (!why) { render(); return; }
+  review.docs[kind] = 'flagged';
+  review.flags = review.flags || {};
+  review.flags[kind] = why;
+  logReview(app.id, applicationDocLabel(kind) + ' flagged by ' + state.adminProfileData.name + ': ' + why);
+  state.verificationModal = null;
+  persist();
   render();
 }
 
 function providerVerificationReview(){
   const app = verificationApplication();
-  const reviewedDocs = state.verificationDocStatus || {};
-  const nbiComplete = reviewedDocs.nbi === 'verified' || app.docs === 5;
-  const documents = [
-    {id:'government', name:'Government ID', detail:'Philippine National ID', status:'Submitted', date:'September 8, 2026', state:'verified'},
-    {id:'tesda', name:'TESDA Certificate', detail:'Electrical Installation and Maintenance NC II', status:'Submitted', date:'Expires March 14, 2028', state:'verified'},
-    {id:'barangay', name:'Barangay Clearance', detail:'Poblacion clearance', status:'Submitted', date:'Expires March 18, 2027', state:'verified'},
-    {id:'nbi', name:'NBI Clearance', detail:'Required for verification', status:nbiComplete ? 'Submitted' : 'Missing', date:nbiComplete ? 'Submitted September 9, 2026' : 'Required before approval', state:nbiComplete ? 'verified' : 'missing'}
-  ];
-  const progress = nbiComplete ? 100 : 80;
+  const review = reviewOf(app.id);
+  const docs = applicationDocs(app.id);
+  const submitted = docs.filter(d => d.submittedAt).length;
+  const outstanding = docs.filter(d => !d.submittedAt);
+  const complete = outstanding.length === 0;
+  const progress = Math.round(submitted / docs.length * 100);
   const modal = state.verificationModal;
+  const about = docs.find(d => d.kind === state.verificationDocKind) || null;
+  /* A document's state is the administrator's mark if there is one, and otherwise whether
+     the row was ever filed. The old screen had no such thing: it showed four documents as
+     verified because four rows said so. */
+  const docState = d => review.docs[d.kind] === 'verified' ? 'verified'
+    : review.docs[d.kind] === 'flagged' ? 'flagged'
+    : d.submittedAt ? 'submitted' : 'missing';
+  const INK = { verified:'var(--success-ink)', submitted:'var(--success-ink)',
+                flagged:'var(--warning-ink)', missing:'var(--error-ink)' };
+  const WORD = { verified:'Verified by ' + state.adminProfileData.name, submitted:'Submitted',
+                 flagged:'Flagged for review', missing:'Not submitted' };
+  const decided = review.status === 'verified' || review.status === 'rejected';
+  const chipTone = review.status === 'verified' ? ''
+    : review.status === 'rejected' ? 'badge-alert'
+    : review.status === 'update requested' ? 'badge-gold' : 'badge-gold';
   return `
-  <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><button class="back-btn" onclick="state.tab='admin_verifications'; render();" aria-label="Back to pending providers">${ic("chevron-left",18)}</button><div><h1 style="font-size:var(--t-lead);">Provider Verification</h1><div class="sub">Application #${app.id}</div></div></div></div>
+  <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><button class="back-btn" onclick="state.tab='admin_verifications'; render();" aria-label="Back to pending providers">${ic("chevron-left",18)}</button><div><h1 style="font-size:var(--t-lead);">Provider Verification</h1><div class="sub">Application ${esc(app.applicationId)}</div></div></div></div>
   <div class="pad pad-cta" style="background:var(--cloud);">
-    <div class="card"><div class="row"><div style="display:flex; gap:10px; align-items:center;"><img class="img-avatar" src="${VERIF_PHOTOS[state.selectedVerificationId] || 'avatars/avatar-10.png'}" alt="${app.name}" style="width:42px; height:42px;"><div><b style="font-size:var(--t-input);">${app.name}</b><div style="font-size:var(--t-caption); color:var(--mist);">${app.service}</div></div></div><span class="chip ${state.verificationStatus === 'Verified' ? '' : state.verificationStatus === 'Rejected' ? 'badge-alert' : 'badge-gold'}">${state.verificationStatus}</span></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; font-size:var(--t-caption);"><div><span style="color:var(--mist);">Barangay</span><br><b>${app.barangay}</b></div><div><span style="color:var(--mist);">Submitted</span><br><b>${app.days}</b></div><div><span style="color:var(--mist);">Priority</span><br><b style="color:var(--gold-600);">${app.priority}</b></div><div><span style="color:var(--mist);">Contact status</span><br><b style="color:var(--success-ink);">Email and mobile verified</b></div></div></div>
-    <div class="card"><div class="row"><b class="card-title">Verification progress</b><b>${nbiComplete ? '5' : '4'} of 5</b></div><div style="height:9px; background:var(--line); border-radius:99px; overflow:hidden; margin:10px 0 12px;"><div style="width:${progress}%; height:100%; background:${nbiComplete ? 'var(--verified)' : 'var(--gold)'};"></div></div><div style="display:flex; flex-direction:column; gap:7px; font-size:var(--t-caption);"><div style="color:var(--success-ink); display:flex; align-items:center; gap:6px;">${ic("check-circle",13)} Identity Information</div><div style="color:var(--success-ink); display:flex; align-items:center; gap:6px;">${ic("check-circle",13)} Government ID</div><div style="color:var(--success-ink); display:flex; align-items:center; gap:6px;">${ic("check-circle",13)} TESDA / Professional Credential</div><div style="color:var(--success-ink); display:flex; align-items:center; gap:6px;">${ic("check-circle",13)} Barangay Clearance</div><div style="color:${nbiComplete ? 'var(--success-ink)' : 'var(--error-ink)'};">${nbiComplete ? ic("check-circle",13) + ' NBI Clearance' : ic("alert-triangle",13) + ' NBI Clearance - Missing'}</div></div></div>
-    <details class="card"><summary style="font-weight:800; cursor:pointer;">Identity information</summary><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; font-size:var(--t-caption);"><div>Full name<br><b>${app.name}</b></div><div>Date of birth<br><b>May 12, 1994</b></div><div>Email<br><b>${app.email}</b></div><div>Mobile<br><b>${app.phone}</b></div><div>Barangay<br><b>${app.barangay}</b></div><div>Address<br><b>${app.address}</b></div></div></details>
-    <div class="card"><div class="row" style="margin-bottom:10px;"><b class="card-title">Submitted documents</b><span class="chip">${app.docs}/5 submitted</span></div>${documents.map(doc => `<div style="border-top:1px solid var(--line); padding:10px 0;"><div class="row"><div><b style="font-size:var(--t-body-sm);">${doc.name}</b><div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${doc.detail}</div></div><span style="font-size:var(--t-caption); color:${doc.state === 'missing' ? 'var(--error-ink)' : 'var(--success-ink)'}; font-weight:800;">${doc.state === 'missing' ? ic("alert-triangle",13) + ' Missing' : ic("check-circle",13) + ' Submitted'}</span></div><div class="row" style="margin-top:7px;"><span style="font-size:var(--t-caption); color:var(--mist);">${doc.date}</span>${doc.state === 'missing' ? `<button class="btn sm secondary" onclick="verificationAction('request')">Request Document</button>` : `<button class="btn sm secondary" onclick="verificationAction('document')">View Document</button>`}</div></div>`).join('')}</div>
-    <details class="card"><summary style="font-weight:800; cursor:pointer;">Verification checks</summary><div style="display:flex; flex-direction:column; gap:8px; margin-top:12px; font-size:var(--t-caption);"><div style="color:var(--success-ink); display:flex; align-items:center; gap:6px;">${ic("check-circle",13)} Name matches Government ID</div><div style="color:var(--success-ink); display:flex; align-items:center; gap:6px;">${ic("check-circle",13)} Service credential submitted</div><div style="color:var(--success-ink); display:flex; align-items:center; gap:6px;">${ic("check-circle",13)} Barangay information consistent</div><div style="color:var(--success-ink); display:flex; align-items:center; gap:6px;">${ic("check-circle",13)} Mobile number verified</div><div style="color:var(--success-ink); display:flex; align-items:center; gap:6px;">${ic("check-circle",13)} Email verified</div><div style="color:var(--error-ink);">${nbiComplete ? ic("check-circle",13) + ' Required NBI Clearance submitted' : ic("alert-triangle",13) + ' Required NBI Clearance missing'}</div></div></details>
-    <div class="card"><b class="card-title">Review assistant</b><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:8px;">${nbiComplete ? 'All required documents are submitted. Complete the final administrator review before approval.' : `${app.name} submitted ${app.docs} of 5 required verification documents. The NBI Clearance is still missing.`}</div><div style="font-size:var(--t-caption); color:var(--gold-600); margin-top:8px;">Recommended next action: ${nbiComplete ? 'Review all documents and checks.' : 'Request the missing NBI Clearance before approval.'}</div></div>
-    <div class="card"><b class="card-title">Internal review notes</b><textarea id="verification-note" aria-label="Internal note about this verification" placeholder="Add notes about this verification..." style="width:100%; min-height:70px; border:1px solid var(--line); border-radius:8px; padding:9px; margin-top:8px; font:inherit; resize:vertical;"></textarea><button class="btn sm secondary" style="margin-top:8px;" onclick="verificationAction('note', document.getElementById('verification-note').value)">Save Note</button>${state.verificationNote ? `<div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px;">Saved by Administrator<br>${state.verificationNote}</div>` : ''}</div>
-    <details class="card"><summary style="font-weight:800; cursor:pointer;">Application activity</summary><div style="display:flex; flex-direction:column; gap:8px; margin-top:12px; font-size:var(--t-caption); color:var(--ink-soft);">${state.verificationActivity.map(item => `<div>&#8226; ${item}</div>`).join('')}</div></details>
+    <div class="card"><div class="row"><div style="display:flex; gap:10px; align-items:center;"><img class="img-avatar" src="${VERIF_PHOTOS[app.id] || 'avatars/avatar-10.png'}" alt="${esc(app.name)}" style="width:42px; height:42px;"><div><b style="font-size:var(--t-input);">${esc(app.name)}</b><div style="font-size:var(--t-caption); color:var(--mist);">${esc(app.service)}</div></div></div><span class="chip ${chipTone}">${esc(reviewStatusLine(review.status))}</span></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; font-size:var(--t-caption);"><div><span style="color:var(--mist);">Barangay</span><br><b>${esc(app.barangay)}</b></div><div><span style="color:var(--mist);">Submitted</span><br><b>${esc(shortDate(app.submittedAt))} · ${esc(applicantWaitLabel(app))}</b></div><div><span style="color:var(--mist);">Priority</span><br><b style="color:var(--gold-600);">${esc(app.priority)}</b></div><div><span style="color:var(--mist);">Contact on file</span><br><b>${esc(app.phone)}</b></div></div></div>
+
+    <div class="card"><div class="row"><b class="card-title">Verification progress</b><b>${submitted} of ${docs.length}</b></div><div style="height:9px; background:var(--line); border-radius:99px; overflow:hidden; margin:10px 0 12px;"><div style="width:${progress}%; height:100%; background:${complete ? 'var(--verified)' : 'var(--gold)'};"></div></div><div style="display:flex; flex-direction:column; gap:7px; font-size:var(--t-caption);">${docs.map(d => { const s = docState(d); return '<div style="color:' + INK[s] + '; display:flex; align-items:center; gap:6px;">' + ic(s === 'missing' ? 'alert-triangle' : s === 'flagged' ? 'alert-circle' : 'check-circle', 13) + ' ' + esc(d.label) + ' — ' + esc(WORD[s]) + '</div>'; }).join('')}</div><div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">Counted from the documents on this application. The prototype runs no automated check of its own — a mark below is something an administrator made.</div></div>
+
+    <details class="card"><summary style="font-weight:800; cursor:pointer;">Identity information</summary><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; font-size:var(--t-caption);"><div>Full name<br><b>${esc(app.name)}</b></div><div>Email<br><b>${esc(app.email)}</b></div><div>Mobile<br><b>${esc(app.phone)}</b></div><div>Barangay<br><b>${esc(app.barangay)}</b></div><div style="grid-column:1 / -1;">Address<br><b>${esc(app.address)}</b></div></div><div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px;">What the applicant filed is on the document list; this screen keeps no date of birth and no document image.</div></details>
+
+    <div class="card"><div class="row" style="margin-bottom:10px;"><b class="card-title">Submitted documents</b><span class="chip">${submitted} of ${docs.length} filed</span></div>${docs.map(d => { const s = docState(d); const flag = review.flags && review.flags[d.kind]; return '<div style="border-top:1px solid var(--line); padding:10px 0;"><div class="row"><div><b style="font-size:var(--t-body-sm);">' + esc(d.label) + '</b><div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">' + esc(d.detail) + '</div></div><span style="font-size:var(--t-caption); color:' + INK[s] + '; font-weight:800;">' + ic(s === 'missing' ? 'alert-triangle' : s === 'flagged' ? 'alert-circle' : 'check-circle', 13) + ' ' + esc(s === 'missing' ? 'Missing' : s === 'flagged' ? 'Flagged' : s === 'verified' ? 'Verified' : 'Submitted') + '</span></div><div class="row" style="margin-top:7px;"><span style="font-size:var(--t-caption); color:var(--mist);">' + (d.submittedAt ? 'Filed ' + esc(shortDate(d.submittedAt)) + (d.expiresAt ? ' · expires ' + esc(shortDate(d.expiresAt)) : '') : 'Required before approval') + '</span>' + (d.submittedAt ? '<button class="btn sm secondary" onclick="verificationAction(\'document\', \'' + d.kind + '\')">Open document</button>' : '<button class="btn sm secondary" onclick="state.verificationDocKind=\'' + d.kind + '\'; verificationAction(\'request\')">Request this</button>') + '</div>' + (flag ? '<div style="font-size:var(--t-caption); color:var(--warning-ink); margin-top:6px;">Flagged: ' + esc(flag) + '</div>' : '') + '</div>'; }).join('')}</div>
+
+    <div class="card"><b class="card-title">What is still outstanding</b><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:8px;">${complete ? 'All ' + docs.length + ' documents are filed. ' + (review.status === 'verified' ? 'This application was approved — the decision and its time are in the activity list.' : 'Nothing is waiting on the applicant, so the decision is the administrator\'s to make.') : esc(app.name) + ' has filed ' + submitted + ' of ' + docs.length + '. Still outstanding: ' + esc(outstanding.map(d => d.label).join(', ')) + '.'}</div>${state.profileError ? '<div class="inline-error" role="alert">' + esc(state.profileError) + '</div>' : ''}</div>
+
+    <div class="card"><b class="card-title">Internal review notes</b><textarea id="verification-note" aria-label="Internal note about this verification" placeholder="Add notes about this verification..." style="width:100%; min-height:70px; border:1px solid var(--line); border-radius:8px; padding:9px; margin-top:8px; font:inherit; resize:vertical;">${esc(review.note)}</textarea><button class="btn sm secondary" style="margin-top:8px;" onclick="verificationAction('note', document.getElementById('verification-note').value)">Save Note</button>${review.note ? '<div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px;">Saved on this device. It is not shown to the applicant.</div>' : ''}</div>
+
+    <details class="card"><summary style="font-weight:800; cursor:pointer;">Application activity</summary><div style="display:flex; flex-direction:column; gap:8px; margin-top:12px; font-size:var(--t-caption); color:var(--ink-soft);">${reviewTimeline(app.id).map(e => '<div>• ' + esc(shortDate(e.at)) + ' ' + esc(clockText(e.at)) + ' — ' + esc(e.text) + '</div>').join('')}</div>${review.activity.length ? '' : '<div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px;">These entries come from the application and document dates. Anything you do on this screen is added with the time it happened.</div>'}</details>
+
+    ${decided ? '<div class="card"><b class="card-title">Decision recorded</b><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.6; margin-top:8px;">' + esc(reviewStatusLine(review.status)) + ' on ' + esc(shortDate(review.decidedAt)) + ' ' + esc(clockText(review.decidedAt)) + ' by ' + esc(review.reviewer || 'this administrator') + (review.reason ? ' — ' + esc(review.reason) : '') + '.</div><button class="btn sm secondary" style="margin-top:10px;" onclick="reopenReview()">Reopen this application</button></div>' : ''}
   </div>
-  <div style="position:sticky; bottom:0; width:100%; margin:0 -16px; padding:10px 16px; box-sizing:content-box; background:var(--surface); border-top:1px solid var(--line); display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; align-items:stretch; z-index:25; box-shadow:0 -4px 12px rgba(0,0,0,0.08);"><button class="btn sm secondary" style="width:100%; min-width:0; height:52px; color:var(--error-ink); border-color:var(--error-ink);" onclick="verificationAction('reject')">Reject</button><button class="btn sm secondary" style="width:100%; min-width:0; height:52px;" onclick="verificationAction('request')">Request Update</button><button class="btn sm" style="width:100%; min-width:0; height:52px; opacity:${nbiComplete ? '1' : '0.5'};" ${nbiComplete ? `onclick="verificationAction('approve_confirm')"` : 'disabled'}>Approve</button></div>
-  ${modal ? `<div style="position:fixed; inset:0; background:var(--scrim); z-index:50; display:flex; align-items:center; justify-content:center; padding:18px;"><div class="card" style="width:100%; max-width:350px; max-height:85vh; overflow:auto"><div class="row"><b style="font-size:var(--t-body-lg);">${modal === 'document' ? 'Document Preview' : modal === 'request' ? 'Request Additional Information' : modal === 'flag' ? 'Flag Document Issue' : modal === 'reject' ? 'Reject Verification Application' : modal === 'approve_confirm' ? 'Approve Provider?' : modal === 'approved' ? 'Provider Verified' : modal === 'rejected' ? 'Application Rejected' : modal === 'request_sent' ? 'Request Sent' : 'Review update'}</b><button onclick="state.verificationModal=null; render();" aria-label="Close" style="border:0; background:transparent; font-size:var(--t-title); cursor:pointer;">&times;</button></div>${modal === 'document' ? `<div style="height:130px; background:var(--brand-tint-soft); border:1px solid var(--line); border-radius:8px; margin:12px 0; display:flex; align-items:center; justify-content:center; color:var(--mist);">Document preview placeholder</div><div style="font-size:var(--t-caption); line-height:1.7;">Document type: Government ID<br>Provider: ${app.name}<br>Document number: **** **** 4821<br>Uploaded: September 8, 2026<br>Status: Requires administrator review</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm" onclick="state.verificationDocStatus.government='verified'; state.verificationModal=null; render();">Mark as Verified</button><button class="btn sm secondary" onclick="verificationAction('flag')">Flag Issue</button></div>` : modal === 'flag' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0;">Select a possible issue for administrator review.</div><select aria-label="Possible issue with this document" style="width:100%; min-height:var(--tap); padding:9px; border:1px solid var(--line); border-radius:8px;"><option>Information does not match</option><option>Document expired</option><option>Image unreadable</option><option>Incorrect document type</option><option>Other</option></select><textarea aria-label="Administrator note about this document" placeholder="Administrator note..." style="width:100%; min-height:70px; margin-top:10px; padding:8px; border:1px solid var(--line); border-radius:8px; font:inherit;"></textarea><button class="btn danger btn-block" style="margin-top:10px;" onclick="state.verificationDocStatus.government='flagged'; state.verificationModal=null; state.verificationActivity.push('Sep 9, 2:40 PM - Document flagged by Administrator'); render();">Flag Document</button>` : modal === 'approve_confirm' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin:12px 0;">${app.name}, ${app.service}. All required verification checks have been completed. Approving will make this provider eligible for marketplace activation.</div><div style="display:flex; gap:6px;"><button class="btn sm secondary" style="flex:1;" onclick="state.verificationModal=null; render();">Cancel</button><button class="btn sm" style="flex:1;" onclick="verificationAction('approved')">Confirm Approval</button></div>` : modal === 'request' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0;">Select requirement: <label style="display:block; margin-top:10px;"><input type="checkbox" checked> NBI Clearance</label><label style="display:block; margin-top:8px;"><input type="checkbox"> Identity information</label></div><textarea id="request-message" aria-label="Message sent to the provider" style="width:100%; min-height:70px; border:1px solid var(--line); border-radius:8px; padding:8px; font:inherit;">Please upload your valid NBI Clearance to continue verification.</textarea><button class="btn btn-block" style="margin-top:10px;" onclick="verificationAction('request_sent')">Send Request</button>` : modal === 'reject' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0;">A reason is required before rejecting this application.</div><select id="reject-reason" aria-label="Reason for rejecting this application" style="width:100%; padding:9px; border:1px solid var(--line); border-radius:8px;"><option>Invalid required document</option><option>Unable to verify identity</option><option>Required qualification not met</option><option>Other</option></select><textarea aria-label="Reason for rejecting this application" placeholder="Administrator notes..." style="width:100%; min-height:70px; margin-top:10px; padding:8px; border:1px solid var(--line); border-radius:8px; font:inherit;"></textarea><button class="btn danger btn-block" style="margin-top:10px;" onclick="verificationAction('rejected')">Confirm Rejection</button>` : `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin:12px 0;">${modal === 'approved' ? `${app.name} has been successfully verified.` : modal === 'rejected' ? `${app.name} remains in the application record with a rejection reason.` : `${app.name} has been notified about the required verification update.`}</div><button class="btn" style="width:100%;" onclick="state.verificationModal=null; render();">Close</button>`}</div></div>` : ''}`;
+  ${decided ? '' : '<div style="position:sticky; bottom:0; width:100%; margin:0 -16px; padding:10px 16px; box-sizing:content-box; background:var(--surface); border-top:1px solid var(--line); z-index:25; box-shadow:0 -4px 12px rgba(0,0,0,0.08);">'
+    + (!complete ? '<div id="approve-why" style="font-size:var(--t-caption); color:var(--mist); margin-bottom:8px; line-height:1.45;">Approval is unavailable while ' + esc(outstanding.map(d => d.label).join(', ')) + ' ' + (outstanding.length === 1 ? 'is' : 'are') + ' outstanding.</div>' : '')
+    + '<div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; align-items:stretch;">'
+    + '<button class="btn sm secondary" style="width:100%; min-width:0; height:52px; color:var(--error-ink); border-color:var(--error-ink);" onclick="verificationAction(\'reject\')">Reject</button>'
+    + '<button class="btn sm secondary" style="width:100%; min-width:0; height:52px;" onclick="verificationAction(\'request\')">Request update</button>'
+    + '<button class="btn sm" style="width:100%; min-width:0; height:52px; opacity:' + (complete ? '1' : '0.5') + ';" ' + (complete ? 'onclick="verificationAction(\'approve_confirm\')"' : 'disabled aria-describedby="approve-why"') + '>Approve</button>'
+    + '</div></div>'}
+  ${modal ? `<div style="position:fixed; inset:0; background:var(--scrim); z-index:50; display:flex; align-items:center; justify-content:center; padding:18px;"><div class="card" style="width:100%; max-width:350px; max-height:85vh; overflow:auto"><div class="row"><b style="font-size:var(--t-body-lg);">${modal === 'document' ? (about ? esc(about.label) : 'Document') : modal === 'request' ? 'Request outstanding documents' : modal === 'flag' ? 'Flag this document' : modal === 'reject' ? 'Reject this application' : modal === 'approve_confirm' ? 'Approve this applicant?' : modal === 'approved' ? 'Approved' : modal === 'rejected' ? 'Rejected' : modal === 'request_sent' ? 'Request recorded' : 'Note saved'}</b><button onclick="state.verificationModal=null; render();" aria-label="Close" style="border:0; background:transparent; font-size:var(--t-title); cursor:pointer; min-width:var(--tap); min-height:var(--tap); display:inline-flex; align-items:center; justify-content:center;">&times;</button></div>${modal === 'document' ? `<div style="height:110px; background:var(--brand-tint-soft); border:1px solid var(--line); border-radius:8px; margin:12px 0; display:flex; align-items:center; justify-content:center; text-align:center; padding:12px; color:var(--mist); font-size:var(--t-caption);">No image is stored in this prototype.<br>What follows is the record of the filing, not the document itself.</div><div style="font-size:var(--t-caption); line-height:1.7;">${about ? 'Document: <b>' + esc(about.label) + '</b><br>Filed as: <b>' + esc(about.detail) + '</b><br>Filed on: <b>' + esc(about.submittedAt ? shortDate(about.submittedAt) : 'not filed') + '</b>' + (about.expiresAt ? '<br>Expires: <b>' + esc(shortDate(about.expiresAt)) + '</b>' : '') + '<br>Your mark: <b>' + esc(WORD[docState(about)]) + '</b><br>Applicant: <b>' + esc(app.name) + '</b>' : 'Open a document from the list to review it.'}</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm" onclick="verificationAction('doc_state')">Mark as verified</button><button class="btn sm secondary" onclick="verificationAction('flag', ${about ? "'" + about.kind + "'" : 'null'})">Flag an issue</button></div>` : modal === 'flag' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0;">What is wrong with ${about ? esc(about.label) : 'this document'}?</div><select id="flag-issue" aria-label="Possible issue with this document" style="width:100%; min-height:var(--tap); padding:9px; border:1px solid var(--line); border-radius:8px;"><option>Information does not match the application</option><option>Document has expired</option><option>Image is unreadable</option><option>Wrong document type</option><option>Other</option></select><textarea id="flag-note" aria-label="Administrator note about this document" placeholder="What the applicant should fix" style="width:100%; min-height:70px; margin-top:10px; padding:8px; border:1px solid var(--line); border-radius:8px; font:inherit;"></textarea><button class="btn danger btn-block" style="margin-top:10px;" onclick="flagDocument()">Flag document</button>` : modal === 'approve_confirm' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin:12px 0;">${esc(app.name)}, ${esc(app.service)}. All ${docs.length} documents are filed and none is flagged. Approving records the decision on this device with your name and the time, and takes the application out of the pending queue.</div><div style="display:flex; gap:6px;"><button class="btn sm secondary" style="flex:1;" onclick="state.verificationModal=null; render();">Cancel</button><button class="btn sm" style="flex:1;" onclick="verificationAction('approved')">Confirm approval</button></div>` : modal === 'request' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0 8px;">Pick what you need back from ${esc(app.name)}. Only documents still outstanding are listed.</div>${outstanding.length ? outstanding.map(d => '<label class="row" style="font-size:var(--t-caption); padding:8px 0; min-height:var(--tap);">' + esc(d.label) + '<input type="checkbox" id="request-' + d.kind + '" checked style="width:20px; height:20px; accent-color:var(--deep); flex-shrink:0;"></label>').join('') : '<div style="font-size:var(--t-caption); color:var(--mist);">Nothing is outstanding on this application.</div>'}<label class="form-label" style="margin-top:10px;">Note to attach<div style="font-size:var(--t-caption); color:var(--mist); margin-top:4px;">Kept with the review record. This prototype has no applicant inbox, so nothing is delivered.</div></label><textarea id="request-message" aria-label="Note attached to the document request" style="width:100%; min-height:70px; border:1px solid var(--line); border-radius:8px; padding:8px; margin-top:6px; font:inherit;">Please upload the outstanding document to continue verification.</textarea><button class="btn btn-block" style="margin-top:10px;" onclick="sendDocumentRequest()">Record request</button>` : modal === 'reject' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0 8px;">A reason is required — it is what the record will show.</div><select id="reject-reason" aria-label="Reason for rejecting this application" style="width:100%; padding:9px; min-height:var(--tap); border:1px solid var(--line); border-radius:8px;"><option>Invalid required document</option><option>Unable to verify identity</option><option>Required qualification not met</option><option>Other</option></select><textarea id="reject-note" aria-label="Reason for rejecting this application" placeholder="What the applicant should know" style="width:100%; min-height:70px; margin-top:10px; padding:8px; border:1px solid var(--line); border-radius:8px; font:inherit;"></textarea><button class="btn danger btn-block" style="margin-top:10px;" onclick="rejectApplication()">Record rejection</button>` : `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin:12px 0;">${modal === 'approved' ? esc(app.name) + ' is approved as of ' + esc(shortDate(review.decidedAt)) + ' ' + esc(clockText(review.decidedAt)) + ' and no longer appears in the pending queue.' : modal === 'rejected' ? esc(app.name) + ' is rejected' + (review.reason ? ': ' + esc(review.reason) : '.') + ' The application stays on this device with that reason.' : modal === 'request_sent' ? 'The request is recorded against this application. The pending queue now shows it as awaiting upload.' + (review.requestMessage ? ' Your note: ' + esc(review.requestMessage) + '.' : '') : 'Your note is saved with this application on this device.'}</div><button class="btn" style="width:100%;" onclick="state.verificationModal=null; render();">Close</button>`}</div></div>` : ''}`;
+}
+
+function reopenReview(){
+  const app = verificationApplication();
+  const review = reviewOf(app.id);
+  review.status = 'pending';
+  review.decidedAt = null;
+  review.reviewer = null;
+  review.reason = '';
+  logReview(app.id, 'Reopened for review by ' + state.adminProfileData.name);
+  adminLog('Verification reopened', app.name, 'Application ' + app.applicationId);
+  persist();
+  render();
 }
 
 function adminAccountAction(action){
