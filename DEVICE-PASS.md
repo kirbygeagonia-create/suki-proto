@@ -59,13 +59,13 @@ What was verified about the artifact, not assumed:
 
 | Check | Result |
 |---|---|
-| `:app:assembleDebug` | **BUILD SUCCESSFUL**. Output `Sukinnect-1.2-preview.6-debug.apk`, **2,104,798 bytes** (was 4,595,092 before reicon.js left the bundle), `versionCode 8`, `versionName 1.2-preview.6` |
+| `:app:assembleDebug` | **BUILD SUCCESSFUL**. Current output `Sukinnect-1.2-preview.7-debug.apk`, **2,105,566 bytes**, `versionCode 9`, `versionName 1.2-preview.7` — the profile-honesty build. The previous one, `Sukinnect-1.2-preview.6-debug.apk`, was **2,104,798 bytes** (was 4,595,092 before reicon.js left the bundle) |
 | Launcher label | `aapt dump badging`: **'Sukinnect · preview'** on this debug APK, and still **'Sukinnect'** on the Oct-1 release APK — the override is debug-scoped, measured on both artifacts |
-| `assets/Sukinnect.html` inside the APK | `cmp` says **identical to `Sukinnect-next.html`** (732,855 bytes at the `.5` build) |
+| `assets/Sukinnect.html` inside the APK | `cmp` says **byte-identical to `Sukinnect-next.html`** — 735,292 bytes at the `.7` build (732,855 at `.5`). Compared with `cmp`, not with a hash: `.gitattributes` normalises line endings, so a hash match is the wrong question for a text file here |
 | The seven category PNGs inside the APK | `cmp` says identical to `assets/category-art/*.png`, and they sit at `assets/assets/category-art/` because the WebView root mirrors the repo root |
 | The four Atkinson weights inside the APK | `cmp` says identical, and `unzip -v` says **Stored** — `noCompress 'woff2'` is doing its job |
 | Every path the bundled page asks for | `check-assets.cjs --apk`: **48 of 48 resolve** |
-| The bundled page, painted | `tools/shot.cjs --file=<the assets copy> --width=360 --height=640 --measure`: 46 screens then, **47 now**, **0 images that got no pixels, 0 console errors**, 9 painted font sizes all ≥14px, 0 moving category artwork, and **every measured field equal to the same run against the repo source** |
+| The bundled page, painted | `tools/shot.cjs --file=<the assets copy> --width=360 --height=640 --measure`: 46 screens then, 47, then 49, **52 now** — the three newest are the modals behind the profile sheets, where the 24×25px close `×` was found. **0 images that got no pixels, 0 console errors**, 9 painted font sizes all ≥14px, 0 moving category artwork, 0 controls under the tap floor, and **every measured field equal to the same run against the repo source** |
 | Scratch left behind | none — the capture directories this pass wrote were deleted. The only tracked edits are `tools/shot.cjs` (the `--file=` flag) and this file |
 
 **Two build notes from 2026-10-10/11, both learned the hard way.** Rebuilding replaces the
@@ -106,6 +106,32 @@ recorded, and the admin's numbers for a provider disagreed with that provider's 
 - [ ] **Admin → Account → Active Sessions and Login Activity.** Both must say plainly that the
       prototype keeps no record, rather than naming a second device or a failed login. If either
       lists a session, that is a fabricated security claim back in the UI.
+
+### 3c. The controls this build added — 3 min, new since the profile-honesty pass
+
+Three surfaces changed on the way to the phone that no desktop instrument can settle, because a
+browser renders a `<select>` and a `<input>` the way Chrome wants to, not the way a handset does.
+
+- [ ] **Resident → Profile → Payment → Change method.** This sheet is new: it used to answer the
+      button with "Changes saved successfully" and change nothing. It now shows a picker over the
+      two methods on the record. On Android that is a native dialog — check it opens, that both
+      options are listed, that picking one and tapping **Save method** leaves the card above reading
+      the method you chose, and that it **is still that method after you close and reopen the app**
+      (it writes `preferredPayment`, which the Store persists). A picker that closes without
+      selecting anything must not overwrite the current method.
+- [ ] **Provider → Profile → Payout & Earnings → Manage Payout.** The sheet now holds a real text
+      field prefilled with the account on the record. Type into it with the keyboard up: the field
+      must stay visible and the **Save payout account** button must not end up under the keyboard
+      (§2's rule, on a control that has never been on a phone before). Save a change, then check the
+      card behind it, the row in the profile list, and the Payout line inside **Edit Professional
+      Profile** all read the new value — they were four separate literals until this build. Sign in
+      as the fruit buyer (**`erning@demo.ph`** — the second of the two provider accounts in
+      `PROVIDER_DEMO_ACCOUNTS`) and confirm the payout shown is
+      **0917***8102**, not the plumber's number the literals carried for every provider.
+- [ ] **Every modal's close.** The `×` that closes a profile modal measured 24×25px and is 44×44 now.
+      It is transparent, so it looks identical — the test is whether you can hit it one-handed at
+      the top-right of the sheet, with the sheet still open underneath. Tap it and confirm you land
+      back on the section you came from, not on the profile list.
 
 The painted-page row is what the `--file=` flag added to `tools/shot.cjs` exists for. The
 camera could previously photograph only `Sukinnect-next.html` at the repo root, where
@@ -154,8 +180,9 @@ the only record.
    `Sukinnect-Android/web-assets-offline/reicon.js` on 2026-10-11, so it is no longer packaged.
    To build the shipped prototype again: `mv Sukinnect-Android/web-assets-offline/reicon.js
    Sukinnect-Android/app/src/main/assets/reicon.js`.
-4. `app/build.gradle`: `versionCode` 2 → 8, `versionName` '1.1' → '1.2-preview.6',
-   **`targetSdk` 34 → 36**.
+4. `app/build.gradle`: `versionCode` 2 → 8 → **9**, `versionName` '1.1' → '1.2-preview.6' →
+   **'1.2-preview.7'**, **`targetSdk` 34 → 36**. The `.7` build is the one that carries the
+   profile-honesty pass, and it is the build the three checks below are about.
 5. `app/src/debug/res/values/app.xml`: new, debug-only `app_name` = "Sukinnect · preview".
 6. `MainActivity.java`: `applySystemBarInsets()` added, plus the `Build` and `WindowInsets`
    imports. This is the edge-to-edge compensation for item 4 and it is **device-unverified**.

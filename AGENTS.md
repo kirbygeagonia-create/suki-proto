@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 10,090 lines, ONE :root block, 1,685 var() usages, 94 tokens declared with 91
+Sukinnect-next.html— 10,119 lines, ONE :root block, 1,694 var() usages, 94 tokens declared with 91
                     of them reached. Twenty-five hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1256,7 +1256,7 @@ official mark is a PNG, not an icon, and it is still the only brand image on the
 The rebuild also added a real verification surface, because reading the file cannot
 see a layout: `node tools/shot.cjs` drives the machine's own Chrome headless over the
 DevTools Protocol with no npm packages, and `--measure` runs an in-page instrument
-across all 49 screens for tap targets, WCAG contrast (sampling gradients at the text's
+across all 52 screens for tap targets, WCAG contrast (sampling gradients at the text's
 own position), clipped text, off-scale fonts, content trapped under the nav, unnamed
 controls, escaping map panes, anything painting over an open modal, and whether any
 category artwork is moving in the painted page — which is the one thing a source grep
@@ -1279,6 +1279,18 @@ held the admin's editable name, phone and office. It is `admin-account` now — 
 sheet reached through `openProfileSection` had ever been photographed either. A table of entry
 points is only as good as its coverage, so when a role gains a destination the table has to gain
 it in the same change.
+
+And a fourth form of the same trap: **a screen can sit one tap below a screen that is covered.**
+The profile *sheets* were photographed; the modals their own buttons open were not, so the 24×25px
+`×` that closes every one of them had never met the tap floor, and no source grep could have found
+it. Those three screens are in the table now (52), reached by `clickPainted()` — which finds the
+button the app actually painted and clicks it, so a control whose handler went away fails the shot by
+name instead of photographing a state nobody can enter. That helper exposed one more thing about the
+walk: it assigned `state.role` over whatever sheet the previous screen left open, and the app pays
+its Back debt with real `history.back()` calls, which on a `file://` page is a navigation — Chrome
+took the target down for three screens before the walk was made to `clearModals()` first, the way
+the app's own bottom navigation does. A harness that reaches a screen the user cannot reach is
+measuring a fiction, and here it was also crashing the browser.
 
 TYPED TEXT NEVER BECOMES MARKUP, and the gate enforces it rather than remembering it.
 `esc()` covers `& < > " '`; `jsStr()` exists for the one context `esc()` cannot serve —
@@ -1356,6 +1368,35 @@ The same pass caught a card on the provider profile reading **"Credentials: All 
 while the list one scroll below it showed two documents expiring soon — the §77 class again, found
 by looking at a screenshot taken for a different reason. `credentialSummaryFor` now counts the
 flagged documents and picks the tone.
+
+EVERY PROFILE ACTION REACHES A SCREEN, and the gate walks to it rather than trusting a list. All
+three hubs end their modal ternary with the generic success body written for `saved`, so an action
+name with no branch of its own opened a modal announcing `Changes saved successfully.` for a change
+that never happened — nine of them did, including `Edit Pricing`, whose button could not open the
+form that holds the price. The honesty suite now renders each profile tab, reads the section ids out
+of the **painted** rows, reads the action names out of the painted section cards, and requires each
+to paint a modal that is neither the fallback body nor the fallback heading (`Update`), so a button
+added tomorrow that reaches nothing fails the gate instead of waiting for a thumb. `Edit Pricing`,
+`Change Radius` and `Edit Hours` now open the one form that carries those fields; the payment picker
+writes `preferredPayment`; the payout sheet writes `bankAccount`, which the payout itself already
+read — the account had been typed into four surfaces while a fifth held it, so the fruit buyer was
+shown the plumber's GCash number. Two `Change password` buttons were deleted: no password is in
+state, so the card says so where the button had promised otherwise. The admin PIN and password
+modals took six credential fields, read none, and called `adminLog('Password updated', …)` —
+fabricated entries in the one record set §29 makes auditable; they are gone, and the 2FA modal
+reports `Not configured` instead of `Enabled`. The hub **rows** carried the same claims one level up
+(`PIN enabled - 2FA enabled`, `2 devices signed in` over a sheet that says this device is the only
+session, `Recent authentication activity` over a card that says none is recorded), the badge rail
+named two of p1's three badges as literals (a false `Top Rated` for seven of eight providers, and
+`Background Checked` hidden from those who hold it), and the public preview card typed 4.9 and 214 —
+p1's own figures, so every screenshot of it looked right. Each now reads its record.
+`node tools/falsify-profile-honesty.cjs` — 9 mutants applied, 9 caught (449 → 456), including one
+that deletes only a modal's *heading* branch while leaving its body, which is how the payment picker
+first opened as "Update". One instrument lesson in the same pass: the credential-window check built
+its dates with `toISOString().slice(0,10)` — a **UTC** calendar date — while `credentialState`
+measures from the local midnight `parseDay` returns, so on a GMT-11 machine the two disagree by a day
+at the boundary and a check that had passed for weeks failed against an app that had not changed.
+Build the day, then read the day, in the same frame of reference.
 
 An animated-illustration pipeline (Lottie) was installed here and then removed again:
 it added 305KB that animated nothing, because the professional artwork it was built for

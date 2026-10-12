@@ -1755,9 +1755,17 @@ suite('honesty', async () => {
       && a.every(x => x.providerId === 'p1') && b.every(x => x.providerId === 'p2');
   })(), 'two different ids returned the same provider rows');
 
-  /* Both sides of the threshold, because a one-sided test survives a rule that fires too often. */
+  /* Both sides of the threshold, because a one-sided test survives a rule that fires too often.
+     The day must be built in LOCAL calendar days: parseDay reads a date-only string as local
+     midnight, so a helper that truncates an ISO timestamp to its UTC date asks a different
+     question near the boundary. This machine sits at GMT-11, where that off-by-one made
+     iso(30) land on a 31-day document and the check failed against an app that was right. */
   const DAY = 86400000;
-  const iso = d => new Date(Date.now() + d * DAY).toISOString().slice(0, 10);
+  const iso = d => {
+    const t = new Date(Date.now() + d * DAY);
+    return [t.getFullYear(), String(t.getMonth() + 1).padStart(2, '0'),
+            String(t.getDate()).padStart(2, '0')].join('-');
+  };
   c.check('a credential reads its state from its own expiry date', (() => {
     const warn = app.CONFIG.credentialWarnDays;
     return app.credentialState({ expiresAt: null }).code === 'valid'
@@ -1842,6 +1850,178 @@ suite('honesty', async () => {
     return clean.tone === 'var(--success-ink)' && after.tone === 'var(--error-ink)'
       && app.credentialSummaryFor('p3').tone === 'var(--success-ink)';
   })(), 'the summary did not change when a document expired');
+
+  /* These five probes walk the app rather than the file, so each computes a verdict —
+     the ok and the sentence explaining it — instead of a bare boolean. c.check takes
+     (label, condition, message), and an object is truthy: passing one would make every
+     check below pass forever, which is the quietest possible way to write a gate. */
+  const verdict = (label, probe) => c.check(label, probe.ok, probe.why);
+
+  /* A profile action with no branch still opened a modal, because all three hubs end
+     their ternary with the generic success body that belongs to 'saved'. Nine action
+     names — Edit Pricing, Change Radius, Edit Hours, Change method, Change password,
+     an edited listing, View Login Activity — were answered with "Changes saved
+     successfully" for a change that never happened. The names below come from the
+     PAINTED rows and the PAINTED section cards, so a button added tomorrow that reaches
+     nothing fails here rather than waiting for somebody to tap it. */
+  verdict('every control a profile screen paints reaches a screen of its own', (() => {
+    const HUBS = [['resident', 'residentProfileAction', 'residentProfileModal'],
+                  ['provider', 'providerProfileAction', 'providerProfileModal'],
+                  ['admin', 'adminAccountAction', 'adminAccountModal']];
+    const SECTIONS = { resident: app.residentSectionBody, provider: app.providerSectionBody,
+                       admin: app.adminSectionBody };
+    const SAVE_CLAIMS = ['Changes saved successfully', 'Update saved and recorded in the Audit Log'];
+    const bad = [];
+    let walked = 0;
+    for (const [role, caller, modalKey] of HUBS) {
+      app.state.view = 'app'; app.state.role = role; app.state.tab = 'profile';
+      app.state[modalKey] = null; app.state.profileSheet = null;
+      app.render();
+      const hub = app._document.getElementById('screen').innerHTML;
+      /* the rows open sections, the section cards hold the buttons — walk both */
+      const ids = [...new Set((hub.match(/openProfileSection\('[a-z]+', *'([a-z_]+)'/g) || [])
+        .map(s => /'([a-z_]+)'$/.exec(s)[1]))];
+      if (!ids.length) bad.push(role + ' paints no profile rows at all');
+      const actions = new Set();
+      ids.forEach(id => {
+        const body = SECTIONS[role](id) || '';
+        const found = body.match(new RegExp(caller + "\\('([a-z_]+)'", 'g')) || [];
+        found.forEach(s => actions.add(/'([a-z_]+)'$/.exec(s)[1]));
+      });
+      for (const a of actions) {
+        walked++;
+        app.state[modalKey] = a;
+        app.render();
+        const html = app._document.getElementById('screen').innerHTML;
+        if (!/class="modal-layer"/.test(html)) bad.push(role + ':' + a + ' paints no modal');
+        else if (SAVE_CLAIMS.some(cl => html.includes(cl))) bad.push(role + ':' + a + ' claims a save it did not make');
+        /* The title is its own ternary in every hub, so a branch can exist in the body and
+           be missing from the heading — the payment-method picker opened as "Update". */
+        else {
+          const t = /modal-card"[^>]*><div class="row"><b>([^<]*)</.exec(html);
+          if (!t) bad.push(role + ':' + a + ' paints no modal title');
+          else if (t[1] === 'Update' || t[1] === 'Account update')
+            bad.push(role + ':' + a + ' opened under the fallback heading "' + t[1] + '"');
+        }
+      }
+      app.state[modalKey] = null;
+    }
+    /* A walk that found nothing is a walk that proved nothing. */
+    return { ok: bad.length === 0 && walked >= 8,
+      why: bad.length ? bad.join(' | ')
+        : 'only ' + walked + ' profile actions were reachable — the walk lost its grip' };
+  })());
+
+  /* Two rows of the same screen disagreed by a factor of two devices: the list said
+     "2 devices signed in", the sheet it opened said this is the only session the
+     prototype knows about. The card had already been corrected; the row above it had not. */
+  verdict('no profile row reports a sign-in state the app does not keep', (() => {
+    const claims = ['PIN enabled - 2FA enabled', "'2 devices signed in'", "'Recent authentication activity'",
+      'placeholder="Current PIN"', 'placeholder="New PIN"', 'placeholder="Confirm New PIN"',
+      'placeholder="Current Password"', 'placeholder="New Password"',
+      "adminLog('Password updated'", "adminLog('Security PIN updated'"];
+    const found = claims.filter(s => appSrc.includes(s));
+    return { ok: found.length === 0, why: 'still asserting: ' + found.join(' | ') };
+  })());
+
+  /* The payout account was typed into three places and held in a fourth: the profile
+     field the payout itself reads. Signed in as the fruit buyer it still showed the
+     plumber's number. A field a keyboard can write has to be the one the screen shows. */
+  verdict('the payout account is read from the field that pays it', (() => {
+    const was = app.state.providerProfileData.bankAccount;
+    app.state.providerProfileData.bankAccount = 'GCash (0900***0000)';
+    const card = app.providerSectionBody('payout');
+    app.state.view = 'app'; app.state.role = 'provider'; app.state.tab = 'profile';
+    app.state.providerProfileModal = null;
+    app.render();
+    const hub = app._document.getElementById('screen').innerHTML;
+    app.state.providerProfileData.bankAccount = was;
+    const surfaces = { card, hub };
+    const names = Object.keys(surfaces);
+    const off = names.filter(k => !surfaces[k].includes('0900***0000'));
+    const stale = names.filter(k => surfaces[k].includes('0918***4321'));
+    return { ok: off.length === 0 && stale.length === 0,
+      why: off.join(',') + ' ignored the field; ' + (stale.length ? stale.join(',')
+        + ' still shows the previous account' : '') };
+  })());
+
+  verdict('the public preview is the signed-in provider, not a fixed one', (() => {
+    app.applyProviderIdentity('p1');
+    const mine = app.providerSectionBody('preview');
+    const p1 = app.PROVIDERS.find(p => p.id === 'p1');
+    const p7 = app.PROVIDERS.find(p => p.id === 'p7');
+    app.applyProviderIdentity('p7');
+    const other = app.providerSectionBody('preview');
+    app.applyProviderIdentity('p1');
+    /* The card's name and rate already moved with the account, so "the two renders
+       differ" was true even with the rating typed as a literal — a check that passes on
+       its own mutant. Ask for the figures, and for the other account's figures to be gone. */
+    const want = (p) => p.jobs + ' completed jobs';
+    const ok = mine.includes(want(p1)) && mine.includes('>' + p1.rating + '<')
+      && other.includes(want(p7)) && other.includes('>' + p7.rating + '<')
+      && !other.includes(want(p1));
+    return { ok,
+      why: !other.includes(want(p7)) ? 'the preview still showed ' + (other.match(/\d+ completed jobs/) || ['nothing'])[0]
+        : 'the preview did not separate the two accounts' };
+  })());
+
+  verdict('the change-method sheet offers the methods on the record', (() => {
+    app.state.view = 'app'; app.state.role = 'resident'; app.state.tab = 'profile';
+    /* The first render of a freshly selected role paints the sample-data skeleton, not
+       the screen — measured with a probe that reported the first action of every role as
+       "paints no modal". Warm the tab before asking it to show a control. */
+    app.state.residentProfileModal = null;
+    app.render();
+    app.state.residentProfileModal = 'add_payment';
+    app.render();
+    const html = app._document.getElementById('screen').innerHTML;
+    app.state.residentProfileModal = null;
+    const missing = app.state.profileData.paymentMethods.filter(m => !html.includes(m));
+    return { ok: missing.length === 0 && /<select[^>]*resident-preferred-payment/.test(html),
+      why: missing.length ? 'not offered: ' + missing.join(', ')
+        : 'the sheet paints no select over the methods' };
+  })());
+
+  /* The provider's own profile card named two badges as literals. p1 does carry both, so
+     every screenshot of that screen looked right — p7 was shown a "Top Rated" claim no
+     record makes, and p3's Background Checked was hidden from it. A card that happens to
+     match one account is still not reading any account. */
+  verdict('the profile card shows the badges its provider actually holds', (() => {
+    /* The tab paints other chips — "Active" sits in the status row — so the badge rail is
+       taken by its own container rather than counted across the screen. */
+    const rail = () => {
+      const html = app._document.getElementById('screen').innerHTML;
+      const m = /justify-content:center; gap:6px; margin-top:10px;">((?:<span class="chip">[^<]*<\/span>)+)/
+        .exec(html);
+      return m ? m[1] : 'NO RAIL';
+    };
+    app.state.view = 'app'; app.state.role = 'provider'; app.state.tab = 'profile';
+    app.state.providerProfileModal = null; app.state.profileSheet = null;
+    app.applyProviderIdentity('p1'); app.render();
+    const one = rail();
+    app.applyProviderIdentity('p7'); app.render();
+    const seven = rail();
+    app.applyProviderIdentity('p1'); app.render();
+    const has = (railHtml, p) => p.badges.every(b => railHtml.includes('<span class="chip">' + b + '</span>'));
+    const only = (railHtml, p) => p.badges.length === (railHtml.match(/<span class="chip">/g) || []).length;
+    const p1 = app.PROVIDERS.find(p => p.id === 'p1'), p7 = app.PROVIDERS.find(p => p.id === 'p7');
+    return { ok: has(one, p1) && only(one, p1) && has(seven, p7) && only(seven, p7) && one !== seven,
+      why: one === seven ? 'two providers with different badges painted the same chips'
+        : !only(seven, p7) ? 'the rail added or dropped a badge: ' + seven.slice(0, 80)
+        : 'the rail did not match the record: ' + seven.slice(0, 80) };
+  })());
+
+  /* A checkbox bound to nothing is a control that reports success and changes no state —
+     the same class as the modals this pass closed, found two lines away from a card that
+     does edit its fields. */
+  verdict('the preferences card offers no switch it cannot turn', (() => {
+    const body = app.adminSectionBody('preferences');
+    const unbound = (body.match(/<input[^>]*type="checkbox"[^>]*>/g) || [])
+      .filter(tag => !/onchange=|checked/.test(tag));
+    return { ok: unbound.length === 0 && !/Compact Dashboard <input/.test(body),
+      why: unbound.length ? unbound.length + ' checkbox(es) answer to no state'
+        : 'the card still offers the compact switch' };
+  })());
 
   const unsourced = ['Expires in 23 days', 'ID Verification - ', 'Last active: 2 hours ago',
     'Failed login attempt', 'PROVIDERS.slice(0, 4)', 'adminVerifiedPerformance', 'meta.active',

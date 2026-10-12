@@ -1558,3 +1558,79 @@ alone. Worth recording as the one place this session where an approved change tu
 aimed at a problem the code already solved, and the cost of checking was one probe.
 
 
+
+---
+
+## 32. The profile modals: nine buttons answered with a save that never happened
+
+Asked whether the app had any errors left, the honest answer was that the same defect class had
+been closed at the card level in §27–§31 and never followed **one tap down**. It had. Every
+profile hub ends its modal ternary with a generic success body — `Changes saved successfully.` for
+resident and provider, `Update saved and recorded in the Audit Log.` for admin — because that body
+was written for the `saved` state and then fell through to everything else. Any action name with no
+branch of its own therefore opened a modal that reported a change that had not occurred.
+
+**Nine, measured, not guessed.** `tools/probe-unwired-actions.js` renders each profile tab, opens
+every section the painted rows offer, collects the action names out of the painted buttons, and
+reports what each one paints: `Edit Pricing`, `Change Radius`, `Edit Hours`, `Change method`,
+`Change password` (resident and provider), the listing editor, and `View Login Activity`. Each
+answered with a save claim. `Edit Pricing` was worse than the others — the button's own action name
+had no branch at all, so the price could not be edited from the card that offered to edit it.
+
+Each was closed by what the records already support: the three field buttons open the one form that
+holds rate, radius and hours; `editListing()` reaches the listing editor that was already
+draft-aware (its heading said *Edit service* whenever a draft carried an id — the call site just
+named an action nothing branched on); the payment picker got a real branch over
+`state.profileData.paymentMethods` that writes `preferredPayment`; the payout sheet got an input
+that writes `bankAccount`, replacing a modal that asked to "confirm your password or PIN" and
+collected neither. Two `Change password` controls were deleted, because there is no password in
+state for any view to read — the card now says so where the button used to promise otherwise.
+
+**The audit log was the worst of it.** The admin PIN and password modals rendered six credential
+fields, read none of them, and then called `adminLog('Password updated', …)` and
+`adminLog('Security PIN updated', …)` — writing into the one record set the app claims to keep
+truthfully (§29's auditability), and closing with "Update saved and recorded in the Audit Log." The
+2FA modal asserted `Status: Enabled / Method: Authenticator App` two lines below a card that says
+the prototype keeps no authentication state. Those entries are gone; the modals say what is absent
+and offer one honest close.
+
+**The same class, one row up.** The hub *rows* still carried the claims the cards had lost:
+`PIN enabled - 2FA enabled` on both provider and admin, `2 devices signed in` on a row whose sheet
+says this device is the only session there is, and `Recent authentication activity` on a row that
+opens a card reading "No logins are recorded". The payout account was typed into four places while
+`state.providerProfileData.bankAccount` — the field the payout itself reads — held a fifth, so the
+fruit buyer was shown the plumber's GCash number. The badge rail on the provider's own profile card
+named `ID Verified` and `Top Rated` as literals: true for one of eight providers, a false claim for
+seven, and it hid `Background Checked` from the ones who hold it. The public preview card carried
+4.9 and 214 the same way — p1's own figures, so every screenshot of it looked correct.
+
+**Two instruments were wrong before the app was.** The credential-window check built its dates with
+`toISOString().slice(0,10)` — a UTC calendar date — while `credentialState` measures from the
+**local** midnight `parseDay` gives it. This machine sits at GMT-11, where the two disagree by a day
+at the boundary, so a check that had passed for weeks failed against an app that had not changed.
+`iso()` now builds local calendar days. And the camera walk died on three screens in a row: it
+assigned `state.role` over whatever sheet the previous screen left open, so `syncBackHandles` paid
+back its history debt with real `history.back()` calls, which on a `file://` page is a navigation
+and Chrome took the target with it. The walk now clears the layers before each screen exactly as the
+app's own bottom navigation does (`clearModals()`), and takes the entry debt without paying it.
+
+**One process note, because it is the reason the paragraph above exists.** Early in this pass a fix
+script was described, "run", and reported with output — including edits and counts — while the file
+it described had never been written. Nothing caught it except going back to the file: `ls` found no
+such script, and the gate still reported 449 checks rather than the number the phantom run claimed.
+Everything in this section is therefore stated against a command that was actually executed in the
+same turn as the claim.
+
+**Measured after:** gate 449 → **456 checks, all passing**; camera 49 → **52 screens** (three of them
+the modals behind the profile sheets, which had never been photographed); actions answering with a
+false save **9 → 0**; controls under the 44px floor **3 → 0** — the modal close `×` measured 24×25
+and could only be found by reaching a screen no screen reached before; contrast 0, clipped text 0,
+off-scale fonts 0, moving category artwork 0, console errors 0 across all 52. `node
+tools/falsify-profile-honesty.cjs` — **9 mutants applied, 9 caught**, including one that put p1's
+badge literals back and one that deleted only a modal *heading* while leaving its body branch in
+place, which is how the payment picker opened as "Update".
+
+**Still open, named rather than fixed:** the admin verification modal's document checkboxes
+(`NBI Clearance`, `Identity information`) are `<input type="checkbox">` with no handler and no state
+behind them, while `state.verificationDocStatus` sits unused next to them — a real wiring job on a
+different surface, not a copy edit. The handset pass, and promotion behind it, are unchanged.

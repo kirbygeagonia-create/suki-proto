@@ -551,6 +551,20 @@ const SCREENS = [
   ['provider-credentials', `state.view='app'; state.role='provider';
                           state.tab='profile'; render();
                           openProfileSection('provider','credentials','Credentials','Documents on file');`],
+  /* Below the sheets sit the modals that a sheet's own button opens. They had never been
+     photographed, so a control added into one — the payment-method select, the payout
+     account field — met no tap floor and no contrast check. Each entry opens its section
+     and then clicks the button painted inside it, so a control whose handler was dropped
+     fails the shot by name instead of photographing a screen nobody can reach. */
+  ['resident-payment-modal', `state.view='app'; state.role='resident'; state.tab='profile'; render();
+                          openProfileSection('resident','payments','Payment','How you settle');
+                          clickPainted(/ProfileAction\\(.add_payment.\\)/, 'the change-method button');`],
+  ['provider-payout-modal', `state.view='app'; state.role='provider'; state.tab='profile'; render();
+                          openProfileSection('provider','payout','Payout & Earnings','Where the money goes');
+                          clickPainted(/ProfileAction\\(.payout.\\)/, 'the manage-payout button');`],
+  ['admin-security-modal', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+                          openProfileSection('admin','security','Security & Sign-in','What this device keeps');
+                          clickPainted(/AccountAction\\(.pin.\\)/, 'the security-PIN button');`],
   ['admin-dash',       `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='overview'; render();`],
   ['admin-finance',    `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='finance'; render();`],
   ['admin-trust',      `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='trust'; render();`],
@@ -763,11 +777,49 @@ async function main() {
      before a navigation let its own paint land after the screen we asked for —
      the tool then photographed the sign-in card and reported it as the chat room. */
   await session.evaluate(`(function(){ localStorage.clear(); resetDemoData(); return true; })()`);
+  /* A helper for the screens that only exist behind a button: click the control the app
+     actually painted instead of assigning the state it would set. If the handler went
+     away, the shot fails with the button's name rather than photographing a reach of
+     nobody — the same trap as a screen table that moves the model but not the field. */
+  await session.evaluate(`(function(){
+     window.clickPainted = function (re, label) {
+        var wanted = new RegExp(re.source, re.flags);
+        var hit = [].slice.call(document.querySelectorAll('[onclick]'))
+           .filter(function (el) { return wanted.test(el.getAttribute('onclick')); })[0];
+        if (!hit) throw new Error('nothing on the screen is ' + label);
+        /* A button with no type defaults to submit, and submit inside a form navigates.
+           Report what was actually hit so a screen that kills the tab says why. */
+        var inForm = !!hit.closest('form');
+        if (hit.tagName === 'BUTTON' && !hit.getAttribute('type')) {
+           if (inForm) throw new Error(label + ' is a submit button inside a form — clicking it would navigate');
+           hit.setAttribute('type', 'button');
+        }
+        hit.click();
+        return label + ' (' + hit.tagName.toLowerCase() + (inForm ? ' in form' : '') + ')';
+     };
+     return true;
+  })()`);
   await sleep(500);
 
   const manifest = [];
   for (const [name, nav] of wanted) {
     try {
+      /* Stand the app back up the way its own bottom navigation does before each screen.
+         A person tapping between tabs runs clearModals(); the walk used to assign
+         state.role over whatever sheet the previous screen left open, and the app then
+         spent the difference with real history.back() calls — on a file:// page that is a
+         navigation, and Chrome took the target with it. Three screens vanished this way
+         before the cause was the harness rather than the markup. */
+      await session.evaluate(`(function(){
+         try { clearModals(); } catch (e) {}
+         /* The app pays back the entries it owns with real history.back() calls, which is
+            right on a phone and wrong here: the walk jump-cuts between screens, and a back()
+            past the page's own entries leaves the file entirely and Chrome closes the target.
+            Take the debt without paying it, so each screen starts from one clean layer stack
+            and the recorded behaviour of Back is still measured by the gate, not by this tool. */
+         try { ignoreNextPop += ownedEntries; ownedEntries = 0; } catch (e) {}
+         return true;
+      })()`);
       const err = await session.evaluate(`(function(){
          try { ${nav} return ''; } catch(e){ return String(e && e.message || e); }
       })()`);
