@@ -59,13 +59,13 @@ What was verified about the artifact, not assumed:
 
 | Check | Result |
 |---|---|
-| `:app:assembleDebug` | **BUILD SUCCESSFUL**. Current output `Sukinnect-1.2-preview.8-debug.apk`, **2,111,574 bytes**, `versionCode 10`, `versionName 1.2-preview.8` — the verification-records build. Before it: `.7` at 2,105,566 bytes (profile honesty), `.6` at 2,104,798 (was 4,595,092 before reicon.js left the bundle) |
+| `:app:assembleDebug` | **BUILD SUCCESSFUL**. Current output `Sukinnect-1.2-preview.9-debug.apk`, **2,112,782 bytes**, `versionCode 11`, `versionName 1.2-preview.9` — the build where an approval has somewhere to be seen and the dashboard tiles count the queue. Before it: `.8` 2,111,574 (verification records), `.7` 2,105,566 (profile honesty), `.6` 2,104,798 (was 4,595,092 before reicon.js left the bundle) |
 | Launcher label | `aapt dump badging`: **'Sukinnect · preview'** on this debug APK, and still **'Sukinnect'** on the Oct-1 release APK — the override is debug-scoped, measured on both artifacts |
-| `assets/Sukinnect.html` inside the APK | `cmp` says **byte-identical to `Sukinnect-next.html`** — 751,283 bytes at the `.8` build (735,292 at `.7`, 732,855 at `.5`). Compared with `cmp`, not with a hash: `.gitattributes` normalises line endings, so a hash match is the wrong question for a text file here |
+| `assets/Sukinnect.html` inside the APK | `cmp` says **byte-identical to `Sukinnect-next.html`** — 754,702 bytes at the `.9` build (751,283 at `.8`, 735,292 at `.7`). Compared with `cmp`, not with a hash: `.gitattributes` normalises line endings, so a hash match is the wrong question for a text file here |
 | The seven category PNGs inside the APK | `cmp` says identical to `assets/category-art/*.png`, and they sit at `assets/assets/category-art/` because the WebView root mirrors the repo root |
 | The four Atkinson weights inside the APK | `cmp` says identical, and `unzip -v` says **Stored** — `noCompress 'woff2'` is doing its job |
 | Every path the bundled page asks for | `check-assets.cjs --apk`: **48 of 48 resolve** |
-| The bundled page, painted | `tools/shot.cjs --file=<the assets copy> --width=360 --height=640 --measure`: 46 screens then, 47, then 49, 52, **56 now** — the newest are the modals behind the profile sheets, where the 24×25px close `×` was found, and the admin's verification review with its request picker and document preview, which had been in no table at all. **0 images that got no pixels, 0 console errors**, 9 painted font sizes all ≥14px, 0 moving category artwork, 0 controls under the tap floor, and **every measured field equal to the same run against the repo source** |
+| The bundled page, painted | `tools/shot.cjs --file=<the assets copy> --width=360 --height=640 --measure`: 46 screens then, 47, then 49, 52, 56, **57 now** — the newest are the modals behind the profile sheets, where the 24×25px close `×` was found, and the admin's verification review with its request picker, document preview and Decided tab, which had been in no table at all. **0 images that got no pixels, 0 console errors**, 9 painted font sizes all ≥14px, 0 moving category artwork, 0 controls under the tap floor, and **every measured field equal to the same run against the repo source**. Quote the full sweep, not a `--only=` subset: a subset run reports three contrast failures on the admin header's translucent "Insights" pill that the full run reports as zero, because the sampler's answer depends on what was painted earlier in the run |
 | Scratch left behind | none — the capture directories this pass wrote were deleted. The only tracked edits are `tools/shot.cjs` (the `--file=` flag) and this file |
 
 **Two build notes from 2026-10-10/11, both learned the hard way.** Rebuilding replaces the
@@ -156,6 +156,11 @@ gesture, and an app killed mid-review.
 - [ ] **Approve Joel Aquino** (all four filed). He must leave the pending queue, the dashboard's
       pending count must fall by one, and reopening the app must **not** put him back. Then
       `Reopen this application` and confirm he returns.
+- [ ] **The Decided tab.** After approving Joel he must appear there — name, the decision, and the
+      date **with** the time (`Oct 11, 2026 8:19 PM by …`, not a bare time), and `Open the decision`
+      must take you to the review showing that entry in its activity list. All four tab labels have
+      to be readable without the selected one being cut off at the right edge; on a 360px-wide device
+      it was, and the instrument reported nothing because the rail scrolls.
 - [ ] **Kill the app while a review modal is open** and reopen it. The decision list should show
       only what was actually recorded; a note typed into the box and never saved must not appear,
       and a saved note must. Notes are per applicant now — open Liza Ramos and confirm none of
@@ -208,9 +213,9 @@ the only record.
    `Sukinnect-Android/web-assets-offline/reicon.js` on 2026-10-11, so it is no longer packaged.
    To build the shipped prototype again: `mv Sukinnect-Android/web-assets-offline/reicon.js
    Sukinnect-Android/app/src/main/assets/reicon.js`.
-4. `app/build.gradle`: `versionCode` 2 → 8 → 9 → **10**, `versionName` '1.1' → '1.2-preview.6' →
-   '1.2-preview.7' → **'1.2-preview.8'**, **`targetSdk` 34 → 36**. The `.8` build carries the
-   verification records, and it is the build section 3d is about.
+4. `app/build.gradle`: `versionCode` 2 → 8 → 9 → 10 → **11**, `versionName` '1.1' →
+   '1.2-preview.6' → '.7' → '.8' → **'.9'**, **`targetSdk` 34 → 36**. The `.9` build is the one
+   where an approval has a Decided tab to be seen in and the dashboard tiles count the queue.
 5. `app/src/debug/res/values/app.xml`: new, debug-only `app_name` = "Sukinnect · preview".
 6. `MainActivity.java`: `applySystemBarInsets()` added, plus the `Build` and `WindowInsets`
    imports. This is the edge-to-edge compensation for item 4 and it is **device-unverified**.

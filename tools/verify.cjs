@@ -889,8 +889,39 @@ suite('admin', async () => {
 
   /* counts and filters */
   const k = adminCounts();
+  /* This check used to read `k.verified === app.PROVIDERS.length` — it asserted the
+     defect. The dashboard printed the whole roster as the verified count while the same
+     console's own roster filter excluded the suspended provider and the one awaiting
+     review, so the check was pinning 8 to a screen that should have shown 6. A green
+     check that agrees with a bug is worse than no check. */
   c.check('the console counts what is actually there',
-    k.verified === app.PROVIDERS.length && k.liveCases === DISPUTES.filter(x => x.status === 'under review').length);
+    k.verified === app.verifiedProviderList().length
+      && k.verified < app.PROVIDERS.length
+      && k.liveCases === DISPUTES.filter(x => x.status === 'under review').length,
+    'verified ' + k.verified + ' against a verified roster of ' + app.verifiedProviderList().length
+      + ' out of ' + app.PROVIDERS.length);
+  /* The queue and the tile are the same number now that an approval means something. */
+  const queueBefore = app.pendingApplicantList().length;
+  app.state.view = 'app'; app.state.role = 'admin';
+  app.openProviderVerification('joel');
+  app.verificationAction('approved');
+  c.check('approving moves the dashboard tile with the queue',
+    adminCounts().pendingVerification === queueBefore - 1
+      && app.pendingApplicantList().length === queueBefore - 1,
+    'tile ' + adminCounts().pendingVerification + ', queue ' + app.pendingApplicantList().length
+      + ', was ' + queueBefore);
+  /* A decision that leaves no screen to be seen on is a record nobody can audit. */
+  app.state.tab = 'admin_verifications'; app.state.adminProviderCategory = 'decided';
+  app.render();
+  const decidedHtml = app._document.getElementById('screen').innerHTML;
+  c.check('a decided application still has a place in the console',
+    /Joel Aquino/.test(decidedHtml) && /Decided/.test(decidedHtml)
+      && /Open the decision/.test(decidedHtml),
+    'the decided tab showed: ' + decidedHtml.replace(/<[^>]*>/g, ' ').slice(0, 90));
+  /* Put the queue back: this suite runs more checks after this one, and a decision left
+     lying around would be the next check's unexplained missing applicant. */
+  app.reopenReview();
+  app.state.adminProviderCategory = 'pending'; app.render();
   const allTime = intelligenceStats({ days: 0, category: 'all' });
   const month = intelligenceStats({ days: 30, category: 'all' });
   const plumbed = intelligenceStats({ days: 0, category: 'plumbing' });
@@ -1836,6 +1867,14 @@ suite('honesty', async () => {
   c.check('a date-only value formats as the same day it names',
     /Mar 14, 2026/.test(app.shortDate('2026-03-14')) && /Jan 1, 2026/.test(app.shortDate('2026-01-01')),
     app.shortDate('2026-03-14'));
+  /* The mirror of the same trap: an instant from Date.now() is not a day to be read in a
+     calendar. It reached parseDay, fell through to Date.parse, came back NaN, and every
+     decision line painted a time with no date on it — an empty string, which no render
+     check calls a hole because there is nothing there to see. */
+  c.check('an epoch stamp formats as the day it falls on',
+    app.shortDate(Date.now()) === app.shortDate(new Date())
+      && /\d{4}/.test(app.shortDate(Date.now() - 86400000)),
+    JSON.stringify(app.shortDate(Date.now())) + ' / ' + JSON.stringify(app.shortDate(new Date())));
 
   c.check('the credential summary agrees with the credential list', (() => {
     const p1 = app.credentialSummaryFor('p1');

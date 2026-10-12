@@ -1696,3 +1696,50 @@ sticky action bar, so the one moment it is needed is the moment it is off screen
 inside the bar, above the buttons. And the request picker's checkboxes measured 44px because the
 input itself was raised to the tap floor; the box is 20px again with the label row carrying the
 tap, which is what the instrument accepts and what the eye expects.
+
+---
+
+## 34. Asked again whether anything was left, the last pass turned out to have broken two things
+
+The answer to "is there nothing more to address?" was still no, and this time the findings were
+mine: §33 made an approval mean something, and two numbers elsewhere in the app had been written
+against the static array that the approval now filters.
+
+**The dashboard disagreed with the queue it drives.** `adminCounts()` computed
+`pendingVerification = PENDING_APPLICANTS.length` and `verified = PROVIDERS.length`. After
+approving one applicant the queue held 2 and the tile said 3; and `verified` printed 8 while the
+console's own roster filter returned 6, because two of the eight are suspended or awaiting review.
+Measured with `tools/probe-queue-agreement.js`: `verified 8 / verifiedProviderList() 6`, and the
+pending count not moving at all.
+
+**A check was asserting the bug.** The gate had `k.verified === app.PROVIDERS.length` — a green
+check pinning the wrong number, which is why eight passes of "all checks passed" never noticed.
+It now asserts `k.verified === verifiedProviderList().length && k.verified < PROVIDERS.length`, and
+two checks joined it: approving moves the tile with the queue, and a decided application still has
+a place in the console.
+
+**An approval used to delete its own evidence.** The queue filters decided applicants out, and
+nothing else listed them — the record existed and was unreachable. There is a fourth tab,
+**Decided**, showing who was approved or rejected, when, by whom, and with the reason if there was
+one; opening one lands on the review with its activity list and its Reopen control.
+
+**Two defects the instrument called clean and a screenshot showed.** The decision line and every
+action entry in the activity list printed a time with **no date**: `parseDay()` handed an epoch
+number from `Date.now()` fell through to `Date.parse`, which stringified it and answered `NaN`, so
+`shortDate()` returned the empty string — nothing to see, so nothing complained. And the provider
+tab rail, built for three labels, clipped the fourth mid-word at 360px; the rail now scrolls, and
+this rail takes its space back from padding so the selected tab is fully visible on arrival rather
+than only reachable.
+
+**One instrument caveat worth recording.** Running `--only=admin-verified,admin-decided,…` reports
+three contrast failures on the header's "Insights" pill (`1:1, white on rgb(255,255,255)`) that the
+full 57-screen sweep reports as zero. The sampler's answer for that translucent pill depends on
+what was painted earlier in the run, so a subset run is not a clean bill of health either way —
+trust the full sweep, and treat a subset's contrast line as unproven.
+
+**After:** gate 461 → **464 checks, all passing**; camera 56 → **57 screens**; tap floor, contrast,
+clipped text, off-scale fonts, moving artwork and console errors all **0** across 57.
+`tools/falsify-verification-records.cjs` — **10 mutants applied, 10 caught**, including one that
+puts `PROVIDERS.length` back and one that cuts `parseDay`'s epoch branch. APK rebuilt as
+`Sukinnect-1.2-preview.9-debug.apk`, 2,112,782 bytes, `versionCode 11`, page `cmp`-identical,
+48 of 48 paths. `Sukinnect.html` untouched.

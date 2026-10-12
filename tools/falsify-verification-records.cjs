@@ -50,6 +50,24 @@ const mutants = [
     from: 'const SCHEMA_VERSION = 14;',
     to: 'const SCHEMA_VERSION = 14;\r\n',
     expect: CRLF },
+  /* The count the dashboard prints, and the two places a decision has to reach. */
+  { name: 'the verified tile goes back to the whole roster',
+    from: '  const verified = verifiedProviderList().length;',
+    to: '  const verified = PROVIDERS.length;',
+    expect: 'the console counts what is actually there' },
+  { name: 'the pending tile stops following the queue',
+    from: '  const pendingVerification = pendingApplicantList().length;',
+    to: '  const pendingVerification = PENDING_APPLICANTS.length;',
+    expect: 'approving moves the dashboard tile with the queue' },
+  { name: 'the decided list loses its branch and the approved applicant vanishes',
+    from: " : category === 'decided' ? adminDecidedSection(decidedList)",
+    to: " : category === 'decidedX' ? adminDecidedSection(decidedList)",
+    expect: 'a decided application still has a place in the console' },
+  /* An epoch that falls through parseDay formats as nothing at all. */
+  { name: 'parseDay stops recognising an instant',
+    from: '  if (typeof value === \'number\' && Number.isFinite(value)) return value;',
+    to: '  if (typeof value === \'number\' && false) return value;',
+    expect: 'an epoch stamp formats as the day it falls on' },
 ];
 
 const base = gate();

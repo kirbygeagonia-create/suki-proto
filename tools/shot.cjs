@@ -595,6 +595,13 @@ const SCREENS = [
      table was written — 46 screens never included it — and it is the screen that holds the
      admin's editable name, phone and office. */
   ['admin-account',    `state.view='app'; state.role='admin'; state.tab='profile'; render();`],
+  /* Placed after every screen that reads the pending counts, because it leaves one
+     applicant decided. The record is written the way verificationAction writes it, so the
+     shot shows the same shape a real approval produces. */
+  ['admin-decided',    `state.view='app'; state.role='admin';
+                        reviewOf('joel').status='verified'; reviewOf('joel').decidedAt=Date.now();
+                        reviewOf('joel').reviewer=state.adminProfileData.name;
+                        state.tab='admin_verifications'; state.adminProviderCategory='decided'; render();`],
   ['case-sheet',       `state.view='app'; state.role='resident'; state.tab='booking_detail';
                         const b=BOOKINGS.find(x=>x.status==='completed'&&x.pricing); b.completedAt=new Date().toISOString();
                         state.selectedBookingId=b.id; render(); openCaseSheet(b.id);`],

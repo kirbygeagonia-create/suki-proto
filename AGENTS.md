@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 10,370 lines, ONE :root block, 1,707 var() usages, 94 tokens declared with 91
+Sukinnect-next.html— 10,404 lines, ONE :root block, 1,713 var() usages, 94 tokens declared with 91
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1216,7 +1216,7 @@ Sukinnect-next.html— 10,370 lines, ONE :root block, 1,707 var() usages, 94 tok
                     --device-signal. Type is fully on the scale: of the 116 `font-size`
                     declarations in the stylesheet, 115 take a var(), none is a literal px,
                     and the 116th is `inherit` — the reset that lets an <h1> sit in a flex bar
-                    as the div it replaced. The 394 `font-size` declarations inside markup's
+                    as the div it replaced. The 397 `font-size` declarations inside markup's
                     inline styles all take a var() too. Every screen in the app now opens with
                     an <h1> and every sheet with an <h2> — 22 and 6, the sixth being the weighing
                     sheet — because a 49-screen app with no headings has no outline for a screen
@@ -1256,7 +1256,7 @@ official mark is a PNG, not an icon, and it is still the only brand image on the
 The rebuild also added a real verification surface, because reading the file cannot
 see a layout: `node tools/shot.cjs` drives the machine's own Chrome headless over the
 DevTools Protocol with no npm packages, and `--measure` runs an in-page instrument
-across all 56 screens for tap targets, WCAG contrast (sampling gradients at the text's
+across all 57 screens for tap targets, WCAG contrast (sampling gradients at the text's
 own position), clipped text, off-scale fonts, content trapped under the nav, unnamed
 controls, escaping map panes, anything painting over an open modal, and whether any
 category artwork is moving in the painted page — which is the one thing a source grep
@@ -1296,8 +1296,9 @@ The same gap existed one screen over, and it is worth naming because it survived
 admin's provider-verification **review** was in no table at all — a whole destination reached by
 tapping "Open verification" on a pending applicant, never photographed, never measured, and the last
 place in the app still typing its own facts. Its request picker and document preview are in the
-table with it (56 screens). The rule after any pass: a destination behind a button counts as a
-destination, and a screen the camera has never painted is a screen nobody has checked.
+table with it, and so is the Decided tab that §34 added (57 screens). The rule after any pass: a
+destination behind a button counts as a destination, and a screen the camera has never painted is a
+screen nobody has checked.
 
 TYPED TEXT NEVER BECOMES MARKUP, and the gate enforces it rather than remembering it.
 `esc()` covers `& < > " '`; `jsStr()` exists for the one context `esc()` cannot serve —
@@ -1426,6 +1427,25 @@ undoes it. Two lessons from the checks: a check that calls `persist()` itself pa
 action saves nothing (its own mutant missed until the check stopped performing the step), and a
 typed-claim needle matching `docs:'4/5'` in a *comment* that explains the old shape is a needle
 matching prose — the surviving ones carry their trailing comma.
+
+A GREEN CHECK THAT AGREES WITH A BUG IS WORSE THAN NO CHECK. The admin console counted
+`verified = PROVIDERS.length` and the gate asserted exactly that — `k.verified === app.PROVIDERS.length`
+— while the same console's own roster filter returned six of the eight, because two are suspended or
+awaiting review. Eight passes reported all-clear. The check now asserts the record
+(`verifiedProviderList().length`, and strictly less than the roster), and §34's other two follow the
+same shape: `pendingVerification` counts the queue an approval filters, not the static array, and
+because that queue filters decided applicants out there is now a **Decided** tab — a decision that
+removes the only record of itself is a decision nobody can audit. Two more findings came from
+reading the screenshot rather than any instrument: `parseDay()` handed an epoch number from
+`Date.now()` fell through to `Date.parse`, answered `NaN`, and `shortDate()` returned the empty
+string, so every decision line printed a time with no date — an absence, which no render check calls
+a hole because there is nothing there to see; and the provider tab rail, built for three labels,
+clipped the fourth mid-word at 360px. The rail scrolls now, and that rail takes its space from
+padding so the selected tab is whole on arrival. One caveat about the camera itself: a `--only=`
+subset run reports three contrast failures on the admin header's translucent "Insights" pill that
+the full 57-screen sweep reports as zero — the sampler's answer depends on what was painted earlier
+in the run, so a subset's contrast line is unproven in both directions and the full sweep is the
+number to quote.
 
 An animated-illustration pipeline (Lottie) was installed here and then removed again:
 it added 305KB that animated nothing, because the professional artwork it was built for

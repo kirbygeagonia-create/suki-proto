@@ -1434,9 +1434,19 @@
   ::-webkit-scrollbar{ width:9px; height:9px; }
   ::-webkit-scrollbar-thumb{ background:var(--brand-tint); border-radius:99px; border:2px solid transparent; background-clip:content-box; }
   ::-webkit-scrollbar-thumb:hover{ background:var(--text-secondary); background-clip:content-box; }
-  .seg{ display:flex; gap:6px; background:var(--brand-tint-soft); padding:4px; border-radius:14px; }
-  .seg-btn{ flex:1; min-height:var(--tap); border:none; background:transparent; color:var(--brand-navy); font-weight:700; font-size:var(--t-body-sm); padding:9px 10px; border-radius:10px; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; justify-content:center; gap:6px; transition:background .16s ease, color .16s ease, box-shadow .16s ease; }
+  /* Four tabs no longer fit in a phone width with flex:1 and a shrinking basis: the
+     last label was cut mid-word with nothing to say the rail scrolls. The buttons now
+     take the width their own text needs and still grow to fill the row when they can,
+     and the rail scrolls when they cannot. */
+  .seg{ display:flex; gap:6px; background:var(--brand-tint-soft); padding:4px; border-radius:14px; overflow-x:auto; scrollbar-width:none; }
+  .seg::-webkit-scrollbar{ display:none; }
+  .seg-btn{ flex:1 0 auto; white-space:nowrap; min-height:var(--tap); border:none; background:transparent; color:var(--brand-navy); font-weight:700; font-size:var(--t-body-sm); padding:9px 10px; border-radius:10px; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; justify-content:center; gap:6px; transition:background .16s ease, color .16s ease, box-shadow .16s ease; }
   .seg-btn.on{ background:var(--grad-brand-dark); color:var(--text-on-brand); box-shadow:0 3px 10px rgba(3,0,43,.28); }
+  /* Four tabs, one phone width. The rail scrolls now, which fixes reaching the last one
+     but not arriving at it half cut off — so this rail takes the space back from the
+     padding instead of from the labels. */
+  .seg-4{ gap:3px; }
+  .seg-4 .seg-btn{ padding:9px 5px; gap:4px; }
   .seg-count{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px; border-radius:999px; background:rgba(3,0,43,.12); font-size:var(--t-caption); font-weight:800; }
   .seg-btn.on .seg-count{ background:rgba(255,255,255,.22); }
   .img-avatar{ border-radius:50%; object-fit:cover; flex-shrink:0; display:inline-block; vertical-align:middle; border:2px solid rgba(255,255,255,.92); box-shadow:0 2px 8px rgba(3,0,43,.22); background:var(--brand-tint-soft); }
@@ -4046,12 +4056,15 @@ function seedDemoDispute() {
 
 /* ---- figures the console derives instead of typing ──────────────────────── */
 function adminCounts() {
-  const verified = PROVIDERS.length;                       /* the demo roster is verified */
+  /* The record decides who is verified: two of the eight on the roster are suspended or
+     still awaiting review, and the dashboard used to print the whole roster as the
+     verified count beside a queue the same screen had just filtered down. */
+  const verified = verifiedProviderList().length;
   const open = BOOKINGS.filter(b => !FINISHED_STATES.includes(b.status) && b.status !== 'disputed').length;
   /* Everything below is counted, because the dashboard used to type its own
      digits: it showed 6 applications beside a queue of 3, and 5 expiring
      credentials where two providers hold a flagged one. */
-  const pendingVerification = PENDING_APPLICANTS.length;
+  const pendingVerification = pendingApplicantList().length;
   const missingDocs = docsOutstanding();
   const liveCases = DISPUTES.filter(d => caseIsOpen(d)).length;
   const expiringSoon = expiringProviderCount();
@@ -5213,6 +5226,11 @@ function warrantyEndsAt(b){
    2026-03-14 rendered "Verified Mar 13, 2026". Parse day-only values in local time so the
    calendar date that comes out is the one that went in. */
 function parseDay(value){
+  /* A timestamp from Date.now() is already an instant, not a day to be read in a
+     calendar. It arrived here as a number, fell through to Date.parse, which stringified
+     it, and answered NaN — so shortDate() returned '' and the review screen's decision
+     line painted "7:49 PM by …" with no date in front of it. */
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ''));
   if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime();
   return Date.parse(value);
@@ -8656,6 +8674,20 @@ function adminProviderManagementProfile(){
       })()}</div>`:''}${section==='reviews'?`<div class="card"><b class="card-title">Reviews &amp; complaints</b><div class="stat-strip" style="margin-top:10px;"><span class="f"><b>${provider.rating}</b><span>rating</span></span><span class="f"><b>${(provider.reviews || []).length}</b><span>reviews on file</span></span><span class="f"><b>${meta.complaints}</b><span>complaints</span></span><span class="f"><b>${providerCases(provider.id).filter(caseIsOpen).length}</b><span>cases open</span></span></div></div>`:''}${section==='activity'?`<div class="card"><b class="card-title">Activity</b><div style="font-size:var(--t-caption); line-height:2; margin-top:9px;">September 9 - Completed booking<br>September 8 - Updated availability<br>September 7 - Received 5-star review<br>September 5 - Credential reminder sent</div></div>`:''}${section==='notes'?`<div class="card"><b class="card-title">Internal admin notes</b><textarea id="provider-admin-note" aria-label="Internal admin note about this provider" placeholder="Add internal note about this provider..." style="width:100%; min-height:80px; margin-top:9px; padding:9px; border:1px solid var(--line); border-radius:8px; font:inherit;">${note}</textarea><button class="btn sm" style="width:100%; margin-top:8px;" onclick="state.adminProviderNotes['${provider.id}']=document.getElementById('provider-admin-note').value; adminLog('Internal provider note added','${provider.name}','Saved'); render();">Save Note</button></div>`:''}<div class="card">${state.adminFlagged.includes(provider.id) ? `<div class="row"><b class="card-title">Account status</b><span class="chip badge-gold">Flagged for review</span></div><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:8px;">Recorded in the audit log. This prototype does not restrict, suspend or remove accounts - a decision needs a reason and a second administrator.</div>` : `<b class="card-title">Account status</b><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:6px;">Restrictive actions are not available here: they require a written reason and confirmation.</div><button class="btn sm secondary btn-block" style="margin-top:10px;" onclick="flagAccountReview('${provider.id}', '${provider.name}')">Flag for status review</button>`}</div></div>`;
 }
 
+/* The queue filters decided applicants out, so the console needs a place that still
+   shows them: an approval that removes the only record of itself is a decision nobody can
+   audit. Reached from the same screen as the queue, and opening one lands on the review
+   with its activity list and its Reopen control. */
+function adminDecidedSection(decided){
+  if (!decided.length) return emptyState('file-text', 'No decisions recorded yet',
+    'Approving or rejecting an application on this device puts it here, with the time it happened and who recorded it.');
+  return `<div style="font-size:var(--t-caption); color:var(--mist); margin:0 0 10px; line-height:1.5;">Decided on this device. Reopening an application returns it to the queue and adds that to its activity.</div>`
+    + decided.map(a => {
+      const r = reviewOf(a.id);
+      return `<div class="card" style="padding:11px; margin-bottom:10px;"><div class="row" style="align-items:flex-start;"><div style="min-width:0;"><b class="card-title">${esc(a.name)}</b><div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${esc(a.service)} · ${esc(a.barangay)}</div></div><span class="chip ${r.status === 'verified' ? '' : 'badge-alert'}" style="flex-shrink:0;">${esc(reviewStatusLine(r.status))}</span></div><div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:8px; line-height:1.5;">${esc(shortDate(r.decidedAt))} ${esc(clockText(r.decidedAt))} by ${esc(r.reviewer || 'this administrator')}${r.reason ? ' — ' + esc(r.reason) : ''}</div><button class="btn sm secondary" style="margin-top:10px;" onclick="openProviderVerification('${a.id}')">Open the decision</button></div>`;
+    }).join('');
+}
+
 function adminVerifications(){
   const verifiedProviders = verifiedProviderList();
   /* Sorted into a new array: the shared roster must keep its own order, or the
@@ -8668,6 +8700,7 @@ function adminVerifications(){
     ? applicantWaitDays(b) - applicantWaitDays(a)
     : applicantWaitDays(a) - applicantWaitDays(b));
   const pendingProviders = pendingDetails.map(a => a.name + ' - ' + a.service);
+  const decidedList = PENDING_APPLICANTS.filter(a => REVIEW_STATUSES.indexOf(reviewOf(a.id).status) > 1);
   const category = state.adminProviderCategory || 'verified';
   const providerQuery = (state.adminVerifiedSearch || '').toLowerCase();
   let visibleVerified = verifiedProviders.filter(provider => {
@@ -8679,10 +8712,11 @@ function adminVerifications(){
   return `
   <div class="topbar"><div><h1>Providers</h1><div class="sub">Manage provider verifications, credentials, and provider performance.</div></div><button class="btn sm" style="background:rgba(255,255,255,0.12); color:var(--on-brand); box-shadow:none;" onclick="state.tab='admin_provider_insights'; render();">Insights</button></div>
   <div class="pad" style="background:var(--cloud);">
-    <div class="seg" style="margin-bottom:14px;">
+    <div class="seg seg-4" style="margin-bottom:14px;">
       <button class="seg-btn ${category === 'verified' ? 'on' : ''}" onclick="state.adminProviderCategory='verified'; render();">Verified <span class="seg-count">${verifiedProviders.length}</span></button>
       <button class="seg-btn ${category === 'pending' ? 'on' : ''}" onclick="state.adminProviderCategory='pending'; render();">Pending <span class="seg-count">${pendingProviders.length}</span></button>
       <button class="seg-btn ${category === 'credentials' ? 'on' : ''}" onclick="state.adminProviderCategory='credentials'; render();">Credentials</button>
+      <button class="seg-btn ${category === 'decided' ? 'on' : ''}" onclick="state.adminProviderCategory='decided'; render();">Decided <span class="seg-count">${decidedList.length}</span></button>
     </div>
     ${category === 'credentials' ? `
     <div style="font-size:var(--t-body); font-weight:800; margin:8px 0 10px;">Credential monitor</div>
@@ -8703,7 +8737,7 @@ function adminVerifications(){
     </div>` : ''}
     <div class="card"><div class="row"><b class="card-title">How this works</b><span class="chip">No automatic action</span></div><div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:7px;">Nothing here suspends a provider. A credential is a document a person uploaded in the sample records; an administrator reads it and decides.</div></div>`;
     })()}
-    ` : category === 'verified' ? `
+    ` : category === 'decided' ? adminDecidedSection(decidedList) : category === 'verified' ? `
     <div style="display:flex; gap:8px; margin-bottom:10px;"><div style="flex:1; min-height:44px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md); padding:9px 10px; display:flex; align-items:center; gap:7px;"><span style="font-size:var(--t-input);">⌕</span><input value="${state.adminVerifiedSearch || ''}" aria-label="Search verified providers by name, service or barangay" oninput="state.adminVerifiedSearch=this.value; render();" placeholder="Search name, service, or barangay..." style="width:100%; min-height:var(--tap); border:0; outline:0; font:inherit; font-size:var(--t-caption); background:transparent;"></div><button class="btn sm secondary" style="padding:7px 10px;" onclick="state.adminVerifiedFiltersOpen=!state.adminVerifiedFiltersOpen; render();">Filter${state.adminVerifiedCredential !== 'all' ? ' (1)' : ''}</button></div>
     ${state.adminVerifiedFiltersOpen ? `<div class="card" style="padding:10px; margin-bottom:10px"><div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:var(--t-caption);"><label>Service<select onchange="state.adminVerifiedService=this.value; render();" style="width:100%; padding:7px; margin-top:3px;"><option value="all">All Services</option><option value="plumbing">Plumbing</option><option value="electrical">Electrical</option><option value="cleaning">Cleaning</option><option value="appliance">Appliance</option></select></label><label>Barangay<select onchange="state.adminVerifiedBarangay=this.value; render();" style="width:100%; padding:7px; margin-top:3px;"><option value="all">All Barangays</option><option value="poblacion">Poblacion</option><option value="san isidro">San Isidro</option><option value="sta. cruz">Sta. Cruz</option></select></label><label>Credentials<select onchange="state.adminVerifiedCredential=this.value; render();" style="width:100%; padding:7px; margin-top:3px;"><option value="all">All</option><option value="valid">Valid</option><option value="expiring-soon">Expiring Soon</option><option value="expired">Expired</option></select></label></div><button class="btn sm secondary" style="margin-top:10px;" onclick="state.adminVerifiedSearch=''; state.adminVerifiedService='all'; state.adminVerifiedBarangay='all'; state.adminVerifiedCredential='all'; state.adminVerifiedFiltersOpen=false; render();">Reset</button></div>` : ''}
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><div><b class="card-title">${visibleVerified.length} Verified Providers</b><div style="font-size:var(--t-caption); color:${visibleVerified.filter(p => adminProviderMeta(p).reasons.length).length ? 'var(--gold-600)' : 'var(--mist)'};">${visibleVerified.filter(p => adminProviderMeta(p).reasons.length).length} of these need a look — an open case, a document expiring or expired, a suspended account, or no credentials on file</div></div><select aria-label="Order the verified roster" onchange="state.adminVerifiedSort=this.value; render();" style="min-height:var(--tap); padding:7px 10px; border:1px solid var(--line); border-radius:var(--r-md); font:inherit; font-size:var(--t-caption);">${ADMIN_SORTS.map(s => `<option value="${s[0]}"${state.adminVerifiedSort === s[0] ? ' selected' : ''}>${esc(s[1])}</option>`).join('')}</select></div>
