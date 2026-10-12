@@ -1256,7 +1256,7 @@ official mark is a PNG, not an icon, and it is still the only brand image on the
 The rebuild also added a real verification surface, because reading the file cannot
 see a layout: `node tools/shot.cjs` drives the machine's own Chrome headless over the
 DevTools Protocol with no npm packages, and `--measure` runs an in-page instrument
-across all 57 screens for tap targets, WCAG contrast (sampling gradients at the text's
+across all 60 screens for tap targets, WCAG contrast (sampling gradients at the text's
 own position), clipped text, off-scale fonts, content trapped under the nav, unnamed
 controls, escaping map panes, anything painting over an open modal, and whether any
 category artwork is moving in the painted page — which is the one thing a source grep
@@ -1296,9 +1296,11 @@ The same gap existed one screen over, and it is worth naming because it survived
 admin's provider-verification **review** was in no table at all — a whole destination reached by
 tapping "Open verification" on a pending applicant, never photographed, never measured, and the last
 place in the app still typing its own facts. Its request picker and document preview are in the
-table with it, and so is the Decided tab that §34 added (57 screens). The rule after any pass: a
-destination behind a button counts as a destination, and a screen the camera has never painted is a
-screen nobody has checked.
+table with it, and so is the Decided tab that §34 added. So are the confirmation and
+outcome dialogs — the approve, reject, flag and request sheets an admin reaches only at the
+moment of deciding (60 screens). The rule after any pass: a destination behind a button
+counts as a destination, and a screen the camera has never painted is a screen nobody has
+checked.
 
 TYPED TEXT NEVER BECOMES MARKUP, and the gate enforces it rather than remembering it.
 `esc()` covers `& < > " '`; `jsStr()` exists for the one context `esc()` cannot serve —

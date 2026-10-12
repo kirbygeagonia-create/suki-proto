@@ -1743,3 +1743,34 @@ clipped text, off-scale fonts, moving artwork and console errors all **0** acros
 puts `PROVIDERS.length` back and one that cuts `parseDay`'s epoch branch. APK rebuilt as
 `Sukinnect-1.2-preview.9-debug.apk`, 2,112,782 bytes, `versionCode 11`, page `cmp`-identical,
 48 of 48 paths. `Sukinnect.html` untouched.
+
+---
+
+## 35. The confirmation dialogs no camera had reached
+
+Asked a fourth time whether anything was left, the answer was still no — but this time the
+finding was about coverage rather than the app. Enumerating every overlay state the code can
+be put into (`state.verificationModal`, `state.<role>ProfileModal`, `state.adminAccountModal`,
+`state.sheet`) and comparing that against the camera table showed five destinations never
+painted: the **approve-confirmation**, the **reject** dialog, the **flag-document** sheet, and
+the two outcome cards. They are the screens an administrator sees at the moment of deciding,
+and nothing had ever measured their buttons or their text.
+
+Three entries added to `tools/shot.cjs`, each reached by `clickPainted()` on the button the
+app actually painted — the flag dialog by clicking *Open document* and then *Flag an issue*,
+which is the only way to know the second button exists. **60 screens now, and all four
+measurements read zero**: tap floor 0, contrast 0, clipped text 0, console errors 0. Reading
+the approve dialog confirmed the records work end to end at the decisive moment — it names
+Joel Aquino, his own service, "All 4 documents are filed and none is flagged", and says what
+the button will do — and the screen behind it shows his Government ID as *Philippine
+Identification System card, filed Oct 9, 2026*, not Maria's row.
+
+**No app file changed, so no APK was rebuilt**: `Sukinnect-1.2-preview.9-debug.apk` is still
+current, and `cmp` still says its bundled page is identical to `Sukinnect-next.html`.
+
+One instrument note, because it nearly produced a false report: a fake-DOM probe of the same
+overlay list said five **sheets** "paint no overlay at all". They do — `renderSheet()` mounts
+the layer and then finds its panel with `root.querySelector('.sheet')`, which the harness's
+DOM does not implement. The probe was deleted rather than fixed, because a check that reports
+five defects that do not exist is worse than the gap it was written to close; the real browser
+is the instrument for overlays.

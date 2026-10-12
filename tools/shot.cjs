@@ -586,6 +586,19 @@ const SCREENS = [
   ['admin-review-document', `state.view='app'; state.role='admin'; state.tab='admin_verifications'; render();
                           openProviderVerification('maria');
                           clickPainted(/Action\\(.document.,/, 'the open-document button');`],
+  /* The decisive dialogs: what an admin sees at the moment of approving, rejecting or
+     flagging. None of them had ever been painted, so nothing had measured their buttons,
+     their contrast, or whether the reason text fits the box it is typed into. */
+  ['admin-review-approve', `state.view='app'; state.role='admin'; state.tab='admin_verifications'; render();
+                          openProviderVerification('joel');
+                          clickPainted(/Action\\(.approve_confirm.\\)/, 'the approve button');`],
+  ['admin-review-reject', `state.view='app'; state.role='admin'; state.tab='admin_verifications'; render();
+                          openProviderVerification('maria');
+                          clickPainted(/Action\\(.reject.\\)/, 'the reject button');`],
+  ['admin-review-flag', `state.view='app'; state.role='admin'; state.tab='admin_verifications'; render();
+                          openProviderVerification('maria');
+                          clickPainted(/Action\\(.document.,/, 'the open-document button');
+                          clickPainted(/Action\\(.flag.,/, 'the flag-an-issue button');`],
   ['admin-verified',   `state.view='app'; state.role='admin'; state.tab='admin_verifications'; state.adminProviderCategory='verified'; render();`],
   ['admin-desk',       `state.view='app'; state.role='admin'; state.tab='admin_disputes'; render();`],
   ['admin-provider',   `state.view='app'; state.role='admin'; state.tab='admin_provider_profile';
