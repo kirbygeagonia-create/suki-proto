@@ -2300,6 +2300,60 @@ function bookingsForProvider(providerId){
   return BOOKINGS.filter(b => b.providerId === id);
 }
 
+/* A reputation that never moves is a photograph, not a reputation. The seed figures
+   are sample data, so they are held aside as seeds and every published figure is
+   recomputed from the seed plus what this device recorded — recomputed, never
+   accumulated, because a stored dump that carried an already-blended average would
+   blend it again on every reload and walk a 4.9 to 5.0 in a week. */
+const SEED_RATING_RATIO = 0.6;
+/* Captured once, from the literals, before hydrate() has a chance to put a derived
+   figure where the seed was. Held apart from the records for that reason: a seed
+   stored on the record is cloned into the dump and becomes indistinguishable from
+   the average it produced. */
+const REPUTATION_SEED = {};
+function reputationSeeds(){
+  PROVIDERS.forEach(p => {
+    if (REPUTATION_SEED[p.id] === undefined) {
+      REPUTATION_SEED[p.id] = { rating: p.rating, jobs: p.jobs || 0 };
+    }
+  });
+}
+/* How many of the sample jobs sit behind the sample average: a convention of the
+   demo data — about six completed jobs in ten leave a rating — derived from a figure
+   that is already sample data rather than a second number invented beside it. Without
+   a population an average cannot be weighted, and one review would swing 4.9 to 5.0,
+   which is theatre rather than reputation. */
+function reputationSeedOf(providerId){
+  const s = REPUTATION_SEED[providerId] || { rating: 0, jobs: 0 };
+  return { rating: s.rating, jobs: s.jobs,
+    ratings: Math.max(1, Math.round(s.jobs * SEED_RATING_RATIO)) };
+}
+reputationSeeds();
+function deviceRatingsOf(providerId){
+  return BOOKINGS.filter(b => b.providerId === providerId && b.myRating).map(b => b.myRating);
+}
+function deviceJobsDone(providerId){
+  return BOOKINGS.filter(b => b.providerId === providerId && b.status === 'completed'
+    && b.source !== 'demo').length;
+}
+function refreshReputation(){
+  reputationSeeds();
+  PROVIDERS.forEach(p => {
+    const seed = reputationSeedOf(p.id);
+    const mine = deviceRatingsOf(p.id);
+    const done = deviceJobsDone(p.id);
+    const count = seed.ratings + mine.length;
+    const blended = (seed.rating * seed.ratings) + mine.reduce((t, s) => t + s, 0);
+    p.rating = count ? Math.round(blended / count * 10) / 10 : seed.rating;
+    p.ratingsFromDevice = mine.length;
+    p.jobs = seed.jobs + done;
+    p.jobsFromDevice = done;
+    /* Display-only copies of the seed, rewritten from the immutable map on every
+       refresh so no screen reads a stale one and none can write back into it. */
+    p.seedRating = seed.rating; p.seedJobs = seed.jobs; p.seedRatings = seed.ratings;
+  });
+}
+
 // Sukinnect app mode — the APK loads this page with ?app=1: drop the
 // desktop phone mock and let the UI fill the real device screen.
 if (/[?&]app=1(&|$)/.test(location.search) || /SukinnectApp/i.test(navigator.userAgent)) document.body.classList.add('app-mode');
@@ -4559,7 +4613,7 @@ function resetDemoData() {
    review record per applicant in place of five screen-local bags. A dump from 13 carries
    a note and a status with no applicant attached to them, which is the one thing this
    screen must not get wrong, so a device holding 13 starts again. */
-const SCHEMA_VERSION = 14;
+const SCHEMA_VERSION = 15;
 const STORE_KEY = 'sukinnect.snapshot.v1';
 
 const Store = (function () {
@@ -4678,6 +4732,7 @@ function storageNotice(message) {
 }
 
 function persist() {
+  refreshReputation();
   const ok = Store.write(snapshot());
   if (!ok) storageNotice('This device refused to store the change. It holds for this session only — a reload will lose it.');
   return ok;
@@ -5441,7 +5496,7 @@ function providerSectionBody(section){
       <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px;">
         These are the documents on file for your account. A status is set by Sukinnect after review, not by the document itself.
       </div>
-    </div>` : section === 'reputation' ? `<div class="card"><b>Reputation</b><div class="stat-strip" style="margin-top:10px;"><span class="f"><b>${providerOf({providerId:CURRENT_PROVIDER_ID}).trustScore}</b><span>trust score</span></span><span class="f"><b>${providerOf({providerId:CURRENT_PROVIDER_ID}).rating}</b><span>rating</span></span><span class="f"><b>${completionRate(CURRENT_PROVIDER_ID)}%</b><span>completion</span></span><span class="f"><b>${cancellationRate(CURRENT_PROVIDER_ID)}%</b><span>cancellation</span></span></div><div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:9px;">Counted from the ${closedJobCount(CURRENT_PROVIDER_ID)} job${closedJobCount(CURRENT_PROVIDER_ID) === 1 ? '' : 's'} on this device that have finished or been cancelled — with a sample that small one booking moves either figure by half. The trust score is the platform's own figure for this account, not a rating of the person.</div></div>` : section === 'portfolio' ? `<div class="card"><b>Work Portfolio</b><div style="font-size:var(--t-caption); margin-top:9px;">${state.providerPortfolio.length ? state.providerPortfolio.map(item=>`${esc(item.service)} - ${esc(item.description)}`).join('<hr>') : 'No portfolio items added yet.'}</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('portfolio_add')">+ Add Work</button></div>` : section === 'payout' ? `<div class="card"><b>Payout &amp; Earnings</b><div class="card-body">Current payout: <b>${esc(pp.bankAccount)}</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('payout')">Manage Payout</button></div>` : section === 'security' ? `<div class="card"><b>Account &amp; Security</b><div class="card-body">This prototype signs in locally and keeps no authentication state, so there is no PIN, two-factor or session list to report.</div></div>` : section === 'notifications' ? `<div class="card"><b>Notification Preferences</b>${[['requests','New Service Requests'],['bookings','Booking Updates'],['messages','Customer Messages'],['quotes','Quotation Responses'],['payments','Payment Received'],['opportunities','High Demand Opportunities'],['schedule','Schedule Alerts'],['trust','Trust Score Changes'],['credentials','Credential Expiry'],['reviews','Customer Reviews']].map(([key,label])=>`<label class="row" style="font-size:var(--t-caption); padding:6px 0;">${label}<input type="checkbox" ${state.providerNotifications[key]?'checked':''} onchange="state.providerNotifications['${key}']=this.checked;"></label>`).join('')}</div>` : section === 'preview' ? `<div class="card"><div style="text-align:center;">${photoAvatar('self', 56)}<div style="font-size:var(--t-lead); font-weight:800; margin-top:8px;">${esc(pp.name)}</div><div style="font-size:var(--t-caption); color:var(--mist);">${esc(pp.service)}</div><div style="margin-top:9px; display:flex; align-items:center; justify-content:center; gap:5px;">${stars(providerOf({providerId:CURRENT_PROVIDER_ID}).rating,12)}<span style="font-weight:700;">${providerOf({providerId:CURRENT_PROVIDER_ID}).rating}</span><span style="color:var(--mist);">- ${providerOf({providerId:CURRENT_PROVIDER_ID}).jobs} completed jobs</span></div><div style="color:var(--success-ink); margin-top:6px;">${esc(providerOf({providerId:CURRENT_PROVIDER_ID}).badges.join(' - '))}</div><div style="font-size:var(--t-caption); text-align:left; margin-top:12px;">Service Area: ${esc(pp.barangay)} + nearby barangays<br>Starting Rate: ${rateLabel(pp.rateCentavos, pp.rateUnit)}<br>Services: ${listingsOf(CURRENT_PROVIDER_ID).filter(l=>l.isActive).map(l=>l.title).join(', ') || 'none listed yet'}</div></div></div>` : '';
+    </div>` : section === 'reputation' ? `<div class="card"><b>Reputation</b><div class="stat-strip" style="margin-top:10px;"><span class="f"><b>${providerOf({providerId:CURRENT_PROVIDER_ID}).trustScore}</b><span>trust score</span></span><span class="f"><b>${providerOf({providerId:CURRENT_PROVIDER_ID}).rating}</b><span>rating</span></span><span class="f"><b>${completionRate(CURRENT_PROVIDER_ID)}%</b><span>completion</span></span><span class="f"><b>${cancellationRate(CURRENT_PROVIDER_ID)}%</b><span>cancellation</span></span></div><div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:9px;">Counted from the ${closedJobCount(CURRENT_PROVIDER_ID)} job${closedJobCount(CURRENT_PROVIDER_ID) === 1 ? '' : 's'} on this device that have finished or been cancelled — with a sample that small one booking moves either figure by half. ${providerOf({providerId:CURRENT_PROVIDER_ID}).seedRatings} ratings from the sample record and ${providerOf({providerId:CURRENT_PROVIDER_ID}).ratingsFromDevice} recorded on this device make up that average, so one finished job cannot move it far — which is what an average is for. The trust score is the platform's own figure for this account, not a rating of the person.</div></div>` : section === 'portfolio' ? `<div class="card"><b>Work Portfolio</b><div style="font-size:var(--t-caption); margin-top:9px;">${state.providerPortfolio.length ? state.providerPortfolio.map(item=>`${esc(item.service)} - ${esc(item.description)}`).join('<hr>') : 'No portfolio items added yet.'}</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('portfolio_add')">+ Add Work</button></div>` : section === 'payout' ? `<div class="card"><b>Payout &amp; Earnings</b><div class="card-body">Current payout: <b>${esc(pp.bankAccount)}</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('payout')">Manage Payout</button></div>` : section === 'security' ? `<div class="card"><b>Account &amp; Security</b><div class="card-body">This prototype signs in locally and keeps no authentication state, so there is no PIN, two-factor or session list to report.</div></div>` : section === 'notifications' ? `<div class="card"><b>Notification Preferences</b>${[['requests','New Service Requests'],['bookings','Booking Updates'],['messages','Customer Messages'],['quotes','Quotation Responses'],['payments','Payment Received'],['opportunities','High Demand Opportunities'],['schedule','Schedule Alerts'],['trust','Trust Score Changes'],['credentials','Credential Expiry'],['reviews','Customer Reviews']].map(([key,label])=>`<label class="row" style="font-size:var(--t-caption); padding:6px 0;">${label}<input type="checkbox" ${state.providerNotifications[key]?'checked':''} onchange="state.providerNotifications['${key}']=this.checked;"></label>`).join('')}</div>` : section === 'preview' ? `<div class="card"><div style="text-align:center;">${photoAvatar('self', 56)}<div style="font-size:var(--t-lead); font-weight:800; margin-top:8px;">${esc(pp.name)}</div><div style="font-size:var(--t-caption); color:var(--mist);">${esc(pp.service)}</div><div style="margin-top:9px; display:flex; align-items:center; justify-content:center; gap:5px;">${stars(providerOf({providerId:CURRENT_PROVIDER_ID}).rating,12)}<span style="font-weight:700;">${providerOf({providerId:CURRENT_PROVIDER_ID}).rating}</span><span style="color:var(--mist);">- ${providerOf({providerId:CURRENT_PROVIDER_ID}).jobs} completed jobs</span></div><div style="color:var(--success-ink); margin-top:6px;">${esc(providerOf({providerId:CURRENT_PROVIDER_ID}).badges.join(' - '))}</div><div style="font-size:var(--t-caption); text-align:left; margin-top:12px;">Service Area: ${esc(pp.barangay)} + nearby barangays<br>Starting Rate: ${rateLabel(pp.rateCentavos, pp.rateUnit)}<br>Services: ${listingsOf(CURRENT_PROVIDER_ID).filter(l=>l.isActive).map(l=>l.title).join(', ') || 'none listed yet'}</div></div></div>` : '';
 }
 
 function adminSectionBody(section){
@@ -10550,6 +10605,7 @@ seedMessages();
 seedDemoDispute();
 seedFruitOffers();
 applyDueTransitions();
+refreshReputation();
 render();
 </script>
 </body>

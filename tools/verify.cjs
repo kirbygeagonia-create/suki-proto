@@ -2353,6 +2353,69 @@ suite('honesty', async () => {
         : 'the profile is not reading its records' };
   })());
 
+  /* The deck's provider promise is a reputation that compounds from completed work
+     (slides 3, 7), and the rebuild could not demonstrate it: rating and jobs were
+     literals that nothing ever wrote, so a resident could rate a job and the published
+     figure would not move. Both are derived now, from the seed plus this device — and
+     derived rather than accumulated, because a dump carrying an already-blended average
+     would blend it again every session and walk a 4.9 to 5.0 in a week. */
+  verdict('a finished job moves the provider’s reputation, and moves it once', (() => {
+    const withJob = app.PROVIDERS.find(p => app.BOOKINGS.some(b =>
+      b.providerId === p.id && b.status === 'completed'));
+    const other = app.PROVIDERS.find(p => p !== withJob && !app.BOOKINGS.some(b =>
+      b.providerId === p.id && b.myRating));
+    if (!withJob || !other) return { ok: false, why: 'no rated and unrated provider pair to test with' };
+    const job = app.BOOKINGS.find(b => b.providerId === withJob.id && b.status === 'completed');
+    const seedRating = withJob.seedRating, seedRatings = withJob.seedRatings;
+    const was = job.myRating;
+
+    job.myRating = 1;
+    app.persist();
+    const expect = Math.round(((seedRating * seedRatings) + 1) / (seedRatings + 1) * 10) / 10;
+    const moved = withJob.rating === expect && withJob.ratingsFromDevice === 1;
+
+    /* Two full write-and-reload cycles, not one. A blend taken from the previous blend
+       reads the same seed on its first pass and is invisible until the second, and a
+       figure that walks itself down every session is the failure this whole design was
+       arranged to avoid. Records are replaced by hydrate(), so every lookup after it is
+       by id rather than by the object held from before. */
+    const cycles = [];
+    for (let i = 0; i < 2; i++) {
+      app.persist();
+      app.hydrate();
+      const live = app.PROVIDERS.find(p => p.id === withJob.id);
+      cycles.push(live.rating + '/' + live.seedRating + '/' + live.ratingsFromDevice);
+    }
+    const noDrift = cycles[0] === expect + '/' + seedRating + '/1'
+      && cycles[1] === cycles[0];
+
+    /* The job count needs a completion this device actually made: every seeded job is
+       source 'demo' and deliberately excluded, so a mutant that dropped the term
+       entirely was invisible against the fixture as first written. */
+    const extra = { id: 'zz-rep-job', providerId: other.id, customerId: app.CUSTOMERS[0].id,
+      status: 'completed', amountCentavos: 100000, source: 'live', createdAt: new Date().toISOString() };
+    const jobsBefore = app.PROVIDERS.find(p => p.id === other.id).jobs;
+    app.BOOKINGS.push(extra);
+    app.persist();
+    const jobsAfter = app.PROVIDERS.find(p => p.id === other.id).jobs;
+    app.BOOKINGS.splice(app.BOOKINGS.indexOf(extra), 1);
+    const jobsOk = jobsAfter === jobsBefore + 1;
+
+    const liveJob = app.BOOKINGS.find(b => b.id === job.id);
+    if (liveJob) liveJob.myRating = was;
+    app.persist();
+    const otherUntouched = app.PROVIDERS.find(p => p.id === other.id).rating
+      === Math.round(((other.seedRating * other.seedRatings) + 0) / other.seedRatings * 10) / 10;
+    return { ok: moved && noDrift && jobsOk && otherUntouched,
+      why: !moved ? 'a 1-star over ' + seedRatings + ' sample ratings painted ' + withJob.rating
+        + ' where the blend is ' + expect
+        : !noDrift ? 'the figure moved across reloads: ' + cycles.join(' then ')
+        : !jobsOk ? 'a completion on this device moved the job count by '
+          + (jobsAfter - jobsBefore) + ' rather than 1'
+        : !otherUntouched ? 'rating one job moved a different provider’s average'
+        : 'the profile is not reading its records' };
+  })());
+
   const unsourced = ['Expires in 23 days', 'ID Verification - ', 'Last active: 2 hours ago',
     /* The verification console's typed claims. Each of these was painted as a fact about
        an applicant while no record held it. The last two carry their trailing comma on
