@@ -28,6 +28,10 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   'submitBookingRequest', 'answerRequest', 'providerJobAction', 'openProviderDetail',
   'render', 'showToast', 'resetDemoData', 'setConfig', 'rateFor', 'LedgerImbalance',
   'CURRENT_CUSTOMER_ID', 'CURRENT_PROVIDER_ID', 'CONFIG_DEFAULTS', 'commissionRateFor',
+  /* Discovery and the provider's own availability, pulled through so a suite can ask
+     whether a filter actually changes what a resident is shown. */
+  'providerMatches', 'providerServes', 'providerAccepting', 'coverageLines',
+  'setProviderAvailable', 'setProviderBusy', 'reputationSeedOf', 'refreshReputation',
   'adminCounts', 'marketplaceRates', 'opsWorkload', 'intelligenceStats', 'supplyGaps', 'disputeCard', 'statementCard', 'configPanel',
   'DISPUTE_STATES', 'disputeLabel', 'caseIsOpen', 'providerCases', 'resolveCase', 'resolveDispute', 'commitConfig', 'setIntFilter', 'runPayoutNow', 'openDispute',
   'categorySupply', 'weeklyBookings', 'providerWeeklyEarnings', 'providerDemandByBarangay', 'weekStart', 'MIN_SHARE_SAMPLE', 'chartShare', 'chartColumns', 'chartBars', 'chartEmpty', 'chartScale', 'chartSummary', 'adminFinanceScreen', 'ageingCard',

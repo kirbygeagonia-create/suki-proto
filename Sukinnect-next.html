@@ -1489,7 +1489,7 @@
 <script>
 const PROVIDERS = [
   {
-    verification:{"status":"verified","verifiedAt":"2026-03-14","reviewer":"admin:raquel"}, id:'p1',name:'Ramil Odiada',service:'Plumbing',serviceId:'plumbing',barangay:'Poblacion',distanceKm:0.8,availabilityMin:15,
+    verification:{"status":"verified","verifiedAt":"2026-03-14","reviewer":"admin:raquel"}, id:'p1',name:'Ramil Odiada',service:'Plumbing',serviceId:'plumbing',barangay:'Poblacion',servesBarangays:['Poblacion','San Isidro','San Jose','Barangay 2'],distanceKm:0.8,availabilityMin:15,
     rateCentavos:35000,rateUnit:'call-out fee',rating:4.9,jobs:214,trustScore:96,
     badges:['ID Verified','Background Checked','Top Rated'],lat:6.3671,lng:124.9331,
     credentials:['TESDA NC II Plumbing','Barangay Cleared','Master Plumber Apprentice','Police Cleared'],
@@ -1508,7 +1508,7 @@ const PROVIDERS = [
     ]
   },
   {
-    verification:{"status":"verified","verifiedAt":"2026-04-02","reviewer":"admin:raquel"}, id:'p2',name:'Jerico Salamat',service:'Electrical',serviceId:'electrical',barangay:'San Isidro',distanceKm:2.1,availabilityMin:25,
+    verification:{"status":"verified","verifiedAt":"2026-04-02","reviewer":"admin:raquel"}, id:'p2',name:'Jerico Salamat',service:'Electrical',serviceId:'electrical',barangay:'San Isidro',servesBarangays:['San Isidro','Poblacion','Sta. Cruz'],distanceKm:2.1,availabilityMin:25,
     rateCentavos:40000,rateUnit:'call-out fee',rating:4.8,jobs:156,trustScore:92,
     badges:['ID Verified','TESDA Certified'],lat:6.3901,lng:124.9548,
     credentials:['TESDA NC II Electrical Installation','Licensed Electrician','Safety Certified'],
@@ -1525,7 +1525,7 @@ const PROVIDERS = [
     ]
   },
   {
-    verification:{"status":"verified","verifiedAt":"2026-01-27","reviewer":"admin:raquel"}, id:'p3',name:'Cristy Fernandez',service:'Cleaning',serviceId:'cleaning',barangay:'Poblacion',distanceKm:1.2,availabilityMin:30,
+    verification:{"status":"verified","verifiedAt":"2026-01-27","reviewer":"admin:raquel"}, id:'p3',name:'Cristy Fernandez',service:'Cleaning',serviceId:'cleaning',barangay:'Poblacion',servesBarangays:['Poblacion','San Isidro','San Jose','Sta. Cruz','Barangay 2'],distanceKm:1.2,availabilityMin:30,
     rateCentavos:50000,rateUnit:'per visit',rating:5.0,jobs:98,trustScore:98,
     badges:['ID Verified','Background Checked'],lat:6.3665,lng:124.9338,
     credentials:['TESDA Housekeeping NC II','Sanitation Certified','NBI Cleared'],
@@ -1542,7 +1542,7 @@ const PROVIDERS = [
     ]
   },
   {
-    verification:{"status":"suspended","verifiedAt":"2025-11-08","reviewer":"admin:raquel"}, id:'p4',name:'Allan Buenaflor',service:'Appliance',serviceId:'appliance',barangay:'Sta. Cruz',distanceKm:3.4,availabilityMin:40,
+    verification:{"status":"suspended","verifiedAt":"2025-11-08","reviewer":"admin:raquel"}, id:'p4',name:'Allan Buenaflor',service:'Appliance',serviceId:'appliance',barangay:'Sta. Cruz',servesBarangays:['Sta. Cruz','Poblacion','San Isidro'],distanceKm:3.4,availabilityMin:40,
     rateCentavos:30000,rateUnit:'diagnostic fee',rating:4.7,jobs:132,trustScore:89,
     badges:['ID Verified'],lat:6.3452,lng:124.9104,
     credentials:['RAC Servicing NC II (Aircon/Fridge)','Consumer Electronics NC II'],
@@ -1558,7 +1558,7 @@ const PROVIDERS = [
     ]
   },
   {
-    verification:{"status":"verified","verifiedAt":"2026-05-19","reviewer":"admin:raquel"}, id:'p5',name:'Kristine Mae Dagohoy',service:'Tutoring',serviceId:'tutoring',barangay:'San Jose',distanceKm:1.9,availabilityMin:20,
+    verification:{"status":"verified","verifiedAt":"2026-05-19","reviewer":"admin:raquel"}, id:'p5',name:'Kristine Mae Dagohoy',service:'Tutoring',serviceId:'tutoring',barangay:'San Jose',servesBarangays:['San Jose','Poblacion','Buayan'],distanceKm:1.9,availabilityMin:20,
     rateCentavos:25000,rateUnit:'per hour',rating:4.9,jobs:74,trustScore:95,
     badges:['ID Verified','Licensed Teacher'],lat:6.4002,lng:124.9203,
     credentials:['PRC Licensed Professional Teacher','BSEd Major in Mathematics'],
@@ -1574,7 +1574,7 @@ const PROVIDERS = [
     ]
   },
   {
-    verification:{"status":"verified","verifiedAt":"2026-02-11","reviewer":"admin:raquel"}, id:'p6',name:'Junjun Estrada',service:'Delivery',serviceId:'delivery',barangay:'Barangay 2',distanceKm:4.0,availabilityMin:5,
+    verification:{"status":"verified","verifiedAt":"2026-02-11","reviewer":"admin:raquel"}, id:'p6',name:'Junjun Estrada',service:'Delivery',serviceId:'delivery',barangay:'Barangay 2',servesBarangays:['Poblacion','San Isidro','Sta. Cruz','San Jose','Barangay 2','Buayan'],distanceKm:4.0,availabilityMin:5,
     rateCentavos:6000,rateUnit:'base fare',rating:4.6,jobs:301,trustScore:90,
     badges:['ID Verified'],lat:6.3549,lng:124.9598,
     credentials:['Professional Driver License','NBI Cleared Motorcycle Rider'],
@@ -1590,7 +1590,7 @@ const PROVIDERS = [
     ]
   },
   {
-    verification:{"status":"pending","verifiedAt":null,"reviewer":null}, id:'p7',name:'Erning Bautista',service:'Fruit Harvest & Buy',serviceId:'fruit',barangay:'Buayan',distanceKm:2.4,availabilityMin:240,
+    verification:{"status":"pending","verifiedAt":null,"reviewer":null}, id:'p7',name:'Erning Bautista',service:'Fruit Harvest & Buy',serviceId:'fruit',barangay:'Buayan',servesBarangays:['Buayan','Poblacion','San Jose'],distanceKm:2.4,availabilityMin:240,
     rateCentavos:80000,rateUnit:'per tree, harvesting',rating:4.7,jobs:41,trustScore:88,
     /* Only what the platform actually checks. A harvest job is the one where a
        resident might read "endorsed" as "someone verified they can climb safely",
@@ -1618,7 +1618,7 @@ const PROVIDERS = [
     ]
   },
   {
-    verification:{"status":"verified","verifiedAt":"2026-06-30","reviewer":"admin:raquel"}, id:'p8',name:'Maricel Tan',service:'Fruit Harvest & Buy',serviceId:'fruit',barangay:'Poblacion',distanceKm:0.9,availabilityMin:1440,
+    verification:{"status":"verified","verifiedAt":"2026-06-30","reviewer":"admin:raquel"}, id:'p8',name:'Maricel Tan',service:'Fruit Harvest & Buy',serviceId:'fruit',barangay:'Poblacion',servesBarangays:['Poblacion','Buayan','San Jose','Sta. Cruz'],distanceKm:0.9,availabilityMin:1440,
     /* A buyer has no rate to publish. What a sell job costs comes from an offer
        after she has seen the trees, and the UI has to say that instead of printing
        ₱0 as if it were a price. */
@@ -5262,6 +5262,21 @@ function bookingListEmpty(filter, role){
 
 // Search text and the sheet's filters narrow the list through this one path, so
 // the count the sheet promises is the count the screen delivers.
+/* A provider serves a barangay from their own record, not from where they happen to
+   live. The filter used to compare the resident's barangay against p.barangay, so a
+   plumber who travels three kilometres was invisible to the household on his edge —
+   which is the connection the product exists to make (slide 3: "a provider who can
+   actually serve their area"). */
+function providerServes(p, barangay){
+  if (!barangay) return true;
+  return p.barangay === barangay || (p.servesBarangays || []).includes(barangay);
+}
+function providerAccepting(p){
+  /* Only an explicit false hides a provider: the field is absent on every record that
+     has never been toggled, and a missing flag is not a refusal. */
+  return p.acceptingRequests !== false;
+}
+
 function providerMatches(){
   const query = (state.searchQuery || '').trim().toLowerCase();
   const f = state.providerFilters || {};
@@ -5270,8 +5285,9 @@ function providerMatches(){
       p.service.toLowerCase().includes(query) ||
       p.barangay.toLowerCase().includes(query)) &&
     (!f.serviceId || p.serviceId === f.serviceId) &&
-    (!f.barangay || p.barangay === f.barangay) &&
-    (!f.maxWait || p.availabilityMin <= f.maxWait)
+    (!f.barangay || providerServes(p, f.barangay)) &&
+    (!f.maxWait || p.availabilityMin <= f.maxWait) &&
+    providerAccepting(p)
   );
 }
 
@@ -5479,7 +5495,7 @@ function residentSectionBody(section){
 
 function providerSectionBody(section){
   const pp = state.providerProfileData;
-  return section === 'services' ? listingsPanel(CURRENT_PROVIDER_ID) : section === 'pricing' ? `<div class="card"><b>Pricing &amp; Rates</b><div class="card-body">Starting from <b>${pesoShort(cheapestListing(providerOf({providerId:CURRENT_PROVIDER_ID})))}</b> across ${listingsOf(CURRENT_PROVIDER_ID).length} listed services.<br>Every price is what you charge; the platform fee comes out of it.</div><button class="btn sm" style="margin-top:8px;" onclick="providerProfileAction('edit')">Edit Pricing</button></div>` : section === 'area' ? `<div class="card"><b>Service Area</b><div class="card-body">Base barangay: <b>${esc(pp.barangay)}</b><br>Service radius: <b>${esc(pp.serviceRadius)}</b><br><span style="color:var(--success-ink); display:inline-flex; align-items:center; gap:2px;">${ic("check",11)} Poblacion</span><br><span style="color:var(--success-ink); display:inline-flex; align-items:center; gap:2px;">${ic("check",11)} San Isidro</span><br><span style="color:var(--success-ink); display:inline-flex; align-items:center; gap:2px;">${ic("check",11)} Barangay 2</span></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('edit')">Change Radius</button></div>` : section === 'hours' ? `<div class="card"><b>Working Hours</b><div class="card-body">Monday - Saturday: <b>${esc(pp.workingHours)}</b><br>Sunday: Unavailable</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('edit')">Edit Hours</button></div>` : section === 'dispatch' ? `<div class="card"><b>Emergency Dispatch</b><div class="card-body">Status: <b style="color:var(--success-ink);">${state.providerEmergencyDispatch ? 'Enabled' : 'Disabled'}</b><br>Accept urgent requests outside the normal booking flow when available.<br>Urgent requests reach you inside the service area you set under Service area — <b>${esc(pp.serviceRadius)}</b>. There is no separate emergency radius or emergency window in this prototype, because nothing records one.</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('dispatch')">${state.providerEmergencyDispatch ? 'Disable' : 'Enable'} Dispatch</button></div>` : section === 'credentials' ? `<div class="card"><b>Credentials &amp; verification</b>
+  return section === 'services' ? listingsPanel(CURRENT_PROVIDER_ID) : section === 'pricing' ? `<div class="card"><b>Pricing &amp; Rates</b><div class="card-body">Starting from <b>${pesoShort(cheapestListing(providerOf({providerId:CURRENT_PROVIDER_ID})))}</b> across ${listingsOf(CURRENT_PROVIDER_ID).length} listed services.<br>Every price is what you charge; the platform fee comes out of it.</div><button class="btn sm" style="margin-top:8px;" onclick="providerProfileAction('edit')">Edit Pricing</button></div>` : section === 'area' ? `<div class="card"><b>Service Area</b><div class="card-body">Base barangay: <b>${esc(pp.barangay)}</b><br>Service radius: <b>${esc(pp.serviceRadius)}</b>${coverageLines(providerOf({providerId:CURRENT_PROVIDER_ID}))}</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('edit')">Change Radius</button></div>` : section === 'hours' ? `<div class="card"><b>Working Hours</b><div class="card-body">Monday - Saturday: <b>${esc(pp.workingHours)}</b><br><span style="color:var(--mist);">No day-by-day schedule is recorded, so nothing here claims a day you have not set.</span></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('edit')">Edit Hours</button></div>` : section === 'dispatch' ? `<div class="card"><b>Emergency Dispatch</b><div class="card-body">Status: <b style="color:var(--success-ink);">${state.providerEmergencyDispatch ? 'Enabled' : 'Disabled'}</b><br>Accept urgent requests outside the normal booking flow when available.<br>Urgent requests reach you inside the barangays recorded under Service area. The radius you typed — <b>${esc(pp.serviceRadius)}</b> — is your own description of that area; the list above is what discovery filters on. There is no separate emergency radius or emergency window in this prototype, because nothing records one.</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('dispatch')">${state.providerEmergencyDispatch ? 'Disable' : 'Enable'} Dispatch</button></div>` : section === 'credentials' ? `<div class="card"><b>Credentials &amp; verification</b>
       <div class="card-body" style="font-size:var(--t-caption); line-height:1.7;">
         Verification: <b>${esc(providerVerificationLine(CURRENT_PROVIDER_ID))}</b>
       </div>
@@ -9817,9 +9833,21 @@ function threadsFor(role) {
 /* ── small provider actions the FSM used to fake with a toast ─────────────── */
 function setProviderAvailable() {
   state.providerAvailability = 'Available';
+  const me = PROVIDERS.find(p => p.id === CURRENT_PROVIDER_ID);
+  if (me) me.acceptingRequests = true;
   persist();
   render();
   showToast('You are marked available - residents in your area see you now');
+}
+/* The pair. Until now the only control went available, so nothing could ever be
+   hidden and the toast's promise that residents would see you was unfalsifiable. */
+function setProviderBusy() {
+  state.providerAvailability = 'Busy';
+  const me = PROVIDERS.find(p => p.id === CURRENT_PROVIDER_ID);
+  if (me) me.acceptingRequests = false;
+  persist();
+  render();
+  showToast('You are marked busy - residents searching now are shown someone else');
 }
 
 /* The radar used to recite a forecast nothing computes — "14 expected requests ·
@@ -9846,8 +9874,9 @@ function opportunityRadar(){
           : `<b>No ${cat.label.toLowerCase()} request is waiting for an answer at the moment.</b> Nothing here is urging you to change your availability.`}
       </div>
       <button class="btn sm" style="background:var(--surface); color:var(--deep); width:100%; font-weight:800;" onclick="setProviderAvailable()">
-        Mark myself available
+        ${(state.providerAvailability === 'Busy' ? 'Mark myself available' : 'Still marked available')}
       </button>
+      ${(state.providerAvailability === 'Busy' ? '' : `<button class="btn sm secondary" style="width:100%; margin-top:8px;" onclick="setProviderBusy()">Mark myself busy</button>`)}
       <div style="font-size:var(--t-caption); opacity:0.72; line-height:1.45; margin-top:9px;">
         Counted from the demo bookings on this device. This prototype does not forecast demand — a real
         surge needs live request history, which the pilot has not gathered yet.
@@ -9874,6 +9903,18 @@ function credentialsOf(providerId){ return CREDENTIALS.filter(c => c.providerId 
    "expiring" without saying from what is the kind of trust claim this project is told not to
    make. A missing expiry is "valid", not "unknown": the record says the document does not
    expire. */
+/* The barangays a provider is recorded as serving, from the record rather than three
+   names typed into markup. The base is marked, because a provider is always taken to
+   work where they live and the rest is travel. */
+function coverageLines(p){
+  const list = (p && p.servesBarangays) || [];
+  if (!list.length) return '<br><span style="color:var(--mist);">No barangay coverage is recorded for this account.</span>';
+  return list.map(b => '<br><span style="color:var(--success-ink); display:inline-flex; align-items:center; gap:2px;">'
+    + ic('check', 11) + ' ' + esc(b)
+    + (b === p.barangay ? ' <span style="color:var(--mist);">(base)</span>' : '')
+    + '</span>').join('');
+}
+
 function credentialState(cred){
   if (!cred || !cred.expiresAt) return { code:'valid', days:null };
   const days = Math.ceil((parseDay(cred.expiresAt) - Date.now()) / 86400000);

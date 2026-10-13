@@ -2416,6 +2416,58 @@ suite('honesty', async () => {
         : 'the profile is not reading its records' };
   })());
 
+  /* Service area was a string the provider typed, a panel that painted three green
+     checks naming the same three barangays for all eight providers, and a filter that
+     matched where a provider lives — never where they said they work. Slide 3 names "a
+     provider who can actually serve their area" as the first thing a customer needs. */
+  verdict('a provider is found where they declared they serve, not only where they live', (() => {
+    const base = app.PROVIDERS.find(p => (p.servesBarangays || []).length > 1);
+    if (!base) return { ok: false, why: 'no provider declares coverage beyond their own barangay' };
+    const away = base.servesBarangays.find(b => b !== base.barangay);
+    const outsider = app.PROVIDERS.find(p => p !== base
+      && p.barangay !== away && !(p.servesBarangays || []).includes(away));
+    app.state.view = 'app'; app.state.role = 'resident'; app.state.tab = 'results';
+    app.state.searchQuery = '';
+    app.state.providerFilters = { barangay: away };
+    const found = app.providerMatches();
+    const declares = found.some(p => p.id === base.id);
+    const excludes = !outsider || !found.some(p => p.id === outsider.id);
+    app.state.providerFilters = { barangay: base.barangay };
+    const atHome = app.providerMatches().some(p => p.id === base.id);
+    app.state.providerFilters = {};
+    return { ok: declares && excludes && atHome,
+      why: !declares ? base.name + ' declares ' + away + ' and is not shown there'
+        : !excludes ? ((outsider || {}).name || 'a provider') + ' is shown in ' + away + ' without declaring it'
+        : !atHome ? base.name + ' disappeared from their own barangay'
+        : 'coverage does not drive discovery' };
+  })());
+
+  verdict('marking yourself busy changes what a resident is shown', (() => {
+    app.state.view = 'app'; app.state.role = 'provider'; app.state.tab = 'dashboard';
+    app.state.providerFilters = {}; app.state.searchQuery = '';
+    const me = app.PROVIDERS.find(p => p.id === app.CURRENT_PROVIDER_ID);
+    const before = app.providerMatches().some(p => p.id === me.id);
+    app.setProviderBusy();
+    const during = app.providerMatches().some(p => p.id === me.id);
+    const recorded = me.acceptingRequests === false;
+    app.setProviderAvailable();
+    const after = app.providerMatches().some(p => p.id === me.id);
+    const back = me.acceptingRequests === true;
+    return { ok: before && !during && recorded && after && back,
+      why: !before ? 'the signed-in provider was not in the list to begin with'
+        : !recorded ? 'marking busy did not reach the record'
+        : during ? 'a provider marked busy is still shown to residents'
+        : !after ? 'marking available did not bring the provider back'
+        : 'the availability control still sets nothing' };
+  })());
+
+  c.check('the coverage list is the record’s and says so when there is none', (() => {
+    const p = app.PROVIDERS.find(x => (x.servesBarangays || []).length > 1);
+    const html = app.coverageLines(p);
+    return p.servesBarangays.every(b => html.includes(b)) && /\(base\)/.test(html)
+      && /No barangay coverage is recorded/.test(app.coverageLines({ servesBarangays: [] }));
+  })(), 'the panel does not list what the record declares');
+
   const unsourced = ['Expires in 23 days', 'ID Verification - ', 'Last active: 2 hours ago',
     /* The verification console's typed claims. Each of these was painted as a fact about
        an applicant while no record held it. The last two carry their trailing comma on
@@ -2428,6 +2480,9 @@ suite('honesty', async () => {
     /* The administrator's provider profile: four dated events typed once and shown to
        all eight providers, and two documents painted green that no record asserts. */
     'September 9 - Completed booking', 'September 5 - Credential reminder sent',
+    /* The provider's service-area card: three green checks naming the same three
+       barangays for all eight providers, and a Sunday nobody recorded as closed. */
+    'ic("check",11)} Poblacion</span>', 'Sunday: Unavailable',
     'Government ID - <b style="color:var(--success-ink);">Verified</b>',
     'meta.performance'];
   const found = unsourced.filter(s => appSrc.includes(s));
