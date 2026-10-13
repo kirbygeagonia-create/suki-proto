@@ -1,4 +1,6 @@
-/* Sukinnect - self-hosted brand fonts (Plus Jakarta Sans + Fraunces).
+/* Sukinnect - self-hosted faces: Atkinson Next (the rebuild's only UI face, four weights),
+   Plus Jakarta Sans (the fallback both files carry, and the shipped prototype's UI face), and
+   Fraunces, which Sukinnect-next.html left out of its stacks and Sukinnect.html still uses.
    Subsets: latin + latin-ext only. Zero network needed at runtime. */
 
 @font-face {
