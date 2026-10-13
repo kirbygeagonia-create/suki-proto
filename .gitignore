@@ -7,6 +7,13 @@ dist/
 node_modules/
 .gradle/
 
+# A Python/uv download cache appeared in the working tree on 2026-10-12 — 44 MB of
+# _cache/*.job and *.tmp, written by a tool outside this project. Nothing here runs
+# Python: the prototype is one HTML file and every instrument in tools/ is Node, so
+# this is machine scratch rather than project content. Ignored, not deleted, because
+# whatever created it may still expect to find it.
+Python/
+
 # Machine-specific and secret local config
 local.properties
 *.keystore
@@ -19,3 +26,9 @@ Thumbs.db
 Desktop.ini
 *.tmp
 *.swp
+
+# screenshots written by tools/shot.cjs — looked at, not shipped.
+# The pattern is open-ended because the tool is routinely pointed at a fresh
+# --out directory to defeat cached image reads, and .shots/ alone let a scratch
+# capture into a commit.
+.shots*/

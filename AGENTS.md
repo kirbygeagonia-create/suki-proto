@@ -1168,28 +1168,508 @@ measured value from section 30:
 --surface-elevated       #FFFFFF with elevation shadow
 --text-primary           #03002B
 --text-secondary         #4C5B88   the deck's only declared slate
---text-muted             OPEN - must be lighter than #4C5B88 but still pass 4.5:1 on #FFFFFF
+--text-muted             #5F6E92   5.1:1 on white, 4.7:1 on --background, lighter than secondary
 --border                 #E7EDFF
 --success                keep existing green #1f8a5f (semantic, not brand)
 --warning                keep existing amber #ffb800 / #fff3cd (semantic, not brand)
 --error                  keep existing red #d64545 (semantic, not brand)
 --info                   #0E4DFF
 
-Two tokens are deliberately left unresolved rather than invented:
+CURRENT STATE OF THE CODE, re-measured. The passages below previously described an
+older build and were wrong in ways that would have sent the next reader the wrong
+scope, so they are replaced rather than left to be re-derived:
 
---text-muted: the deck declares no mid-tone suitable for muted text. Deriving a tint
-is a design decision, and a too-light value would violate section 72 (contrast).
+TWO FILES EXIST NOW, and a reader must know which one they are in. `Sukinnect.html` is
+the shipped prototype, untouched by the rebuild on `feat/domain-kernel`. `Sukinnect-next.html`
+is the rebuild: same single-file architecture, with a domain kernel (centavos money, a
+Store adapter, a booking state machine, a double-entry ledger, payment records behind a
+gateway seam, disputes, and message threads as records). Work happens in the -next file;
+§11 and §88 still apply to both. Measured with `node tools/verify.cjs` and a static scan:
 
-Service-specific colors (section 45): the deck declares no per-category palette.
-These need an explicit decision, not a guess.
+Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 tokens declared with
+                    9 never reached, and 75 hex-shaped strings outside :root: twelve in the older
+                    per-trade palette, one in <meta name="theme-color">, and sixty-two the tool
+                    prints rather than classifies — among them the phone mockup's bezel
+                    (#1a1a1a, #171717) and its signal bars, and a good many `#fff`. Untouched by
+                    the rebuild; still identical to main — see the note below on how to prove
+                    that, and still carrying the old
+                    gradient-hero sign-in.
+Sukinnect-next.html— 11,125 lines, ONE :root block, 1,748 var() usages, 95 tokens declared with 92
+                    of them reached. Twenty-four hex-shaped strings sit outside :root, and the
+                    tool that counts them refuses to explain the ones it cannot decide: fourteen are
+                    the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
+                    (§45 — the seventh is Fruit Harvest & Buy); one is the <meta
+                    name="theme-color"> value, which cannot take a var(). The remaining nine are
+                    printed line by line, because a comment quoting a measured brand value and a
+                    hard-coded colour in markup are the same string to any scanner — and one of
+                    them (`#9021`) is a booking id, not a colour at all. Fifteen `#fff` values that
+                    used to be counted here went away with the inline SVG scenes, which are now
+                    seven PNG files rather than painted shapes. That is why the count is
+                    quoted with its command: **`node tools/measure.cjs`**, which takes a file
+                    argument and measures either one the same way. A number that has to be
+                    re-derived by hand in prose drifts; this passage was three out when the tool
+                    was written, three out again a week later while saying exactly that, and the
+                    next reader should cite the tool rather than trust it.
+                    Everything that was a real violation is now a token: #fff became
+                    --surface and --on-brand, the modal dim became --scrim, and the phone
+                    mockup's bezel and signal bars became --device-bezel and
+                    --device-signal. Type is fully on the scale: of the 120 `font-size`
+                    declarations in the stylesheet, 119 take a var(), none is a literal px,
+                    and the 120th is `inherit` — the reset that lets an <h1> sit in a flex bar
+                    as the div it replaced. The 402 `font-size` declarations inside markup's
+                    inline styles all take a var() too. Every screen in the app now opens with
+                    an <h1> and every sheet with an <h2> — 23 and 6, the sixth being the weighing
+                    sheet — because a 62-screen app with no headings has no outline for a screen
+                    reader to navigate. This sentence was false when it was first written, and
+                    stayed false for two screens (the resident's booking detail hand-rolled a bare
+                    <div> where the provider's used the shared header, and the chat room titled
+                    itself with a name in a div): the screens pass in tools/verify.cjs now fails
+                    if any app screen paints no <h1>, so the claim is enforced rather than
+                    remembered.
 
-CURRENT STATE OF THE CODE, measured, so the scope is understood before starting:
+HOW TO PROVE THE SHIPPED FILE IS UNTOUCHED — and why "byte-identical" is the wrong words.
+`.gitattributes` declares `* text=auto`, so git stores LF in the object and this repository
+checks out CRLF on Windows: `Sukinnect.html` on disk has 4,706 CRLF pairs and the committed blob
+has none, which makes their md5s differ by design while their content is identical. The claim
+"byte-identical to main" was repeated in this file and the change log for weeks and is false as
+literally written; an auditor running `md5sum Sukinnect.html <(git show main:Sukinnect.html)`
+would get a mismatch and conclude the invariant had been broken when it had not. The command that
+actually proves it:
 
-Sukinnect.html has TWO separate :root{} blocks (a duplicated color system, which
-section 65 forbids), 574 var() usages competing with 372 hard-coded hex values
-across 65 distinct codes. The most-repeated literals are legacy teal #0f3d3e (27),
-#093030 (20), #145050 (11) and gold #ffb800 (9). Consolidating to a single :root
-and routing the hard-coded values through tokens is part of this work.
+```
+git diff --quiet origin/main -- Sukinnect.html && echo unchanged
+```
+
+Say "identical to main" and name that command. Do not reach for a hash comparison on any text
+file in this repository — the same normalisation silently applies to all of them.
+
+ICONS DIVERGE BETWEEN THE TWO FILES, and a reader should not mistake that for an accident.
+`Sukinnect.html` loads `reicon.js` (8 MB, Git LFS) and draws through its `<re-icon>` custom
+element. `Sukinnect-next.html` loads nothing of the sort: 43 glyphs are drawn in the file, and
+every one of the 38 names the app can reach has one. Six of those (four trade icons and two
+empty states) lived only inside the library, and dropping it blanked them silently — a name
+carried by a data row is not an `ic('name')` in markup, so the check that watched for that
+missed them. They are drawn inline now, and the gate checks all three ways a name arrives. This
+does not touch §10: the
+official mark is a PNG, not an icon, and it is still the only brand image on the sign-in.
+
+The rebuild also added a real verification surface, because reading the file cannot
+see a layout: `node tools/shot.cjs` drives the machine's own Chrome headless over the
+DevTools Protocol with no npm packages, and `--measure` runs an in-page instrument
+across all 60 screens for tap targets, WCAG contrast (sampling gradients at the text's
+own position), clipped text, off-scale fonts, content trapped under the nav, unnamed
+controls, escaping map panes, anything painting over an open modal, and whether any
+category artwork is moving in the painted page — which is the one thing a source grep
+cannot prove, because a class with no rule and a rule with a typo both read fine as text.
+A screenshot
+tool that navigates by assigning `state.*` measures a screen nobody can reach — the
+SCREENS table walks the app's real entry points for that reason. The same trap has a
+second form: a setup script that moves the *model* without moving the *field* photographs
+a state nobody can reach either, which is how one screen showed a kilos input reading 120
+beside a total computed from 31 — the sheet updates only its totals on input, so the
+harness has to type into the element. Anything below the fold needs a `scrollIntoView()`
+in the entry or the picture is of the wrong card.
+
+And a third form, found on 2026-10-10: **a screen can be missing from the table entirely.**
+The admin's fourth nav item is "Account", it dispatches through the same `tab='profile'`
+branch the other two roles use, and it had never been photographed or measured — the
+"46 screens" figure was accurate and complete for everything except the one screen that
+held the admin's editable name, phone and office. It is `admin-account` now — the count went 46 →
+47, and to 49 when two profile modules were added after the resident-history pass found that no
+sheet reached through `openProfileSection` had ever been photographed either. A table of entry
+points is only as good as its coverage, so when a role gains a destination the table has to gain
+it in the same change.
+
+And a fourth form of the same trap: **a screen can sit one tap below a screen that is covered.**
+The profile *sheets* were photographed; the modals their own buttons open were not, so the 24×25px
+`×` that closes every one of them had never met the tap floor, and no source grep could have found
+it. Those three screens are in the table now, reached by `clickPainted()` — which finds the
+button the app actually painted and clicks it, so a control whose handler went away fails the shot by
+name instead of photographing a state nobody can enter. That helper exposed one more thing about the
+walk: it assigned `state.role` over whatever sheet the previous screen left open, and the app pays
+its Back debt with real `history.back()` calls, which on a `file://` page is a navigation — Chrome
+took the target down for three screens before the walk was made to `clearModals()` first, the way
+the app's own bottom navigation does. A harness that reaches a screen the user cannot reach is
+measuring a fiction, and here it was also crashing the browser.
+
+The same gap existed one screen over, and it is worth naming because it survived four passes: the
+admin's provider-verification **review** was in no table at all — a whole destination reached by
+tapping "Open verification" on a pending applicant, never photographed, never measured, and the last
+place in the app still typing its own facts. Its request picker and document preview are in the
+table with it, and so is the Decided tab that §34 added. So are the confirmation and
+outcome dialogs — the approve, reject, flag and request sheets an admin reaches only at the
+moment of deciding (60 screens). The rule after any pass: a destination behind a button
+counts as a destination, and a screen the camera has never painted is a screen nobody has
+checked.
+
+TYPED TEXT NEVER BECOMES MARKUP, and the gate enforces it rather than remembering it.
+`esc()` covers `& < > " '`; `jsStr()` exists for the one context `esc()` cannot serve —
+text carried into an inline `onclick`, where the attribute is HTML and what the browser
+hands the JavaScript parser after decoding it is a string literal, so quoting for HTML
+alone leaves a double quote that closes the attribute. `settingsRow` and `emptyState`
+escape what they paint, so a value passed to either is safe at the sink. The check that
+holds this together resolves the writable fields from the page's own
+`X.field = el.value` assignments and then reads every interpolation with real brace
+matching, because a list of field names goes stale the moment someone adds a field and a
+stale list reads as clean. It found 45 sites painting a profile value raw — every profile
+field in all three roles, 31 of them fields a keyboard can actually write, while chat and
+booking text had been escaped all along — and `node tools/probe-injection.js` showed the
+browser building real elements out of a name field on 5 of 5 cases before the fix and 0 of
+10 after, across all three roles. `node tools/falsify-escaping.cjs` proves the guards:
+6 mutants applied, 6 caught, against the 10 checks the pass added (415 → 425).
+
+THE APP HAS ONE HISTORY, AND IT IS THE RECORDS. The resident's profile modules used to carry a
+second one: a faucet job described as completed, rated five and paid ₱850 on September 12 when
+the same booking is ongoing, unrated and ₱365 with payment pending on the screen behind it, and a
+₱2,500 year-to-date across four trades where the records hold two finished jobs worth ₱590. The
+admin's provider-management profile had its own three invented bookings. `residentSectionBody`
+now derives from `residentFinished` / `residentPaid` / `bookingTotal` / `residentSpendByService` /
+`warrantyEndsAt`, and the checks that hold it in place do not compare helpers to each other: they
+void a payment *inside the test* and require the total to move by exactly that job's money, then
+render the module and require every `₱` figure in the markup to be one the records produce.
+`node tools/falsify-history.cjs` — 6 mutants applied, 6 caught (425 → 434). Two of those mutants
+were wrong first: dropping the pay-status filter does not put an unpaid booking on a receipt,
+because an *ongoing* job never reaches the finished set, and a mutant that renames a function
+fires every check except the one it was written for. Where a module has no record behind it —
+saved providers, maintenance reminders — it says so plainly rather than naming something.
+
+CREDENTIALS AND VERIFICATION ARE RECORDS NOW (schema 13). Before this the only thing the app knew
+about a document was a bare name in `PROVIDERS[].credentials`, and three screens asserted statuses
+that nothing owned: a provider's own profile claimed "NBI Clearance — Valid" for a provider whose
+record says Police Cleared, "Barangay Clearance — Expires in 23 days", and an admin roster said
+"Verified since March 14, 2026". There is now a `CREDENTIALS` record set (name, issuer, kind,
+expiresAt — null means the document does not expire) and `PROVIDERS[].verification`
+(status, verifiedAt, reviewer). `credentialState` reads the expiry against
+`CONFIG.credentialWarnDays`, `worstCredentialState` lets one expired document decide the
+provider's row, and the verified roster is `verifiedProviderList()` rather than
+`PROVIDERS.slice(0, 4)`.
+
+The reason the admin console was the place this festered: `bookingsForProvider()` took **no
+parameter at all**, so `completionRate(providerId)` and `cancellationRate(providerId)` declared an
+argument, ignored it, and returned the signed-in provider's rows. Every per-provider figure in the
+admin console was p1's figure wearing another name — the typed `adminProviderMeta` table (96%
+completion, 4% cancellation, trust 94/100, 2 complaints for p1, where the records say 50%, 50%,
+96 and none) hid the bug because its numbers looked plausible. The table is gone; the verdict
+labels with it ("Performance", "last active", "response time" — no record says any of those) and
+`adminProviderMeta` now returns figures plus a `reasons` list of conditions a record actually
+asserts. `node tools/falsify-trust.cjs` — 6 mutants applied, 6 caught.
+
+One bug in that work was found only by reading a screenshot: a `YYYY-MM-DD` value parsed as UTC
+midnight formats as the **previous day** on a machine west of UTC, so a record reading 2026-03-14
+rendered "Verified Mar 13, 2026". Every number in the panel was correct. `parseDay()` treats a
+date-only value as a local day, and the gate now asserts that the day which goes in is the day
+that comes out.
+
+NO CONTROL IS BELOW THE 44px TAP FLOOR, and the instrument that measures this was itself wrong
+first. The camera walked three ancestors looking for a taller box, printed a comment about "a 23px
+input inside a 56px pill", and then reported the control's own height anyway without consulting
+the number it had computed. Once it asks whether the wrapper can actually deliver the tap — a
+`<label>` forwards to its control, a `<button>`/`<a>`/`<summary>` or anything with its own
+handler does, an inert `div` does not — the count of genuinely small controls was 17, not 19: two
+of the reported ones were checkboxes inside real labels. All 17 were fixed by giving the control
+itself `min-height:var(--tap)`, which left the search pill at exactly 56px and the category grid
+top at exactly 605px, so the floor was met without the screen growing — the regression that bit
+this app the last time anything on Resident Home got taller. Two hand-rolled 30px copies of
+`.back-btn` became the shared class; one of them declared `width:var(--tap)` and then
+`width:30px` later in the same `style` attribute, which is why a 44px button measured 30.
+`node tools/falsify-tap-and-summary.cjs` — 4 mutants applied, 4 caught (443 → 449).
+
+The same pass caught a card on the provider profile reading **"Credentials: All Valid"** in green
+while the list one scroll below it showed two documents expiring soon — the §77 class again, found
+by looking at a screenshot taken for a different reason. `credentialSummaryFor` now counts the
+flagged documents and picks the tone.
+
+EVERY PROFILE ACTION REACHES A SCREEN, and the gate walks to it rather than trusting a list. All
+three hubs end their modal ternary with the generic success body written for `saved`, so an action
+name with no branch of its own opened a modal announcing `Changes saved successfully.` for a change
+that never happened — nine of them did, including `Edit Pricing`, whose button could not open the
+form that holds the price. The honesty suite now renders each profile tab, reads the section ids out
+of the **painted** rows, reads the action names out of the painted section cards, and requires each
+to paint a modal that is neither the fallback body nor the fallback heading (`Update`), so a button
+added tomorrow that reaches nothing fails the gate instead of waiting for a thumb. `Edit Pricing`,
+`Change Radius` and `Edit Hours` now open the one form that carries those fields; the payment picker
+writes `preferredPayment`; the payout sheet writes `bankAccount`, which the payout itself already
+read — the account had been typed into four surfaces while a fifth held it, so the fruit buyer was
+shown the plumber's GCash number. Two `Change password` buttons were deleted: no password is in
+state, so the card says so where the button had promised otherwise. The admin PIN and password
+modals took six credential fields, read none, and called `adminLog('Password updated', …)` —
+fabricated entries in the one record set §29 makes auditable; they are gone, and the 2FA modal
+reports `Not configured` instead of `Enabled`. The hub **rows** carried the same claims one level up
+(`PIN enabled - 2FA enabled`, `2 devices signed in` over a sheet that says this device is the only
+session, `Recent authentication activity` over a card that says none is recorded), the badge rail
+named two of p1's three badges as literals (a false `Top Rated` for seven of eight providers, and
+`Background Checked` hidden from those who hold it), and the public preview card typed 4.9 and 214 —
+p1's own figures, so every screenshot of it looked right. Each now reads its record.
+`node tools/falsify-profile-honesty.cjs` — 9 mutants applied, 9 caught (449 → 456), including one
+that deletes only a modal's *heading* branch while leaving its body, which is how the payment picker
+first opened as "Update". One instrument lesson in the same pass: the credential-window check built
+its dates with `toISOString().slice(0,10)` — a **UTC** calendar date — while `credentialState`
+measures from the local midnight `parseDay` returns, so on a GMT-11 machine the two disagree by a day
+at the boundary and a check that had passed for weeks failed against an app that had not changed.
+Build the day, then read the day, in the same frame of reference.
+
+APPLICATIONS AND THEIR DOCUMENTS ARE RECORDS NOW (schema 14). The admin's verification console was
+the last screen that asserted everything and stored nothing: five document rows written once and
+shown to all three applicants — so the cleaning applicant was handed the electrician's TESDA NC II —
+a date of birth identical for all three, six green checks no record had performed, a "5 of 5" header
+over four itemised documents, a seeded activity list stamped `Sep 8, 9:14 AM`, and five actions that
+appended `Sep 9, 2:45 PM` whatever hour the button was pressed. The applicants existed twice: the
+roster called Maria `maria` with `docs:'4/5'`, the review called her `LS-PV-0024` with `docs:4`.
+There is now one `PENDING_APPLICANTS` record carrying the application number, contact details and
+`submittedAt`; `APPLICATION_DOCS` holds one row per applicant per document, and a row with no
+`submittedAt` **is** what outstanding means, so the count is `3 of 4` and the wait is counted rather
+than parsed out of a phrase. The required set is the four the screen already named — identity, NBI
+clearance, barangay clearance, and the qualification for the trade applied for — with each
+applicant's own. One persisted review record per applicant replaces five screen-local bags that were
+wiped whenever the admin opened someone else, so a note written on one applicant can no longer be
+painted on the next, and every action appends `{ at: Date.now() }`. Approving is refused while a
+document is outstanding, names which, and on approval writes status, time and reviewer, persists,
+and takes the applicant out of the queue — the decision survives a reload and `reopenReview()`
+undoes it. Two lessons from the checks: a check that calls `persist()` itself passes even when the
+action saves nothing (its own mutant missed until the check stopped performing the step), and a
+typed-claim needle matching `docs:'4/5'` in a *comment* that explains the old shape is a needle
+matching prose — the surviving ones carry their trailing comma.
+
+A GREEN CHECK THAT AGREES WITH A BUG IS WORSE THAN NO CHECK. The admin console counted
+`verified = PROVIDERS.length` and the gate asserted exactly that — `k.verified === app.PROVIDERS.length`
+— while the same console's own roster filter returned six of the eight, because two are suspended or
+awaiting review. Eight passes reported all-clear. The check now asserts the record
+(`verifiedProviderList().length`, and strictly less than the roster), and §34's other two follow the
+same shape: `pendingVerification` counts the queue an approval filters, not the static array, and
+because that queue filters decided applicants out there is now a **Decided** tab — a decision that
+removes the only record of itself is a decision nobody can audit. Two more findings came from
+reading the screenshot rather than any instrument: `parseDay()` handed an epoch number from
+`Date.now()` fell through to `Date.parse`, answered `NaN`, and `shortDate()` returned the empty
+string, so every decision line printed a time with no date — an absence, which no render check calls
+a hole because there is nothing there to see; and the provider tab rail, built for three labels,
+clipped the fourth mid-word at 360px. The rail scrolls now, and that rail takes its space from
+padding so the selected tab is whole on arrival. One caveat about the camera itself: a `--only=`
+subset run reports three contrast failures on the admin header's translucent "Insights" pill that
+the full 57-screen sweep reports as zero — the sampler's answer depends on what was painted earlier
+in the run, so a subset's contrast line is unproven in both directions and the full sweep is the
+number to quote.
+
+A DETAIL SCREEN NEVER ANSWERS AN UNKNOWN ID WITH SOMEBODY ELSE'S RECORD. `providerBookingDetail()`
+fell back to `bookingsForProvider()[0]` and `adminProviderManagementProfile()` to `PROVIDERS[0]`, so
+a reference the account does not hold rendered a real, unrelated record with no indication it was
+not the one asked for. Neither is reachable by a tap — the ids come from the lists — which is
+exactly why they survived: the only thing they break is a test that passes the wrong id, and a test
+silently measuring a different record is worse than no test. Both now return an honest not-found
+screen, and the check asserts both halves: the foreign id leaks no other client's address, summary
+or phone, **and** a legitimate id still shows its own client location — the positive control that
+stops the check passing by rendering nothing. The same sweep also closed the reverse of a rule the
+gate already had: `tools/audit-handler-reachability.cjs` checks every function named in an
+`onclick`/`onchange` against the page's definitions — 71 handlers, all 71 resolve — where the gate
+had only ever proved that no defined function is unreferenced, which catches a dead function and
+misses a dead button. And the privacy promise the resident's card makes was measured rather than
+assumed: for every booking the provider can actually open, a `requested` job shows a lock card and
+"Withheld", and only an accepted one shows the door and the number.
+
+THE SAME RULE APPLIES TO THE ENTRY POINT, NOT ONLY THE RENDER FUNCTION. That commit fixed two
+screens and left three: `residentBookingDetail()` fell back to `bookingsForResident()[0]`,
+`verificationApplication()` to `PENDING_APPLICANTS[0]`, and `openProviderDetail()` to
+`PROVIDERS[2]`. The middle one is the one that mattered — the per-applicant review records were
+built precisely so a note written on one applicant could not be painted on the next, and the id
+fallback was still a door to exactly that. `tools/falsify-id-substitutions.cjs`: 4 mutants, 4
+caught, with the same positive control as before.
+
+AND IT APPLIES TO THE LOOKUP, NOT ONLY THE SCREEN. Those two passes fixed nine call sites and
+left the seam every screen reads through: `providerOf()` answered a dangling `providerId` with
+`PROVIDERS[0]`, so one missing record repainted a job's name, badges, reviews and payout account
+with the plumber's, on both sides, while every figure stayed arithmetically perfect — and the
+accept path then read `provider.rateCentavos` from that borrowed record's shape as `null`, which
+`Math.round` answers with `0`, so a job nobody was behind got *agreed* at ₱0 and the ledger booked
+it as fact. The same shape sat in six more places: the signed-in provider lookup (`PROVIDERS[0]`,
+twice), `serviceMeta()` and `categoryBehaviour()` (`SERVICES[0]`, so an unknown trade was drawn as
+Plumbing and inherited its commission basis), a declared category with no tint (Delivery's cyan),
+the chat room and its thread key (`PROVIDERS[0]` and the demo resident, so a provider answering one
+customer could be shown — and write into — the thread the plumber shares with another), the
+resident's provider detail (`PROVIDERS[2]`), a payment index past the end of its list (`pays[0]`,
+which is what the *record* took, not just the card), and the concierge's three
+`CONCIERGE_SORTS[2]` fallbacks — which meant a photo with no words beside it, the whole point of
+the camera button, was filed under Plumbing and announced as "Briefing ready - shortlisted under
+plumbing", the §20 thing this prototype is explicitly not allowed to do. `providerOf()` now answers
+with a record-shaped stand-in that carries no identity (a record, not `null`, because 54 call sites
+read a field straight off the answer); the signed-in lookup returns `null` and the two screens that
+used it say so; an unknown trade is drawn on the two neutral tokens; the room resolves its
+counterpart from the ids on the thread rather than from a row; a stale index is clamped *and
+written back*, so the rail marks the row the money uses; and the concierge refuses to sort rather
+than invent a category — which is a new screen state, reachable by typing, and is in the camera's
+table (`concierge-no-match`) for that reason. `tools/falsify-identity-fallbacks.cjs`: 19 mutants,
+19 caught — after three were missed, two because the checks were shallow (an assertion on
+`isChatOpen` cannot see a header naming the wrong person, and a room guard with two conditions
+passes while only one of them is tested) and one because the mutant was **equivalent**: with the
+write-back in place, `pays[d.payIdx] || pays[0]` reads the same row, so that mutant was deleted
+rather than kept to make the count look bigger. The three refusal states that no tap can reach —
+a chat room with no thread, a provider detail with nothing selected, a dashboard signed in as
+nobody — are asserted by the gate and deliberately *not* photographed, because a camera that walks
+to a screen nobody can enter is measuring a fiction.
+
+AND THE STORAGE DOOR HAS TO CHECK THE STATE THAT IS NOT A RECORD. That pass clamped two
+draft indices and left three bare: `days[d.dayIdx].date` does not fall back on an
+out-of-range index, it throws, and the booking sheet never opens; `REQUEST_TIMES[d.timeIdx]`
+stores `undefined` as an appointment time; and `(savedAddresses || [address])[d.addrIdx]` is
+this whole class in its driest form because **an empty array is truthy** — the `||` guard
+never fires, the rail paints nothing, and the next request records an address of `undefined`.
+All four indices now resolve through `requestChoices()`, which clamps into the list actually
+painted and writes the corrected index back. `hydrate()` validated every record family and
+then did `Object.assign(state.profileData, snap.profileData)` unchecked, so a dump carrying
+`savedAddresses` as a string threw on `.map` and one carrying `rateCentavos` as `"35000"`
+walked into money arithmetic; the seed now decides what each field may be, with the allowed
+fields *derived from the seed* rather than listed a second time. One mutant survived the
+first run and the check was at fault: the door's two rules were written as one predicate, and
+a key the seed lacks already fails the kind test (`seedKind(undefined)` is `"undefined"`), so
+the check named for unknown fields had never tested unknown fields. Two rules, two reasons.
+`tools/falsify-identity-fallbacks.cjs`: 24 mutants, 24 caught.
+
+A STATISTIC CAN COUNT TWO QUESTIONS UNDER ONE LABEL, AND NO INSTRUMENT SEES IT. The admin
+dashboard printed `adminCounts().open` — 10 — under "Live bookings". It is
+`!FINISHED_STATES && !disputed`, which is six accepted bookings plus four requests nobody has
+answered: the same pair §21 and `statusColors` refuse to merge anywhere else, "because nothing
+has been agreed yet". Its `aria-label` then promised Marketplace Intelligence counts the same
+ten, and that screen counts a date window, which is 11. Now `agreed` and `waiting` are counted
+apart, the tile prints `agreed`, the four requests are named in the caption instead of folded
+into a bigger number, the workload ring says "Open work", and the gate moves a request into the
+accepted set requiring `agreed` +1, `waiting` -1, `open` unchanged. `tools/falsify-count-labels.cjs`:
+6 mutants, 6 caught. Note the shape of the finding: it was invisible to every substitution check
+because nothing was *wrong with the arithmetic* — the number was right and the noun was wrong.
+The first three disagreements the count-pair probe reported were the probe's own errors (a
+guessed field name, a label compared against a state, a nav badge that does not exist), so
+correct the instrument before concluding anything. And `bookingsInWindow(f)` silently drops
+every row when `f.category` is absent — the screens always pass it, but a helper that reads a
+missing option as "match nothing" is one careless caller away from reporting zero activity.
+
+A CHECK THAT CANNOT FAIL LOOKS EXACTLY LIKE A CHECK THAT PASSES. `makeChecker().check(label,
+cond)` coerces with `!!cond`, so `c.check('…', () => { … })` — an arrow written without its
+invoking parentheses — is a *function*, is always truthy, and prints PASS forever. Four checks
+in this file were like that on 2026-10-13, two of them written that same day, and the proof was
+a falsifier reporting **0 of 9 mutants caught** with every named check "passing anyway". The
+harness now throws `check("…") was handed a function, not a verdict` rather than printing a
+verdict it did not compute. Two rules follow, and both are about the tooling rather than the
+app: a mutant family must be re-run after any change to the code it targets, because a passing
+suite is not evidence that a *check* works; and a needle pinned to a value that legitimately
+changes (`SCHEMA_VERSION = 14`) silently stops testing anything the moment that value moves —
+it had been reporting NOT APPLIED for a week, quietly un-guarding the doubled-CR check. Anchor
+needles on things that do not move, and read the "not applied" line, not just the count.
+
+THE APP'S CLAIMS ABOUT A RELOAD ARE AS FALSIFIABLE AS ITS MONEY. Measured by calling a handler
+and asking whether the bytes in storage changed: ten actions that tell the reader something was
+saved, logged or shown wrote nothing — a typed chat message (whose own comment claims it is
+"stored rather than appended to the screen"), a household item, a portfolio entry, a concierge
+answer, an administrator's note and flag, a document request, and both roles' notification
+checkboxes — and six of those fields were not snapshot keys at all, so no later write would ever
+carry them. The portfolio's **Save Work** button read two inputs, wrote neither, and opened a
+modal printing "Changes saved successfully." The audit log stamped every row `Sep 10, 2026 /
+2:42 PM`, so the record §29 exists to keep could not say when anything happened, and lived in
+state nothing stored; rows now carry a real instant and the actor's name, and `SCHEMA_VERSION`
+went 15 → 16 because a v15 dump's typed-date rows are indistinguishable on disk from real ones.
+`hydrate()` also restored the provider's stored profile and *then* called
+`applyProviderIdentity()`, which clears that object and re-copies the demo seed — so every saved
+edit reverted on reload; the identity is applied first now, and the check signs in as p7 so a
+mutant that drops the call cannot hide behind p1's seed matching by accident. Prove any of this
+with `node tools/probe-write-claims.cjs`, which measures storage rather than reading source.
+
+A DESTINATION BEHIND A ROW IS STILL A DESTINATION. The audit log sat one tap off the admin
+dashboard, in no camera table, and had never been photographed — while its timestamps were
+exactly the thing only a screenshot can confirm. It is `admin-audit` now (62 screens), reached
+by clicking the row a person clicks.
+
+A MODAL OPENED FROM A SHEET HAS TO OUTRANK THE SHEET. `.sheet-layer` sat at `z-index:60` over
+`.modal-layer`'s 50, and the sheet's scrim covers the whole phone and closes the sheet on any tap
+— so the three profile modals reached from a sheet were painted underneath it: visible, dimmed,
+and **inert**, every tap meant for their own control dismissing the screen behind them. The camera
+had been reporting `something painting on top of an open modal layer: 48` for weeks and nobody had
+opened the number. The gate could not see it because it calls the handler directly; only a
+hit-test in a real layout can, which is the whole reason `document.elementFromPoint` is in the
+instrument. `tools/falsify-modal-stacking.cjs`: 3 mutants, 3 caught.
+
+THE APP'S OWN ANSWERS ABOUT ITS STORAGE ARE NOT DISCARDABLE. `hydrate()` validated four legal
+values and **no foreign key**, so a dump whose `booking.providerId` named nobody loaded and
+`providerOf()` answered with the first provider — one dangling id repainting a job's name, phone,
+rating and payout account on both sides while every figure stayed arithmetically perfect.
+References are validated at the door now, for bookings, listings, payouts and the five record
+families that name a booking. And `hydrate()`'s report — `{restored, kind, rejected}` with six
+distinct refusal reasons — was thrown away at its only call site, while `persist()`'s boolean was
+thrown away at 24: a refused session looked exactly like a first run, and a device that could not
+write was told "saved" by every toast in the app. `storageNotice()` raises a standing banner plus
+a toast, painted in the flow above the screen rather than fixed over it, because a storage warning
+that covers content is the second thing hiding the first. `tools/falsify-storage-truth.cjs`: 5
+mutants, 5 caught — after one was **missed**, and the mutant was right: the fixture only ever
+dangled a provider, so the customer half of the same predicate went untested and a mutant that
+disabled it passed. A check that cannot tell which of its two conditions fired is half a check.
+
+REPUTATION IS DERIVED, AND THE SEEDS ARE HELD OUTSIDE THE RECORDS. The deck promises providers "a
+reputation built from completed work" (slides 3, 7); `provider.rating` and `provider.jobs` were
+literals nothing ever wrote, so a resident could rate a job five and the figure would not stir.
+Both derive now — the seed average weighted by the sample ratings behind it, plus what this device
+recorded — and the reputation panel states how wide the sample is, so a 5.0 that becomes 4.9 after
+one 1-star reads as an average rather than a broken counter. The seed lives in `REPUTATION_SEED`,
+captured at definition time **before `hydrate()` runs**, not on the provider records: a seed stored
+on a record is cloned into the dump, and two of the four mutants written against the first version
+were shown to be *equivalent* — the drift they introduce is absorbed by one decimal place, so no
+check could see them. Making the seed immutable removes the class of defect instead of relying on
+a check to notice it. `tools/falsify-reputation.cjs`: 5 mutants, 5 caught. Schema 14 → 15, because
+a dump written before this carries a rating that was a literal and nothing on disk can tell the
+two apart.
+
+SERVICE AREA IS A RECORD AND DISCOVERY READS IT. Coverage was a string the provider typed, a panel
+painting three green checks naming Poblacion, San Isidro and Barangay 2 **for all eight providers**
+(the fruit buyer in Buayan was shown covering three barangays he never declared), and a filter
+matching only where a provider lives. A household on the edge of a plumber's radius was told there
+was no plumber for them, which is slide 3's first customer need: "a provider who can actually serve
+their area". `servesBarangays` is declared per provider and `providerMatches()` filters through
+`providerServes()`; availability gained the counterpart it never had, because with only a "go
+available" control the toast promising that residents would see you was unfalsifiable.
+`tools/falsify-service-area.cjs`: 4 mutants, 4 caught.
+
+THE CAMERA NOW MEASURES THE WIDTH YOUR HANDSET ACTUALLY USES. A vivo 1906 reports
+`Override density: 256` on a 720px panel, so its WebView lays out at **~450 CSS px**, not the 360
+every clipping case had been tuned against; `node tools/shot.cjs --measure --width=450` is clean
+there, at 390, and at 320. The one defect that list used to carry — 21 SVG chart labels painting
+12.4px against the 14px floor §68 sets, because a fixed `viewBox` scales its text with the
+container — was closed on 2026-10-13 by taking a chart's words out of the scaled box entirely:
+the shapes stay in SVG, the labels are HTML positioned by percentage of the *plot*, which must
+therefore be its own positioned element (the drawing caps at 320 units, and a percentage of a
+wider parent slides off the bar it names). Chasing it turned up two instrument defects worth
+remembering. The off-scale tally treated 13.3px as on-scale, because `14 - 13.3` is
+0.6999999999 in floating point and the tolerance is 0.7 — so the user-agent default for a form
+control sat *inside* the floor it was written to enforce, and the element walk never looked at a
+`<select>` at all, because its words live in `option` children and the walk skipped anything with
+children; six dropdowns had no font declaration and nothing said so. There is now a hard floor
+check separate from the scale test, form controls are measured by what they paint, and the
+camera has a `chart labels painted outside their own chart box` tally — proved by narrowing the
+gutter to 24px (it reports 4) after a probe, not a grep, showed that the first version's
+grid-column gutter collapsed to zero width and hung every axis label outside the card at all
+three widths. The same device arrived with **no network at all** and the app
+rendered completely, which is an unplanned proof of §81 — and the only remote dependency left in
+the file is `TILE_URL` (`{s}.tile.openstreetmap.org`, 448 requests per 390px sweep), which
+`mapFallback()` degrades honestly when the tiles never paint but which still sends a device IP and
+tile coordinates to a third-party CDN whenever there **is** a connection. Decided 2026-10-12: keep
+it, and treat the exposure as a production DPA/NPC question (slide 16) rather than a prototype bug.
+
+An animated-illustration pipeline (Lottie) was installed here and then removed again:
+it added 305KB that animated nothing, because the professional artwork it was built for
+never arrived. The category tiles are seven PNG files under `assets/category-art/`, and
+they are static: see §46.
+
+The legacy teal and gold values survive only as documented aliases (--ink, --deep,
+--gold, --verified) so existing call sites resolve to the new palette. The two tokens
+that were listed as deliberately unresolved have since been decided, with the reasoning
+in code comments next to each:
+
+--text-muted: derived as #5F6E92, measured against both surfaces it ships on,
+because a value too light to pass section 72 is worse than no value.
+
+Service-specific colors (section 45): a per-trade palette now exists as
+SERVICE_THEME — one hue per trade, ink at 4.5:1 or better on its own tint and on
+--background, with delivery moved to the logo's cyan family so it no longer reads
+identical to plumbing. It stays a secondary cue: brand blue still owns navigation,
+CTAs and brand surfaces.
+
+The commission rate is NOT a color token and does not belong in this list. It is
+platform configuration with a value of its own per the deck's worked example
+(10%), editable by an administrator, audited when changed, and frozen onto each
+booking when the provider accepts.
 
 Do not scatter raw color codes throughout the file.
 
@@ -1569,6 +2049,23 @@ Use the Sukinnect brand palette for:
 ---
 
 # 46. CURRENT MOTION PRINCIPLES
+
+SERVICE-CATEGORY ILLUSTRATIONS NEVER MOVE. This is an explicit project-owner rule and
+it overrides any contrary guidance elsewhere in this file, in old prompts, or in CSS
+that still exists. No CSS `animation`, no SVG `<animate>`, no JavaScript loop, no
+hover or pressed transform on the tile or on anything inside its artwork, and no
+animated shadow or highlight. Dimension is achieved with layered shapes, restrained
+gradients, fixed highlights and contact shadows. The rule holds whether or not the
+device asks for reduced motion — reduced motion is an escape hatch for people who want
+it, not a reason to move artwork for everyone else.
+
+Three checks enforce it: the gate fails on any `.cat` rule carrying `animation` or
+`transform`, on any `@keyframes ca*`, and on any artwork shape carrying an animation
+class; the camera counts moving category nodes in the painted page across all screens.
+The file once ran 33 infinite animations over the seven tiles while two adjacent
+comments disagreed about whether the scenes moved at all.
+
+Everything else in this section still applies to non-category motion.
 
 The existing prototype already includes deliberate work to avoid:
 - white flashes
@@ -2090,6 +2587,20 @@ The current prototype uses:
 - Plus Jakarta Sans for body/interface text
 
 Preserve this hierarchy unless there is a deliberate typography redesign.
+
+THE REBUILD HAS HAD THAT REDESIGN. `Sukinnect-next.html` now runs one sans family
+across every role — Atkinson Hyperlegible Next, self-hosted as four WOFF2 weights,
+with Plus Jakarta Sans behind it for any glyph Atkinson does not carry — and the
+decorative serif is removed from headings, sheet titles, stat numbers and the display
+size. Hierarchy comes from weight and spacing instead. This section still describes
+the shipped `Sukinnect.html`, which keeps Fraunces; the two files differ here on
+purpose, and promotion carries the redesign with the rest of the rebuild.
+
+Two rules the rebuild now holds and the gate can be made to check: no essential
+interface text below 14px (the scale floor moved from 12), and numerals live in the
+same legible face as the words beside them. The type tokens are pixel values, not
+`rem`, so browser zoom reflows the app but an operating-system text-scale setting
+does not — recorded as a known limitation, not as a decision.
 
 Use:
 - strong display type for major page titles
