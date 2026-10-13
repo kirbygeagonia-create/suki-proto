@@ -58,6 +58,48 @@ suite('storage', async () => {
   quota.setItem = (k, v) => { if (k === 'sukinnect.snapshot.v1') throw new Error('QuotaExceeded'); okSet(k, v); };
   const q = boot({ storage: quota });
   c.check('a failed write returns false without throwing', q.persist() === false);
+  /* The return value was always correct. What was missing is that the app never told
+     anybody, so on a device whose storage is full every "saved" toast in the app was a
+     promise about a write that had just failed. */
+  c.check('a refused write is said out loud, not only returned',
+    /refused to store/.test(q.state.storageNotice || ''), q.state.storageNotice);
+
+  /* And the other end: a dump refused because a reference pointed at nothing used to
+     look exactly like a first run. A clean session must stay quiet about storage, or
+     this check would pass by always shouting. */
+  const clean = fakeStorage();
+  const seeded = boot({ storage: clean });
+  c.check('an ordinary session says nothing about storage', !seeded.state.storageNotice,
+    seeded.state.storageNotice);
+  /* One dump, one reference broken at a time. A single fixture that dangled only the
+     provider let the customer half of the same predicate go untested, and a mutant
+     that disabled it passed the gate — a check that cannot tell which of its two
+     conditions fired is half a check. */
+  const refuse = (breakIt) => {
+    const from = fakeStorage();
+    const writer = boot({ storage: from });
+    writer.persist();
+    const dump = JSON.parse(from.getItem('sukinnect.snapshot.v1'));
+    breakIt(dump);
+    const into = fakeStorage();
+    into.setItem('sukinnect.snapshot.v1', JSON.stringify(dump));
+    return boot({ storage: into });
+  };
+  const ghostProvider = refuse(d => { d.bookings[0].providerId = 'ghost'; });
+  ghostProvider.render();
+  const notice = ghostProvider._document.getElementById('notice-root');
+  const ghostCustomer = refuse(d => { d.bookings[0].customerId = 'nobody'; });
+  c.check('a booking that belongs to nobody is refused, and named',
+    /provider or customer that does not exist/.test(ghostProvider.state.storageNotice || ''),
+    ghostProvider.state.storageNotice);
+  c.check('the customer half of that door holds on its own',
+    /provider or customer that does not exist/.test(ghostCustomer.state.storageNotice || ''),
+    ghostCustomer.state.storageNotice);
+  c.check('the refusal is painted where it can be read, not only stored',
+    !!notice && /refused/.test(notice.innerHTML) && /Dismiss this notice/.test(notice.innerHTML),
+    notice ? notice.innerHTML.slice(0, 130) : 'no #notice-root in the document');
+  c.check('and the sample records are what loaded, not a half-read dump',
+    !ghostProvider.BOOKINGS.some(b => b.providerId === 'ghost') && ghostProvider.BOOKINGS.length > 0);
 
   const f = boot({ storage: fakeStorage() });
   f.BOOKINGS[0].status = 'cancelled';

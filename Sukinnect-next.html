@@ -288,6 +288,19 @@
     display:flex; align-items:center; justify-content:center; padding:var(--s-4);
   }
   .modal-card{ width:100%; max-width:350px; }
+  /* In the flow above the screen rather than fixed over it: a storage warning that
+     covered content would be the second thing on this device hiding the first. */
+  .storage-notice{
+    display:flex; align-items:center; gap:10px; padding:10px 12px;
+    background:var(--warning-100); color:var(--warning-ink);
+    border-bottom:1px solid var(--line); font-size:var(--t-body-sm); line-height:1.45;
+  }
+  .storage-notice .sn-ic{ flex-shrink:0; display:inline-flex; }
+  .storage-notice .sn-text{ flex:1; min-width:0; }
+  .storage-notice .sn-x{
+    flex-shrink:0; min-width:var(--tap); min-height:var(--tap); border:0; background:transparent;
+    color:inherit; font-size:var(--t-title); line-height:1; cursor:pointer;
+  }
   .form-label{ display:block; font-size:var(--t-body); margin-top:10px; }
   /* Used fourteen times and never written down: a bulk edit renamed the call sites
      and left the rule behind, so these labels inherited nothing. */
@@ -1466,6 +1479,7 @@
 
 <div class="phone">
   <div class="devicebar"><span>9:41</span><span style="display:inline-flex; align-items:flex-end; gap:2px;"><i style="display:inline-block; width:3px; height:4px; background:var(--device-signal); border-radius:1px;"></i><i style="display:inline-block; width:3px; height:6px; background:var(--device-signal); border-radius:1px;"></i><i style="display:inline-block; width:3px; height:8px; background:var(--device-signal); border-radius:1px;"></i><i style="display:inline-block; width:3px; height:10px; background:var(--device-signal); border-radius:1px;"></i><b style="margin-left:5px; font-weight:700;">5G</b><b style="margin-left:4px; font-weight:700;">100%</b></span></div>
+  <div id="notice-root" aria-live="polite"></div>
   <div class="screen" id="screen"></div>
   <div id="navbar"></div>
   <div id="sheet-root"></div>
@@ -4651,7 +4665,23 @@ function snapshot() {
   };
 }
 
-function persist() { return Store.write(snapshot()); }
+/* A one-shot notice. The gate already proved persist() returns false without
+  throwing; what it never proved is that anybody is told. Twenty-four call sites
+  discard the answer, so on a device whose storage is full every "saved" toast in
+  this app was a promise about a write that had just failed. */
+const storageWarned = {};
+function storageNotice(message) {
+  if (storageWarned[message]) return;
+  storageWarned[message] = true;
+  state.storageNotice = message;
+  showToast(message, 'warn');
+}
+
+function persist() {
+  const ok = Store.write(snapshot());
+  if (!ok) storageNotice('This device refused to store the change. It holds for this session only — a reload will lose it.');
+  return ok;
+}
 
 function hydrate() {
   const snap = Store.read();
@@ -4678,6 +4708,35 @@ function hydrate() {
   if (Array.isArray(snap.offers) &&
       snap.offers.some(o => o.bookingId && !snap.bookings.some(b => b.id === o.bookingId)))
     return { restored:false, kind:Store.kind, rejected:'an offer belongs to no booking' };
+  /* The checks above ask whether each value is legal. None asked whether the
+     references point at anything. A booking whose providerId names nobody loads
+     happily and then renders under the first provider in the table, because
+     providerOf() has a fallback — so one dangling id repaints that job's name,
+     phone, rating and payout account on both sides, from the receipt to the admin
+     console, and every figure in between stays arithmetically perfect. A record
+     that belongs to nobody is not a record; it is a hole wearing an id. */
+  const known = (list, id) => Array.isArray(list) && list.some(r => r && r.id === id);
+  if (snap.bookings.some(b => (b.providerId && !known(snap.providers, b.providerId))
+                           || (b.customerId && !known(snap.customers, b.customerId))))
+    return { restored:false, kind:Store.kind, rejected:'a booking belongs to a provider or customer that does not exist' };
+  if (Array.isArray(snap.listings) &&
+      snap.listings.some(l => l && l.providerId && !known(snap.providers, l.providerId)))
+    return { restored:false, kind:Store.kind, rejected:'a listed service belongs to no provider' };
+  if (Array.isArray(snap.payouts) &&
+      snap.payouts.some(p => p && p.providerId && !known(snap.providers, p.providerId)))
+    return { restored:false, kind:Store.kind, rejected:'a payout belongs to no provider' };
+  /* Every child record that names a booking, in one pass. A payment against
+     nothing would still be counted as money, and a case, a status line or a
+     message would still print as though it belonged to a job. */
+  let orphan = null;
+  [['payments', 'a payment'], ['disputes', 'a case'], ['statusEvents', 'a status line'],
+   ['notifications', 'a notification'], ['messages', 'a message']].forEach(pair => {
+    const rows = snap[pair[0]];
+    if (!orphan && Array.isArray(rows)
+        && rows.some(r => r && r.bookingId && !known(snap.bookings, r.bookingId)))
+      orphan = pair[1] + ' belongs to a booking that does not exist';
+  });
+  if (orphan) return { restored:false, kind:Store.kind, rejected:orphan };
   replaceContents(PROVIDERS, snap.providers);
   replaceContents(BOOKINGS, snap.bookings);
   replaceContents(CUSTOMERS, snap.customers);
@@ -6704,6 +6763,23 @@ window.addEventListener('popstate', function(){
   stepBack();
 });
 
+/* Painted from state.storageNotice, which storageNotice() sets when a write is
+   refused or a dump is rejected. Kept out of render()'s per-role branches so there
+   is one place that decides whether the device is telling the truth about saving. */
+function renderNotice(){
+  const root = document.getElementById('notice-root');
+  if (!root) return;
+  const text = state.storageNotice || '';
+  if (root._notice === text) return;
+  root._notice = text;
+  root.innerHTML = text ? `<div class="storage-notice">
+    <span class="sn-ic">${ic('alert-triangle', 16)}</span>
+    <span class="sn-text">${esc(text)}</span>
+    <button type="button" class="sn-x" aria-label="Dismiss this notice"
+      onclick="state.storageNotice=null; renderNotice();">&times;</button>
+  </div>` : '';
+}
+
 function render(){
   const screen = document.getElementById('screen');
   const nav = document.getElementById('navbar');
@@ -6743,6 +6819,7 @@ function render(){
   // The sheet lives in its own layer above the screen and the tab bar, so it
   // paints independently of whichever screen is underneath it.
   renderSheet();
+  renderNotice();
 
   // Keep the reader's place during in-place updates; start at the top of a
   // genuinely new screen. Applied instantly so nothing slides on its own.
@@ -10439,7 +10516,13 @@ function bindTabHandlers(){
   }
 }
 
-hydrate();
+/* hydrate() answers three questions the app used to discard: was there a dump, did
+   it survive validation, and can this device store anything at all. A refused dump
+   looked exactly like a first run, so the person who had bookings on this phone saw
+   the sample records and no explanation for where theirs went. */
+const BOOT = hydrate();
+if (BOOT.rejected) storageNotice('Your saved session was refused: ' + BOOT.rejected + '. The sample records are loaded instead.');
+else if (BOOT.kind === 'memory') storageNotice('This browser will not keep records between sessions, so anything saved here lasts only while the screen is open.');
 seedHistoricalLedger();
 seedStatusHistory();
 seedMessages();
