@@ -277,8 +277,14 @@
     font-size:var(--t-caption); font-weight:800; color:var(--mist);
     margin:14px 0 7px;
   }
+  /* Above .sheet-layer (60), not below it. Three profile modals are opened from a
+     sheet, and a modal that sits under the sheet's scrim is not a modal: the scrim
+     covers it entirely and its onclick closes the sheet, so every tap meant for the
+     dialog's own control dismissed the screen behind it. Measured, not assumed —
+     the instrument hit-tests the panel and all 48 sampled points used to answer
+     .sheet-scrim. */
   .modal-layer{
-    position:fixed; inset:0; background:var(--scrim); z-index:50;
+    position:fixed; inset:0; background:var(--scrim); z-index:70;
     display:flex; align-items:center; justify-content:center; padding:var(--s-4);
   }
   .modal-card{ width:100%; max-width:350px; }

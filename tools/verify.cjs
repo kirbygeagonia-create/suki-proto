@@ -1114,6 +1114,22 @@ suite('hygiene', async () => {
     (raw.match(/\r\r\n/g) || []).length + ' × \\r\\r\\n, CR ' + (raw.match(/\r/g) || []).length
       + ' against LF ' + (raw.match(/\n/g) || []).length);
 
+  /* A modal opened from a sheet has to outrank the sheet, or it is not a modal.
+     .sheet-scrim covers the whole phone and closes the sheet on any tap, so while it
+     sat above .modal-layer every control in those three dialogs was unreachable —
+     the dialog was visible, dimmed, and inert. Only a hit-test in a real layout can
+     see that, which is why the camera samples the panel; this pins the number the
+     layout has to keep. */
+  const layerZ = (sel) => {
+    const rule = new RegExp('\\' + sel + '\\s*\\{([^}]*)\\}').exec(css);
+    const z = rule && /z-index:\s*(-?\d+)/.exec(rule[1]);
+    return z ? parseInt(z[1], 10) : null;
+  };
+  const modalZ = layerZ('.modal-layer'), sheetZ = layerZ('.sheet-layer');
+  c.check('a modal opened from a sheet sits above the sheet',
+    modalZ !== null && sheetZ !== null && modalZ > sheetZ,
+    '.modal-layer z-index ' + modalZ + ' against .sheet-layer ' + sheetZ);
+
   /* Category artwork is static by owner's rule, not by taste: the picture is what
      tells a plumber from an electrician, and this app once ran 33 infinite
      animations over the seven tiles. A CSS-only guard would not hold — the motion
