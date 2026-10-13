@@ -1256,9 +1256,11 @@ official mark is a PNG, not an icon, and it is still the only brand image on the
 The rebuild also added a real verification surface, because reading the file cannot
 see a layout: `node tools/shot.cjs` drives the machine's own Chrome headless over the
 DevTools Protocol with no npm packages, and `--measure` runs an in-page instrument
-across all 60 screens for tap targets, WCAG contrast (sampling gradients at the text's
+across all 62 screens for tap targets, WCAG contrast (sampling gradients at the text's
 own position), clipped text, off-scale fonts, content trapped under the nav, unnamed
-controls, escaping map panes, anything painting over an open modal, and whether any
+controls, form fields a screen reader cannot name, images that asked for a file and got no
+pixels, escaping map panes, chart labels escaping their own chart box, anything painting
+over an open modal, and whether any
 category artwork is moving in the painted page — which is the one thing a source grep
 cannot prove, because a class with no rule and a rule with a typo both read fine as text.
 A screenshot
