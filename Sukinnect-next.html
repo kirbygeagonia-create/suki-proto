@@ -1738,12 +1738,27 @@ const CATEGORY_DEFAULTS = {
   commissionBasis: 'labour'
 };
 function categoryBehaviour(serviceId){
-  const svc = SERVICES.find(s => s.id === serviceId) || SERVICES[0];
-  return Object.assign({}, CATEGORY_DEFAULTS, svc.behaviour || {});
+  /* A category the catalogue does not hold gets the generic shape, not the first
+     category's overrides — a row that does not exist must not inherit someone
+     else's modes, safety rules, matching rules or commission basis. */
+  const svc = SERVICES.find(s => s.id === serviceId);
+  return Object.assign({}, CATEGORY_DEFAULTS, (svc && svc.behaviour) || {});
 }
+/* An unknown trade used to be drawn as Plumbing: the label, the droplet icon, the
+   plumbing tint and the plumbing rate on every card, because SERVICES[0] was the
+   answer to a question nothing in the file can ask. The tint is two existing tokens
+   rather than a new hex, so the unknown case cannot become an eighth trade. */
 function serviceMeta(serviceId){
-  const svc = SERVICES.find(s => s.id === serviceId) || SERVICES[0];
-  const theme = SERVICE_THEME[svc.id] || SERVICE_THEME.delivery;
+  const svc = SERVICES.find(s => s.id === serviceId);
+  if (!svc) {
+    return { id:null, askedFor:serviceId || null, label:'Service not on this roster',
+             icon:'alert-triangle', bg:'var(--border)', fg:'var(--text-secondary)',
+             pilot:false, behaviour:categoryBehaviour(serviceId) };
+  }
+  /* A declared trade with no tint of its own takes the neutral pair, not Delivery's
+     cyan: a new category arriving under §44 must not arrive wearing another trade's
+     colours, and the fallback is the same one an unknown id gets two lines below. */
+  const theme = SERVICE_THEME[svc.id] || { bg:'var(--border)', fg:'var(--text-secondary)' };
   return { id:svc.id, label:svc.label, icon:svc.icon, bg:theme.bg, fg:theme.fg,
            pilot:!!svc.pilot, behaviour:categoryBehaviour(svc.id) };
 }
@@ -2050,6 +2065,14 @@ function applyProviderIdentity(id){
   Object.assign(state.providerProfileData, JSON.parse(JSON.stringify(profile)));
   return CURRENT_PROVIDER_ID;
 }
+/* Whose dashboard this is. Two screens asked for it and, finding nobody, took
+   PROVIDERS[0] — so a mistyped CURRENT_PROVIDER_ID would have painted Ramil's
+   reviews, ratings and earnings on a build signed in as somebody else, and every
+   figure on the page would have looked correct. null means the caller has to say
+   so instead of showing a person who is not the one holding the phone. */
+function signedInProvider(){
+  return PROVIDERS.find(p => p.id === CURRENT_PROVIDER_ID) || null;
+}
 
 /* Demo bookings are dated against the day they are opened, so a job meant to
    read as upcoming does not expire into a fixed September the moment the file is
@@ -2286,7 +2309,29 @@ const BOOKINGS = [
 ];
 
 function bookingById(id){ return BOOKINGS.find(b => b.id === id) || null; }
-function providerOf(booking){ return PROVIDERS.find(p => p.id === booking.providerId) || PROVIDERS[0]; }
+/* A booking whose providerId names nobody used to be answered with PROVIDERS[0], so
+   one dangling id repainted that job with the plumber's name, phone, rating, payout
+   account and map pin while every figure on the screen stayed arithmetically
+   perfect. hydrate() now refuses such a dump at the door; this is the seam that
+   makes the same id unpaintable if it reaches a screen any other way.
+   A record-shaped stand-in rather than null because 54 call sites read a field
+   straight off the answer — what changes is *whose* identity shows, not how many
+   screens have to learn the new rule. Built fresh per call: a frozen shared object
+   would let one screen's write become another provider's record. */
+function unknownProviderOf(booking){
+  return {
+    id:null, unknown:true, missingProviderId:booking && booking.providerId || null,
+    name:'Unknown provider', service:'Not on this roster', serviceId:null,
+    barangay:'not on file', address:'', phone:'', bankAccount:'',
+    distanceKm:0, lat:null, lng:null, availability:'unknown',
+    rateCentavos:null, rateUnit:'no rate on file', serviceRadius:'',
+    rating:0, jobs:0, trustScore:0, badges:[], reviews:[],
+    seedRating:0, seedJobs:0, seedRatings:0, ratingsFromDevice:0
+  };
+}
+function providerOf(booking){
+  return PROVIDERS.find(p => p.id && booking && p.id === booking.providerId) || unknownProviderOf(booking);
+}
 function customerOf(booking){ return CUSTOMERS.find(c => c.id === booking.customerId) || null; }
 /* The two role views the app used to keep as separate tables. Same objects, so
    an action taken on one side is immediately true on the other. */
@@ -2944,6 +2989,13 @@ function onAccept(booking, actor) {
     } else {
     const listing = booking.listingId ? listingById(booking.listingId) : defaultListingFor(booking.providerId);
     const provider = providerOf(booking);
+    /* No roster record and no listing means there is no published price to freeze.
+       Continuing would take provider.rateCentavos from the unknown-provider stand-in
+       — null — and Math.round(null) is 0, so the job would be accepted at ₱0 and the
+       ledger would book that as fact. */
+    if (provider.unknown && !listing) {
+      throw new GuardRejected('No provider record and no listing back this job, so there is no price to agree.');
+    }
     freezePricing(booking, computeBreakdown({
       baseCentavos: listing ? listing.basePriceCentavos : provider.rateCentavos,
       categoryId: listing ? listing.categoryId : provider.serviceId,
@@ -9857,7 +9909,17 @@ function setProviderBusy() {
    for an answer. The button says what setProviderAvailable does rather than
    promising a 5–8 PM window the prototype has no model for. */
 function opportunityRadar(){
-  const me = PROVIDERS.find(p => p.id === CURRENT_PROVIDER_ID) || PROVIDERS[0];
+  const me = signedInProvider();
+  if (!me) {
+    return `<div class="card" style="background:var(--surface); border:1px solid var(--line);">
+      <div class="row" style="margin-bottom:6px;">
+        <span style="font-size:var(--t-caption); font-weight:800; color:var(--ink);">${ic("alert-triangle",12)} Opportunity radar</span>
+      </div>
+      <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.45;">
+        This device is signed in as an id the roster does not hold, so there is no trade to count requests for. Nothing here is shown under another provider's name.
+      </div>
+    </div>`;
+  }
   const cat = serviceMeta(me.serviceId);
   const waiting = BOOKINGS.filter(b => b.status === 'requested' && providerOf(b).serviceId === me.serviceId);
   const hands = PROVIDERS.filter(p => p.serviceId === me.serviceId).length;
@@ -10043,7 +10105,15 @@ function cancellationRate(providerId) {
 function providerDashboard(){
   /* The signed-in provider, not p1: this card used to read out Ramil's reviews to
      whoever was holding the phone. */
-  const me = PROVIDERS.find(p => p.id === CURRENT_PROVIDER_ID) || PROVIDERS[0];
+  const me = signedInProvider();
+  if (!me) {
+    return `
+  ${screenHeader('Dashboard', { sub:'Signed in as an id this roster does not hold' })}
+  <div class="pad" style="background:var(--cloud);">
+    ${emptyState('alert-triangle', 'No provider record behind this sign-in',
+      'The account id on this device matches nobody on the roster, so there are no reviews, jobs or earnings to show. Nothing here is filled in from another provider.')}
+  </div>`;
+  }
   const providerReviews = me.reviews || [];
   const reviewTotal = providerReviews.length;
   const positiveReviews = providerReviews.filter(r => r.stars >= 4).length;

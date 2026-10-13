@@ -2286,6 +2286,109 @@ suite('honesty', async () => {
         : 'one of the three guards does not hold' };
   })());
 
+  /* The same class one layer down, at the seams every screen reads through.
+     `providerOf()` answered a dangling providerId with PROVIDERS[0], so a job whose
+     provider record is gone was repainted with the plumber's name, rating, badges,
+     reviews and payout account on both sides of the transaction — while every figure
+     on the card stayed arithmetically perfect, which is exactly what let it live this
+     long. hydrate() refuses such a dump at the door (the storage pass), but the door is
+     one of the ways a record goes missing rather than the only one: the roster can also
+     lose a row in memory, and a signed-in id can name nobody. Each assertion again has
+     both halves — the missing record paints nothing belonging to a real person, and a
+     present one still paints itself. */
+  verdict('a provider record that is gone leaves no identity behind', (() => {
+    const a = boot();
+    a.state.view = 'app';
+    a.state.profileSheet = null; a.state.sheet = null; a.state.providerProfileModal = null;
+    const first = a.PROVIDERS[0];
+    const paint = () => (a.render(), a._document.getElementById('screen').innerHTML);
+    const owns = a.BOOKINGS.find(b => b.providerId === first.id
+      && b.customerId === a.CURRENT_CUSTOMER_ID);
+
+    a.state.role = 'resident'; a.state.tab = 'booking_detail';
+    a.state.selectedBookingId = owns.id;
+    const withRecord = paint();
+    const seamHolds = a.providerOf(owns) === first;
+
+    /* Take the row out, leaving the job that names it — the state one dangling
+       reference produces, and the one the door cannot catch in memory. */
+    const removed = a.PROVIDERS.splice(a.PROVIDERS.indexOf(first), 1)[0];
+    const standIn = a.providerOf(owns);
+    const honest = standIn.unknown === true && standIn.id === null && standIn.serviceId === null;
+    const withoutRecord = paint();
+    const identity = [first.name, (first.reviews[0] || {}).comment, (first.badges[2] || '')]
+      .filter(Boolean).filter(s => withoutRecord.includes(String(s)));
+
+    const signedIn = a.signedInProvider();
+    a.state.role = 'provider'; a.state.tab = 'dashboard';
+    const dashWithout = paint();
+    a.PROVIDERS.unshift(removed);
+    a.state.selectedBookingId = owns.id;
+    a.state.role = 'resident'; a.state.tab = 'booking_detail';
+    const restored = paint();
+
+    /* The money half: with no provider row and no listing there is no published price,
+       and provider.rateCentavos from the stand-in is null — Math.round(null) is 0, so
+       continuing would have accepted the job at ₱0 and booked that as fact. The reason
+       text is asserted, not just that something refused: the same door also refuses a
+       double-booked provider, and a check that passes on either message is half a check.
+       A listing is enough on its own, so the control beside it accepts a job whose
+       provider row is gone but whose price is still published — refusing that too would
+       pass this check for the wrong reason. */
+    const listed = a.LISTINGS.find(l => l.providerId === first.id && l.isActive !== false);
+    const orphan = { id:'probe-orphan', providerId:first.id, customerId:a.CURRENT_CUSTOMER_ID,
+      status:'requested', summary:'A job whose provider row is gone but priced', date:'Probe day',
+      time:'00:00', createdAt:new Date().toISOString(), source:'device',
+      listingId: listed ? listed.id : null };
+    const ghost = { id:'probe-ghost', providerId:'p-nobody', customerId:a.CURRENT_CUSTOMER_ID,
+      status:'requested', summary:'A job with nobody behind it', date:'Probe night',
+      time:'00:30', createdAt:new Date().toISOString(), source:'device' };
+    a.BOOKINGS.push(orphan, ghost);
+    a.PROVIDERS.splice(a.PROVIDERS.indexOf(removed), 1);
+    let refused = null;
+    try { a.attemptTransition(ghost.id, 'upcoming', { role:'provider', name:'Probe', id:first.id }); }
+    catch (err) { refused = { name: err && err.name, message: String((err && err.message) || '') }; }
+    const pricedAnyway = a.attemptTransition(orphan.id, 'upcoming',
+      { role:'provider', name:'Probe', id:first.id });
+    a.PROVIDERS.push(removed);
+    const noFabricatedPrice = refused && refused.name === 'GuardRejected'
+      && /no price to agree/.test(refused.message)
+      && !ghost.pricing && ghost.amountCentavos === undefined && ghost.status === 'requested';
+    const listedStillPrices = pricedAnyway.status === 'upcoming'
+      && pricedAnyway.pricing && pricedAnyway.pricing.baseCentavos > 0;
+
+    const unknownTrade = a.serviceMeta('not-a-category');
+    const catalogueOk = unknownTrade.label === 'Service not on this roster'
+      && unknownTrade.id === null && a.serviceMeta('plumbing').label === 'Plumbing'
+      && a.serviceMeta('plumbing').icon === 'droplet';
+    /* A category that does not exist must not inherit one that does: the pilot's
+       harvest-and-buy mode set, its safety rules and its commission basis all live in
+       that row's overrides. */
+    const fruitBasis = a.categoryBehaviour('fruit').commissionBasis;
+    const behaviourOk = a.categoryBehaviour('not-a-category').commissionBasis
+      === a.CATEGORY_DEFAULTS.commissionBasis && fruitBasis !== a.CATEGORY_DEFAULTS.commissionBasis;
+
+    return { ok: seamHolds && honest && /Unknown provider/.test(withoutRecord)
+        && identity.length === 0 && signedIn === null
+        && /No provider record behind this sign-in/.test(dashWithout)
+        && restored.includes(first.name) && noFabricatedPrice && listedStillPrices
+        && catalogueOk && behaviourOk,
+      why: !seamHolds || !restored.includes(first.name)
+        ? 'a provider record that IS on the roster stopped resolving to itself'
+        : !honest ? 'the missing record still resolves to a real provider'
+        : !/Unknown provider/.test(withoutRecord) ? 'the resident’s job card names nobody for a missing provider'
+        : identity.length ? 'the job card painted ' + identity.join(', ') + ' from the fallback provider'
+        : signedIn !== null ? 'the signed-in lookup answered a real provider after the row went away'
+        : !/No provider record behind this sign-in/.test(dashWithout)
+          ? 'the provider dashboard filled in from someone else when the sign-in names nobody'
+          : !noFabricatedPrice ? 'a job with no provider and no listing froze money anyway ('
+            + (refused ? refused.name + ': ' + refused.message : 'it was accepted') + ')'
+          : !listedStillPrices ? 'a job that IS priced by a listing stopped being acceptable'
+          : !catalogueOk ? 'an unknown trade is drawn as a known one'
+          : !behaviourOk ? 'an unknown category inherits another trade’s behaviour'
+          : 'one half of the seam does not hold' };
+  })());
+
   /* The administrator's provider profile was the last screen typing its own facts: the
      audit tab was four dated lines identical for all eight providers — one of them
      "Received 5-star review" for a provider with no review on file — and the
