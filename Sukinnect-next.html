@@ -5643,7 +5643,10 @@ function mountMap(elId, at, zoom, popup, fallbackLines){
 // Every route into a provider's public profile goes through here, so the record,
 // the tab it came back to, and the map cannot be set three different ways.
 function openProviderDetail(providerId, fromTab){
-  const p = PROVIDERS.find(x => x.id === providerId) || PROVIDERS[2];
+  const p = PROVIDERS.find(x => x.id === providerId);
+  /* An unknown id used to open provider index 2 — her photo, her rate, her
+     credentials and her map pin — under whatever name was tapped. */
+  if (!p) { showToast('No provider carries that id'); return; }
   state.selectedProvider = p;
   state.previousTab = fromTab || 'results';
   state.tab = 'provider_detail';
@@ -7925,7 +7928,15 @@ function ratingCell(b){
 }
 
 function residentBookingDetail(){
-  const b = bookingsForResident().find(item => item.id === state.selectedBookingId) || bookingsForResident()[0];
+  /* An id this account does not hold used to fall back to the first booking in the
+     list, so the screen painted one job's money, provider and payment state under a
+     reference that named another. Same rule as the provider's job screen. */
+  const b = bookingsForResident().find(item => item.id === state.selectedBookingId);
+  if (!b) return `
+  ${screenHeader('Booking details', { back: "state.tab='bookings'; render();", backLabel: 'Back to bookings' })}
+  <div class="pad" style="background:var(--cloud);">
+    ${emptyState('alert-triangle', 'That booking is not on this account', 'This profile has no record with that reference, so there is nothing here to show. Open one from Bookings.')}
+  </div>`;
   
   const statusText = label(b.status).toUpperCase();
 
@@ -8795,7 +8806,11 @@ function adminDisputes(){  const open = DISPUTES.filter(d => caseIsOpen(d));
    review called her 'LS-PV-0024' with docs:4, so "Application #…" and the row that opened
    it named the same person two different ways. One record now, read by both. */
 function verificationApplication(){
-  return PENDING_APPLICANTS.find(a => a.id === state.selectedVerificationId) || PENDING_APPLICANTS[0];
+  /* No fallback applicant. The review screen, three actions and the undo all read
+     this, so answering an unknown id with whoever was first in the queue let a note,
+     a document state or an approval land on the wrong person — the exact thing the
+     per-applicant review records were built to prevent. */
+  return PENDING_APPLICANTS.find(a => a.id === state.selectedVerificationId) || null;
 }
 
 function openProviderVerification(id){
@@ -8811,6 +8826,7 @@ function openProviderVerification(id){
 
 function verificationAction(action, value){
   const app = verificationApplication();
+  if (!app) { state.profileError = 'No application is open, so nothing can be recorded against one.'; render(); return; }
   const review = reviewOf(app.id);
   const adminName = state.adminProfileData.name;
   /* Every branch used to push a literal 'Sep 9, 2:45 PM - …' into the activity list, so
@@ -8897,6 +8913,7 @@ function rejectApplication(){
 function flagDocument(){
   const kind = state.verificationDocKind;
   const app = verificationApplication();
+  if (!app) { state.profileError = 'No application is open, so nothing can be recorded against one.'; render(); return; }
   const review = reviewOf(app.id);
   if (!kind) { state.profileError = 'Open a document before flagging it.'; render(); return; }
   const sel = document.getElementById('flag-issue');
@@ -8915,6 +8932,11 @@ function flagDocument(){
 
 function providerVerificationReview(){
   const app = verificationApplication();
+  if (!app) return `
+  ${screenHeader('Verification progress', { back: "state.tab='admin_verifications'; render();", backLabel: 'Back to the queue' })}
+  <div class="pad" style="background:var(--cloud);">
+    ${emptyState('alert-triangle', 'No application is open', 'The queue has no applicant with that reference, so there is nothing to review. Open one from Provider verification.')}
+  </div>`;
   const review = reviewOf(app.id);
   const docs = applicationDocs(app.id);
   const submitted = docs.filter(d => d.submittedAt).length;
@@ -8968,6 +8990,7 @@ function providerVerificationReview(){
 
 function reopenReview(){
   const app = verificationApplication();
+  if (!app) { state.profileError = 'No application is open, so nothing can be recorded against one.'; render(); return; }
   const review = reviewOf(app.id);
   review.status = 'pending';
   review.decidedAt = null;

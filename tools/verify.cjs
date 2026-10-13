@@ -2196,6 +2196,54 @@ suite('honesty', async () => {
         : 'the real id stopped rendering' };
   })());
 
+  /* The same rule at the three sites that sweep left behind. Each is reachable only by
+     an id the lists never hand out, so no thumb will ever find them and no screenshot
+     ever did — which is the whole reason the check exists. Each half is asserted: the
+     foreign id must leak nothing, and a legitimate one must still render its own
+     record, so the check cannot pass by painting nothing at all. */
+  verdict('the last three screens refuse somebody else’s record', (() => {
+    const paint = () => (app.render(), app._document.getElementById('screen').innerHTML);
+    app.state.view = 'app'; app.state.providerProfileModal = null;
+    app.state.profileSheet = null; app.state.sheet = null;
+
+    app.state.role = 'resident'; app.state.tab = 'booking_detail';
+    const mine = app.bookingsForResident();
+    const own = mine[0];
+    const foreign = app.BOOKINGS.find(b => b.customerId && !mine.some(x => x.id === b.id));
+    app.state.selectedBookingId = foreign ? foreign.id : 'no-such-booking';
+    const resMiss = paint();
+    app.state.selectedBookingId = own.id;
+    const resHit = paint();
+
+    app.state.role = 'admin'; app.state.tab = 'verification_review';
+    const applicant = app.PENDING_APPLICANTS[0];
+    app.state.selectedVerificationId = 'no-such-application';
+    const revMiss = paint();
+    app.state.selectedVerificationId = applicant.id;
+    const revHit = paint();
+
+    const chosen = app.state.selectedProvider;
+    const tabBefore = app.state.tab;
+    app.openProviderDetail('no-such-provider', 'results');
+    const held = app.state.selectedProvider === chosen && app.state.tab === tabBefore;
+
+    const leaksRes = [own.summary, own.date].filter(Boolean).filter(s => resMiss.includes(String(s)));
+    const leaksRev = [applicant.name, applicant.applicationId]
+      .filter(Boolean).filter(s => revMiss.includes(String(s)));
+    return { ok: /That booking is not on this account/.test(resMiss) && leaksRes.length === 0
+        && resHit.includes(own.summary)
+        && /No application is open/.test(revMiss) && leaksRev.length === 0
+        && revHit.includes(applicant.name) && held,
+      why: leaksRes.length ? 'the resident’s not-found card leaked ' + leaksRes.join(', ')
+        : !/That booking is not on this account/.test(resMiss) ? 'a foreign booking id still renders a real booking'
+        : !resHit.includes(own.summary) ? 'the resident’s own booking stopped rendering'
+        : leaksRev.length ? 'the review’s not-found card leaked ' + leaksRev.join(', ')
+        : !/No application is open/.test(revMiss) ? 'a foreign application id still renders an applicant'
+        : !revHit.includes(applicant.name) ? 'a real application stopped rendering'
+        : !held ? 'an unknown provider id still moved the screen onto someone'
+        : 'one of the three guards does not hold' };
+  })());
+
   const unsourced = ['Expires in 23 days', 'ID Verification - ', 'Last active: 2 hours ago',
     /* The verification console's typed claims. Each of these was painted as a fact about
        an applicant while no record held it. The last two carry their trailing comma on
