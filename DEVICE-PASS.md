@@ -59,9 +59,9 @@ What was verified about the artifact, not assumed:
 
 | Check | Result |
 |---|---|
-| `:app:assembleDebug` | **BUILD SUCCESSFUL**. Current output `Sukinnect-1.2-preview.10-debug.apk`, **2,113,374 bytes**, `versionCode 12`, `versionName 1.2-preview.10` — the build where a detail screen stops answering an unknown id with somebody else's record. Before it: `.9` 2,112,782 (decided tab), `.8` 2,111,574 (verification records), `.7` 2,105,566 (profile honesty), `.6` 2,104,798 (was 4,595,092 before reicon.js left the bundle) |
+| `:app:assembleDebug` | **BUILD SUCCESSFUL**. Current output `Sukinnect-1.2-preview.11-debug.apk`, **2,118,834 bytes**, `versionCode 13`, `versionName 1.2-preview.11` — the build where the dialogs a sheet was covering become tappable, a stored record that belongs to nobody is refused rather than repainted, the app says out loud when the device will not keep what it was told to save, reputation moves when work is finished, and a provider is found where they said they serve. `SCHEMA_VERSION` is **15**, so a handset holding v14 will show the refusal notice on first launch — that is the new notice working, not a fault. Earlier rows: `.10` was `2,113,374 bytes`, `versionCode 12` — the build where a detail screen stops answering an unknown id with somebody else's record. Before it: `.9` 2,112,782 (decided tab), `.8` 2,111,574 (verification records), `.7` 2,105,566 (profile honesty), `.6` 2,104,798 (was 4,595,092 before reicon.js left the bundle) |
 | Launcher label | `aapt dump badging`: **'Sukinnect · preview'** on this debug APK, and still **'Sukinnect'** on the Oct-1 release APK — the override is debug-scoped, measured on both artifacts |
-| `assets/Sukinnect.html` inside the APK | `cmp` says **byte-identical to `Sukinnect-next.html`** — 756,087 bytes at the `.10` build (754,702 at `.9`, 751,283 at `.8`). Compared with `cmp`, not with a hash: `.gitattributes` normalises line endings, so a hash match is the wrong question for a text file here |
+| `assets/Sukinnect.html` inside the APK | `cmp` says **byte-identical to `Sukinnect-next.html`** — 770,173 bytes at the `.11` build (756,087 at `.10`, 754,702 at `.9`, 751,283 at `.8`). Verified by extracting `assets/Sukinnect.html` out of the APK itself, not from the staged copy. Compared with `cmp`, not with a hash: `.gitattributes` normalises line endings, so a hash match is the wrong question for a text file here |
 | The seven category PNGs inside the APK | `cmp` says identical to `assets/category-art/*.png`, and they sit at `assets/assets/category-art/` because the WebView root mirrors the repo root |
 | The four Atkinson weights inside the APK | `cmp` says identical, and `unzip -v` says **Stored** — `noCompress 'woff2'` is doing its job |
 | Every path the bundled page asks for | `check-assets.cjs --apk`: **48 of 48 resolve** |
@@ -169,6 +169,38 @@ gesture, and an app killed mid-review.
       only what was actually recorded; a note typed into the box and never saved must not appear,
       and a saved note must. Notes are per applicant now — open Liza Ramos and confirm none of
       Maria's notes or status is painted on her.
+
+### 3e. What this build changed — 5 min, new since the deck audit
+
+- [ ] **A dialog opened from a sheet must answer its own buttons.** Resident → Profile → Payment →
+      `Change method`. The "Change payment method" card used to paint *under* the sheet's scrim:
+      dimmed, and every tap inside it closed the sheet instead. Tap **Save method** and confirm the
+      method changes and the sheet stays. Repeat for provider → Payout and admin → Security.
+- [ ] **The refusal notice.** `SCHEMA_VERSION` went 14 → 15, so the first launch on a handset that
+      already holds records will show an amber banner at the top of the screen saying the saved
+      session was refused and naming why. That is the notice doing its job, not a crash. It must be
+      dismissable, and it must not cover the search field or the bottom navigation.
+- [ ] **Reputation moves.** Complete a job, rate it 1 star, then open that provider's public card.
+      The average must shift (a 5.0 over 59 sample ratings becomes 4.9 — a small move is correct,
+      that is what an average is) and the reputation panel must state how many ratings came from
+      **this device**. Kill the app and reopen: the figure must not move again.
+- [ ] **Coverage is what you are found by.** Provider → Profile → Service area: the list must be
+      that provider's own barangays with the base marked, not three names every provider shares.
+      Then, as a resident, filter Find Services to a barangay the signed-in provider serves but
+      does not live in — they must still appear. Filter to one they never declared — they must not.
+- [ ] **Mark myself busy.** Provider → the opportunity card. After marking busy, a resident
+      searching that trade must be shown someone else, and `Mark myself available` must bring them
+      back. Before this build the only control went available, so the promise in its toast could not
+      be tested either way.
+- [ ] **The administrator's provider profile.** Open a provider who has **no** job on this device:
+      the Activity tab must say so plainly rather than listing four September events. Open one whose
+      credential expires soon: the Credentials tab must name each document from the record and show
+      its real state — no green "Verified" for a document nothing verified.
+
+This phone renders at **~450 CSS px**, not the 360 the clipping cases were tuned against (720px
+panel at `Override density: 256`), so it will not exercise the narrow-device tab-rail case, and
+being Android 11 it cannot exercise the `targetSdk 36` edge-to-edge behaviour at all. Both remain
+open and neither is a fault in this build.
 
 The painted-page row is what the `--file=` flag added to `tools/shot.cjs` exists for. The
 camera could previously photograph only `Sukinnect-next.html` at the repo root, where

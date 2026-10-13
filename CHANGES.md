@@ -1821,3 +1821,80 @@ an app that was right. And `add-not-found-screens.cjs` converted the joined file
 with a stray carriage return on all 10,403 lines; `fix-double-cr.cjs --write` collapsed them and
 the hygiene check that pass 34 added caught it on the same run, which is the first time that guard
 has paid for itself. The script now works in LF throughout and converts once.
+
+---
+
+## 37. A full audit against the deck, and the six things it turned up
+
+Asked whether anything remained, the answer this time was measured rather than asserted: the
+deck's own text was extracted to `.shots/decktext/deck.txt` (22 slides, `tools/extract-deck-text.cjs`)
+so every claim below is checked against slide words and not against a summary of them, and the
+camera was run at three viewports including the ~450 CSS px the connected vivo 1906 actually
+renders at. Baseline before any of it: gate **465**, 60 screens, clean.
+
+### The P0: three modals nobody could use
+
+`.sheet-layer` was `z-index:60`, `.modal-layer` was `50`, and the sheet's scrim covers the whole
+phone and closes the sheet on any tap. The three profile modals reached *from* a sheet were
+therefore painted underneath it — visible, dimmed, and inert. The camera had been reporting
+`something painting on top of an open modal layer: 48` and the number had never been opened. The
+gate could not see it because it calls the handler directly; only `document.elementFromPoint` in a
+real layout can. Raised to 70, and `tools/falsify-modal-stacking.cjs` (3/3) pins the ordering.
+
+### The rule from §36 survived at three more sites
+
+`residentBookingDetail()` → `bookingsForResident()[0]`, `verificationApplication()` →
+`PENDING_APPLICANTS[0]`, `openProviderDetail()` → `PROVIDERS[2]`. The middle one is the one that
+mattered: per-applicant review records exist precisely so a note cannot land on the wrong person,
+and the id fallback was still a door to that. `tools/falsify-id-substitutions.cjs` — 4/4, both
+halves asserted as before.
+
+### What the app knew about its own storage, and discarded
+
+`hydrate()` validated four legal values and no foreign key; `providerOf()`'s fallback then
+repainted a whole job under the first provider. And its `{restored, kind, rejected}` report was
+thrown away at its only call site while `persist()`'s boolean was thrown away at 24 — so a refused
+dump looked like a first run, and a device that could not write was told "saved" by every toast.
+References are validated at the door now, and `storageNotice()` raises a standing banner plus a
+toast. `tools/falsify-storage-truth.cjs` — 5/5, after one mutant was **missed** because the
+fixture only ever dangled a provider and the customer half of the same predicate went untested.
+
+### The last screen typing its own facts
+
+The administrator's provider profile: four dated audit lines identical for all eight providers
+(including "Received 5-star review" for a provider with no review on file), and two credentials
+painted green that no record asserts. Both read `STATUS_EVENTS` and `credentialLine()` now.
+`tools/falsify-admin-profile-records.cjs` — 5/5, after two were missed: one because the check
+asked whether "Expiring soon" appeared *anywhere on the screen* and the summary card above every
+tab already prints that word.
+
+### Two owner decisions, built
+
+**Reputation now compounds** — `rating` and `jobs` derive from the seed weighted by the sample
+ratings behind it plus this device's records, and the panel says how wide the sample is. The seed
+is held in `REPUTATION_SEED`, captured before `hydrate()`, because two mutants against the first
+version proved *equivalent*: the drift they cause is absorbed by one decimal place. Schema 14 → 15.
+
+**Service area now gates discovery** — `servesBarangays` per provider, `providerMatches()` filtering
+through it, the three typed green checks gone, and availability given the "mark busy" counterpart
+it never had. `tools/falsify-reputation.cjs` 5/5, `tools/falsify-service-area.cjs` 4/4.
+
+### Where the deck and the build still differ, stated plainly
+
+Aligned and measured: the FIND → REVIEW → BOOK → RECORD spine; category-matched qualification
+review with approval blocked while a document is outstanding; commission at 10% default with
+per-category override, a 40% guard, frozen on accept and audited; no wallet and no resident
+balance; and **no planning target appears anywhere in the app** — `3,000`, `6,000`, `150` and
+`78,599` are all zero hits, so slides 6/10/15/18 cannot be mistaken for traction.
+
+Open by decision, not by accident: admin has no resident/user management and no category
+create-edit (slide 8 says "User & category management"); the deck's demand list names events,
+beauty and personal care, which the seven categories do not include; and OpenStreetMap tiles
+remain the one remote dependency, kept deliberately, with the third-party IP exposure recorded as
+a production DPA/NPC question. One measured defect is still unfixed: at 320px, 21 SVG chart
+labels paint at 12.4px against the 14px floor §68 sets.
+
+**After:** gate 465 → **478 checks, all passing**; camera **60 screens** clean at 320, 390 and 450
+on tap floor, contrast, clipping, off-scale, under-nav, unnamed controls, occlusion, moving
+artwork, horizontal overflow and console errors. Installed and run on a vivo 1906, Android 11,
+over `file://` with no network attached.

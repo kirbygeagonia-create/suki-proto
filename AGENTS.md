@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 10,423 lines, ONE :root block, 1,715 var() usages, 94 tokens declared with 91
+Sukinnect-next.html— 10,652 lines, ONE :root block, 1,722 var() usages, 94 tokens declared with 91
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1464,6 +1464,74 @@ had only ever proved that no defined function is unreferenced, which catches a d
 misses a dead button. And the privacy promise the resident's card makes was measured rather than
 assumed: for every booking the provider can actually open, a `requested` job shows a lock card and
 "Withheld", and only an accepted one shows the door and the number.
+
+THE SAME RULE APPLIES TO THE ENTRY POINT, NOT ONLY THE RENDER FUNCTION. That commit fixed two
+screens and left three: `residentBookingDetail()` fell back to `bookingsForResident()[0]`,
+`verificationApplication()` to `PENDING_APPLICANTS[0]`, and `openProviderDetail()` to
+`PROVIDERS[2]`. The middle one is the one that mattered — the per-applicant review records were
+built precisely so a note written on one applicant could not be painted on the next, and the id
+fallback was still a door to exactly that. `tools/falsify-id-substitutions.cjs`: 4 mutants, 4
+caught, with the same positive control as before.
+
+A MODAL OPENED FROM A SHEET HAS TO OUTRANK THE SHEET. `.sheet-layer` sat at `z-index:60` over
+`.modal-layer`'s 50, and the sheet's scrim covers the whole phone and closes the sheet on any tap
+— so the three profile modals reached from a sheet were painted underneath it: visible, dimmed,
+and **inert**, every tap meant for their own control dismissing the screen behind them. The camera
+had been reporting `something painting on top of an open modal layer: 48` for weeks and nobody had
+opened the number. The gate could not see it because it calls the handler directly; only a
+hit-test in a real layout can, which is the whole reason `document.elementFromPoint` is in the
+instrument. `tools/falsify-modal-stacking.cjs`: 3 mutants, 3 caught.
+
+THE APP'S OWN ANSWERS ABOUT ITS STORAGE ARE NOT DISCARDABLE. `hydrate()` validated four legal
+values and **no foreign key**, so a dump whose `booking.providerId` named nobody loaded and
+`providerOf()` answered with the first provider — one dangling id repainting a job's name, phone,
+rating and payout account on both sides while every figure stayed arithmetically perfect.
+References are validated at the door now, for bookings, listings, payouts and the five record
+families that name a booking. And `hydrate()`'s report — `{restored, kind, rejected}` with six
+distinct refusal reasons — was thrown away at its only call site, while `persist()`'s boolean was
+thrown away at 24: a refused session looked exactly like a first run, and a device that could not
+write was told "saved" by every toast in the app. `storageNotice()` raises a standing banner plus
+a toast, painted in the flow above the screen rather than fixed over it, because a storage warning
+that covers content is the second thing hiding the first. `tools/falsify-storage-truth.cjs`: 5
+mutants, 5 caught — after one was **missed**, and the mutant was right: the fixture only ever
+dangled a provider, so the customer half of the same predicate went untested and a mutant that
+disabled it passed. A check that cannot tell which of its two conditions fired is half a check.
+
+REPUTATION IS DERIVED, AND THE SEEDS ARE HELD OUTSIDE THE RECORDS. The deck promises providers "a
+reputation built from completed work" (slides 3, 7); `provider.rating` and `provider.jobs` were
+literals nothing ever wrote, so a resident could rate a job five and the figure would not stir.
+Both derive now — the seed average weighted by the sample ratings behind it, plus what this device
+recorded — and the reputation panel states how wide the sample is, so a 5.0 that becomes 4.9 after
+one 1-star reads as an average rather than a broken counter. The seed lives in `REPUTATION_SEED`,
+captured at definition time **before `hydrate()` runs**, not on the provider records: a seed stored
+on a record is cloned into the dump, and two of the four mutants written against the first version
+were shown to be *equivalent* — the drift they introduce is absorbed by one decimal place, so no
+check could see them. Making the seed immutable removes the class of defect instead of relying on
+a check to notice it. `tools/falsify-reputation.cjs`: 5 mutants, 5 caught. Schema 14 → 15, because
+a dump written before this carries a rating that was a literal and nothing on disk can tell the
+two apart.
+
+SERVICE AREA IS A RECORD AND DISCOVERY READS IT. Coverage was a string the provider typed, a panel
+painting three green checks naming Poblacion, San Isidro and Barangay 2 **for all eight providers**
+(the fruit buyer in Buayan was shown covering three barangays he never declared), and a filter
+matching only where a provider lives. A household on the edge of a plumber's radius was told there
+was no plumber for them, which is slide 3's first customer need: "a provider who can actually serve
+their area". `servesBarangays` is declared per provider and `providerMatches()` filters through
+`providerServes()`; availability gained the counterpart it never had, because with only a "go
+available" control the toast promising that residents would see you was unfalsifiable.
+`tools/falsify-service-area.cjs`: 4 mutants, 4 caught.
+
+THE CAMERA NOW MEASURES THE WIDTH YOUR HANDSET ACTUALLY USES. A vivo 1906 reports
+`Override density: 256` on a 720px panel, so its WebView lays out at **~450 CSS px**, not the 360
+every clipping case had been tuned against; `node tools/shot.cjs --measure --width=450` is clean
+there and at 390, and at 320 the only new failure is 21 SVG chart labels on the two dashboards
+painting 12.4px against a declared 15px, because a fixed `viewBox` scales its text with the
+container. That one is open. The same device arrived with **no network at all** and the app
+rendered completely, which is an unplanned proof of §81 — and the only remote dependency left in
+the file is `TILE_URL` (`{s}.tile.openstreetmap.org`, 448 requests per 390px sweep), which
+`mapFallback()` degrades honestly when the tiles never paint but which still sends a device IP and
+tile coordinates to a third-party CDN whenever there **is** a connection. Decided 2026-10-12: keep
+it, and treat the exposure as a production DPA/NPC question (slide 16) rather than a prototype bug.
 
 An animated-illustration pipeline (Lottie) was installed here and then removed again:
 it added 305KB that animated nothing, because the professional artwork it was built for
