@@ -86,6 +86,12 @@
     --s-5:20px; --s-6:24px; --s-7:28px; --s-8:32px;
     --r-sm:10px; --r-md:14px; --r-lg:20px; --r-sheet:28px; --r-pill:999px;
     --tap:44px; --field-h:48px; --cta-h:50px; --nav-h:62px;
+    /* The room a column chart's axis labels need, now that they are HTML sitting to the
+       left of the drawing rather than text inside its scaled viewBox. 56px is the widest
+       tick the app paints (₱400 at 15px) plus its gap plus a margin, and the camera
+       measures whether any label escapes the chart box — a gutter sized by eye is how
+       the first version of this hung the axis outside the card. */
+    --chart-gutter:56px;
     /* Type scale. --t-caption is the floor: nothing on any screen renders below
        12px, and a label that will not fit wraps instead of shrinking. Inputs are
        16px because a smaller input makes a mobile browser zoom the page on focus.
@@ -980,10 +986,10 @@
   }
   .rate-star:hover{ color:var(--gold); }
   .rate-star:active{transform:scale(.9);}
-  /* The shared chart kit. Text stays at the 14px floor everywhere except inside the
-     SVG, where the viewBox scales it — a 10-unit label in a 320-unit-wide box
-     renders at about 12px on a 390px phone, so the axis type is set larger in the
-     drawing than the floor would suggest and is measured, not assumed.
+  /* The shared chart kit. Every word a chart paints is HTML at a type token, including
+     the axis of a column chart — its shapes are SVG but its labels are positioned over
+     the box by percentage, because text inside a fixed viewBox scales with the
+     container and painted below §68's floor on a narrow handset.
      (The old .bar/.barchart/.barcol/.barlbl rules were removed with the last
      hand-styled chart; nothing renders through them any more.) */
   .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; border:0;}
@@ -1007,6 +1013,23 @@
     font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5;}
   .chart-title{font-weight:700; font-size:var(--t-body-sm); color:var(--ink);}
   .chart-sub{font-size:var(--t-caption); color:var(--mist); margin:2px 0 8px; line-height:1.5;}
+  /* A fixed viewBox scales its <text> with the container, so a column chart's axis
+     painted at 12.4px on a 320px handset — under the floor every other figure in the
+     app is held to (68). The shapes stay in SVG and the words are HTML. The plot is
+     its own positioned box because the labels are placed by percentage of *it*: the
+     drawing caps at 320 units, and a percentage of a wider parent would slide off the
+     bar it belongs to. The axis gutter is padding on the parent, so a right-aligned
+     label has somewhere to sit that is inside the chart — a grid column sized by
+     absolutely-positioned children collapses to nothing, which is how the first
+     version of this hung the tick labels outside the card at every width. */
+  .chart-cols{position:relative;}
+  .chart-plot{position:relative; margin-left:var(--chart-gutter); max-width:320px;}
+  .chart-plot svg{display:block; width:100%; height:auto; overflow:visible;}
+  .chart-tick,.chart-val,.chart-cat{position:absolute; font-size:var(--t-body-sm); line-height:1;
+    white-space:nowrap; pointer-events:none;}
+  .chart-tick{left:calc(var(--chart-gutter) - 6px); transform:translate(-100%,-50%); color:var(--mist);}
+  .chart-val{transform:translate(-50%,-100%); color:var(--ink); font-weight:700;}
+  .chart-cat{transform:translate(-50%,-100%); color:var(--mist);}
   .devicebar{
     display:flex; justify-content:space-between; padding:8px 24px 2px; font-size:var(--t-caption); font-weight:600; letter-spacing:0.4px; color:var(--ink); flex-shrink:0;
   }
@@ -1271,8 +1294,12 @@
   /* Search & inputs — visible focus glow */
   .search-wrapper{ box-shadow:var(--shadow-xs); transition:box-shadow .18s ease, border-color .18s ease; }
   .search-wrapper:focus-within{ border-color:var(--deep); box-shadow:0 0 0 3px var(--deep-100); }
-  /* A dropdown written per screen came out 34px tall; a thumb needs 44 (39, 72). */
-  select{ min-height:var(--tap); font-family:inherit; }
+  /* A dropdown written per screen came out 34px tall; a thumb needs 44 (39, 72).
+     The size belongs here too: a <select> with no font of its own paints at the
+     user-agent default of 13.3px, which is under the floor 68 sets, and six of the
+     app's eight dropdowns had forgotten it — the instrument only reads a size a rule
+     declares, so nothing reported the ones that never said anything. */
+  select{ min-height:var(--tap); font-family:inherit; font-size:var(--t-caption); color:var(--ink); }
   textarea:focus{ border-color:var(--deep) !important; box-shadow:0 0 0 3px var(--deep-100); }
 
   /* Category tiles — feedback that does not move the picture. A transform on the
@@ -4312,11 +4339,16 @@ function providerDemandByBarangay(providerId, days) {
    text rather than pixels. That reasoning and the measurement are recorded in
    CHANGES.md so the choice can be revisited if the app grows real analytics. */
 const CHART_W = 320;
-const CHART_PAD = { l: 44, r: 10, t: 14, b: 34 };
-/* SVG text is drawn in viewBox units, so a "10" here would render at ~10px on a
-   390px phone — under the 14px floor the rest of the app was just moved to, and the
-   instrument reports it as off-scale. 14 units is the floor at this box width. */
-const CHART_FONT = 15;
+/* l is small because the axis words no longer live in the drawing: they are HTML in a
+   column beside it (.chart-gutter), so the plot keeps the width the old 44-unit gutter
+   was reserved for. It used to be 44, which is what a right-aligned label inside a
+   scaled viewBox needs — and needed to be, until the labels escaped their box at 320px. */
+const CHART_PAD = { l: 6, r: 10, t: 14, b: 34 };
+/* There used to be a CHART_FONT here, sized in viewBox units and inflated to 15 so the
+   14px floor survived the box's own scale. It could not: a fixed viewBox scales its text
+   with the container, so the same label painted 15px at 390 and 12.4px at 320. The words
+   are HTML now (see .chart-cols) and their size is the type token's, so no number is
+   needed here to keep them legible. */
 
 /* Round an axis up to a readable step. Count data gets whole ticks: the first
    version drew 0 / 0.75 / 1 on a chart of bookings per day, which is an axis that
@@ -4350,12 +4382,24 @@ function chartColumns(rows, opts) {
      its own axis rather than rotating or truncating it — a rotated label is unreadable
      at this size and a truncated one is a lie about the period. */
   const stride = slot < 62 ? Math.ceil(rows.length / 4) : 1;
-  const grid = sc.ticks.map(t => {
+  /* Every position below is written twice: in viewBox units for the shape, and as a
+     percentage of the box for the word that belongs to it. The percentage is what
+     keeps the label on its anchor when the box is narrower than 320. */
+  const pctX = v => (v / CHART_W * 100).toFixed(2) + '%';
+  const pctY = v => (v / h * 100).toFixed(2) + '%';
+  const shapes = [];
+  const labels = [];
+  const ticks = [];
+  sc.ticks.forEach(t => {
     const y = CHART_PAD.t + inner - (t / sc.top) * inner;
-    return `<line x1="${CHART_PAD.l}" y1="${y.toFixed(1)}" x2="${CHART_W - CHART_PAD.r}" y2="${y.toFixed(1)}" stroke="var(--line)" stroke-width="1" ${t === 0 ? '' : 'stroke-dasharray="2 4"'}></line>` +
-      `<text x="${CHART_PAD.l - 6}" y="${(y + 3.5).toFixed(1)}" text-anchor="end" font-size="${CHART_FONT}" fill="var(--mist)">${esc(fmt(t))}</text>`;
-  }).join('');
-  const bars = rows.map((r, i) => {
+    shapes.push(`<line x1="${CHART_PAD.l}" y1="${y.toFixed(1)}" x2="${CHART_W - CHART_PAD.r}" y2="${y.toFixed(1)}" stroke="var(--line)" stroke-width="1" ${t === 0 ? '' : 'stroke-dasharray="2 4"'}></line>`);
+    /* Centred on the line, not offset by the 3.5 units an SVG text baseline needed: an
+       HTML label is positioned by its own box, so carrying the fudge over left every
+       tick 3.5px below the gridline it names — 2.4px at 320, because the offset was a
+       percentage of a scaled box. */
+    ticks.push(`<span class="chart-tick" style="top:${pctY(y)};">${esc(fmt(t))}</span>`);
+  });
+  rows.forEach((r, i) => {
     const x = CHART_PAD.l + slot * i + (slot - bw) / 2;
     /* A row may carry a second value (completed vs still open, say). Drawing it as a
        thinner paired bar keeps one renderer for both shapes — the alternative was a
@@ -4371,13 +4415,13 @@ function chartColumns(rows, opts) {
     };
     const topVal = pair ? Math.max(r.value, r.value2) : r.value;
     const topY = CHART_PAD.t + inner - hOf(topVal);
-    return (pair ? piece(r.value, 0, o.tone || 'var(--brand-primary)') + piece(r.value2, one + 3, o.tone2 || 'var(--brand-secondary)')
-                 : piece(r.value, 0, o.tone || 'var(--brand-primary)')) +
-      (topVal > 0 ? `<text x="${(x + bw / 2).toFixed(1)}" y="${(topY - 5).toFixed(1)}" text-anchor="middle" font-size="${CHART_FONT}" font-weight="700" fill="var(--ink)">${esc(fmt(topVal))}</text>` : '') +
-      (i % stride === 0 ? `<text x="${(x + bw / 2).toFixed(1)}" y="${h - 12}" text-anchor="middle" font-size="${CHART_FONT}" fill="var(--mist)">${esc(r.label)}</text>` : '');
-  }).join('');
-  return `<svg viewBox="0 0 ${CHART_W} ${h}" width="100%" style="max-width:${CHART_W}px" height="${h}" role="img" aria-label="${esc(o.aria || chartSummary(rows, fmt))}" preserveAspectRatio="xMidYMid meet">${grid}${bars}</svg>` +
-    chartSrSummary(rows, fmt);
+    shapes.push(pair ? piece(r.value, 0, o.tone || 'var(--brand-primary)') + piece(r.value2, one + 3, o.tone2 || 'var(--brand-secondary)')
+                     : piece(r.value, 0, o.tone || 'var(--brand-primary)'));
+    if (topVal > 0) labels.push(`<span class="chart-val" style="left:${pctX(x + bw / 2)}; top:${pctY(topY - 5)};">${esc(fmt(topVal))}</span>`);
+    if (i % stride === 0) labels.push(`<span class="chart-cat" style="left:${pctX(x + bw / 2)}; top:${pctY(h - 8)};">${esc(r.label)}</span>`);
+  });
+  return `<div class="chart-cols"><div class="chart-plot"><svg viewBox="0 0 ${CHART_W} ${h}" role="img" aria-label="${esc(o.aria || chartSummary(rows, fmt))}">${shapes.join('')}</svg>${labels.join('')}</div>${ticks.join('')}</div>`
+    + chartSrSummary(rows, fmt);
 }
 
 /* Horizontal bars: the form that survives long Filipino place names, because the

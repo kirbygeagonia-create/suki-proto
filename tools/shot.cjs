@@ -67,7 +67,7 @@ const PROBE = flag('probe', '');
    what a real browser actually laid out.
    -------------------------------------------------------------------------------- */
 const AUDIT_JS = `(function(){
-  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], contrast: [], overlaps: [], stretched: [], broken: [], remote: [], svgSmall: [], vendor: [], mapEscape: [], occluded: [], nameless: [], placeholderOnly: [], catMotion: [], hOverflow: 0 };
+  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], belowFloor: [], chartEscape: [], contrast: [], overlaps: [], stretched: [], broken: [], remote: [], svgSmall: [], vendor: [], mapEscape: [], occluded: [], nameless: [], placeholderOnly: [], catMotion: [], hOverflow: 0 };
   const vw = document.documentElement.clientWidth;
   out.hOverflow = document.documentElement.scrollWidth - vw;
   const TAP = 44;
@@ -166,6 +166,22 @@ const AUDIT_JS = `(function(){
       declared: declared, rendered: rendered, box: Math.round(w) });
   });
 
+  /* A chart label that hangs outside the chart. The column chart's words are HTML
+     positioned against the chart box, so an axis gutter narrower than the widest tick
+     paints the numbers over the card's padding — and nothing else sees it: the text is
+     not clipped because nothing clips it, its contrast is fine, and it is not off the
+     type scale. This is the check that would have caught the first version. */
+  document.querySelectorAll('.chart-cols').forEach(chart => {
+    const cb = chart.getBoundingClientRect();
+    if (!cb.width) return;
+    chart.querySelectorAll('.chart-tick,.chart-val,.chart-cat').forEach(l => {
+      const r = l.getBoundingClientRect();
+      const over = Math.max(cb.left - r.left, r.right - cb.right, 0);
+      if (over > 1) out.chartEscape.push({ text: (l.textContent || '').trim().slice(0, 16),
+        cls: l.className, over: Math.round(over), box: Math.round(cb.width) });
+    });
+  });
+
   /* Anything the nav actually traps. Content sliding under a glass bar while you
      scroll is normal and wanted; a control that is still covered when the screen
      is scrolled to its end is not. So scroll to the bottom first, then ask. */
@@ -211,6 +227,18 @@ const AUDIT_JS = `(function(){
   const scale = ['t-display','t-title-lg','t-num','t-title','t-lead','t-body-lg','t-input','t-body','t-body-sm','t-caption']
     .map(t => parseFloat(rootS.getPropertyValue('--' + t))).filter(Boolean);
   const seenSizes = {};
+  /* A hard floor, checked separately from "is this a declared token". The scale test
+     allows 0.7px of rounding noise, and 14 - 13.3 is 0.6999999999 in floating point —
+     so the user-agent default for a form control slipped inside it and the report said
+     the type scale was clean while painting 13.3px text. §68's floor is not a
+     tolerance, so it does not get one. */
+  const FLOOR = 14;
+  const below = (el, f) => {
+    if (!(f > 0) || f >= FLOOR - 0.05) return null;
+    if (el.closest && el.closest('.sr-only')) return null;
+    return { size: f, tag: el.tagName.toLowerCase(),
+      text: (el.textContent || el.value || '').trim().slice(0, 24) };
+  };
   document.querySelectorAll('#screen *, .sheet *, .auth-sheet *').forEach(el => {
     if (el.children.length) return;
     if (!(el.textContent || '').trim()) return;
@@ -219,6 +247,26 @@ const AUDIT_JS = `(function(){
     seenSizes[f] = (seenSizes[f] || 0) + 1;
     if (!scale.some(s => Math.abs(s - f) < 0.7))
       out.offScale.push({ size: f, text: (el.textContent || '').trim().slice(0, 24) });
+    const b = below(el, f);
+    if (b) out.belowFloor.push(b);
+  });
+  out.usedSizes = Object.keys(seenSizes).map(Number).sort((a,b)=>a-b);
+
+  /* Form controls, measured separately, because the loop above skips anything with
+     children and a <select> keeps its words in <option> elements. That blind spot let
+     six dropdowns paint at the user-agent default of 13.3px — under the floor 68 sets —
+     while the type-scale tally reported clean. Controls that paint no words are skipped
+     on purpose: a checkbox has no text to be too small. */
+  document.querySelectorAll('#screen select, #screen textarea, #screen input, .sheet select, .sheet textarea, .sheet input, .auth-sheet select, .auth-sheet textarea, .auth-sheet input').forEach(el => {
+    if (/^(checkbox|radio|range|color|file|hidden)$/.test(el.type || '')) return;
+    if (el.disabled && el.tagName === 'INPUT') return;
+    const f = Math.round(parseFloat(getComputedStyle(el).fontSize) * 10) / 10;
+    if (!f) return;
+    seenSizes[f] = (seenSizes[f] || 0) + 1;
+    if (!scale.some(s => Math.abs(s - f) < 0.7))
+      out.offScale.push({ size: f, text: (el.value || el.tagName.toLowerCase()) + ' (form control)' });
+    const b = below(el, f);
+    if (b) out.belowFloor.push(b);
   });
   out.usedSizes = Object.keys(seenSizes).map(Number).sort((a,b)=>a-b);
 
@@ -971,6 +1019,7 @@ async function main() {
     tally(contrast, 'text below WCAG contrast', r => r.screen + ' "' + r.text + '" ' + r.ratio + ':1 (needs ' + r.need + ', ' + r.size + 'px w' + r.weight + ' on ' + r.on + ')');
     tally(trunc, 'text clipped by its own container', r => r.screen + ' "' + r.text + '" loses ' + r.lost + 'px' + (r.ellipsis ? ' (ellipsis)' : ''));
     tally(off, 'font sizes off the type scale', r => r.screen + ' ' + r.size + 'px "' + r.text + '"');
+    tally(flat('belowFloor'), 'text painted below the 14px floor (68)', r => r.screen + ' ' + r.size + 'px <' + r.tag + '> "' + r.text + '"');
     tally(over, 'content sitting under the bottom nav', r => r.screen + ' "' + r.what + '" by ' + r.underBy + 'px');
     tally(unl, 'clickable things with no accessible name', r => r.screen + '  ' + r.unlabelled);
     tally(flat('nameless'), 'form controls a screen reader cannot name', r => r.screen + '  ' + r.field);
@@ -981,6 +1030,7 @@ async function main() {
     tally(flat('broken'), 'images that asked for a file and got no pixels', r => r.screen + '  ' + r.src + ' — ' + r.why);
     tally(flat('remote'), 'requests that left the device for a network', r => r.screen + '  ' + r.kind + '  ' + r.url);
     tally(flat('svgSmall'), 'chart text that paints below the 14px floor', r => r.screen + '  "' + r.text + '" declares ' + r.declared + 'px, paints ' + r.rendered + 'px');
+    tally(flat('chartEscape'), 'chart labels painted outside their own chart box', r => r.screen + '  "' + r.text + '" (' + r.cls + ') hangs ' + r.over + 'px past a ' + r.box + 'px box');
     const vend = flat('vendor');
     console.log('\nvendor-owned controls excluded (Leaflet attribution + markers, not ours to resize): ' +
       vend.length + (vend.length ? '  e.g. ' + [...new Set(vend.map(r => r.what || 'unlabelled <img>'))].slice(0, 4).join(' | ') : ''));

@@ -1720,13 +1720,28 @@ suite('honesty', async () => {
 
   c.check('a dense series thins its own axis labels instead of overlapping them', (() => {
     const wide = Array.from({ length: 12 }, (_, i) => ({ label: 'W' + (i + 1), value: i + 1 }));
-    /* Counted by the axis row's own y coordinate: value labels sit above the bars and
-       both use text-anchor="middle", so counting that attribute measured the values. */
-    const axisLabels = html => (html.match(/y="120" text-anchor="middle"/g) || []).length;
+    /* Counted by the axis label's own class. It used to be counted by the axis row's y
+       coordinate, which stopped existing when the words moved out of the scaled SVG —
+       and a check that counts nothing reports a clean floor, which is the worse way for
+       a guard to fail. */
+    const axisLabels = html => (html.match(/class="chart-cat"/g) || []).length;
     const sparse = app.chartColumns([{ label: 'Mon', value: 2 }, { label: 'Tue', value: 3 }], { format: v => v });
     const n = axisLabels(app.chartColumns(wide, { format: v => v }));
     return n < wide.length && n >= 3 && axisLabels(sparse) === 2;
   })(), 'axis labels overlap on a dense series, or the thinning breaks a sparse one');
+
+  c.check('a column chart draws no words inside the scaled box', () => {
+    /* §68's floor is a rule about painted pixels, and the camera is what measures those.
+       This guards the markup that produces them: text inside a fixed viewBox is scaled
+       by the container, so on a 320px handset the axis painted at 12.4px. The shapes
+       stay in SVG; the words are HTML, and the camera's chart-floor count is 0 at 320
+       because of it. */
+    const out = app.chartColumns([{ label: 'Mon', value: 2 }, { label: 'Tue', value: 3 }], { format: v => v });
+    const svg = out.slice(out.indexOf('<svg'), out.indexOf('</svg>'));
+    return !/<text/.test(svg) && /<div class="chart-cols">/.test(out)
+      && /class="chart-tick"/.test(out) && /class="chart-val"/.test(out)
+      && /class="chart-cat"/.test(out);
+  }, 'a chart is painting words inside the viewBox again');
 
   c.check('no chart is drawn from a literal data series', (() => {
     /* The same defect twice over, and invisible either way on screen: the provider
