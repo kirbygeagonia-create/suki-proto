@@ -2325,4 +2325,48 @@ exactly the first, then leaked a new folder of its own that the next sweep will 
 **No shipped bytes moved, again.** `Sukinnect-next.html` is identical to HEAD through all of it — the
 app gained nothing this pass, the instruments did. Worth noting where the work stands: PR #2 was
 merged into `main` at 10:44Z, so the rebuild is on `main`, while the commits from §43 and §44 sit on
-the merged branch and need their own pull request to reach it.
+the merged branch and need their own pull request to reach it. *(Written before that landed: PR #3
+merged at 12:36Z and PR #4, the camera's profile sweep, merged at 13:14Z, so `main` now carries all
+of it. Left as written because a change log that rewrites its own status lines is a change log nobody
+can trust — the correction belongs here, not inside the sentence.)*
+
+## 45. Two modes nobody had measured, and one file no instrument can see
+
+**The rebuild had only ever been painted in app mode.** §37 and §46 both make claims about the other
+states — that app mode can fall away to a desktop preview shell, and that the category artwork stays
+still *whether or not the device asks for reduced motion* — and no run this session had exercised
+either. Both swept now at 62 screens, every tally zero: tap floor, WCAG contrast, clipped copy,
+off-scale and under-floor type, content under the nav, unnamed controls and unnameable fields,
+distorted images, escaping map panes, anything painting over an open modal, moving category artwork,
+images that got no pixels, console errors, horizontal overflow, nine painted sizes starting at 14.
+
+Identical numbers across two modes are exactly when to suspect the instrument, so the modes were
+verified rather than assumed: the reduced-motion run prints `emulating prefers-reduced-motion:
+reduce` on its first line, the desktop run's PNGs measure **2560×1800** — a 1280×900 window at a
+device scale of 2, which app mode at 390 never produces — and the same screen reports a different
+scroll figure in each (`resident-home`: 543px in app mode and under reduced motion, 693px in the
+desktop shell). The two runs were genuinely two layouts.
+
+**The shipped `Sukinnect.html` is measured by nothing, and that is now written down** in §31 rather
+than left to be inferred. Its static shape is known and re-checked — `node tools/measure.cjs
+Sukinnect.html` agrees with every figure the master prompt quotes for it, 4,707 lines, one `:root`,
+86 tokens with 9 never reached, 1,138 `var()` uses, 75 hex strings outside the block. The painted
+surface is not, and no flag fixes that: pointing the camera at the file boots it
+(`providers 6 | bookings 0 | store no Store | schema v?`) and then dies on the first step of the walk
+because the `SCREENS` table calls seventeen functions the shipped file does not have — `resetDemoData`,
+`openChatThread`, `bookingsForResident`, `applyProviderIdentity`, `openProfileSection`, `openMakeOffer`,
+`answerOffer`, `reviewOf`, `openCaseSheet`, `clickPainted` among them. A shipped-file walk would be a
+second table written and proved separately, so the gap is recorded instead of built, and what it means
+is stated plainly: the floors the rebuild earned are proven for the file that ships *after* promotion
+and unproven for the one a reviewer opens today.
+
+**Two loose ends closed by measurement, not by memory.** The camera's new profile sweep ran for real
+and reclaimed the nine folders the earlier deletion had kept as too young, taking the temp from
+**2,971 MB down to 66 MB** — two folders, both created inside the last hour and therefore still
+entitled to exist, which is exactly what the hour floor is for; and the Git LFS assets were checked
+rather than trusted — `reicon.js` 8,344,694 bytes, the deck PPTX 10,545,446 and PDF 15,767,289, the
+logo 264,808, none of them a pointer stub, which is the failure mode the README's own clone warning
+describes.
+
+**No shipped bytes moved, for the third pass running.** `Sukinnect-next.html` and `Sukinnect.html`
+are both identical to `main`; `node tools/verify.cjs` still reports 502 checks.
