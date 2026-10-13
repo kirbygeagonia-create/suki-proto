@@ -59,13 +59,13 @@ What was verified about the artifact, not assumed:
 
 | Check | Result |
 |---|---|
-| `:app:assembleDebug` | **BUILD SUCCESSFUL in 1m 7s** (34 tasks, 9 executed). Current output `Sukinnect-1.2-preview.12-debug.apk`, **2,125,430 bytes**, `versionCode 14`, `versionName 1.2-preview.12` — read off `aapt dump badging`, not off this file. It is the build where a missing provider record stops borrowing somebody else's identity through the shared lookups, a chat room resolves who it is with from the thread rather than from the first row of a table, a stale payment or listing index can no longer record a choice nobody made, the concierge refuses to invent a category, a job with nothing behind it is refused rather than agreed at ₱0, and the admin console says out loud that it manages no residents and no catalogue. Schema is still 15. Earlier builds: `.11` 2,118,834 / `versionCode 13` (dialogs a sheet was covering, the refusal notice, reputation, service area), `.10` 2,113,374 / `versionCode 12` (a detail screen stops answering an unknown id), `.9` 2,112,782 (decided tab), `.8` 2,111,574 (verification records), `.7` 2,105,566 (profile honesty), `.6` 2,104,798 (was 4,595,092 before reicon.js left the bundle) |
+| `:app:assembleDebug` | **BUILD SUCCESSFUL in 14s** (34 tasks, 9 executed). Current output `Sukinnect-1.2-preview.13-debug.apk`, **2,126,962 bytes**, `versionCode 15`, `versionName 1.2-preview.13` — read off `aapt dump badging`. It is `.12` plus the last bare index reads and the storage door: the booking sheet can no longer open onto a stale day, time or address choice (one of those threw rather than falling back, which is a sheet that simply never appears), an account with no address anywhere is told so instead of booking a visit to `undefined`, and a stored profile whose field arrived as the wrong kind of value — or carrying a field the app never had — is refused at the door with the reason named. Earlier builds: `.12` 2,125,430 / `versionCode 14` (identity through the shared lookups, the chat room, the concierge refusing to invent a category, the chart axis at its declared size), `.11` 2,118,834 / `13` (dialogs a sheet was covering, the refusal notice, reputation, service area), `.10` 2,113,374 / `12` (a detail screen stops answering an unknown id), `.9` 2,112,782, `.8` 2,111,574, `.7` 2,105,566, `.6` 2,104,798 |
 | Launcher label | `aapt dump badging`: **'Sukinnect · preview'** on this debug APK, and still **'Sukinnect'** on the Oct-1 release APK — the override is debug-scoped, measured on both artifacts |
-| `assets/Sukinnect.html` inside the APK | `cmp` says identical to `Sukinnect-next.html` — **786,835 bytes** at the `.12` build (770,173 at `.11`, 756,087 at `.10`, 754,702 at `.9`, 751,283 at `.8`). Verified by extracting `assets/Sukinnect.html` out of the APK itself with `unzip` and comparing that, not the staged copy. Compared with `cmp`, not with a hash: `.gitattributes` normalises line endings, so a hash match is the wrong question for a text file here |
+| `assets/Sukinnect.html` inside the APK | `cmp` says identical to `Sukinnect-next.html` — **791,013 bytes** at the `.13` build (786,835 at `.12`, 770,173 at `.11`, 756,087 at `.10`). Verified by extracting `assets/Sukinnect.html` out of the APK itself with `unzip` and comparing that, not the staged copy. Compared with `cmp`, not with a hash: `.gitattributes` normalises line endings, so a hash match is the wrong question for a text file here |
 | The seven category PNGs inside the APK | `cmp` says identical to `assets/category-art/*.png`, and they sit at `assets/assets/category-art/` because the WebView root mirrors the repo root |
 | The four Atkinson weights inside the APK | `cmp` says identical, and `unzip -v` says **Stored** — `noCompress 'woff2'` is doing its job |
 | Every path the bundled page asks for | `check-assets.cjs --apk`: **48 of 48 resolve** |
-| The bundled page, painted | `tools/shot.cjs --file=<the assets copy> --width=360 --height=640 --measure`: **61 screens**, and every tally 0 — tap floor, contrast, clipped, off-scale, **text below the 14px floor**, under-nav, unnamed controls, occlusion, moving artwork, horizontal overflow, **chart labels outside their own box**, 0 images that got no pixels, 0 console errors, 9 painted font sizes all ≥14px. The two bolded tallies are new with `.12`: a chart's axis left the scaled SVG, and six dropdowns that never declared a font were painting 13.3px inside a check that called 13.3 on-scale. Run against the staged copy, which the row above proves is the copy inside the APK — run against a lone extracted file it reports 72 broken images, because the page resolves `assets/` and `avatars/` beside itself |
+| The bundled page, painted | `tools/shot.cjs --file=<the staged assets copy> --width=360 --height=640 --measure` on `.13`: **61 screens**, every tally 0 — tap floor, contrast, clipped, off-scale, text below the 14px floor, under-nav, unnamed controls, occlusion, moving artwork, no-pixels images, horizontal overflow, chart labels outside their own box — 9 painted font sizes all ≥14px, and **no console errors**. Run it against the staged copy, which the row above proves is the copy inside the APK: run against a lone extracted file it reports 72 broken images that do not exist in the artifact, because the page resolves `assets/` and `avatars/` beside itself |
 | Scratch left behind | none — the capture directories this pass wrote were deleted. The only tracked edits are `tools/shot.cjs` (the `--file=` flag) and this file |
 
 **Three build notes from 2026-10-10/11/12, all learned the hard way.** Rebuilding replaces the
@@ -197,7 +197,7 @@ gesture, and an app killed mid-review.
       credential expires soon: the Credentials tab must name each document from the record and show
       its real state — no green "Verified" for a document nothing verified.
 
-### 3f. What the .12 build changed — 4 min, new since the identity pass
+### 3f. What .12 and .13 changed — 6 min, new since the identity pass
 
 - [ ] **The concierge refuses to guess.** Resident → AI Service Concierge → type something with
       no trade in it (`The garden gate hinge is loose`) → Analyze. It must say the words did not
@@ -212,6 +212,16 @@ gesture, and an app killed mid-review.
       arrival, then open a second provider and book again: the payment row that is marked must be
       the one the confirmation and the booking show. A draft carried between providers used to
       price and record the first option while appearing to select another.
+- [ ] **A request cannot be booked to nowhere.** Resident → Profile → edit the address
+      field: it must not be clearable to nothing. Then, on an account genuinely left with no
+      address, open Book on any provider: the service-address block must say there is nothing
+      to choose and the send must refuse — the old code stored `address: undefined` and the
+      provider saw a visit with no door. `.13` also clamps a stale day/time choice, so a
+      sheet that used to simply fail to appear now opens with a real row marked.
+- [ ] **The refusal notice, on a bad profile.** `SCHEMA_VERSION` is 15. A stored profile
+      whose field arrived as the wrong kind of value, or carrying a field the app never had,
+      is now refused at the door with the field **named** — so if the amber banner appears
+      after this install, read what it names rather than assuming it is the schema bump.
 - [ ] **The console says what it does not do.** Admin → Dashboard → the card naming what is not
       managed here, and Categories → the line saying the catalogue is read-only. It is disclosure
       for slide 8, not decoration: judge whether it reads as information about the tool rather
