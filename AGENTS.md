@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 10,901 lines, ONE :root block, 1,742 var() usages, 95 tokens declared with 92
+Sukinnect-next.html— 10,967 lines, ONE :root block, 1,746 var() usages, 95 tokens declared with 92
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1216,7 +1216,7 @@ Sukinnect-next.html— 10,901 lines, ONE :root block, 1,742 var() usages, 95 tok
                     --device-signal. Type is fully on the scale: of the 120 `font-size`
                     declarations in the stylesheet, 119 take a var(), none is a literal px,
                     and the 120th is `inherit` — the reset that lets an <h1> sit in a flex bar
-                    as the div it replaced. The 400 `font-size` declarations inside markup's
+                    as the div it replaced. The 401 `font-size` declarations inside markup's
                     inline styles all take a var() too. Every screen in the app now opens with
                     an <h1> and every sheet with an <h2> — 23 and 6, the sixth being the weighing
                     sheet — because a 61-screen app with no headings has no outline for a screen
@@ -1504,6 +1504,23 @@ rather than kept to make the count look bigger. The three refusal states that no
 a chat room with no thread, a provider detail with nothing selected, a dashboard signed in as
 nobody — are asserted by the gate and deliberately *not* photographed, because a camera that walks
 to a screen nobody can enter is measuring a fiction.
+
+AND THE STORAGE DOOR HAS TO CHECK THE STATE THAT IS NOT A RECORD. That pass clamped two
+draft indices and left three bare: `days[d.dayIdx].date` does not fall back on an
+out-of-range index, it throws, and the booking sheet never opens; `REQUEST_TIMES[d.timeIdx]`
+stores `undefined` as an appointment time; and `(savedAddresses || [address])[d.addrIdx]` is
+this whole class in its driest form because **an empty array is truthy** — the `||` guard
+never fires, the rail paints nothing, and the next request records an address of `undefined`.
+All four indices now resolve through `requestChoices()`, which clamps into the list actually
+painted and writes the corrected index back. `hydrate()` validated every record family and
+then did `Object.assign(state.profileData, snap.profileData)` unchecked, so a dump carrying
+`savedAddresses` as a string threw on `.map` and one carrying `rateCentavos` as `"35000"`
+walked into money arithmetic; the seed now decides what each field may be, with the allowed
+fields *derived from the seed* rather than listed a second time. One mutant survived the
+first run and the check was at fault: the door's two rules were written as one predicate, and
+a key the seed lacks already fails the kind test (`seedKind(undefined)` is `"undefined"`), so
+the check named for unknown fields had never tested unknown fields. Two rules, two reasons.
+`tools/falsify-identity-fallbacks.cjs`: 24 mutants, 24 caught.
 
 A MODAL OPENED FROM A SHEET HAS TO OUTRANK THE SHEET. `.sheet-layer` sat at `z-index:60` over
 `.modal-layer`'s 50, and the sheet's scrim covers the whole phone and closes the sheet on any tap

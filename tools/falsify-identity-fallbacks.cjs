@@ -24,6 +24,11 @@ const ROOM = 'a chat room with one side missing keeps both out of it';
 const PROFILE = 'the resident’s provider profile shows nobody rather than somebody else';
 const CHOICE = 'a stale choice index cannot record a method nobody picked';
 const CONCIERGE = 'the concierge sorts what it can read and refuses the rest';
+/* Three separate rules live behind the profile door, so three separate labels: a harness
+   that reports the same victim for every mutant proves nothing about which one fired. */
+const DOOR = 'a profile field that changed kind is refused and named';
+const PROMO = 'a dump cannot teach the app a field it never had';
+const KIND = 'money that arrives as a word is refused at the door';
 const MUTANTS = [
   { name: 'providerOf falls back to the first provider on the roster', label: SEAM,
     apply: s => s.replace(
@@ -67,13 +72,17 @@ const MUTANTS = [
   { name: 'the provider profile falls back to index 2', label: PROFILE,
     apply: s => s.replace('function residentProviderDetail(){',
       'function residentProviderDetail(){ state.selectedProvider = state.selectedProvider || PROVIDERS[2];') },
-  { name: 'the payment choice is read from the stale index without correcting it', label: CHOICE,
-    apply: s => s.replace(
-      'if (d && d.payIdx !== idx) d.payIdx = idx;', 'if (d && false) d.payIdx = idx;') },
+  { name: 'a draft index is clamped for the picture but not written back', label: CHOICE,
+    apply: s => s.replace('if (d && d[key] !== i) d[key] = i;', 'if (d && false) d[key] = i;') },
   { name: 'the sheet reads the payment row from the stale index again', label: CHOICE,
     apply: s => s.replace(
-      '  const { option: pay, options: pays } = requestPaymentChoice(d);',
-      "  const pays = requestPaymentOptions();\n  const pay = pays[d.payIdx] || pays[0];") },
+      '  const { days, times, pays, addrs, pay } = requestChoices(d);',
+      "  const days = requestDays();\n  const times = REQUEST_TIMES;\n  const pays = requestPaymentOptions();\n  const addrs = state.profileData.savedAddresses || [state.profileData.address];\n  const pay = pays[d.payIdx] || pays[0];") },
+  { name: 'an empty saved-address list stops falling back to the home address', label: CHOICE,
+    apply: s => s.replace('  if (saved.length) return saved;', '  return saved;') },
+  { name: 'a blank entry in the address list survives the filter', label: CHOICE,
+    apply: s => s.replace("    ? state.profileData.savedAddresses.filter(a => typeof a === 'string' && a.trim())",
+      '    ? state.profileData.savedAddresses') },
   { name: 'the listing index is left past the end of the provider’s own list', label: CHOICE,
     apply: s => s.replace(
       'if (d.listingIdx !== idx) d.listingIdx = idx;', 'if (false) d.listingIdx = idx;') },
@@ -90,6 +99,15 @@ const MUTANTS = [
   { name: 'an unsorted briefing still opens a category’s results', label: CONCIERGE,
     apply: s => s.replace('const s = SERVICES.find(x => x.id === state.conciergeServiceId) || null;',
       'const s = SERVICES.find(x => x.id === state.conciergeServiceId) || SERVICES[0];') },
+  { name: 'the profile walks through the storage door entirely', label: DOOR,
+    apply: s => s.replace('if (badProfile) return { restored:false,',
+      'if (false && badProfile) return { restored:false,') },
+  { name: 'a dump is allowed to teach the app a field it never had', label: PROMO,
+    apply: s => s.replace('const extra = Object.keys(given).find(k => !(k in seed));',
+      'const extra = Object.keys(given).find(k => false);') },
+  { name: 'a field that changed kind is accepted because the seed is not consulted', label: KIND,
+    apply: s => s.replace('const wrong = Object.keys(given).find(k => seedKind(seed[k]) !== seedKind(given[k]));',
+      'const wrong = Object.keys(given).find(k => false);') },
 ];
 
 function gateRun() {

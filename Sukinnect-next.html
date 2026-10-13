@@ -4919,6 +4919,32 @@ function hydrate() {
      counter past its own entries or the next event reuses an id already booked. */
   LEDGER.forEach(e => { const n = parseInt(String(e.id).replace(/[^0-9]/g, ''), 10);
                         if (!Number.isNaN(n) && n > ledgerSeq) ledgerSeq = n; });
+  /* Every record family is held to this door, and then the profile was merged in with no
+     check at all: Object.assign took whatever shape the dump carried. A savedAddresses
+     that came back as a string threw on .map and the booking sheet never opened; a
+     rateCentavos that came back as "35000" went straight into money arithmetic. A profile
+     is app state like any other, so the seed decides what each field is allowed to be —
+     derived from the seed rather than listed again here, because a list of field names
+     goes stale the moment someone adds one. */
+  const seedKind = v => Array.isArray(v) ? 'array' : (v === null ? 'null' : typeof v);
+  /* Two rules, two reasons. Written as one predicate an unknown field also failed the
+     kind test — a key the seed does not have has kind "undefined" — so the check that
+     looked like it was watching for a dump teaching the app a new field was actually
+     being satisfied by the other rule, and a mutant that removed the first condition
+     survived the gate. */
+  const profileDoor = (snapKey, seed) => {
+    const given = snap[snapKey];
+    if (given === undefined || given === null) return null;
+    if (typeof given !== 'object' || Array.isArray(given)) return snapKey + ' is not a set of fields';
+    const extra = Object.keys(given).find(k => !(k in seed));
+    if (extra) return snapKey + ' carries "' + extra + '", a field this app does not have';
+    const wrong = Object.keys(given).find(k => seedKind(seed[k]) !== seedKind(given[k]));
+    if (wrong) return snapKey + ' carries "' + wrong + '" as a kind of value this app does not use';
+    return null;
+  };
+  const badProfile = profileDoor('profileData', state.profileData)
+    || profileDoor('providerProfileData', state.providerProfileData);
+  if (badProfile) return { restored:false, kind:Store.kind, rejected:badProfile };
   if (snap.profileData) Object.assign(state.profileData, snap.profileData);
   if (snap.providerProfileData) Object.assign(state.providerProfileData, snap.providerProfileData);
   /* A review record carries a status the queue branches on, so it is held to the same
@@ -5820,17 +5846,44 @@ function requestPaymentOptions(){
     { code:'cash',  label: PAY_METHODS.cash  }
   ];
 }
-/* A draft outlives the list its index came from: a resident who chose the second
-   option and then opened a provider whose list is shorter used to get pays[undefined]
-   — which fell back to pays[0] on the card AND on the record, so the method painted
-   was not the method chosen. The index is brought back inside the list it belongs to
-   and written into the draft, so sheet and submission cannot disagree. */
-function requestPaymentChoice(d){
+/* The places this account can be serviced at, in one place. An empty array is *truthy*,
+   which is why `savedAddresses || [address]` was no guard: a profile whose list came back
+   empty painted no rail at all and stored `address: undefined` on the job, and a profile
+   whose list came back as a string threw on `.map` so the sheet never opened. Only
+   non-empty strings count as an address, and the home address is the fallback rather than
+   a second source of truth. */
+function requestAddressBook(){
+  const saved = Array.isArray(state.profileData.savedAddresses)
+    ? state.profileData.savedAddresses.filter(a => typeof a === 'string' && a.trim())
+    : [];
+  if (saved.length) return saved;
+  const home = String(state.profileData.address || '').trim();
+  return home ? [home] : [];
+}
+/* Every choice the request sheet makes is an index into a list the app builds as it
+   paints, and a draft outlives the list its index came from. Two of these were clamped
+   last pass — the payment method and the listing — and the other two were not, so
+   `days[d.dayIdx].date` with an index past the end did not fall back, it threw, and the
+   sheet never rendered at all. Each index is brought back inside the list it belongs to
+   and written into the draft, so the rail marks and the record store the same row. */
+function requestChoices(d){
+  const days = requestDays();
+  const times = REQUEST_TIMES;
   const pays = requestPaymentOptions();
-  const wanted = Math.round(Number(d && d.payIdx));
-  const idx = Number.isFinite(wanted) ? Math.min(Math.max(0, wanted), pays.length - 1) : 0;
-  if (d && d.payIdx !== idx) d.payIdx = idx;
-  return { option: pays[idx], options: pays };
+  const addrs = requestAddressBook();
+  const clamp = (key, len) => {
+    const wanted = Math.round(Number(d && d[key]));
+    const i = Number.isFinite(wanted) ? Math.min(Math.max(0, wanted), Math.max(0, len - 1)) : 0;
+    if (d && d[key] !== i) d[key] = i;
+    return i;
+  };
+  const dayIdx = clamp('dayIdx', days.length);
+  const timeIdx = clamp('timeIdx', times.length);
+  const payIdx = clamp('payIdx', pays.length);
+  const addrIdx = clamp('addrIdx', addrs.length);
+  return { days, times, pays, addrs, dayIdx, timeIdx, payIdx, addrIdx,
+           day: days[dayIdx] || null, time: times[timeIdx] || null,
+           pay: pays[payIdx] || null, addr: addrs[addrIdx] || null };
 }
 
 // Provider Detail is entered from results, from a booking, and from admin. One
@@ -6631,9 +6684,7 @@ function bookingRequestSheet(){
   const p = state.selectedProvider;
   if(!p) return '';
   const d = state.requestDraft || { service:'', dayIdx:0, timeIdx:1, addrIdx:0, payIdx:0, mode:null, fruit:null };
-  const days = requestDays();
-  const addrs = state.profileData.savedAddresses || [state.profileData.address];
-  const { option: pay, options: pays } = requestPaymentChoice(d);
+  const { days, times, pays, addrs, pay } = requestChoices(d);
   const cash = pay.code === 'cash';
   return `
     <div class="sheet-grab"></div>
@@ -6684,7 +6735,7 @@ function bookingRequestSheet(){
         : `<div class="sheet-group">
         <div class="sheet-label">Preferred time</div>
         <div class="hscroll req-rail">
-          ${REQUEST_TIMES.map((t, i) => requestPick(d.timeIdx === i, t, `pickRequest('timeIdx',${i})`)).join('')}
+          ${times.map((t, i) => requestPick(d.timeIdx === i, t, `pickRequest('timeIdx',${i})`)).join('')}
         </div>
       </div>`}
 
@@ -6692,7 +6743,9 @@ function bookingRequestSheet(){
         <div class="sheet-label">Service address</div>
 
         <div class="req-addr">
-          ${addrs.map((a, i) => requestPick(d.addrIdx === i, ic('map-pin',12) + ' ' + esc(a), `pickRequest('addrIdx',${i})`)).join('')}
+          ${addrs.length
+            ? addrs.map((a, i) => requestPick(d.addrIdx === i, ic('map-pin',12) + ' ' + esc(a), `pickRequest('addrIdx',${i})`)).join('')
+            : `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; padding:10px 12px; background:var(--background); border:1px solid var(--line); border-radius:12px;">${ic('alert-triangle',12)} No address is on this account, so there is nowhere to choose. Add one under Profile before sending this request — a job is never booked to an address the app has invented.</div>`}
         </div>
       </div>
 
@@ -6740,6 +6793,21 @@ function submitBookingRequest(){
   }
   const fm = (categoryBehaviour(p.serviceId).modes || []).find(m => m.id === d.mode);
   const fruitErr = fruitProblem(p, d, fm);
+  /* Resolved before anything is stored, so the row the sheet marked is the row this
+     record carries. An account with no address anywhere is refused here rather than
+     writing `undefined` into the job — the provider's screen would then show a visit
+     with no door, and the resident would only find out when nobody arrived. */
+  const choice = requestChoices(d);
+  if (!choice.addr) {
+    state.requestError = 'This account has no address to book at. Add one under Profile first.';
+    render();
+    return;
+  }
+  if (!choice.day || !choice.time) {
+    state.requestError = 'The day or time chosen is no longer offered. Pick one again.';
+    render();
+    return;
+  }
   if (fruitErr){
     state.requestError = fruitErr;
     render();
@@ -6751,8 +6819,6 @@ function submitBookingRequest(){
   state.requestSubmitting = true;
   render();
   setTimeout(() => {
-    const days = requestDays();
-    const pay = requestPaymentChoice(d).option;
     const me = customerOf({ customerId: CURRENT_CUSTOMER_ID });
     const listing = draftListing(p, d);
     const indicative = draftBreakdown(p, d);
@@ -6766,8 +6832,8 @@ function submitBookingRequest(){
       listingTitle: listing ? listing.title : p.service,
       summary: listing ? listing.title : serviceMeta(p.serviceId).label + ' requested',
       request: text,
-      date: d.asap ? 'As soon as possible' : days[d.dayIdx].date,
-      time: d.asap ? 'Next available' : REQUEST_TIMES[d.timeIdx],
+      date: d.asap ? 'As soon as possible' : choice.day.date,
+      time: d.asap ? 'Next available' : choice.time,
       eta: d.asap ? p.availabilityMin + ' mins' : null,
       status: 'requested',
       /* Indicative, not agreed. The terms freeze when the provider accepts — unless
@@ -6783,9 +6849,9 @@ function submitBookingRequest(){
       notes: '',
       createdAt: new Date().toISOString(),
       source: 'live',
-      payStatus: (fm && fm.offerRequired) ? 'unpaid' : (pay.code === 'cash' ? 'pending_site' : 'unpaid'),
-      payMethod: pay.code,
-      address: (state.profileData.savedAddresses || [state.profileData.address])[d.addrIdx]
+      payStatus: (fm && fm.offerRequired) ? 'unpaid' : (choice.pay.code === 'cash' ? 'pending_site' : 'unpaid'),
+      payMethod: choice.pay.code,
+      address: choice.addr
     };
 
     BOOKINGS.unshift(booking);

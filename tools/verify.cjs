@@ -101,6 +101,51 @@ suite('storage', async () => {
   c.check('and the sample records are what loaded, not a half-read dump',
     !ghostProvider.BOOKINGS.some(b => b.providerId === 'ghost') && ghostProvider.BOOKINGS.length > 0);
 
+  /* The same door, on the one persisted object that used to be merged in unchecked. A
+     savedAddresses arriving as a string threw on .map so the booking sheet never opened;
+     a rateCentavos arriving as "35000" went straight into money arithmetic; and a dump
+     could add a field no screen knows about, which then rode along forever. */
+  const stringAddresses = refuse(d => { d.profileData.savedAddresses = 'Blk 4 Lot 12'; });
+  c.check('a profile field that changed kind is refused and named',
+    /savedAddresses.*kind of value/.test(stringAddresses.state.storageNotice || '')
+    && stringAddresses.state.profileData.savedAddresses.length === 2,
+    stringAddresses.state.storageNotice);
+  const stringRate = refuse(d => { d.providerProfileData.rateCentavos = '35000'; });
+  c.check('money that arrives as a word is refused at the door',
+    /rateCentavos.*kind of value/.test(stringRate.state.storageNotice || '')
+    && stringRate.state.providerProfileData.rateCentavos === 35000,
+    stringRate.state.storageNotice);
+  const extraField = refuse(d => { d.profileData.promoCode = 'FREE100'; });
+  c.check('a dump cannot teach the app a field it never had',
+    /promoCode.*field this app does not have/.test(extraField.state.storageNotice || '')
+    && !('promoCode' in extraField.state.profileData),
+    extraField.state.storageNotice);
+  /* The control that keeps the three above from passing by refusing everything: a real
+     edit, written by the app's own save path, has to come back on the next boot. */
+  const roundTrip = fakeStorage();
+  const editor = boot({ storage: roundTrip });
+  editor.state.profileData.name = 'Ana D. Cruz';
+  editor.state.profileData.savedAddresses = ['Only one place now'];
+  editor.persist();
+  const reloaded = boot({ storage: roundTrip });
+  c.check('a profile the app itself wrote still comes back',
+    reloaded.state.profileData.name === 'Ana D. Cruz'
+    && reloaded.state.profileData.savedAddresses.length === 1
+    && !reloaded.state.storageNotice,
+    reloaded.state.profileData.name + ' / ' + reloaded.state.storageNotice);
+  /* An empty saved-address list is a legal array — the door must not shout over it — and
+     the sheet falls back to the home address instead of painting nothing. */
+  const emptyList = fakeStorage();
+  const emptier = boot({ storage: emptyList });
+  emptier.state.profileData.savedAddresses = [];
+  emptier.persist();
+  const emptyReload = boot({ storage: emptyList });
+  c.check('an empty address list is restored quietly and falls back to the home address',
+    !emptyReload.state.storageNotice && emptyReload.state.profileData.savedAddresses.length === 0
+    && emptyReload.requestAddressBook().length === 1
+    && emptyReload.requestAddressBook()[0] === emptyReload.state.profileData.address,
+    JSON.stringify(emptyReload.state.storageNotice) + ' / ' + emptyReload.requestAddressBook().length);
+
   const f = boot({ storage: fakeStorage() });
   f.BOOKINGS[0].status = 'cancelled';
   f.restoreSeed();
@@ -2506,8 +2551,8 @@ suite('honesty', async () => {
         + which + '\',(\\d+)\\)"').exec(sheet);
       return m ? Number(m[1]) : -1;
     };
-    const stale = { service:'', listingIdx:listings.length + 3, dayIdx:0, timeIdx:1,
-      addrIdx:0, payIdx:pays.length + 4, asap:false, mode:null, fruit:null };
+    const stale = { service:'', listingIdx:listings.length + 3, dayIdx:9, timeIdx:4,
+      addrIdx:6, payIdx:pays.length + 4, asap:false, mode:null, fruit:null };
     a.state.requestDraft = stale;
     const sheetStale = a.bookingRequestSheet();
     const clamped = { service:'', listingIdx:0, dayIdx:0, timeIdx:1, addrIdx:0,
@@ -2517,10 +2562,49 @@ suite('honesty', async () => {
     /* The draft is corrected in place, so what the rail marks and what the money uses
        are the same row — and the last real choice is left exactly where it was. */
     const listedOk = a.draftListing(p, stale) === listings[listings.length - 1];
+    const resolved = a.requestChoices(stale);
+    const everyRow = stale.dayIdx === a.requestDays().length - 1
+      && stale.timeIdx === a.REQUEST_TIMES.length - 1 && stale.addrIdx === 1
+      && resolved.day && resolved.time && resolved.pay && resolved.addr
+      && pressed(sheetStale, 'dayIdx') === a.requestDays().length - 1
+      && pressed(sheetStale, 'timeIdx') === a.REQUEST_TIMES.length - 1
+      && pressed(sheetStale, 'addrIdx') === 1;
+
+    /* The address book itself. An empty array is truthy, so the old `savedAddresses ||
+       [address]` guard did nothing at all: no rail, and `address: undefined` on the job. */
+    a.state.profileData.savedAddresses = [];
+    const fellBack = a.requestAddressBook().length === 1
+      && a.requestAddressBook()[0] === a.state.profileData.address;
+    a.state.profileData.savedAddresses = ['Home place', '', null, '   ', 'Work unit'];
+    const filtered = JSON.stringify(a.requestAddressBook()) === JSON.stringify(['Home place', 'Work unit']);
+    a.state.profileData.savedAddresses = [];
+    a.state.profileData.address = '';
+    const emptyBook = a.requestAddressBook().length === 0;
+    const sheetEmpty = a.bookingRequestSheet();
+    const saysSo = /No address is on this account/.test(sheetEmpty);
+    /* And the door at the record: with nowhere to go, the request is refused before the
+       send ever starts, rather than stored with an undefined address the provider would
+       only discover by nobody arriving. Both halves are read from the synchronous state,
+       because the record itself is built inside a setTimeout — an assertion on BOOKINGS
+       here would pass on the refusal for the wrong reason, and the control beside it
+       proves the door is the address and not the submit being broken. */
+    a.state.selectedProvider = p;
+    a.state.requestDraft = { service:'Kitchen faucet drips all night.', listingIdx:0, dayIdx:0,
+      timeIdx:1, addrIdx:0, payIdx:0, asap:false, mode:null, fruit:null };
+    a._document.getElementById('request-service').value = 'Kitchen faucet drips all night.';
+    a.submitBookingRequest();
+    const refusedEmpty = !!a.state.requestError && a.state.requestSubmitting === false;
+    a.state.profileData.address = 'Blk 4 Lot 12, Rizal St. (Home)';
+    a.state.requestError = null;
+    a.submitBookingRequest();
+    const proceedsWhenThereIsOne = a.state.requestSubmitting === true && !a.state.requestError;
+
     return { ok: stale.payIdx === pays.length - 1 && stale.listingIdx === listings.length - 1
         && pressed(sheetStale, 'payIdx') === pays.length - 1
         && pressed(sheetStale, 'listingIdx') === listings.length - 1
-        && pressed(sheetReal, 'payIdx') === pays.length - 1 && listedOk,
+        && pressed(sheetReal, 'payIdx') === pays.length - 1 && listedOk
+        && everyRow && fellBack && filtered && emptyBook && saysSo && refusedEmpty
+        && proceedsWhenThereIsOne,
       why: stale.payIdx !== pays.length - 1 ? 'an out-of-range payment index stayed out of range: ' + stale.payIdx
         : stale.listingIdx !== listings.length - 1 ? 'an out-of-range listing index stayed out of range: ' + stale.listingIdx
         : pressed(sheetStale, 'payIdx') !== pays.length - 1
@@ -2529,6 +2613,14 @@ suite('honesty', async () => {
             ? 'the sheet marks listing ' + pressed(sheetStale, 'listingIdx') + ' while the draft holds ' + stale.listingIdx
             : pressed(sheetReal, 'payIdx') !== pays.length - 1 ? 'a valid payment choice stopped being marked'
             : !listedOk ? 'the money is computed from a different listing than the one selected'
+            : !everyRow ? 'a day, time or address index is clamped in one place but not the other ('
+              + stale.dayIdx + '/' + stale.timeIdx + '/' + stale.addrIdx + ')'
+            : !fellBack ? 'an empty saved-address list still has no address, so a job is booked to undefined'
+            : !filtered ? 'a blank or non-string entry in the address list still reaches the rail'
+            : !emptyBook ? 'an account with no address anywhere does not read as empty'
+            : !saysSo ? 'the sheet paints a rail with nothing in it instead of saying the account has no address'
+            : !refusedEmpty ? 'a request with no address was sent anyway'
+            : !proceedsWhenThereIsOne ? 'a request with a real address is now refused too — the door is not the address'
             : 'one half of the clamp does not hold' };
   })());
 

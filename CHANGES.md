@@ -2048,3 +2048,51 @@ a later pass that reads them as clutter has to fail a check to delete them.
 **After:** gate **485 checks, all passing**; camera **61 screens** clean at 320, 390 and 450
 on every tally including the two new ones; no console errors; `Sukinnect.html` still
 identical to `main`.
+
+---
+
+## 40. The last two index reads, and the one persisted object the door never checked
+
+Asked to continue, the same rule was applied where it had not yet been: the substitution
+sweep had stopped at the two draft indices that happened to be noticed (`payIdx`,
+`listingIdx`), and the storage door validated every record family while merging the profile
+in with no check at all.
+
+**Three reads were still bare.** `days[d.dayIdx].date` does not fall back when the index is
+past the end — it throws, and the booking sheet never opens. `REQUEST_TIMES[d.timeIdx]`
+yields `undefined`, which is stored on the job as the appointment time. And
+`(savedAddresses || [address])[d.addrIdx]` is the trap the whole pass has been about in its
+driest form: **an empty array is truthy**, so the `||` guard never fires, the rail paints
+nothing to choose, and the next request records `address: undefined` — a visit with no door
+that the resident discovers when nobody arrives.
+
+One resolver now reads the draft (`requestChoices`), clamping each index into the list
+actually painted and writing the corrected index back, so the rail and the record cannot
+disagree. `requestAddressBook()` keeps only non-empty strings and falls back to the home
+address as a *fallback*, not as a second source. When there is genuinely no address
+anywhere, the sheet says so in the space the rail would have occupied and the send is
+refused before it starts — asserted with a control on the other side, because a door that
+refuses everything passes this check too.
+
+**The door now checks the profile.** `hydrate()` refused a booking with an unknown status,
+an offer with an unknown state, a ledger line naming no account and a child record naming no
+booking, then did `Object.assign(state.profileData, snap.profileData)` — so a dump carrying
+`savedAddresses` as a string threw on `.map`, and one carrying `rateCentavos` as `"35000"`
+walked into money arithmetic. The seed decides what each field may be, and the field list is
+*derived from the seed* rather than written out again here.
+
+**One mutant survived the first run of this, and it was the check's fault.** The door was
+first written as one predicate: `!(k in seed) || kind differs`. A key the seed does not have
+has kind `undefined`, so the unknown-field rule was redundant — the mutant that deleted only
+that condition still failed the gate, but failed it *because of the other rule*, which means
+the check named `a dump cannot teach the app a field it never had` had never tested that
+thing at all. Split into two rules with two distinct reasons, the mutant is now caught by the
+check it targets. This is the §31 lesson again: a check that cannot tell which of its two
+conditions fired is half a check.
+
+**After:** gate 485 → **490 checks, all passing**. `tools/falsify-identity-fallbacks.cjs`
+grew to **24 mutants, 24 caught** (23/24 before the door was split). Camera **61 screens**
+clean at 390 and 450; the first 320 run reported two console errors, both
+`net::ERR_NAME_NOT_RESOLVED` from the tile CDN rather than the app, and the re-run of the
+same sweep reported none — recorded because a flaky network is not a defect, and quoting only
+the clean run would hide that it took two.
