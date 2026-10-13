@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 10,834 lines, ONE :root block, 1,735 var() usages, 94 tokens declared with 91
+Sukinnect-next.html— 10,901 lines, ONE :root block, 1,742 var() usages, 95 tokens declared with 92
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1213,10 +1213,10 @@ Sukinnect-next.html— 10,834 lines, ONE :root block, 1,735 var() usages, 94 tok
                     Everything that was a real violation is now a token: #fff became
                     --surface and --on-brand, the modal dim became --scrim, and the phone
                     mockup's bezel and signal bars became --device-bezel and
-                    --device-signal. Type is fully on the scale: of the 118 `font-size`
-                    declarations in the stylesheet, 117 take a var(), none is a literal px,
-                    and the 118th is `inherit` — the reset that lets an <h1> sit in a flex bar
-                    as the div it replaced. The 399 `font-size` declarations inside markup's
+                    --device-signal. Type is fully on the scale: of the 120 `font-size`
+                    declarations in the stylesheet, 119 take a var(), none is a literal px,
+                    and the 120th is `inherit` — the reset that lets an <h1> sit in a flex bar
+                    as the div it replaced. The 400 `font-size` declarations inside markup's
                     inline styles all take a var() too. Every screen in the app now opens with
                     an <h1> and every sheet with an <h2> — 23 and 6, the sixth being the weighing
                     sheet — because a 61-screen app with no headings has no outline for a screen
