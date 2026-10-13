@@ -2286,6 +2286,73 @@ suite('honesty', async () => {
         : 'one of the three guards does not hold' };
   })());
 
+  /* The administrator's provider profile was the last screen typing its own facts: the
+     audit tab was four dated lines identical for all eight providers — one of them
+     "Received 5-star review" for a provider with no review on file — and the
+     credentials tab claimed two documents green that no record asserts. Every
+     assertion below reads the painted card for a provider whose records contradict
+     those literals, so a re-typed line cannot pass, and the empty case is asserted
+     against the record rather than against a chosen provider. */
+  verdict('the administrator’s provider profile reads records, not prose', (() => {
+    app.state.view = 'app'; app.state.role = 'admin'; app.state.tab = 'admin_provider_profile';
+    app.state.providerProfileModal = null; app.state.profileSheet = null; app.state.sheet = null;
+    const paint = (section) => {
+      app.state.adminProviderSection = section;
+      app.render();
+      return app._document.getElementById('screen').innerHTML;
+    };
+    const hasEvent = (p) => app.STATUS_EVENTS.some(e => {
+      const b = app.BOOKINGS.find(x => x.id === e.bookingId); return b && b.providerId === p.id; });
+    const withEvent = app.PROVIDERS.find(hasEvent);
+    const flagged = app.PROVIDERS.find(p => app.credentialsOf(p.id)
+      .some(cr => app.credentialState(cr).code !== 'valid'));
+    app.state.selectedAdminProvider = (flagged || withEvent || app.PROVIDERS[0]).id;
+    const creds = paint('credentials');
+    const acts = paint('activity');
+
+    const stale = ['Government ID', 'September 9 - Completed booking', 'Credential reminder sent']
+      .filter(t => (creds + acts).includes(t));
+    const rows = app.credentialsOf(app.state.selectedAdminProvider);
+    const codes = rows.map(cr => app.credentialState(cr).code);
+    /* Per row, not per card. An earlier draft asked only whether "Expiring soon"
+       appeared anywhere in the screen, and the summary card above every tab already
+       prints that word — so a mutant that painted every document "Valid" passed. A
+       check satisfied by an element it was not watching is not a check. */
+    const STATE_WORDS = { valid:'Valid', expiring:'Expiring soon', expired:'Expired' };
+    const rowLines = creds.split('<br>');
+    const rowsOk = rows.every(cr => {
+      const line = rowLines.find(t => t.includes(cr.name)) || '';
+      return !!line && line.includes(STATE_WORDS[app.credentialState(cr).code]);
+    });
+    const showsOwn = rows.every(cr => creds.includes(cr.name));
+    const honestExpired = !codes.includes('expired') || /Expired/.test(creds);
+    const honestExpiring = !codes.includes('expiring') || /Expiring soon/.test(creds);
+    const activityOk = withEvent ? /—/.test(acts) : /nothing to audit/i.test(acts);
+    /* And the other half: a provider with no event on this device must not be shown
+       somebody else's, which is how a card that ignores the provider id would pass the
+       assertion above. Its text is scanned for typed claims too — the empty branch is
+       the only place a re-typed line could hide. */
+    const quiet = app.PROVIDERS.find(p => !hasEvent(p));
+    let quietSaysSo = true, quietActs = '';
+    if (quiet) {
+      app.state.selectedAdminProvider = quiet.id;
+      quietActs = paint('activity');
+      quietSaysSo = /nothing to audit/i.test(quietActs);
+    }
+    const staleAll = stale.concat(['Government ID', 'September 9 - Completed booking',
+      'Credential reminder sent'].filter(t => quietActs.includes(t)));
+    return { ok: staleAll.length === 0 && showsOwn && rowsOk && honestExpired && honestExpiring
+        && activityOk && quietSaysSo,
+      why: staleAll.length ? 'the card still types ' + staleAll.join(' / ')
+        : !showsOwn ? 'a document on file is missing from the credentials card'
+        : !rowsOk ? 'a document is not shown in the state its record holds'
+        : !honestExpired ? 'an expired document is not shown as expired'
+        : !honestExpiring ? 'a document expiring soon is not shown as expiring'
+        : !activityOk ? 'the audit card shows no event though the record has one'
+        : !quietSaysSo ? 'a provider with no event on file was shown another provider’s'
+        : 'the profile is not reading its records' };
+  })());
+
   const unsourced = ['Expires in 23 days', 'ID Verification - ', 'Last active: 2 hours ago',
     /* The verification console's typed claims. Each of these was painted as a fact about
        an applicant while no record held it. The last two carry their trailing comma on
@@ -2295,6 +2362,10 @@ suite('honesty', async () => {
     'May 12, 1994', '**** **** 4821', "'Sep 8, 9:14 AM", "push('Sep 9, 2:",
     'Email and mobile verified', 'Name matches Government ID', "docs:'4/5',", "days:'1 day ago',",
     'Failed login attempt', 'PROVIDERS.slice(0, 4)', 'adminVerifiedPerformance', 'meta.active',
+    /* The administrator's provider profile: four dated events typed once and shown to
+       all eight providers, and two documents painted green that no record asserts. */
+    'September 9 - Completed booking', 'September 5 - Credential reminder sent',
+    'Government ID - <b style="color:var(--success-ink);">Verified</b>',
     'meta.performance'];
   const found = unsourced.filter(s => appSrc.includes(s));
   c.check('no screen asserts a security or document state nothing records',
