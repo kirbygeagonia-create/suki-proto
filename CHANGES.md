@@ -1898,3 +1898,94 @@ labels paint at 12.4px against the 14px floor §68 sets.
 on tap floor, contrast, clipping, off-scale, under-nav, unnamed controls, occlusion, moving
 artwork, horizontal overflow and console errors. Installed and run on a vivo 1906, Android 11,
 over `file://` with no network attached.
+
+---
+
+## 38. The same rule, at the layer every screen reads through
+
+Asked whether anything was left, the answer turned out to be no — and the reason was
+worth writing down. §36 and §37 removed five id substitutions **in screens** and closed
+the door on the one that could arrive from storage, and nobody asked what the lookups
+*underneath* those screens did when they missed. They answered with a real row.
+
+**`providerOf()` took `PROVIDERS[0]`.** Fifty-four call sites read a field off its
+answer, so one dangling `providerId` repainted that job with the plumber's name,
+badges, reviews, barangay and payout account on both sides of the transaction — while
+every figure on the card stayed arithmetically perfect, which is what let it survive
+two passes aimed at this exact class. Worse on the money side: `onAccept` reads
+`provider.rateCentavos` when a job has no listing, the stand-in's is `null`, and
+`Math.round(null)` is `0` — so a job nobody was behind was **agreed at ₱0** and the
+ledger booked that as fact.
+
+Six more sites, same shape: the signed-in provider lookup (`PROVIDERS[0]`, twice),
+`serviceMeta()` and `categoryBehaviour()` (`SERVICES[0]`, so an unknown trade was drawn
+as Plumbing and inherited its modes and commission basis), a declared category with no
+tint of its own (Delivery's cyan), the chat room and its **thread key** (`PROVIDERS[0]`
+and the demo resident — a provider answering one customer could be shown, and could
+write into, the thread the plumber shares with somebody else), the resident's provider
+detail (`PROVIDERS[2]`), and `pays[d.payIdx] || pays[0]` — which is what the *booking
+record* took, not just the card, so the method painted was not the method stored.
+
+**And the concierge invented a category.** Three sites fell back to
+`CONCIERGE_SORTS[2]`, which is Plumbing, so a description it could not place — including
+**a photo with no words beside it, which is every photo anyone would attach to a
+broken thing** — was announced as "Briefing ready - shortlisted under plumbing", asked
+whether the water was leaking continuously, and then opened a list of plumbers. §20 says
+this prototype must not fabricate a diagnosis; it was fabricating one on the path with
+no text in it at all.
+
+### What it does now
+
+`providerOf()` answers with a record-shaped stand-in that carries no identity — a record
+rather than `null`, because the 54 call sites read fields straight off it and the point
+is to change *whose* identity shows, not how many screens have to learn a new rule. The
+signed-in lookup returns `null` and the dashboard and the opportunity radar say so in
+their own words. An unknown trade is drawn on `--border` and `--text-secondary`, the two
+neutral tokens, so it cannot become an eighth trade and cannot wear another's colours.
+The room resolves its counterpart **from the ids on the thread** rather than from a row,
+and a tap whose counterpart is not the job's other half is refused. A stale index is
+clamped *and written back*, so the rail marks the row the money is computed from — the
+listing rail had the same mismatch and silently priced one job while selecting none.
+Accepting refuses when neither a provider record nor a listing prices the job, and the
+check asserts the **reason**, because the same door also refuses a double-booked
+provider and a check that passes on either message is half a check. The concierge
+refuses to sort: the resident is told the words did not place, in two different
+sentences for the two different cases (unsortable words, or a photo this prototype
+cannot read), and is pointed at choosing the category themselves.
+
+`jobsFromDevice` was written by `refreshReputation()` and read by nothing; the reputation
+panel now states the jobs figure as what it is — the sample's count plus what finished on
+this device.
+
+### Numbers, and three mutants that were missed first
+
+Gate **478 → 483** checks, all passing. `tools/falsify-identity-fallbacks.cjs`:
+**19 mutants applied, 19 caught** — after the first run caught 11 of 14. Two of the three
+misses were shallow checks: an assertion on `state.isChatOpen` cannot see a header naming
+the wrong person, because the refused tap left every *other* field already correct, and a
+room guard with two conditions passes while only one of them is exercised — so the room
+check now also walks a thread whose provider id names nobody, which is where
+`PROVIDERS[0]` used to walk in. The third miss was an **equivalent mutant**: with the
+write-back in place, `pays[(d && d.payIdx) || 0] || pays[0]` reads the same row the clamp
+just wrote, so no check could see it. That mutant was deleted rather than kept to make the
+count look bigger.
+
+Camera **60 → 61 screens.** The concierge's refusal is a state a thumb creates by typing,
+so it is in the table (`concierge-no-match`) and was photographed at 320, 390 and 450. The
+three new refusal *screens* — a chat room with no thread, a provider detail with nothing
+selected, a dashboard signed in as nobody — are asserted by the gate and deliberately not
+photographed: no tap reaches them, and a camera that walks to a screen nobody can enter is
+measuring a fiction. Clean at all three widths on tap floor, contrast, clipping, off-scale,
+under-nav, unnamed controls, occlusion, moving artwork, overflow and console errors; the one
+known failure is unchanged and still open — **21 SVG chart labels at 320px paint at 12.4px
+against the 14px floor §68 sets**, because a fixed `viewBox` scales its text with the
+container. At 390 and 450 that count is 0.
+
+`Sukinnect.html` is unchanged; `git diff --quiet origin/main -- Sukinnect.html` still
+reports unchanged. **No device build was made from this pass, and the copy inside the
+shell is now behind**: `Sukinnect-Android/app/src/main/assets/Sukinnect.html` is 770,173
+bytes against this file's 781,812, so `Sukinnect-1.2-preview.9-debug.apk` (`versionCode 11`)
+is the newest install a bench can hold but does **not** contain the concierge refusal, the
+chat-room rule or the identity seam. Re-syncing and rebuilding is the owner's call, and
+whatever it produces has to be described in `DEVICE-PASS.md`, because git will never show
+that tree.

@@ -5254,7 +5254,12 @@ function sendChatMessage(){
   const text = (input && input.value ? input.value : '').trim();
   if(!text){ showToast('Type a message first'); return; }
   const side = state.role === 'provider' ? 'provider' : 'customer';
-  appendMessage(currentThreadKey(), state.activeChatBookingId, side, text);
+  /* A room with one half missing has no key, and the old code invented one from
+     PROVIDERS[0] — so the line was stored in somebody else's conversation and read
+     back as though it had been said here. */
+  const thread = currentThreadKey();
+  if (!thread) { showToast('This room has no conversation on this device to write into'); return; }
+  appendMessage(thread, state.activeChatBookingId, side, text);
   markThreadRead();
   render();
   const list = document.getElementById('chat-msg-list');
@@ -5564,7 +5569,7 @@ function providerSectionBody(section){
       <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px;">
         These are the documents on file for your account. A status is set by Sukinnect after review, not by the document itself.
       </div>
-    </div>` : section === 'reputation' ? `<div class="card"><b>Reputation</b><div class="stat-strip" style="margin-top:10px;"><span class="f"><b>${providerOf({providerId:CURRENT_PROVIDER_ID}).trustScore}</b><span>trust score</span></span><span class="f"><b>${providerOf({providerId:CURRENT_PROVIDER_ID}).rating}</b><span>rating</span></span><span class="f"><b>${completionRate(CURRENT_PROVIDER_ID)}%</b><span>completion</span></span><span class="f"><b>${cancellationRate(CURRENT_PROVIDER_ID)}%</b><span>cancellation</span></span></div><div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:9px;">Counted from the ${closedJobCount(CURRENT_PROVIDER_ID)} job${closedJobCount(CURRENT_PROVIDER_ID) === 1 ? '' : 's'} on this device that have finished or been cancelled — with a sample that small one booking moves either figure by half. ${providerOf({providerId:CURRENT_PROVIDER_ID}).seedRatings} ratings from the sample record and ${providerOf({providerId:CURRENT_PROVIDER_ID}).ratingsFromDevice} recorded on this device make up that average, so one finished job cannot move it far — which is what an average is for. The trust score is the platform's own figure for this account, not a rating of the person.</div></div>` : section === 'portfolio' ? `<div class="card"><b>Work Portfolio</b><div style="font-size:var(--t-caption); margin-top:9px;">${state.providerPortfolio.length ? state.providerPortfolio.map(item=>`${esc(item.service)} - ${esc(item.description)}`).join('<hr>') : 'No portfolio items added yet.'}</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('portfolio_add')">+ Add Work</button></div>` : section === 'payout' ? `<div class="card"><b>Payout &amp; Earnings</b><div class="card-body">Current payout: <b>${esc(pp.bankAccount)}</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('payout')">Manage Payout</button></div>` : section === 'security' ? `<div class="card"><b>Account &amp; Security</b><div class="card-body">This prototype signs in locally and keeps no authentication state, so there is no PIN, two-factor or session list to report.</div></div>` : section === 'notifications' ? `<div class="card"><b>Notification Preferences</b>${[['requests','New Service Requests'],['bookings','Booking Updates'],['messages','Customer Messages'],['quotes','Quotation Responses'],['payments','Payment Received'],['opportunities','High Demand Opportunities'],['schedule','Schedule Alerts'],['trust','Trust Score Changes'],['credentials','Credential Expiry'],['reviews','Customer Reviews']].map(([key,label])=>`<label class="row" style="font-size:var(--t-caption); padding:6px 0;">${label}<input type="checkbox" ${state.providerNotifications[key]?'checked':''} onchange="state.providerNotifications['${key}']=this.checked;"></label>`).join('')}</div>` : section === 'preview' ? `<div class="card"><div style="text-align:center;">${photoAvatar('self', 56)}<div style="font-size:var(--t-lead); font-weight:800; margin-top:8px;">${esc(pp.name)}</div><div style="font-size:var(--t-caption); color:var(--mist);">${esc(pp.service)}</div><div style="margin-top:9px; display:flex; align-items:center; justify-content:center; gap:5px;">${stars(providerOf({providerId:CURRENT_PROVIDER_ID}).rating,12)}<span style="font-weight:700;">${providerOf({providerId:CURRENT_PROVIDER_ID}).rating}</span><span style="color:var(--mist);">- ${providerOf({providerId:CURRENT_PROVIDER_ID}).jobs} completed jobs</span></div><div style="color:var(--success-ink); margin-top:6px;">${esc(providerOf({providerId:CURRENT_PROVIDER_ID}).badges.join(' - '))}</div><div style="font-size:var(--t-caption); text-align:left; margin-top:12px;">Service Area: ${esc(pp.barangay)} + nearby barangays<br>Starting Rate: ${rateLabel(pp.rateCentavos, pp.rateUnit)}<br>Services: ${listingsOf(CURRENT_PROVIDER_ID).filter(l=>l.isActive).map(l=>l.title).join(', ') || 'none listed yet'}</div></div></div>` : '';
+    </div>` : section === 'reputation' ? `<div class="card"><b>Reputation</b><div class="stat-strip" style="margin-top:10px;"><span class="f"><b>${providerOf({providerId:CURRENT_PROVIDER_ID}).trustScore}</b><span>trust score</span></span><span class="f"><b>${providerOf({providerId:CURRENT_PROVIDER_ID}).rating}</b><span>rating</span></span><span class="f"><b>${completionRate(CURRENT_PROVIDER_ID)}%</b><span>completion</span></span><span class="f"><b>${cancellationRate(CURRENT_PROVIDER_ID)}%</b><span>cancellation</span></span></div><div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:9px;">Counted from the ${closedJobCount(CURRENT_PROVIDER_ID)} job${closedJobCount(CURRENT_PROVIDER_ID) === 1 ? '' : 's'} on this device that have finished or been cancelled — with a sample that small one booking moves either figure by half. ${providerOf({providerId:CURRENT_PROVIDER_ID}).seedRatings} ratings from the sample record and ${providerOf({providerId:CURRENT_PROVIDER_ID}).ratingsFromDevice} recorded on this device make up that average, so one finished job cannot move it far — which is what an average is for. The ${providerOf({providerId:CURRENT_PROVIDER_ID}).jobs} completed jobs is ${providerOf({providerId:CURRENT_PROVIDER_ID}).seedJobs} the sample record carries plus ${providerOf({providerId:CURRENT_PROVIDER_ID}).jobsFromDevice} finished on this device. The trust score is the platform's own figure for this account, not a rating of the person.</div></div>` : section === 'portfolio' ? `<div class="card"><b>Work Portfolio</b><div style="font-size:var(--t-caption); margin-top:9px;">${state.providerPortfolio.length ? state.providerPortfolio.map(item=>`${esc(item.service)} - ${esc(item.description)}`).join('<hr>') : 'No portfolio items added yet.'}</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('portfolio_add')">+ Add Work</button></div>` : section === 'payout' ? `<div class="card"><b>Payout &amp; Earnings</b><div class="card-body">Current payout: <b>${esc(pp.bankAccount)}</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('payout')">Manage Payout</button></div>` : section === 'security' ? `<div class="card"><b>Account &amp; Security</b><div class="card-body">This prototype signs in locally and keeps no authentication state, so there is no PIN, two-factor or session list to report.</div></div>` : section === 'notifications' ? `<div class="card"><b>Notification Preferences</b>${[['requests','New Service Requests'],['bookings','Booking Updates'],['messages','Customer Messages'],['quotes','Quotation Responses'],['payments','Payment Received'],['opportunities','High Demand Opportunities'],['schedule','Schedule Alerts'],['trust','Trust Score Changes'],['credentials','Credential Expiry'],['reviews','Customer Reviews']].map(([key,label])=>`<label class="row" style="font-size:var(--t-caption); padding:6px 0;">${label}<input type="checkbox" ${state.providerNotifications[key]?'checked':''} onchange="state.providerNotifications['${key}']=this.checked;"></label>`).join('')}</div>` : section === 'preview' ? `<div class="card"><div style="text-align:center;">${photoAvatar('self', 56)}<div style="font-size:var(--t-lead); font-weight:800; margin-top:8px;">${esc(pp.name)}</div><div style="font-size:var(--t-caption); color:var(--mist);">${esc(pp.service)}</div><div style="margin-top:9px; display:flex; align-items:center; justify-content:center; gap:5px;">${stars(providerOf({providerId:CURRENT_PROVIDER_ID}).rating,12)}<span style="font-weight:700;">${providerOf({providerId:CURRENT_PROVIDER_ID}).rating}</span><span style="color:var(--mist);">- ${providerOf({providerId:CURRENT_PROVIDER_ID}).jobs} completed jobs</span></div><div style="color:var(--success-ink); margin-top:6px;">${esc(providerOf({providerId:CURRENT_PROVIDER_ID}).badges.join(' - '))}</div><div style="font-size:var(--t-caption); text-align:left; margin-top:12px;">Service Area: ${esc(pp.barangay)} + nearby barangays<br>Starting Rate: ${rateLabel(pp.rateCentavos, pp.rateUnit)}<br>Services: ${listingsOf(CURRENT_PROVIDER_ID).filter(l=>l.isActive).map(l=>l.title).join(', ') || 'none listed yet'}</div></div></div>` : '';
 }
 
 function adminSectionBody(section){
@@ -5771,6 +5776,18 @@ function requestPaymentOptions(){
     { code:'cash',  label: PAY_METHODS.cash  }
   ];
 }
+/* A draft outlives the list its index came from: a resident who chose the second
+   option and then opened a provider whose list is shorter used to get pays[undefined]
+   — which fell back to pays[0] on the card AND on the record, so the method painted
+   was not the method chosen. The index is brought back inside the list it belongs to
+   and written into the draft, so sheet and submission cannot disagree. */
+function requestPaymentChoice(d){
+  const pays = requestPaymentOptions();
+  const wanted = Math.round(Number(d && d.payIdx));
+  const idx = Number.isFinite(wanted) ? Math.min(Math.max(0, wanted), pays.length - 1) : 0;
+  if (d && d.payIdx !== idx) d.payIdx = idx;
+  return { option: pays[idx], options: pays };
+}
 
 // Provider Detail is entered from results, from a booking, and from admin. One
 // entry point keeps the map initialisation and the back target identical for all
@@ -5884,7 +5901,12 @@ function requestPick(active, label, onClick){
 function draftListing(p, d) {
   const list = listingsOf(p.id);
   if (!list.length) return null;
-  return list[Math.min(d.listingIdx || 0, list.length - 1)];
+  /* Clamped and written back, the same way a payment choice is: the rail paints the
+     row the draft's index names, so an index past the end priced one listing while
+     selecting none of them. */
+  const idx = Math.min(Math.max(0, Math.round(Number(d.listingIdx) || 0)), list.length - 1);
+  if (d.listingIdx !== idx) d.listingIdx = idx;
+  return list[idx];
 }
 function draftBreakdown(p, d) {
   const listing = draftListing(p, d);
@@ -6123,6 +6145,11 @@ function bookingAmountPhrase(b){
 function listingRail(p, d) {
   const list = listingsOf(p.id);
   if (list.length < 2) return '';
+  /* Resolve the draft's listing first, because that is where an index past the end is
+     brought back: the rail has to mark the same row the money below it is computed
+     from, and painting nothing selected over a priced listing is the same mismatch
+     the payment rail had. */
+  draftListing(p, d);
   return `<div class="sheet-group">
         <div class="sheet-label">Which job</div>
         <div class="hscroll req-rail">
@@ -6561,9 +6588,8 @@ function bookingRequestSheet(){
   if(!p) return '';
   const d = state.requestDraft || { service:'', dayIdx:0, timeIdx:1, addrIdx:0, payIdx:0, mode:null, fruit:null };
   const days = requestDays();
-  const pays = requestPaymentOptions();
   const addrs = state.profileData.savedAddresses || [state.profileData.address];
-  const pay = pays[d.payIdx] || pays[0];
+  const { option: pay, options: pays } = requestPaymentChoice(d);
   const cash = pay.code === 'cash';
   return `
     <div class="sheet-grab"></div>
@@ -6682,8 +6708,7 @@ function submitBookingRequest(){
   render();
   setTimeout(() => {
     const days = requestDays();
-    const pays = requestPaymentOptions();
-    const pay = pays[d.payIdx] || pays[0];
+    const pay = requestPaymentChoice(d).option;
     const me = customerOf({ customerId: CURRENT_CUSTOMER_ID });
     const listing = draftListing(p, d);
     const indicative = draftBreakdown(p, d);
@@ -7519,8 +7544,12 @@ function residentConcierge(){
   // when Analyze ran, so editing the description afterwards cannot leave the
   // card describing one trade while the button opens another.
   const sorted = state.conciergeAnalyzed ? serviceMeta(state.conciergeServiceId) : null;
+  /* The row that owns the clarifying question, or nothing. It used to answer an id no
+     sort carries with CONCIERGE_SORTS[2] — Plumbing — so a card about an appliance
+     could ask whether the water is leaking continuously and offer two plumbing
+     answers to add to the provider's briefing. */
   const sort = state.conciergeAnalyzed
-    ? (CONCIERGE_SORTS.find(s => s.id === state.conciergeServiceId) || CONCIERGE_SORTS[2])
+    ? CONCIERGE_SORTS.find(s => s.id === state.conciergeServiceId) || null
     : null;
   return `
   ${screenHeader('AI Service Concierge ' + ic("sparkles",16), { backId:'back-from-concierge-btn', backLabel:'Back to home', sub:'Describe the problem, then review who to book' })}
@@ -7564,7 +7593,7 @@ function residentConcierge(){
       </button>
     </div>
 
-    ${state.conciergeAnalyzed ? `
+    ${(state.conciergeAnalyzed && sort && sorted) ? `
       <div class="card card-hero" style=" border:2px solid var(--brand-navy); box-shadow:0 6px 20px rgba(0,0,0,0.06)">
         <div class="row" style="margin-bottom:12px;">
           <span style="background:${sorted.bg}; color:${sorted.fg}; font-size:var(--t-caption); font-weight:800; padding:5px 12px; border-radius:999px; display:inline-flex; align-items:center; gap:5px;">
@@ -7612,11 +7641,14 @@ function residentConcierge(){
 }
 
 /* These used to congratulate you and change nothing. The answer now extends what
-   the resident said, and the booking sheet carries that wording across. */
+   the resident said, and the booking sheet carries that wording across. An id no
+   sort carries adds nothing: taking the Plumbing row for an unknown id would append
+   a plumbing answer to a briefing about a different trade, and the provider would
+   read it as something the resident was asked and answered. */
 function addConciergeAnswer(sortId, index) {
-  const row = CONCIERGE_SORTS.find(r => r.id === sortId) || CONCIERGE_SORTS[2];
+  const row = CONCIERGE_SORTS.find(r => r.id === sortId) || null;
   const answer = row && row.ans && row.ans[index];
-  if (!answer) return;
+  if (!answer) { showToast('That question belongs to a category this concierge did not sort you into'); return; }
   const notes = state.conciergeNotes || [];
   if (!notes.includes(answer)) notes.push(answer);
   state.conciergeNotes = notes;
@@ -7691,19 +7723,26 @@ const CONCIERGE_SORTS = [
     ask:'What is being moved, and is there someone at both ends to help load and unload?', ans:['Help at both ends','No help available'] },
 ];
 
+/* null is the answer when the words do not sort: the Concierge used to hand back
+   CONCIERGE_SORTS[2] — Plumbing — for anything it could not place, including a photo
+   with no words at all, and the screen then said "Briefing ready - shortlisted under
+   plumbing" over a description that never mentioned water. Inventing the category is
+   the one thing this prototype cannot do on a resident's behalf (§20). */
 function matchConciergeService(text){
   const t = (text || '').toLowerCase();
-  const hit = CONCIERGE_SORTS.find(s => {
+  return CONCIERGE_SORTS.find(s => {
     s._re = s._re || new RegExp('(^|[^a-z0-9])(' + s.words.join('|') + ')([^a-z0-9]|$)');
     return s._re.test(t);
-  });
-  return hit || CONCIERGE_SORTS[2];
+  }) || null;
 }
 
 // The Concierge hands off through the same filter path the results screen uses,
 // so "show me this category" cannot disagree with the list it opens.
 function conciergeFindMatches(){
-  const s = SERVICES.find(x => x.id === state.conciergeServiceId) || SERVICES[0];
+  const s = SERVICES.find(x => x.id === state.conciergeServiceId) || null;
+  /* An id the catalogue does not hold used to open Plumbing's results, so a briefing
+     nobody could place led the resident to a list of plumbers. */
+  if (!s) { showToast('This briefing was not sorted into a category, so there is nothing to list'); return; }
   openCategory(s.id);
 }
 
@@ -7820,7 +7859,19 @@ function residentResults(){
 }
 
 function residentProviderDetail(){
-  const p = state.selectedProvider || PROVIDERS[2]; 
+  /* openProviderDetail() refuses an unknown id, but this screen is the other half of
+     the rule: it used to paint PROVIDERS[2] whenever it was rendered with nothing
+     selected — her photo, her rate, her credentials and her map pin under whatever
+     heading got the app here. */
+  const p = state.selectedProvider;
+  if (!p) {
+    return `
+  ${screenHeader('Provider details', { backId:'back-from-detail-btn', backLabel:'Back to results' })}
+  <div class="pad" style="background:var(--cloud);">
+    ${emptyState('alert-triangle', 'No provider is open here',
+      'Nothing was selected, so this screen shows nobody. Open a provider from the results list.')}
+  </div>`;
+  }
   return `
   ${screenHeader('Provider details', { backId:'back-from-detail-btn', backLabel:'Back to results', action:`<div style="display:flex; align-items:center; gap:6px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.20); padding:5px 10px; border-radius:var(--r-pill); flex-shrink:0;">
       ${stars(p.rating,12,true)}
@@ -7960,17 +8011,22 @@ function residentMessagesList(){
 }
 
 /* Which pair the open room is about — read from state, because a provider
-   answering one customer must not be shown another customer's thread. */
+   answering one customer must not be shown another customer's thread. Both halves
+   have to be on the record: the room used to invent them from PROVIDERS[0] and
+   CURRENT_CUSTOMER_ID, so a thread opened with one side missing was keyed to the
+   plumber's conversation with somebody else, and whatever was typed went in there.
+   null is the honest answer, and every caller has to say so rather than write. */
 function currentThreadKey(){
-  const other = state.activeChatCounterpart || state.activeChatProvider || PROVIDERS[0];
-  const customer = state.activeChatCustomerId || CURRENT_CUSTOMER_ID;
-  const provider = other.serviceId ? other.id : (state.activeChatProviderId || (PROVIDERS[0]||{}).id);
-  return threadKeyOf(customer, provider);
+  const provider = state.activeChatProviderId;
+  const customer = state.activeChatCustomerId;
+  return provider && customer ? threadKeyOf(customer, provider) : null;
 }
 
 function markThreadRead(){
+  const key = currentThreadKey();
+  if (!key) return;
   const read = Object.assign({}, state.threadRead);
-  read[currentThreadKey()] = Date.now();
+  read[key] = Date.now();
   state.threadRead = read;
 }
 
@@ -7986,13 +8042,22 @@ function closeChatRoom(){
 function openChatThread(counterpartId, bookingId){
   const b = bookingId ? bookingById(bookingId) : null;
   const other = PROVIDERS.find(x => x.id === counterpartId) || CUSTOMERS.find(c => c.id === counterpartId);
-  if (!other) return;
-  const providerRecord = other.serviceId ? other : (b ? PROVIDERS.find(p => p.id === b.providerId) : null);
+  if (!other) { showToast('No conversation on this device carries that reference'); return; }
+  /* The job owns both halves, so a tap whose counterpart disagrees with the job it
+     was pressed on is refused instead of painting one person's name over another's
+     thread. Without a job there is only one known side, and one side is not a thread. */
+  const providerId = b ? b.providerId : (other.serviceId ? other.id : null);
+  const customerId = b ? b.customerId : (other.serviceId ? CURRENT_CUSTOMER_ID : other.id);
+  const counterpartIsTheOtherHalf = other.serviceId ? other.id === providerId : other.id === customerId;
+  if (!providerId || !customerId || !counterpartIsTheOtherHalf) {
+    showToast('This message has no job on this device to carry the conversation');
+    return;
+  }
   state.activeChatCounterpart = other;
-  state.activeChatProvider = providerRecord || PROVIDERS[0];
-  state.activeChatProviderId = providerRecord ? providerRecord.id : null;
+  state.activeChatProvider = PROVIDERS.find(p => p.id === providerId) || null;
+  state.activeChatProviderId = providerId;
   state.activeChatBookingId = b ? b.id : null;
-  state.activeChatCustomerId = b ? b.customerId : (other.serviceId ? CURRENT_CUSTOMER_ID : other.id);
+  state.activeChatCustomerId = customerId;
   state.tab = 'messages';
   state.isChatOpen = true;
   markThreadRead();
@@ -8009,11 +8074,44 @@ function chatBubble(m, other){
     </div>`;
 }
 
+/* The person on the other side of the open room, resolved from the ids the thread is
+   keyed to rather than from whichever record happens to be in state: a room that
+   knows it is talking to p2 must not be handed the first provider on the roster
+   because the field holding the object was cleared. null means the id names nobody,
+   and a room with nobody in it says so. */
+function chatCounterpart(){
+  if (state.activeChatCounterpart) return state.activeChatCounterpart;
+  const id = state.role === 'provider' ? state.activeChatCustomerId : state.activeChatProviderId;
+  if (!id) return null;
+  return PROVIDERS.find(p => p.id === id) || CUSTOMERS.find(c => c.id === id) || null;
+}
+
 function residentChatRoom(){
   /* The room belongs to whichever pair is talking. It assumed a provider on the
      other end, which is right for a resident and wrong for the provider answering
-     the same thread — so the counterpart is whatever record opened it. */
-  const activeChat = state.activeChatCounterpart || state.activeChatProvider || PROVIDERS[0];
+     the same thread — so the counterpart is whatever record opened it. When neither
+     side was on the record the room took PROVIDERS[0]: the plumber's face, name and
+     distance painted over a thread keyed to somebody else, and the composer wrote
+     into it. */
+  const activeChat = chatCounterpart();
+  const thread = currentThreadKey();
+  if (!activeChat || !thread) {
+    return `
+  <div class="chat-head">
+    <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+      <button type="button" onclick="closeChatRoom()" class="back-btn" aria-label="Back to messages">${ic("chevron-left",18)}</button>
+      <div style="min-width:0;">
+        <h1 class="chat-head-name">Messages</h1>
+        <div class="chat-head-sub">${ic('user',12)} No conversation is open</div>
+      </div>
+    </div>
+  </div>
+  <div style="background:var(--cloud); display:flex; flex-direction:column; height:100%; min-height:0; position:relative;">
+    <div class="chat-list">${emptyState('chat', 'This room has no thread on this device',
+      'A conversation needs the job it belongs to and the person on the other side. Open one from Messages or from a booking.')
+    }</div>
+  </div>`;
+  }
   const isPro = !!activeChat.serviceId;
   const activeChatService = isPro ? serviceMeta(activeChat.serviceId) : null;
   const firstName = String(activeChat.name || '').split(' ')[0];
@@ -8025,19 +8123,19 @@ function residentChatRoom(){
       <div style="min-width:0;">
         <h1 class="chat-head-name">${esc(activeChat.name)}</h1>
         <div class="chat-head-sub">
-          ${isPro ? ic(activeChatService.icon,12) + ' Verified ' + esc(activeChat.service)
+          ${isPro ? ic(activeChatService.icon,12) + ' ' + (activeChat.unknown ? 'No roster record' : 'Verified ') + esc(activeChat.service)
                   : ic('user',12) + ' Client · ' + esc(activeChat.barangay || 'no barangay on file')}
         </div>
       </div>
     </div>
-    <span class="chat-head-tag">${isPro ? activeChat.distanceKm + ' km away'
+    <span class="chat-head-tag">${isPro ? (activeChat.unknown ? 'not on this roster' : activeChat.distanceKm + ' km away')
                                         : esc(firstName ? firstName + '’s job' : 'this job')}</span>
   </div>
 
   <div style="background:var(--cloud); display:flex; flex-direction:column; height:100%; min-height:0; position:relative;">
     <div id="chat-msg-list" class="chat-list">
       ${(() => {
-        const rows = threadMessages(currentThreadKey());
+        const rows = threadMessages(thread);
         if (!rows.length)
           return `<div class="chat-empty">Nothing has been said on this job yet. The first line usually describes what needs fixing.</div>`;
         let day = '';
@@ -10634,7 +10732,20 @@ function bindTabHandlers(){
       }
       state.conciergeError = null;
       // Capture the category now, from the words supplied at this moment.
-      state.conciergeServiceId = matchConciergeService(text).id;
+      const sorted = matchConciergeService(text);
+      /* No sort, no briefing. The old version took the Plumbing row for anything it
+         could not place — including a photo with no words beside it — and then told
+         the resident their problem had been shortlisted under plumbing. */
+      if (!sorted) {
+        state.conciergeServiceId = null;
+        state.conciergeAnalyzed = false;
+        state.conciergeError = text
+          ? 'Nothing in those words sorts into a service on this roster. Say what is broken in a little more detail, or go back and choose the category yourself.'
+          : 'This prototype does not read pictures, so a photo on its own cannot be sorted. Add a few words about what is wrong, or go back and choose the category yourself.';
+        render();
+        return;
+      }
+      state.conciergeServiceId = sorted.id;
       state.conciergeAnalyzing = true;
       render();
       setTimeout(() => {

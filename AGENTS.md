@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 10,652 lines, ONE :root block, 1,722 var() usages, 94 tokens declared with 91
+Sukinnect-next.html— 10,834 lines, ONE :root block, 1,735 var() usages, 94 tokens declared with 91
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1213,13 +1213,13 @@ Sukinnect-next.html— 10,652 lines, ONE :root block, 1,722 var() usages, 94 tok
                     Everything that was a real violation is now a token: #fff became
                     --surface and --on-brand, the modal dim became --scrim, and the phone
                     mockup's bezel and signal bars became --device-bezel and
-                    --device-signal. Type is fully on the scale: of the 116 `font-size`
-                    declarations in the stylesheet, 115 take a var(), none is a literal px,
-                    and the 116th is `inherit` — the reset that lets an <h1> sit in a flex bar
-                    as the div it replaced. The 397 `font-size` declarations inside markup's
+                    --device-signal. Type is fully on the scale: of the 118 `font-size`
+                    declarations in the stylesheet, 117 take a var(), none is a literal px,
+                    and the 118th is `inherit` — the reset that lets an <h1> sit in a flex bar
+                    as the div it replaced. The 399 `font-size` declarations inside markup's
                     inline styles all take a var() too. Every screen in the app now opens with
-                    an <h1> and every sheet with an <h2> — 22 and 6, the sixth being the weighing
-                    sheet — because a 49-screen app with no headings has no outline for a screen
+                    an <h1> and every sheet with an <h2> — 23 and 6, the sixth being the weighing
+                    sheet — because a 61-screen app with no headings has no outline for a screen
                     reader to navigate. This sentence was false when it was first written, and
                     stayed false for two screens (the resident's booking detail hand-rolled a bare
                     <div> where the provider's used the shared header, and the chat room titled
@@ -1472,6 +1472,38 @@ screens and left three: `residentBookingDetail()` fell back to `bookingsForResid
 built precisely so a note written on one applicant could not be painted on the next, and the id
 fallback was still a door to exactly that. `tools/falsify-id-substitutions.cjs`: 4 mutants, 4
 caught, with the same positive control as before.
+
+AND IT APPLIES TO THE LOOKUP, NOT ONLY THE SCREEN. Those two passes fixed nine call sites and
+left the seam every screen reads through: `providerOf()` answered a dangling `providerId` with
+`PROVIDERS[0]`, so one missing record repainted a job's name, badges, reviews and payout account
+with the plumber's, on both sides, while every figure stayed arithmetically perfect — and the
+accept path then read `provider.rateCentavos` from that borrowed record's shape as `null`, which
+`Math.round` answers with `0`, so a job nobody was behind got *agreed* at ₱0 and the ledger booked
+it as fact. The same shape sat in six more places: the signed-in provider lookup (`PROVIDERS[0]`,
+twice), `serviceMeta()` and `categoryBehaviour()` (`SERVICES[0]`, so an unknown trade was drawn as
+Plumbing and inherited its commission basis), a declared category with no tint (Delivery's cyan),
+the chat room and its thread key (`PROVIDERS[0]` and the demo resident, so a provider answering one
+customer could be shown — and write into — the thread the plumber shares with another), the
+resident's provider detail (`PROVIDERS[2]`), a payment index past the end of its list (`pays[0]`,
+which is what the *record* took, not just the card), and the concierge's three
+`CONCIERGE_SORTS[2]` fallbacks — which meant a photo with no words beside it, the whole point of
+the camera button, was filed under Plumbing and announced as "Briefing ready - shortlisted under
+plumbing", the §20 thing this prototype is explicitly not allowed to do. `providerOf()` now answers
+with a record-shaped stand-in that carries no identity (a record, not `null`, because 54 call sites
+read a field straight off the answer); the signed-in lookup returns `null` and the two screens that
+used it say so; an unknown trade is drawn on the two neutral tokens; the room resolves its
+counterpart from the ids on the thread rather than from a row; a stale index is clamped *and
+written back*, so the rail marks the row the money uses; and the concierge refuses to sort rather
+than invent a category — which is a new screen state, reachable by typing, and is in the camera's
+table (`concierge-no-match`) for that reason. `tools/falsify-identity-fallbacks.cjs`: 19 mutants,
+19 caught — after three were missed, two because the checks were shallow (an assertion on
+`isChatOpen` cannot see a header naming the wrong person, and a room guard with two conditions
+passes while only one of them is tested) and one because the mutant was **equivalent**: with the
+write-back in place, `pays[d.payIdx] || pays[0]` reads the same row, so that mutant was deleted
+rather than kept to make the count look bigger. The three refusal states that no tap can reach —
+a chat room with no thread, a provider detail with nothing selected, a dashboard signed in as
+nobody — are asserted by the gate and deliberately *not* photographed, because a camera that walks
+to a screen nobody can enter is measuring a fiction.
 
 A MODAL OPENED FROM A SHEET HAS TO OUTRANK THE SHEET. `.sheet-layer` sat at `z-index:60` over
 `.modal-layer`'s 50, and the sheet's scrim covers the whole phone and closes the sheet on any tap

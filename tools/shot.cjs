@@ -519,6 +519,14 @@ const SCREENS = [
                         state.isChatOpen=true; render();`],
   ['resident-profile', `state.view='app'; state.role='resident'; state.tab='profile'; render();`],
   ['concierge',        `state.view='app'; state.role='resident'; state.tab='concierge'; render();`],
+  /* The answer the concierge gives when the words sort into nothing. Typed into the
+     field and submitted through the painted button, because the state only exists if
+     a thumb can create it — and until this change an unsortable description was
+     photographed as, and shipped as, a plumbing briefing. */
+  ['concierge-no-match', `state.view='app'; state.role='resident'; state.tab='concierge'; render();
+                          document.getElementById('concierge-input-field').value =
+                            'The garden gate hinge is loose and the paint is peeling.';
+                          document.getElementById('concierge-analyze-btn').click();`],
   ['notifications',    `state.view='app'; state.role='resident'; state.tab='notifications'; render();`],
   ['provider-dash',    `state.view='app'; state.role='provider'; state.tab='dashboard'; render();`],
   /* The pilot's provider side, reached by signing in as the fruit pro rather than

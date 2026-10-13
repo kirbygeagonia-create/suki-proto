@@ -53,6 +53,9 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   /* the Back suite drives the app through its own navigation entry points, because a
      history handle is only worth testing if the step that created it is real */
   'openSheet', 'closeSheet', 'openChatThread', 'stepBack', 'openLayers', 'receiptCard',
+  'requestPaymentChoice', 'requestPaymentOptions', 'residentChatRoom', 'draftListing',
+  'closeChatRoom', 'threadsFor', 'markThreadRead', 'threadKeyOf',
+  'matchConciergeService', 'addConciergeAnswer', 'conciergeFindMatches', 'openCategory',
   'openDispute', 'openCaseSheet', 'submitCase', 'raiseCaseSheet', 'caseDoor', 'caseActor',
   'PAY_METHODS', 'PAYMENT_LABELS', 'TRANSITIONS', 'providerIsFreeToAccept',
   /* the thread, and the verbs the provider's card offers */

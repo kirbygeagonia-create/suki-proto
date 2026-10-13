@@ -2389,6 +2389,197 @@ suite('honesty', async () => {
           : 'one half of the seam does not hold' };
   })());
 
+  /* The room, the profile and the sheet each answered a missing half with somebody's
+     record: the chat took PROVIDERS[0] for its counterpart, the resident's provider
+     detail took PROVIDERS[2], and a payment index past the end of the list took
+     pays[0] — so a resident who chose one method could be booked onto another, and a
+     provider replying to one customer was writing into the thread the plumber shares
+     with someone else. Every one of these is asserted on both sides, because a check
+     that only tests the missing case passes by rendering nothing. */
+  verdict('a chat room with one side missing keeps both out of it', (() => {
+    const a = boot();
+    a.state.view = 'app'; a.state.role = 'provider'; a.state.tab = 'messages';
+    a.state.providerProfileModal = null; a.state.profileSheet = null; a.state.sheet = null;
+    a.state.isChatOpen = true;
+    a.state.activeChatCounterpart = null; a.state.activeChatProvider = null;
+    a.state.activeChatProviderId = null; a.state.activeChatCustomerId = null;
+    a.state.activeChatBookingId = null;
+    const paint = () => (a.render(), a._document.getElementById('screen').innerHTML);
+    const keyless = a.currentThreadKey();
+    const empty = paint();
+    const before = a.MESSAGES.length;
+    a._document.getElementById('chat-input').value = 'A line that has nowhere to go';
+    a.sendChatMessage();
+    const wroteNowhere = a.MESSAGES.length === before;
+
+    /* The real entry: the room shows the customer whose job it is, keys the thread to
+       that pair, and refuses a counterpart the job does not name. */
+    a.state.isChatOpen = false;
+    const job = a.bookingsForProvider().find(b => a.customerOf(b));
+    const cust = a.customerOf(job);
+    a.openChatThread(cust.id, job.id);
+    const opened = paint();
+    const rightKey = a.currentThreadKey() === a.threadKeyOf(job.customerId, job.providerId);
+    const stranger = a.CUSTOMERS.find(c => c.id !== job.customerId);
+    a.openChatThread(stranger ? stranger.id : 'c-nobody', job.id);
+    /* The ids stay the job's and the record stays the customer's: a header naming the
+       wrong person over the right thread is the same defect in the other direction, and
+       an assertion on isChatOpen alone cannot see it because the state already matches. */
+    const stayed = a.state.isChatOpen && a.state.activeChatCounterpart
+      && a.state.activeChatCounterpart.id === cust.id
+      && a.currentThreadKey() === a.threadKeyOf(job.customerId, job.providerId);
+    a.state.activeChatCounterpart = null;
+    const byId = paint();
+
+    /* A thread keyed to a provider the roster no longer holds: both halves are on the
+       record so the key computes, and there is no object to name — which is exactly
+       where PROVIDERS[0] used to walk in wearing somebody else's conversation. */
+    a.state.role = 'resident';
+    a.state.activeChatCustomerId = a.CURRENT_CUSTOMER_ID;
+    a.state.activeChatProviderId = 'p-nobody';
+    a.state.activeChatProvider = null;
+    const dangling = paint();
+    return { ok: keyless === null && /no thread on this device/.test(empty)
+        && !empty.includes(a.PROVIDERS[0].name) && /<h1/.test(empty) && wroteNowhere
+        && rightKey && opened.includes(cust.name) && stayed && byId.includes(cust.name)
+        && !byId.includes(stranger ? stranger.name : 'zzz')
+        && /no thread on this device/.test(dangling)
+        && !dangling.includes(a.PROVIDERS[0].name),
+      why: keyless !== null ? 'a room with no counterpart still computes a thread key'
+        : !/no thread on this device/.test(empty) ? 'the keyless room paints a conversation anyway'
+        : empty.includes(a.PROVIDERS[0].name) ? 'the keyless room is still wearing the first provider'
+        : !/<h1/.test(empty) ? 'the keyless room paints no heading'
+        : !wroteNowhere ? 'a message typed into a room with no thread was filed somewhere'
+        : !rightKey ? 'a real thread no longer keys to the pair that opened it'
+        : !opened.includes(cust.name) ? 'the room stopped naming the customer on the job'
+        : !stayed ? 'a counterpart the job does not name still moved the room onto them'
+        : !byId.includes(cust.name) ? 'a room whose record field was cleared lost the person it is with'
+        : byId.includes(stranger ? stranger.name : 'zzz') ? 'a refused counterpart is still named in the header'
+        : !/no thread on this device/.test(dangling) ? 'a thread keyed to a provider that is gone paints a room anyway'
+        : dangling.includes(a.PROVIDERS[0].name) ? 'a thread keyed to a provider that is gone wears the first provider'
+        : 'one half of the room guard does not hold' };
+  })());
+
+  verdict('the resident’s provider profile shows nobody rather than somebody else', (() => {
+    const a = boot();
+    a.state.view = 'app'; a.state.role = 'resident'; a.state.tab = 'provider_detail';
+    a.state.providerProfileModal = null; a.state.profileSheet = null; a.state.sheet = null;
+    const chosen = a.PROVIDERS[2];
+    const paint = () => (a.render(), a._document.getElementById('screen').innerHTML);
+    a.state.selectedProvider = null;
+    const miss = paint();
+    a.state.selectedProvider = chosen;
+    const hit = paint();
+    return { ok: /No provider is open here/.test(miss) && !miss.includes(chosen.name)
+        && /<h1/.test(miss) && hit.includes(chosen.name) && hit.includes(chosen.service),
+      why: !/No provider is open here/.test(miss) ? 'the profile still fills in a provider when none is open'
+        : miss.includes(chosen.name) ? 'the empty profile paints ' + chosen.name
+        : !/<h1/.test(miss) ? 'the empty profile paints no heading'
+        : !hit.includes(chosen.name) ? 'a provider who IS open stopped rendering'
+        : 'one half of the guard does not hold' };
+  })());
+
+  verdict('a stale choice index cannot record a method nobody picked', (() => {
+    const a = boot();
+    a.state.view = 'app'; a.state.role = 'resident';
+    const p = a.PROVIDERS[0];
+    const pays = a.requestPaymentOptions();
+    const listings = a.listingsOf(p.id);
+    a.state.selectedProvider = p;
+    const pressed = (sheet, which) => {
+      const m = new RegExp('class="pick on" aria-pressed="true" onclick="pickRequest\\(\''
+        + which + '\',(\\d+)\\)"').exec(sheet);
+      return m ? Number(m[1]) : -1;
+    };
+    const stale = { service:'', listingIdx:listings.length + 3, dayIdx:0, timeIdx:1,
+      addrIdx:0, payIdx:pays.length + 4, asap:false, mode:null, fruit:null };
+    a.state.requestDraft = stale;
+    const sheetStale = a.bookingRequestSheet();
+    const clamped = { service:'', listingIdx:0, dayIdx:0, timeIdx:1, addrIdx:0,
+      payIdx:pays.length - 1, asap:false, mode:null, fruit:null };
+    a.state.requestDraft = clamped;
+    const sheetReal = a.bookingRequestSheet();
+    /* The draft is corrected in place, so what the rail marks and what the money uses
+       are the same row — and the last real choice is left exactly where it was. */
+    const listedOk = a.draftListing(p, stale) === listings[listings.length - 1];
+    return { ok: stale.payIdx === pays.length - 1 && stale.listingIdx === listings.length - 1
+        && pressed(sheetStale, 'payIdx') === pays.length - 1
+        && pressed(sheetStale, 'listingIdx') === listings.length - 1
+        && pressed(sheetReal, 'payIdx') === pays.length - 1 && listedOk,
+      why: stale.payIdx !== pays.length - 1 ? 'an out-of-range payment index stayed out of range: ' + stale.payIdx
+        : stale.listingIdx !== listings.length - 1 ? 'an out-of-range listing index stayed out of range: ' + stale.listingIdx
+        : pressed(sheetStale, 'payIdx') !== pays.length - 1
+          ? 'the sheet marks payment ' + pressed(sheetStale, 'payIdx') + ' while the draft holds ' + stale.payIdx
+          : pressed(sheetStale, 'listingIdx') !== listings.length - 1
+            ? 'the sheet marks listing ' + pressed(sheetStale, 'listingIdx') + ' while the draft holds ' + stale.listingIdx
+            : pressed(sheetReal, 'payIdx') !== pays.length - 1 ? 'a valid payment choice stopped being marked'
+            : !listedOk ? 'the money is computed from a different listing than the one selected'
+            : 'one half of the clamp does not hold' };
+  })());
+
+  /* §20 says the Concierge must not fabricate a diagnosis, and it did: a description
+     it could not place — including a photo with no words at all, which is every
+     photo — fell back to CONCIERGE_SORTS[2], Plumbing, so the screen read "Briefing
+     ready - shortlisted under plumbing", asked whether the water was leaking
+     continuously, and led the resident to a list of plumbers. Sorting nothing is now
+     an answer, and the two places that turn a sort id into a record refuse an id the
+     catalogue does not hold. */
+  verdict('the concierge sorts what it can read and refuses the rest', (() => {
+    const a = boot();
+    a.state.view = 'app'; a.state.role = 'resident'; a.state.tab = 'concierge';
+    a.state.providerProfileModal = null; a.state.profileSheet = null; a.state.sheet = null;
+    const placed = a.matchConciergeService('The main breaker trips whenever the fridge turns on.');
+    const unplaced = a.matchConciergeService('The garden gate hinge is loose and the paint is peeling.');
+
+    /* The button the resident actually presses, with words nothing sorts. */
+    a.render();
+    a._document.getElementById('concierge-input-field').value = unplaced === null
+      ? 'The garden gate hinge is loose and the paint is peeling.' : '';
+    const analyze = a._document.getElementById('concierge-analyze-btn');
+    const clicked = typeof analyze.onclick === 'function';
+    if (clicked) analyze.onclick();
+    const refusedBriefing = clicked && !a.state.conciergeServiceId
+      && !a.state.conciergeAnalyzing && !!a.state.conciergeError;
+
+    /* A briefing card whose sort row is gone must not paint another trade's question,
+       and the hand-off must not open that trade's results either. */
+    a.state.conciergeAnalyzed = true; a.state.conciergeServiceId = 'no-such-category';
+    a.render();
+    const ghostCard = a._document.getElementById('screen').innerHTML;
+    const tabBefore = a.state.tab;
+    a.conciergeFindMatches();
+    const stayedPut = a.state.tab === tabBefore;
+    const notesBefore = (a.state.conciergeNotes || []).length;
+    a.addConciergeAnswer('no-such-category', 0);
+    const borrowedNothing = (a.state.conciergeNotes || []).length === notesBefore;
+
+    /* The positive controls: a real description still sorts, a real sort still asks
+       its own question, its own answers still attach, and its own hand-off opens. */
+    a.state.conciergeServiceId = placed ? placed.id : 'appliance';
+    a.render();
+    const realCard = a._document.getElementById('screen').innerHTML;
+    const asked = placed ? placed.ask : 'x';
+    a.addConciergeAnswer(a.state.conciergeServiceId, 0);
+    const attached = (a.state.conciergeNotes || []).length === notesBefore + 1;
+    a.conciergeFindMatches();
+    const handedOff = a.state.tab !== tabBefore;
+    return { ok: !!placed && unplaced === null && refusedBriefing
+        && !/Job briefing for/.test(ghostCard) && stayedPut && borrowedNothing
+        && /Job briefing for/.test(realCard) && realCard.includes(asked)
+        && attached && handedOff,
+      why: !placed ? 'words that name a trade on the roster no longer sort into it'
+        : unplaced !== null ? 'a description nothing sorts is still placed under ' + unplaced.id
+        : !refusedBriefing ? 'Analyze still builds a briefing out of words it cannot sort'
+        : /Job briefing for/.test(ghostCard) ? 'a briefing with no sort row still paints a card'
+        : !stayedPut ? 'an unsorted briefing still opens a category’s results'
+        : !borrowedNothing ? 'an answer from another trade was appended to the briefing'
+        : !/Job briefing for/.test(realCard) ? 'a real sort stopped building its briefing'
+        : !realCard.includes(asked) ? 'the briefing asks a question that is not its own trade’s'
+        : !attached ? 'a real answer stopped being added to what the provider sees'
+        : !handedOff ? 'a real sort stopped opening its results'
+        : 'the concierge is not honest about what it cannot sort' };
+  })());
+
   /* The administrator's provider profile was the last screen typing its own facts: the
      audit tab was four dated lines identical for all eight providers — one of them
      "Received 5-star review" for a provider with no review on file — and the
