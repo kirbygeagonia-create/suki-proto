@@ -1556,9 +1556,22 @@ available" control the toast promising that residents would see you was unfalsif
 THE CAMERA NOW MEASURES THE WIDTH YOUR HANDSET ACTUALLY USES. A vivo 1906 reports
 `Override density: 256` on a 720px panel, so its WebView lays out at **~450 CSS px**, not the 360
 every clipping case had been tuned against; `node tools/shot.cjs --measure --width=450` is clean
-there and at 390, and at 320 the only new failure is 21 SVG chart labels on the two dashboards
-painting 12.4px against a declared 15px, because a fixed `viewBox` scales its text with the
-container. That one is open. The same device arrived with **no network at all** and the app
+there, at 390, and at 320. The one defect that list used to carry — 21 SVG chart labels painting
+12.4px against the 14px floor §68 sets, because a fixed `viewBox` scales its text with the
+container — was closed on 2026-10-13 by taking a chart's words out of the scaled box entirely:
+the shapes stay in SVG, the labels are HTML positioned by percentage of the *plot*, which must
+therefore be its own positioned element (the drawing caps at 320 units, and a percentage of a
+wider parent slides off the bar it names). Chasing it turned up two instrument defects worth
+remembering. The off-scale tally treated 13.3px as on-scale, because `14 - 13.3` is
+0.6999999999 in floating point and the tolerance is 0.7 — so the user-agent default for a form
+control sat *inside* the floor it was written to enforce, and the element walk never looked at a
+`<select>` at all, because its words live in `option` children and the walk skipped anything with
+children; six dropdowns had no font declaration and nothing said so. There is now a hard floor
+check separate from the scale test, form controls are measured by what they paint, and the
+camera has a `chart labels painted outside their own chart box` tally — proved by narrowing the
+gutter to 24px (it reports 4) after a probe, not a grep, showed that the first version's
+grid-column gutter collapsed to zero width and hung every axis label outside the card at all
+three widths. The same device arrived with **no network at all** and the app
 rendered completely, which is an unplanned proof of §81 — and the only remote dependency left in
 the file is `TILE_URL` (`{s}.tile.openstreetmap.org`, 448 requests per 390px sweep), which
 `mapFallback()` degrades honestly when the tiles never paint but which still sends a device IP and

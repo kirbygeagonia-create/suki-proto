@@ -2595,6 +2595,20 @@ suite('honesty', async () => {
         : 'the concierge is not honest about what it cannot sort' };
   })());
 
+  /* Slide 8 promises "User & category management" and the deck's demand list names three
+     trades the catalogue does not hold. Decided with the owner on 2026-10-13: state both
+     gaps on the screens where an administrator would go looking for them, build neither.
+     Asserted here because a quiet disclosure card is exactly what a later pass deletes as
+     clutter — and it is the only place §63's honesty about the console lives. */
+  c.check('the admin console says what it does not manage', () => {
+    const dash = app.adminDashboard();
+    const cats = app.adminCategories();
+    return /What this console does not manage/.test(dash)
+      && /Resident accounts and service categories are not administered here/.test(dash)
+      && /Categories are read-only in this prototype/.test(cats)
+      && !/create.*categor|edit.*categor/i.test(cats);
+  }, 'the admin console is back to implying it administers residents or the catalogue');
+
   /* The administrator's provider profile was the last screen typing its own facts: the
      audit tab was four dated lines identical for all eight providers — one of them
      "Received 5-star review" for a provider with no review on file — and the

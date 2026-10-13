@@ -1989,3 +1989,56 @@ is the newest install a bench can hold but does **not** contain the concierge re
 chat-room rule or the identity seam. Re-syncing and rebuilding is the owner's call, and
 whatever it produces has to be described in `DEVICE-PASS.md`, because git will never show
 that tree.
+
+---
+
+## 39. Four things the deck audit left open, decided and closed
+
+The audit (§37) ended with three items named and none settled, and the owner answered all
+of them on 2026-10-13 rather than let a future pass decide silently.
+
+### The chart labels — fixed, and two instrument defects found on the way
+
+21 SVG chart labels painted 12.4px at 320px against §68's 14px floor, because a fixed
+`viewBox` scales its text with the container. The shapes stay in SVG; the words are HTML
+positioned by percentage of the plot, and the plot is its own positioned element because the
+drawing caps at 320 units — a percentage of a wider parent slides off the bar it names.
+
+**The first version of the fix was wrong and only a probe caught it.** The axis labels went
+into a grid column sized `max-content`, and a column whose every child is absolutely
+positioned has no content to size it: it collapsed to zero width and hung all four tick
+labels *outside the card* at 320, 390 and 450 alike. Nothing in the instrument saw that —
+the text is not clipped, because nothing clips it; its contrast is fine; it is on the type
+scale. So the camera now has a `chart labels painted outside their own chart box` tally,
+proved by narrowing the gutter to 24px, which reports 4, and the gutter is a token
+(`--chart-gutter`) sized from the widest tick the app actually paints rather than by eye.
+The 3.5-unit baseline offset an SVG `<text>` needed also came across as every tick sitting
+2.4px (at 320) to 3.5px (at 450) below the gridline it names; the ticks are centred on the
+line now, and the alignment is measured rather than assumed.
+
+**Two real defects in the measuring itself.** The off-scale tally treats 13.3px as
+*on-scale*, because `14 - 13.3` is `0.6999999999999993` in floating point and the tolerance
+is `< 0.7` — a form control's user-agent default sat inside the floor the check was written
+to enforce. And the element walk skips anything with children, which is how it never once
+looked at a `<select>`, whose words live in `option` elements. Six of the app's eight
+dropdowns declared no font at all and painted 13.3px on two admin dialogs. Both are fixed:
+a hard floor check separate from the scale test, form controls measured by what they paint,
+and `select` given its size in the stylesheet so a filter added tomorrow cannot forget it.
+Proved by removing the rule — the old tally reports 0, the new one reports 5.
+
+### The two deck divergences — stated, not built
+
+Slide 8 promises admin "User & category management". The console now says what it does not
+manage, in a card where an administrator would go looking for it: resident accounts and the
+catalogue are not administered here, and what is — verification, credentials, cases,
+commission configuration, and money on completed work. The categories screen says its own
+half: read-only, and the deck's other demand trades (events, beauty, personal care) are
+absent on purpose, because §58 puts verified supply first and a tile a resident can tap with
+no provider behind it is a claim about the marketplace rather than a service.
+
+Neither gap was built. `gate 484 → 485` now asserts both statements are on the screens, so
+a later pass that reads them as clutter has to fail a check to delete them.
+
+**After:** gate **485 checks, all passing**; camera **61 screens** clean at 320, 390 and 450
+on every tally including the two new ones; no console errors; `Sukinnect.html` still
+identical to `main`.

@@ -8592,6 +8592,21 @@ function adminDashboard(){
          heading said "This week" as well, over counts taken from every demo record with
          no date filter anywhere, which is the same claim the caption below corrects. -->
     <div style="font-size:var(--t-caption); color:var(--mist); margin:6px 0 4px;">Counted from the demo records on this device — a sample marketplace, not a live one.</div>
+    <!-- Slide 8 of the deck promises "User & category management". This console verifies
+         providers, holds cases and moves money; it administers neither residents nor the
+         catalogue. §63 says a prototype must not look like what it is not, so the gap is
+         stated where an administrator would go looking for it rather than left to be
+         discovered by a missing button. -->
+    <div class="card card-quiet" style="margin-top:10px;">
+      <b class="card-title">What this console does not manage</b>
+      <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.55; margin-top:6px;">
+        Resident accounts and service categories are not administered here. A resident
+        edits their own record, and the catalogue is fixed in this prototype — no
+        category can be created, renamed or retired from this screen. What is managed
+        here: provider verification and credentials, cases and their evidence, the
+        commission configuration, and the movement of money on completed work.
+      </div>
+    </div>
 
     <div class="card" style="margin-top:14px">
       <div class="row" style="margin-bottom:10px;"><b class="card-title">Marketplace analytics</b><span class="chip">From these records</span></div>
@@ -8901,6 +8916,14 @@ function adminCategories(){
       <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.55;">
         Every category below is read from the catalogue the app itself uses to match,
         price and book. Supply is the demo roster; demand is jobs in the last 30 days.
+        <!-- The deck's demand list also names events, beauty and personal care. They are
+             deliberately absent: §58 puts verified supply first, and a tile a resident can
+             tap with no provider behind it is a claim about the marketplace rather than a
+             service. Recorded in CHANGES.md as a decision, not an omission. -->
+        <br><br>Categories are read-only in this prototype — there is no create or edit
+        here. The trades the pilot plan names as demand still to be tested (events,
+        beauty, personal care) are not listed as categories, because a category with no
+        verified provider behind it is a promise the marketplace cannot keep yet.
       </div>
     </div>
     ${SERVICES.map(cat => {
