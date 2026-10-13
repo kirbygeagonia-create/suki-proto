@@ -1984,11 +1984,17 @@ container. At 390 and 450 that count is 0.
 `Sukinnect.html` is unchanged; `git diff --quiet origin/main -- Sukinnect.html` still
 reports unchanged. **No device build was made from this pass, and the copy inside the
 shell is now behind**: `Sukinnect-Android/app/src/main/assets/Sukinnect.html` is 770,173
-bytes against this file's 781,812, so `Sukinnect-1.2-preview.9-debug.apk` (`versionCode 11`)
-is the newest install a bench can hold but does **not** contain the concierge refusal, the
-chat-room rule or the identity seam. Re-syncing and rebuilding is the owner's call, and
-whatever it produces has to be described in `DEVICE-PASS.md`, because git will never show
-that tree.
+bytes against this file's newer one, so the newest install — `Sukinnect-1.2-preview.11-debug.apk`,
+`versionCode 13`, measured against the build output rather than remembered from this file —
+does **not** contain the concierge refusal, the chat-room rule or the identity seam.
+Re-syncing and rebuilding is the owner's call, and whatever it produces has to be described
+in `DEVICE-PASS.md`, because git will never show that tree.
+
+*(This paragraph first said `preview.9` / `versionCode 11`, taken from the entry above it
+rather than from `app/build.gradle` and the outputs directory. Both builds named in this
+file's own history had already been overtaken twice. A claim about what a device runs has to
+be read off the artifact — which is the rule §31 records for every other number in this
+project, and this session broke it in the paragraph that quotes it.)*
 
 ---
 

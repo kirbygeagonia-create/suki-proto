@@ -34,7 +34,7 @@ title from the day it was written until 2026-10-10, when the label was found to 
 that one `applicationId` means one install: installing this **replaces** the customer build rather
 than sitting beside it, which is why the version code went up as well as the name.
 
-## Building it — re-built 2026-10-10 for the rebuild's assets; first compiled 2026-10-09
+## Building it — re-built 2026-10-13 (`1.2-preview.12`, `versionCode 14`); first compiled 2026-10-09
 
 "the Java looks right" is not the same claim as "an APK builds and contains what you changed",
 and neither is the same claim as "the page inside it finds its images". All three are now
@@ -59,13 +59,13 @@ What was verified about the artifact, not assumed:
 
 | Check | Result |
 |---|---|
-| `:app:assembleDebug` | **BUILD SUCCESSFUL**. Current output `Sukinnect-1.2-preview.11-debug.apk`, **2,118,834 bytes**, `versionCode 13`, `versionName 1.2-preview.11` — the build where the dialogs a sheet was covering become tappable, a stored record that belongs to nobody is refused rather than repainted, the app says out loud when the device will not keep what it was told to save, reputation moves when work is finished, and a provider is found where they said they serve. `SCHEMA_VERSION` is **15**, so a handset holding v14 will show the refusal notice on first launch — that is the new notice working, not a fault. Earlier rows: `.10` was `2,113,374 bytes`, `versionCode 12` — the build where a detail screen stops answering an unknown id with somebody else's record. Before it: `.9` 2,112,782 (decided tab), `.8` 2,111,574 (verification records), `.7` 2,105,566 (profile honesty), `.6` 2,104,798 (was 4,595,092 before reicon.js left the bundle) |
+| `:app:assembleDebug` | **BUILD SUCCESSFUL in 1m 7s** (34 tasks, 9 executed). Current output `Sukinnect-1.2-preview.12-debug.apk`, **2,125,430 bytes**, `versionCode 14`, `versionName 1.2-preview.12` — read off `aapt dump badging`, not off this file. It is the build where a missing provider record stops borrowing somebody else's identity through the shared lookups, a chat room resolves who it is with from the thread rather than from the first row of a table, a stale payment or listing index can no longer record a choice nobody made, the concierge refuses to invent a category, a job with nothing behind it is refused rather than agreed at ₱0, and the admin console says out loud that it manages no residents and no catalogue. Schema is still 15. Earlier builds: `.11` 2,118,834 / `versionCode 13` (dialogs a sheet was covering, the refusal notice, reputation, service area), `.10` 2,113,374 / `versionCode 12` (a detail screen stops answering an unknown id), `.9` 2,112,782 (decided tab), `.8` 2,111,574 (verification records), `.7` 2,105,566 (profile honesty), `.6` 2,104,798 (was 4,595,092 before reicon.js left the bundle) |
 | Launcher label | `aapt dump badging`: **'Sukinnect · preview'** on this debug APK, and still **'Sukinnect'** on the Oct-1 release APK — the override is debug-scoped, measured on both artifacts |
-| `assets/Sukinnect.html` inside the APK | `cmp` says **byte-identical to `Sukinnect-next.html`** — 770,173 bytes at the `.11` build (756,087 at `.10`, 754,702 at `.9`, 751,283 at `.8`). Verified by extracting `assets/Sukinnect.html` out of the APK itself, not from the staged copy. Compared with `cmp`, not with a hash: `.gitattributes` normalises line endings, so a hash match is the wrong question for a text file here |
+| `assets/Sukinnect.html` inside the APK | `cmp` says identical to `Sukinnect-next.html` — **786,835 bytes** at the `.12` build (770,173 at `.11`, 756,087 at `.10`, 754,702 at `.9`, 751,283 at `.8`). Verified by extracting `assets/Sukinnect.html` out of the APK itself with `unzip` and comparing that, not the staged copy. Compared with `cmp`, not with a hash: `.gitattributes` normalises line endings, so a hash match is the wrong question for a text file here |
 | The seven category PNGs inside the APK | `cmp` says identical to `assets/category-art/*.png`, and they sit at `assets/assets/category-art/` because the WebView root mirrors the repo root |
 | The four Atkinson weights inside the APK | `cmp` says identical, and `unzip -v` says **Stored** — `noCompress 'woff2'` is doing its job |
 | Every path the bundled page asks for | `check-assets.cjs --apk`: **48 of 48 resolve** |
-| The bundled page, painted | `tools/shot.cjs --file=<the assets copy> --width=360 --height=640 --measure`: 46 screens then, 47, then 49, 52, 56, 57, **60 now** — the newest are the modals behind the profile sheets, where the 24×25px close `×` was found, and the admin's verification review with its request picker, document preview, Decided tab and the four dialogs an admin reaches only at the moment of deciding (approve, reject, flag, request), which had been in no table at all. **0 images that got no pixels, 0 console errors**, 9 painted font sizes all ≥14px, 0 moving category artwork, 0 controls under the tap floor, and **every measured field equal to the same run against the repo source**. Quote the full sweep, not a `--only=` subset: a subset run reports three contrast failures on the admin header's translucent "Insights" pill that the full run reports as zero, because the sampler's answer depends on what was painted earlier in the run |
+| The bundled page, painted | `tools/shot.cjs --file=<the assets copy> --width=360 --height=640 --measure`: **61 screens**, and every tally 0 — tap floor, contrast, clipped, off-scale, **text below the 14px floor**, under-nav, unnamed controls, occlusion, moving artwork, horizontal overflow, **chart labels outside their own box**, 0 images that got no pixels, 0 console errors, 9 painted font sizes all ≥14px. The two bolded tallies are new with `.12`: a chart's axis left the scaled SVG, and six dropdowns that never declared a font were painting 13.3px inside a check that called 13.3 on-scale. Run against the staged copy, which the row above proves is the copy inside the APK — run against a lone extracted file it reports 72 broken images, because the page resolves `assets/` and `avatars/` beside itself |
 | Scratch left behind | none — the capture directories this pass wrote were deleted. The only tracked edits are `tools/shot.cjs` (the `--file=` flag) and this file |
 
 **Three build notes from 2026-10-10/11/12, all learned the hard way.** Rebuilding replaces the
@@ -196,6 +196,28 @@ gesture, and an app killed mid-review.
       the Activity tab must say so plainly rather than listing four September events. Open one whose
       credential expires soon: the Credentials tab must name each document from the record and show
       its real state — no green "Verified" for a document nothing verified.
+
+### 3f. What the .12 build changed — 4 min, new since the identity pass
+
+- [ ] **The concierge refuses to guess.** Resident → AI Service Concierge → type something with
+      no trade in it (`The garden gate hinge is loose`) → Analyze. It must say the words did not
+      sort, and offer nothing else. Then attach **a photo with no words at all** and Analyze:
+      before this build both cases were filed under plumbing and the screen said so in a toast.
+      Nothing may appear that looks like a diagnosis.
+- [ ] **A thread stays with its pair.** Open a chat from a booking, read it, kill the app, reopen,
+      go to Messages → the same conversation. Then open a *different* customer's thread as the
+      provider and confirm the header names that customer and the messages are theirs — the room
+      used to fill an empty counterpart from the first provider on the roster.
+- [ ] **What the sheet marks is what the booking records.** Book one provider choosing Cash on
+      arrival, then open a second provider and book again: the payment row that is marked must be
+      the one the confirmation and the booking show. A draft carried between providers used to
+      price and record the first option while appearing to select another.
+- [ ] **The console says what it does not do.** Admin → Dashboard → the card naming what is not
+      managed here, and Categories → the line saying the catalogue is read-only. It is disclosure
+      for slide 8, not decoration: judge whether it reads as information about the tool rather
+      than as an error. A chart's axis is HTML beside the drawing now — on this phone (~450 CSS px)
+      the labels should sit clear of the card edge; the narrow case was measured at 320px, which
+      this device cannot show.
 
 This phone renders at **~450 CSS px**, not the 360 the clipping cases were tuned against (720px
 panel at `Override density: 256`), so it will not exercise the narrow-device tab-rail case, and
