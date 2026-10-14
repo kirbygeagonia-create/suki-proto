@@ -58,6 +58,9 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   'REQUEST_TIMES', 'submitBookingRequest', 'bookingRequestSheet',
   'closeChatRoom', 'threadsFor', 'markThreadRead', 'threadKeyOf',
   'matchConciergeService', 'addConciergeAnswer', 'conciergeFindMatches', 'openCategory',
+  'adminLog', 'askForDocuments', 'flagAccountReview', 'submitCase', 'savePayoutAccount',
+  'savePreferredPayment', 'setProviderNotification', 'saveHouseholdItem', 'savePortfolioWork',
+  'saveAdminProviderNote', 'setAdminNotification',
   'openDispute', 'openCaseSheet', 'submitCase', 'raiseCaseSheet', 'caseDoor', 'caseActor',
   'PAY_METHODS', 'PAYMENT_LABELS', 'TRANSITIONS', 'providerIsFreeToAccept',
   /* the thread, and the verbs the provider's card offers */
@@ -198,6 +201,13 @@ function makeChecker() {
   const results = [];
   const api = {
     check(label, cond, extra) {
+      /* `cond` is coerced, so a function passed by mistake — `c.check(l, () => {...})`
+         where the body was never invoked — is permanently truthy and prints PASS while
+         testing nothing. Three checks in this file were written that way on 2026-10-13
+         and nine mutants walked through them. Fail loudly instead. */
+      if (typeof cond === 'function') {
+        throw new Error('check("' + label + '") was handed a function, not a verdict — invoke the body');
+      }
       results.push({ label, ok: !!cond, extra });
       console.log(`${cond ? 'PASS' : 'FAIL'}  ${label}${cond ? '' : '   ' + (extra || '')}`);
       return !!cond;

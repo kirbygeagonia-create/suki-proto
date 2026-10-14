@@ -15,6 +15,7 @@ function gate() {
 }
 
 const QUEUE = 'the verification queue is a record, not a screen state';
+const REOPEN = 'a reopened application stays reopened after a reload';
 const CLOCK = 'a review action is stamped with the time it happened';
 const QUAL = 'each applicant is shown the qualification they hold';
 const COUNT = 'the document count moves with the rows behind it';
@@ -39,16 +40,23 @@ const mutants = [
     to: 'function pendingApplicantList(){\r\n  return PENDING_APPLICANTS.slice();',
     expect: QUEUE },
   { name: 'the decision is never written down',
-    from: 'reopened. */\r\n  persist();\r\n  render();',
-    to: 'reopened. */\r\n  render();',
-    expect: QUEUE },
+    /* Two writers now: adminLog() persists, so removing the explicit persist() alone no
+       longer loses the record — that mutant was equivalent, not caught. This removes both
+       routes, which is the regression the check is actually meant to see. */
+    from: "  adminLog('Verification reopened', app.name, 'Application ' + app.applicationId);\r\n  persist();\r\n",
+    to: '',
+    expect: REOPEN },
   /* The defect the patch scripts introduced and this gate now catches: a literal that
      already spelled CRLF, converted once more into a stray carriage return. `raw` keeps the
      CRLF below from being normalised away, which is the whole point of the mutant. */
   { name: 'a patch script leaves a doubled carriage return',
     raw: true,
-    from: 'const SCHEMA_VERSION = 14;',
-    to: 'const SCHEMA_VERSION = 14;\r\n',
+    /* Anchored on the store key, not on the schema line: this needle named
+       `SCHEMA_VERSION = 14`, quietly stopped matching when that went to 15, and reported
+       NOT APPLIED for a whole version bump before anyone looked. A version number is the
+       worst possible anchor for a mutant. */
+    from: "const STORE_KEY = 'sukinnect.snapshot.v1';",
+    to: "const STORE_KEY = 'sukinnect.snapshot.v1';\r\n",
     expect: CRLF },
   /* The count the dashboard prints, and the two places a decision has to reach. */
   { name: 'the verified tile goes back to the whole roster',

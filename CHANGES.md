@@ -2142,3 +2142,58 @@ future change to that signature knows what depends on it.
 applied, 6 caught**. Camera **61 screens** clean at 320 and 450 on every tally with no console
 errors, and the dashboard was read back from a screenshot at 390 — a caption that only
 *computes* correctly has to also not turn the section into a pile of small grey text.
+
+---
+
+## 42. Nine actions said "saved". Four checks could not fail.
+
+The next sweep asked what the app claims about a reload. `tools/probe-write-claims.cjs`
+calls a handler and then asks whether the **bytes in storage changed** — not whether the
+source mentions `persist()`, which is true of every handler that reaches one indirectly.
+
+**Ten writes never happened.** A typed chat message, a household item, a portfolio entry,
+a concierge answer, an administrator's note on a provider, a flag on an account, a document
+request, and both roles' notification checkboxes. Six of those fields were not snapshot keys
+at all, so even a later `persist()` would not have carried them. Two claims are sharper than
+the rest: `sendChatMessage`'s own comment has always said a message is "stored rather than
+appended to the screen and lost on the next render" — it survived a render, not a reload; and
+the portfolio's **Save Work** button read two inputs, wrote neither, opened a modal that
+printed "Changes saved successfully." and left the list empty. That is the §63 claim this
+project keeps having to take back, sitting in a button label.
+
+**The audit log stamped every row `Sep 10, 2026 / 2:42 PM`.** Two actions a minute apart
+were indistinguishable, and the array lived in state nothing stored, so the record §29 exists
+to keep was both wrong and temporary. Rows now carry `at: Date.now()` and the acting
+administrator's name, the log is a snapshot key held to the door like the rest, and
+`SCHEMA_VERSION` went **15 → 16** because a v15 dump carries typed-date rows that nothing on
+disk can tell from real ones.
+
+**And four of this session's own checks could not fail.** `makeChecker().check(label, cond)`
+coerces with `!!cond`, and I had written `c.check('…', () => { … })` — an *un-invoked* arrow,
+which is a function, which is always truthy. Four checks were like this (the reload check, the
+audit stamp, the chart-labels guard, the admin-disclosure guard), and the falsifier proved it:
+**0 of 9 mutants caught**, with every named check "passing anyway". The harness now throws
+`check("…") was handed a function, not a verdict` — which is how the two older ones surfaced,
+since they had been green since the moment they were written. A check that has never been seen
+to fail is a counter, not a guard.
+
+**Two more tooling defects the re-run exposed.** A mutant in
+`falsify-verification-records.cjs` had a needle pinned to `SCHEMA_VERSION = 14`; that value
+moved to 15 a week ago and the mutant has been reporting NOT APPLIED ever since, quietly
+un-testing the doubled-CR guard — now anchored on the store key instead, because a version
+number is the worst possible anchor for a needle. And *the reopen path had no reload check at
+all*: the mutant that deletes its writes passed the whole suite, which is a coverage gap, not
+an equivalent mutant — so `a reopened application stays reopened after a reload` exists now
+and the mutant names it.
+
+**The audit log screen had never been photographed.** It sits one tap off the dashboard, was
+in no table, and its timestamps are precisely the thing only a screenshot can confirm: the
+first capture reads `Oct 13, 2026 - 5:59 PM` on a UTC-11 machine. Camera **61 → 62 screens**,
+reached by clicking the row a person clicks.
+
+**After:** gate 494 → **495 checks, all passing**. `tools/falsify-saved-claims.cjs`: **10
+mutants, 10 caught**, after 0 of 9 the first time. `falsify-verification-records.cjs` 10/10
+after two of its mutants were repaired. Nine other families re-run unchanged: identity
+fallbacks 24/24, profile honesty 11/11, trust 6/6, history 6/6, admin records 5/5, reputation
+5/5, service area 4/4, id substitutions 4/4, storage truth 5/5, modal stacking 3/3, count
+labels 6/6, escaping 6/6, tap floor 4/4. Camera **62 screens** clean at 320, 390 and 450.

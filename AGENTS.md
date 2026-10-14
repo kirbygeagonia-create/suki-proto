@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 10,977 lines, ONE :root block, 1,748 var() usages, 95 tokens declared with 92
+Sukinnect-next.html— 11,125 lines, ONE :root block, 1,748 var() usages, 95 tokens declared with 92
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1219,7 +1219,7 @@ Sukinnect-next.html— 10,977 lines, ONE :root block, 1,748 var() usages, 95 tok
                     as the div it replaced. The 402 `font-size` declarations inside markup's
                     inline styles all take a var() too. Every screen in the app now opens with
                     an <h1> and every sheet with an <h2> — 23 and 6, the sixth being the weighing
-                    sheet — because a 61-screen app with no headings has no outline for a screen
+                    sheet — because a 62-screen app with no headings has no outline for a screen
                     reader to navigate. This sentence was false when it was first written, and
                     stayed false for two screens (the resident's booking detail hand-rolled a bare
                     <div> where the provider's used the shared header, and the chat room titled
@@ -1538,6 +1538,41 @@ guessed field name, a label compared against a state, a nav badge that does not 
 correct the instrument before concluding anything. And `bookingsInWindow(f)` silently drops
 every row when `f.category` is absent — the screens always pass it, but a helper that reads a
 missing option as "match nothing" is one careless caller away from reporting zero activity.
+
+A CHECK THAT CANNOT FAIL LOOKS EXACTLY LIKE A CHECK THAT PASSES. `makeChecker().check(label,
+cond)` coerces with `!!cond`, so `c.check('…', () => { … })` — an arrow written without its
+invoking parentheses — is a *function*, is always truthy, and prints PASS forever. Four checks
+in this file were like that on 2026-10-13, two of them written that same day, and the proof was
+a falsifier reporting **0 of 9 mutants caught** with every named check "passing anyway". The
+harness now throws `check("…") was handed a function, not a verdict` rather than printing a
+verdict it did not compute. Two rules follow, and both are about the tooling rather than the
+app: a mutant family must be re-run after any change to the code it targets, because a passing
+suite is not evidence that a *check* works; and a needle pinned to a value that legitimately
+changes (`SCHEMA_VERSION = 14`) silently stops testing anything the moment that value moves —
+it had been reporting NOT APPLIED for a week, quietly un-guarding the doubled-CR check. Anchor
+needles on things that do not move, and read the "not applied" line, not just the count.
+
+THE APP'S CLAIMS ABOUT A RELOAD ARE AS FALSIFIABLE AS ITS MONEY. Measured by calling a handler
+and asking whether the bytes in storage changed: ten actions that tell the reader something was
+saved, logged or shown wrote nothing — a typed chat message (whose own comment claims it is
+"stored rather than appended to the screen"), a household item, a portfolio entry, a concierge
+answer, an administrator's note and flag, a document request, and both roles' notification
+checkboxes — and six of those fields were not snapshot keys at all, so no later write would ever
+carry them. The portfolio's **Save Work** button read two inputs, wrote neither, and opened a
+modal printing "Changes saved successfully." The audit log stamped every row `Sep 10, 2026 /
+2:42 PM`, so the record §29 exists to keep could not say when anything happened, and lived in
+state nothing stored; rows now carry a real instant and the actor's name, and `SCHEMA_VERSION`
+went 15 → 16 because a v15 dump's typed-date rows are indistinguishable on disk from real ones.
+`hydrate()` also restored the provider's stored profile and *then* called
+`applyProviderIdentity()`, which clears that object and re-copies the demo seed — so every saved
+edit reverted on reload; the identity is applied first now, and the check signs in as p7 so a
+mutant that drops the call cannot hide behind p1's seed matching by accident. Prove any of this
+with `node tools/probe-write-claims.cjs`, which measures storage rather than reading source.
+
+A DESTINATION BEHIND A ROW IS STILL A DESTINATION. The audit log sat one tap off the admin
+dashboard, in no camera table, and had never been photographed — while its timestamps were
+exactly the thing only a screenshot can confirm. It is `admin-audit` now (62 screens), reached
+by clicking the row a person clicks.
 
 A MODAL OPENED FROM A SHEET HAS TO OUTRANK THE SHEET. `.sheet-layer` sat at `z-index:60` over
 `.modal-layer`'s 50, and the sheet's scrim covers the whole phone and closes the sheet on any tap

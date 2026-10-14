@@ -146,6 +146,119 @@ suite('storage', async () => {
     && emptyReload.requestAddressBook()[0] === emptyReload.state.profileData.address,
     JSON.stringify(emptyReload.state.storageNotice) + ' / ' + emptyReload.requestAddressBook().length);
 
+  /* What a person typed and was told was saved. Same test each time: act through the
+     handler a thumb reaches, then boot a fresh copy against the same storage and ask
+     whether it is still there. Six of these lived in state that no writer ever stored —
+     a household item, a portfolio entry, a notification switched off, an administrator's
+     note, a concierge answer, a chat message — while the button beside them said Save.
+     The chat one is the sharpest: the function's own comment has always claimed a message
+     is "stored rather than appended to the screen and lost on the next render", and it
+     survived a render but not a reload. */
+  c.check('what the app says it saved survives a reload', (() => {
+    const store = fakeStorage();
+    const a = boot({ storage: store });
+    a.state.view = 'app';
+    a._document.getElementById('household-type').value = 'Water Pump';
+    a._document.getElementById('household-nickname').value = 'Paso';
+    a.saveHouseholdItem();
+    a.state.role = 'provider';
+    a._document.getElementById('portfolio-service').value = 'Repipe';
+    a._document.getElementById('portfolio-description').value = 'Two bathrooms, one weekend.';
+    a.savePortfolioWork();
+    a.setProviderNotification('reviews', false);
+    a.state.role = 'admin';
+    a.setAdminNotification('disputes', false);
+    a.state.role = 'resident';
+    const job = a.bookingsForResident()[0];
+    a.openChatThread(job.providerId, job.id);
+    const key = a.currentThreadKey();
+    const before = a.threadMessages(key).length;
+    a._document.getElementById('chat-input').value = 'Does it trip only at night?';
+    a.sendChatMessage();
+    a.state.role = 'admin';
+    a._document.getElementById('provider-admin-note').value = 'Awaiting renewed police clearance.';
+    a.saveAdminProviderNote('p1', 'Ramil Odiada');
+    const auditBefore = a.state.adminAuditLog.length;
+    const b = boot({ storage: store });
+    const items = b.state.residentHouseholdItems;
+    return items.length === 1 && items[0].type === 'Water Pump' && items[0].nickname === 'Paso'
+      && b.state.providerPortfolio.length === 1
+      && b.state.providerPortfolio[0].description === 'Two bathrooms, one weekend.'
+      && b.state.providerNotifications.reviews === false
+      && b.state.adminNotifications.disputes === false
+      && b.threadMessages(key).length === before + 1
+      && b.state.adminProviderNotes.p1 === 'Awaiting renewed police clearance.'
+      && b.state.adminAuditLog.length === auditBefore
+      && b.state.adminAuditLog.every(e => Number.isFinite(e.at) && !!e.action);
+  })(), 'a saved item, portfolio entry, preference, message, note or audit row did not come back');
+
+  /* The audit trail is the record §29 exists to keep, and it stamped every row with one
+     typed date and time — two actions a minute apart were indistinguishable, and the log
+     could not say when anything happened. */
+  c.check('the audit log stamps each row with the moment it happened', (() => {
+    const a = boot();
+    a.state.role = 'admin';
+    a.adminLog('First', 'one', 'ok');
+    const stamp = a.state.adminAuditLog[a.state.adminAuditLog.length - 1].at;
+    const rendered = a.shortDate(stamp) + ' - ' + a.clockText(stamp);
+    /* Scoped to the function body, not the whole file: the comment above adminLog quotes
+       the literal it replaced, and a needle that reads prose reports a defect that is
+       sitting in a sentence about the fix. */
+    const body = /function adminLog\([\s\S]*?\n\}/.exec(a._source);
+    return Number.isFinite(stamp) && Math.abs(stamp - Date.now()) < 60000
+      && !/undefined/.test(rendered) && !!a.shortDate(stamp)
+      && !!body && !/date:\s*'|time:\s*'/.test(body[0]) && /Date\.now\(\)/.test(body[0]);
+  })(), 'the audit log is back to a typed timestamp');
+
+  /* The identity and the stored profile are two writes to one object and the order is
+     everything: applyProviderIdentity() clears it and re-copies the demo seed, so when it
+     ran after the merge every edit the provider had saved came back as the seed. */
+  c.check('a saved provider profile is not overwritten by the seed on reload', (() => {
+    const store = fakeStorage();
+    const a = boot({ storage: store });
+    /* Sign in as the *other* demo pro. With the default identity the two writes agree by
+       accident — the seed for p1 is what the stored profile would be overwritten with —
+       so a mutant that removes the identity restore entirely still passed. */
+    a.applyProviderIdentity('p7');
+    a.state.role = 'provider';
+    a.state.providerProfileData.phone = '+63 900 555 0101';
+    a.state.providerProfileData.rateCentavos = 41000;
+    a.state.providerProfileData.service = 'Fruit Harvest & Buy';
+    a.state.providerProfileData.bankAccount = 'GCash (0900***0101)';
+    a.persist();
+    const b = boot({ storage: store });
+    return b.CURRENT_PROVIDER_ID === 'p7'
+      && b.state.providerProfileData.name === 'Erning Bautista'
+      && b.state.providerProfileData.phone === '+63 900 555 0101'
+      && b.state.providerProfileData.rateCentavos === 41000
+      && b.state.providerProfileData.bankAccount === 'GCash (0900***0101)'
+      /* and the seed the identity brings with it must not leak over the stored edits:
+         p7's own seed rate is 80000, so a clobber shows up as that number. */
+      && b.state.providerProfileData.rateCentavos !== 80000;
+  })(), 'the reload restored the demo seed over the provider’s own edits');
+
+  /* Approving was tested for surviving a reload when it landed. Reopening — the other
+     half, the one that puts an applicant back in the queue — never was, and a mutant that
+     deleted both of its writes passed this whole suite until 2026-10-13. A decision that
+     does not survive a reload is a decision the queue forgets. */
+  c.check('a reopened application stays reopened after a reload', (() => {
+    const store = fakeStorage();
+    const a = boot({ storage: store });
+    a.state.view = 'app'; a.state.role = 'admin';
+    a.openProviderVerification('joel');
+    a.verificationAction('approved');
+    const decided = boot({ storage: store });
+    const goneFromQueue = decided.pendingApplicantList().length === a.pendingApplicantList().length
+      && decided.state.verificationReviews.joel.status === 'verified';
+    decided.state.view = 'app'; decided.state.role = 'admin';
+    decided.openProviderVerification('joel');
+    decided.reopenReview();
+    const reopened = decided.pendingApplicantList().length;
+    const again = boot({ storage: store });
+    return goneFromQueue && again.pendingApplicantList().length === reopened
+      && again.state.verificationReviews.joel.status === 'pending';
+  })(), 'the reopen happened in memory only, so the queue forgets it on the next launch');
+
   const f = boot({ storage: fakeStorage() });
   f.BOOKINGS[0].status = 'cancelled';
   f.restoreSeed();
@@ -1812,7 +1925,7 @@ suite('honesty', async () => {
     return n < wide.length && n >= 3 && axisLabels(sparse) === 2;
   })(), 'axis labels overlap on a dense series, or the thinning breaks a sparse one');
 
-  c.check('a column chart draws no words inside the scaled box', () => {
+  c.check('a column chart draws no words inside the scaled box', (() => {
     /* §68's floor is a rule about painted pixels, and the camera is what measures those.
        This guards the markup that produces them: text inside a fixed viewBox is scaled
        by the container, so on a 320px handset the axis painted at 12.4px. The shapes
@@ -1823,7 +1936,7 @@ suite('honesty', async () => {
     return !/<text/.test(svg) && /<div class="chart-cols">/.test(out)
       && /class="chart-tick"/.test(out) && /class="chart-val"/.test(out)
       && /class="chart-cat"/.test(out);
-  }, 'a chart is painting words inside the viewBox again');
+  })(), 'a chart is painting words inside the viewBox again');
 
   c.check('no chart is drawn from a literal data series', (() => {
     /* The same defect twice over, and invisible either way on screen: the provider
@@ -2729,14 +2842,14 @@ suite('honesty', async () => {
      gaps on the screens where an administrator would go looking for them, build neither.
      Asserted here because a quiet disclosure card is exactly what a later pass deletes as
      clutter — and it is the only place §63's honesty about the console lives. */
-  c.check('the admin console says what it does not manage', () => {
+  c.check('the admin console says what it does not manage', (() => {
     const dash = app.adminDashboard();
     const cats = app.adminCategories();
     return /What this console does not manage/.test(dash)
       && /Resident accounts and service categories are not administered here/.test(dash)
       && /Categories are read-only in this prototype/.test(cats)
       && !/create.*categor|edit.*categor/i.test(cats);
-  }, 'the admin console is back to implying it administers residents or the catalogue');
+  })(), 'the admin console is back to implying it administers residents or the catalogue');
 
   /* The administrator's provider profile was the last screen typing its own facts: the
      audit tab was four dated lines identical for all eight providers — one of them

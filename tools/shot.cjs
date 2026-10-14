@@ -622,6 +622,15 @@ const SCREENS = [
                           openProfileSection('admin','security','Security & Sign-in','What this device keeps');
                           clickPainted(/AccountAction\\(.pin.\\)/, 'the security-PIN button');`],
   ['admin-dash',       `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='overview'; render();`],
+  /* The audit log is the record §29 exists to keep, and the camera had never painted it:
+     it sits one tap off the dashboard, and no table entry reached it. An action is logged
+     first so the screen has a row, because the timestamps are the thing worth looking at —
+     every row used to carry one typed date, which no source grep could tell from a real
+     one. Reached by clicking the row a person clicks, not by assigning the screen. */
+  ['admin-audit',      `state.view='app'; state.role='admin'; state.tab='admin_dashboard';
+                        state.adminScreen='overview'; render();
+                        adminLog('Camera pass check', 'the audit screen itself', 'Recorded so the row can be read');
+                        clickPainted(/adminScreen='audit'/, 'the audit log row');`],
   ['admin-finance',    `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='finance'; render();`],
   ['admin-trust',      `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='trust'; render();`],
   ['admin-intel',      `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='intelligence'; render();`],
