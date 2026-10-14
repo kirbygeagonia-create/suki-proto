@@ -1090,13 +1090,30 @@ async function main() {
   }
   console.log('PNGs in ' + OUT);
 
-  session.ws.close();
-  child.kill('SIGKILL');
-  /* Chrome keeps a handle on its profile for a moment after the kill, and a
-     Windows delete then throws EPERM. The screenshots are the point; a leftover
-     temp folder is not worth failing the run over. */
+  /* Ask the browser to shut itself down before killing it, rather than leaving a SIGKILL mid-write.
+     This was tried as the real cure for the abandoned-profile leak and it DOES NOT WORK on this
+     machine: over four clean single-screen runs after it, three still threw EPERM and the folders
+     kept accumulating. It stays because it costs at most 1.5 s and sometimes the delete then
+     succeeds, but the thing that actually bounds the leak is `reclaimAbandonedProfiles()` at the
+     START of the next run. A first version of this block sent the command after closing the
+     websocket and hung the tool forever waiting for a reply that could not arrive; a second version
+     looked fixed across two runs, which was two runs too few to conclude anything. */
+  try {
+    await Promise.race([session.send('Browser.close'), sleep(1500)]);
+  } catch (e) { /* already gone, or the domain is refused */ }
+  try { session.ws.close(); } catch (e) { /* closed */ }
+  const exited = new Promise(resolve => {
+    let done = false;
+    const finish = () => { if (!done) { done = true; resolve(); } };
+    child.once('exit', finish); child.once('error', finish);
+    setTimeout(finish, 3000);
+  });
+  try { child.kill('SIGKILL'); } catch (e) { /* it closed itself */ }
+  await exited;
+  /* Chrome keeps a handle on its profile after the kill and a Windows delete then throws EPERM.
+     The screenshots are the point; a leftover temp folder is not worth failing a run over. */
   await sleep(400);
-  try { fs.rmSync(profile, { recursive: true, force: true, maxRetries: 3, retryDelay: 300 }); }
+  try { fs.rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 300 }); }
   catch (e) { console.log('(left the throwaway Chrome profile at ' + profile + ': ' + e.code + ')'); }
 }
 
