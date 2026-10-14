@@ -1313,9 +1313,14 @@ holds this together resolves the writable fields from the page's own
 matching, because a list of field names goes stale the moment someone adds a field and a
 stale list reads as clean. It found 45 sites painting a profile value raw — every profile
 field in all three roles, 31 of them fields a keyboard can actually write, while chat and
-booking text had been escaped all along — and `node tools/probe-injection.js` showed the
-browser building real elements out of a name field on 5 of 5 cases before the fix and 0 of
-10 after, across all three roles. `node tools/falsify-escaping.cjs` proves the guards:
+booking text had been escaped all along — and `node tools/shot.cjs
+--probe=@tools/probe-injection.js --only=resident-profile` showed the browser building real
+elements out of a name field on 5 of 5 cases before the fix and 0 of 10 after, across all three
+roles. Note the `--probe=@` form: `probe-injection.js` is one expression the camera evaluates
+inside a real page, and the plain `node tools/probe-injection.js` this paragraph used to print
+dies on `state is not defined` — a proof command a reader cannot run is not a proof. The two
+kinds are told apart by `node tools/probe-all.cjs`, which runs every probe and audit in `tools/`
+the way each one is meant to run and flags any that answers nothing. `node tools/falsify-escaping.cjs` proves the guards:
 6 mutants applied, 6 caught, against the 10 checks the pass added (415 → 425).
 
 THE APP HAS ONE HISTORY, AND IT IS THE RECORDS. The resident's profile modules used to carry a
@@ -1537,7 +1542,21 @@ accepted set requiring `agreed` +1, `waiting` -1, `open` unchanged. `tools/falsi
 because nothing was *wrong with the arithmetic* — the number was right and the noun was wrong.
 The first three disagreements the count-pair probe reported were the probe's own errors (a
 guessed field name, a label compared against a state, a nav badge that does not exist), so
-correct the instrument before concluding anything. And `bookingsInWindow(f)` silently drops
+correct the instrument before concluding anything. That advice was written and the probe kept
+printing a fabricated DIFF anyway, because the sentence fixed the three findings and not the
+shape of the mistake. Running every instrument today found the same pair still disagreeing with
+itself, for two reasons worth naming since both generalise: the badge was read out of `#screen`
+while `render()` paints the nav bar into `#navbar` and keeps it there so the active pill glides
+instead of blinking, and the probe set `state.tab = 'dash'`, which is the word on the button
+rather than the value behind it — the nav answers `dashboard`, and `dash` paints nothing. Over an
+unread needle the probe then wrote `|| 0`, which is how an instrument manufactures both a zero and
+an argument: a missed match and a genuine zero print identically, so the check can fail on a file
+that is fine and pass on one that is not. Read a needle that cannot match as *"nothing was
+painted here"*, never as a number — and note that no person can reach an unknown tab: every
+assignment in the app names a value the render branch answers, no URL parameter carries one, and
+the dump persists no destination, so the blank screen was the probe's artifact rather than a
+missing fallback. The pair is now asserted the way the gate asserts the tile: move a request out
+of the waiting set and the badge has to follow it, which a hard-coded number would not. And `bookingsInWindow(f)` silently drops
 every row when `f.category` is absent — the screens always pass it, but a helper that reads a
 missing option as "match nothing" is one careless caller away from reporting zero activity.
 
@@ -1644,8 +1663,12 @@ gutter to 24px (it reports 4) after a probe, not a grep, showed that the first v
 grid-column gutter collapsed to zero width and hung every axis label outside the card at all
 three widths. The same device arrived with **no network at all** and the app
 rendered completely, which is an unplanned proof of §81 — and the only remote dependency left in
-the file is `TILE_URL` (`{s}.tile.openstreetmap.org`, 448 requests per 390px sweep), which
-`mapFallback()` degrades honestly when the tiles never paint but which still sends a device IP and
+the file is `TILE_URL` (`{s}.tile.openstreetmap.org`), which the camera counts on its own line,
+`requests that left the device for a network`. That line read **942** on the 390px sweep today
+(699 at 320, 1,023 at 450); this passage quoted 448 until it was re-read off the tally, and the
+map-bearing screens added since are the reason the figure grew — which is the same argument
+`node tools/measure.cjs` was written for: a count kept in prose is a count that will be wrong in
+the next document that copies it. `mapFallback()` degrades honestly when the tiles never paint but which still sends a device IP and
 tile coordinates to a third-party CDN whenever there **is** a connection. Decided 2026-10-12: keep
 it, and treat the exposure as a production DPA/NPC question (slide 16) rather than a prototype bug.
 

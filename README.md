@@ -102,6 +102,20 @@ are only ever quoted from a run that ended green. (The harness is Node now for a
 three of its first mutants had silently matched nothing, because the app file is CRLF and a
 find-string carrying a newline missed every time. An unapplied mutant is a rule nobody tested.)
 
+Two runners keep the rest of the suite honest, and both were written after being mis-read by hand:
+
+```
+node tools/falsify-all.cjs          # every mutant family, with applied / caught / not-applied
+node tools/probe-all.cjs            # every probe and audit, each run the way it is meant to run
+```
+
+`tools/probe-all.cjs` exists because the suite has two kinds of probe and the extension is what
+tells them apart. Anything that requires `harness.cjs` boots the app in Node; a `probe-*.js` that
+is a single expression ending `})()` is evaluated inside a real page by `shot.cjs --probe=@file`,
+and running it with plain node dies on `document is not defined`. A probe that prints nothing is
+called out rather than counted as a pass — an instrument nobody reads is how a stale needle spent a
+week guarding nothing.
+
 ### Look at the painted page
 
 ```

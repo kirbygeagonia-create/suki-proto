@@ -2255,3 +2255,63 @@ is why the camera was not run again rather than why it passed: the 62-screen thr
 recorded at the end of §42 measures these exact bytes, and repainting them would produce the same
 numbers at several minutes' cost. It is also why there is no new device build. The handset pass is
 still owed against `1.2-preview.15`, and nothing in this pass could change what it finds.
+
+## 44. Every instrument run the way it is meant to run, and three of them were lying
+
+The camera and the gate had both been re-measured, so the next untested surface was the other tools
+in `tools/` — the probes and audits every finding in this change log was eventually confirmed with.
+None of them had ever been run as a set. `node tools/probe-all.cjs` does that now.
+
+**Eleven of twenty-one came back broken, and ten of the eleven were the runner's own mistake.**
+The suite holds two kinds of probe and nothing recorded it: `probe-*.cjs` and anything that requires
+`harness.cjs` boots the app in Node, while a `probe-*.js` that is one expression ending `})()` is
+evaluated inside a real page by `shot.cjs --probe=@file`. Run the second kind with plain node and it
+dies on `document is not defined`. The classifier first guessed by which page globals a file
+mentioned and mis-read `probe-reputation.js` as a Node script — it reads records, not the DOM — so
+the rule is now the shape of the file: one expression, no `require`, therefore in-page. The runner
+also globbed itself, which is the same self-spawn bug `falsify-all.cjs` found in itself the same
+afternoon. Final state: **21 probes, 0 needing attention.**
+
+**The count-pairs probe had been printing a fabricated disagreement.** It read the provider's
+Bookings badge out of `#screen`, but `render()` paints the nav bar into `#navbar` and deliberately
+leaves it there so the active pill glides instead of blinking — and it set `state.tab = 'dash'`,
+which is the word printed on the button, not the value the nav answers (`dashboard`), so the screen
+it read was empty. Then the part worth generalising: over an unread needle the probe wrote `|| 0`. A
+missed match and a real zero print identically, so one instrument can both invent a defect and swear
+there is none. The row now reads the container that holds the badge, says *"no badge is painted"*
+rather than answering zero, and the resident row compares the bell's dot and its `aria-label` against
+the notification list — because the resident's nav carries no count at all, and the old row had been
+comparing a badge that does not exist to a list that does. Whether the new pair can fail was tested
+by moving a request out of the waiting set: the badge followed it, 2 to 1, which a hard-coded number
+would not have done.
+
+**Half the roster was never being checked.** The credential-summary loop compared the count in a
+label against the documents behind it, but read only the `2 of 4 expiring soon` shape — and four of
+eight providers are labelled `All 3 valid`, so those four were skipped in silence while the probe
+printed a clean run. It now reads both shapes, prints a DIFF for a label it cannot parse instead of
+skipping it, and states how many providers were compared. `node tools/falsify-credential-pair.cjs`
+proves the widened comparison — **3 mutants applied, 3 caught**, and it refuses any needle that
+matches more than once rather than editing whichever function happens to come first. The first
+attempt at that proof reported one mutant MISSED, and the mutant was the fault:
+its needle, `const creds = credentialsOf(providerId);`, appears twice in the file, so `replace`
+edited a different function and the check correctly found nothing wrong — and a CRLF file cannot be
+disambiguated by putting a newline in the needle, which is the rule the falsifier families already
+print in their own headers.
+
+**Three camera sweeps, every tally zero** — run again here even though §43 argued they were
+redundant, because the owner asked for the measurement rather than the argument. 62 screens at 320,
+390 and 450 CSS px: no control under a 44px tap target, no text below WCAG contrast, no clipped
+copy, no font off the scale, no text under the 14px floor, nothing painting over an open modal, no
+map pane escaping its frame, no category artwork moving, no unnamed control, no image that asked for
+a file and got no pixels, no console error on any screen, no horizontal overflow, nine painted sizes
+starting at 14.
+
+**One more hand-kept figure caught stale.** §31 said `TILE_URL` costs 448 requests per 390px sweep;
+the camera's own `requests that left the device for a network` line reads **942** today, 699 at 320
+and 1,023 at 450. The map-bearing screens added since then explain the growth. The paragraph now
+quotes the tally it came from instead of the number.
+
+**No shipped bytes moved, again.** `Sukinnect-next.html` is identical to HEAD through all of it — the
+app gained nothing this pass, the instruments did. Worth noting where the work stands: PR #2 was
+merged into `main` at 10:44Z, so the rebuild is on `main`, while the commits from §43 and §44 sit on
+the merged branch and need their own pull request to reach it.
