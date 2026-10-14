@@ -2311,6 +2311,17 @@ the camera's own `requests that left the device for a network` line reads **942*
 and 1,023 at 450. The map-bearing screens added since then explain the growth. The paragraph now
 quotes the tally it came from instead of the number.
 
+**The camera had been leaking 19 MB a run.** Checking the final state found **157**
+`suki-shot-*` folders in the user's temp, **2.97 GB** accumulated across a week of sweeps. The tool
+already tried to delete its own profile and gave up politely when Chrome still held a handle after
+`SIGKILL` — the EPERM note that prints at the end of a run was the sound of a leak nobody came back
+for, because only that run ever knew the folder's name. `reclaimAbandonedProfiles()` now sweeps by
+prefix at the start of every run and skips anything touched in the last hour, so a live run's own
+folder is never the one deleted. Proved in a simulated temp rather than against the real one: three
+seeded folders — two hours old, one fresh, and one that is not the tool's — and the run reclaimed
+exactly the first, then leaked a new folder of its own that the next sweep will get. Deleting the
+157 existing folders is a separate, deliberate act, not a side effect of a screenshot run.
+
 **No shipped bytes moved, again.** `Sukinnect-next.html` is identical to HEAD through all of it — the
 app gained nothing this pass, the instruments did. Worth noting where the work stands: PR #2 was
 merged into `main` at 10:44Z, so the rebuild is on `main`, while the commits from §43 and §44 sit on

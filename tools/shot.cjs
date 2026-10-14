@@ -772,6 +772,26 @@ const SCREENS = [
   }
 })();
 
+/* A run that hit EPERM on its own profile leaves the folder in the user's temp forever, because
+   only that run ever knew its name. This sweeps by prefix, skips anything younger than an hour
+   (a live run's own folder is being written to right now), and never throws: a folder still held
+   by Chrome is a folder that will be reclaimed by the next run, not an error to report. */
+function reclaimAbandonedProfiles(keep) {
+  const tmp = os.tmpdir();
+  let gone = 0;
+  for (const name of fs.readdirSync(tmp)) {
+    if (!name.startsWith('suki-shot-')) continue;
+    const p = path.join(tmp, name);
+    if (p === keep) continue;
+    try { if (Date.now() - fs.statSync(p).mtimeMs < 3600000) continue; } catch (e) { continue; }
+    try {
+      fs.rmSync(p, { recursive: true, force: true, maxRetries: 2, retryDelay: 200 });
+      gone++;
+    } catch (e) { /* still locked by a Chrome that has not let go — leave it for the next sweep */ }
+  }
+  return gone;
+}
+
 async function main() {
   if (has('list')) {
     console.log(SCREENS.map(s => '  ' + s[0]).join('\n'));
@@ -781,6 +801,15 @@ async function main() {
 
   const chrome = findChrome();
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'suki-shot-'));
+  /* Reclaim the profiles earlier runs abandoned. Chrome keeps a handle on its own folder for a
+     moment after SIGKILL, so the delete at the end of a main() below can throw EPERM and the
+     folder is simply left behind — 157 of them and 2.97 GB in one week of sweeps, with nothing
+     anywhere set to reclaim them. A suki-shot-* untouched for an hour cannot belong to a run in
+     progress, so trying again is safe; a folder still locked by a live run survives this quietly,
+     which is why the loop reports what it removed rather than assuming it removed everything. */
+  const reclaimed = reclaimAbandonedProfiles(profile);
+  if (reclaimed) console.log('reclaimed ' + reclaimed + ' abandoned Chrome profile folder(s) from earlier runs');
+
   const url = 'file:///' + APP_FILE.replace(/\\/g, '/') + (APP_MODE ? '?app=1' : '');
   const wanted = ONLY.length ? SCREENS.filter(s => ONLY.includes(s[0])) : SCREENS;
   const port = await freePort();
