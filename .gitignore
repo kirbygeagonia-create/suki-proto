@@ -32,3 +32,9 @@ Desktop.ini
 # --out directory to defeat cached image reads, and .shots/ alone let a scratch
 # capture into a commit.
 .shots*/
+
+# Working copies the instruments write to compare against: a committed blob pulled out
+# with `git show` to check a file that is being mutated under it, a mutant fixture a
+# falsifier is about to install. Same reasoning as .shots* — they are read, never shipped,
+# and a 780 KB duplicate of the app left untracked invites somebody to `git add .` it.
+.scratch*/

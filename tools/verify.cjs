@@ -1436,6 +1436,54 @@ suite('hygiene', async () => {
   c.check('no stored-value wallet language survives',
     !/Secure Balance Wallet|Instant Cash-Out|wallet balance/i.test(body));
   c.check('nothing pretends a rate is measured', !/\(previously 4%\)|\(previously 4\.8\)/.test(body));
+
+  /* The type surface. AGENTS.md §68 says the rebuild removed the decorative serif from
+     headings and runs one sans family everywhere — and no check said so, so a one-line
+     `--font-display: "Fraunces", serif` would have reversed the redesign in silence. The
+     reason a grep is not enough here is the same reason the art map above is read from
+     disk: a @font-face whose file is missing is not an error, it is a fallback. The page
+     paints, every screenshot looks plausible, and the contrast and tap figures were
+     measured on a face the app never loaded. */
+  const fontCssPath = require('path').join(appDir, 'fonts', 'fonts.css');
+  c.check('the stylesheet the app links is itself on disk', fsx.existsSync(fontCssPath), fontCssPath);
+  const fontCss = fsx.existsSync(fontCssPath) ? fsx.readFileSync(fontCssPath, 'utf8') : '';
+  const fontDecls = [...fontCss.matchAll(/@font-face\s*\{([\s\S]*?)\}/g)].map(m => m[1]);
+  const fontFaces = fontDecls.map(b => ({
+    family: ((b.match(/font-family:\s*'([^']+)'/) || [])[1]) || '',
+    weight: ((b.match(/font-weight:\s*(\d+)/) || [])[1]) || '',
+    files: [...b.matchAll(/url\(([^)]+)\)/g)].map(u => u[1].replace(/["']/g, '').trim())
+  }));
+  const danglingFonts = fontFaces.flatMap(f => f.files)
+    .filter(u => !/^https?:/.test(u) && !fsx.existsSync(require('path').join(appDir, 'fonts', u.replace(/^\.\//, ''))));
+  c.check('every font the stylesheet promises is a file that exists',
+    fontFaces.length > 0 && danglingFonts.length === 0,
+    'dangling: ' + danglingFonts.join(','));
+  /* A stub is the other way this fails quietly: the repo's own README warns that an LFS
+     file cloned without `git lfs install` arrives as ~130 bytes of pointer text. Only the
+     deck and reicon.js are LFS here, so the fonts are ordinary blobs today — the size floor
+     is what notices if that ever changes, since a pointer still resolves as a file. */
+  const stubFonts = fontFaces.flatMap(f => f.files)
+    .filter(u => !/^https?:/.test(u) && fsx.existsSync(require('path').join(appDir, 'fonts', u)) &&
+      fsx.statSync(require('path').join(appDir, 'fonts', u)).size < 1000);
+  c.check('and none of them is a placeholder stub', stubFonts.length === 0,
+    'stub: ' + stubFonts.join(','));
+  const declaredFamilies = [...new Set(fontFaces.map(f => f.family))];
+  const uiStack = (src.match(/--font-ui:\s*([^;]+);/) || [])[1] || '';
+  const firstFamily = (uiStack.match(/"([^"]+)"/) || [])[1] || '';
+  c.check('the face the app asks for first is one the stylesheet actually declares',
+    !!firstFamily && declaredFamilies.includes(firstFamily),
+    '--font-ui opens with ' + JSON.stringify(firstFamily) + '; fonts.css declares ' + declaredFamilies.join(', '));
+  c.check('the four weights the rebuild says it carries are really four',
+    fontFaces.filter(f => f.family === firstFamily).length === 4,
+    fontFaces.filter(f => f.family === firstFamily).map(f => f.weight || '?').join(',') || 'none');
+  /* The serif only stays away if the alias holds and nothing bypasses the two tokens. */
+  const literalFamilies = (css.match(/font-family:\s*[^;]+/g) || [])
+    .filter(d => !/var\(--font-(ui|display)\)|inherit|font-family:\s*var\(--font/.test(d));
+  c.check('no rule names a font family directly — every one goes through the two tokens',
+    literalFamilies.length === 0, literalFamilies.map(d => d.slice(0, 46)).join(' | '));
+  c.check('the display face is an alias, so the decorative serif stays out',
+    /--font-display:\s*var\(--font-ui\)/.test(css) && !/font-family:\s*[^;]*Fraunces/.test(css),
+    '--font-display is not var(--font-ui)');
   return c;
 });
 

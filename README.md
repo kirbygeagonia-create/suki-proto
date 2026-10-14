@@ -88,15 +88,19 @@ also its limit: a stub fires synchronously and a browser does not, so the same s
 driven in real Chrome by pressing Back for real and awaiting each event.
 
 **A check that cannot fail is not a check.** Every rule above is falsified by mutating the rule
-in the real file and requiring the intended check to fail — twenty-six targeted breaks so far,
-each restoring the file from an in-memory copy in a `finally` so a crash cannot leave a mutation
-behind. One earlier version of that harness died mid-run to a console-encoding error and poisoned
-its own backup; the gate then reported green on a file that still carried a mutation. The restore
-is now the last thing that runs, and the numbers below are only quoted from a run that ended
-green. (The harness is Node now for a second reason: three of its first mutants had silently
-matched nothing, because the app file is CRLF and a find-string carrying a newline missed every
-time. An unapplied mutant is a rule nobody tested, so the count of *applied* breaks is printed
-beside the count of caught ones.)
+in the real file and requiring the intended check to fail, one family per rule under
+`tools/falsify-*.cjs`. `node tools/falsify-all.cjs` runs them in a single sequential pass and
+prints, per family, how many breaks were applied, how many the named check caught, and how many
+never matched the file — the third column being the point, because a family whose needle stopped
+matching reports a smaller applied count and looks like a clean run. No total is quoted in prose
+here: this passage said "twenty-six targeted breaks" for a while and was three families out of
+date by the time anyone read it. Each family restores the file from an in-memory copy in a
+`finally`, so a crash cannot leave a mutation behind; one earlier version of that harness died
+mid-run to a console-encoding error and poisoned its own backup, and the gate then reported green
+on a file that still carried a mutation. The restore is now the last thing that runs, and totals
+are only ever quoted from a run that ended green. (The harness is Node now for a second reason:
+three of its first mutants had silently matched nothing, because the app file is CRLF and a
+find-string carrying a newline missed every time. An unapplied mutant is a rule nobody tested.)
 
 ### Look at the painted page
 
@@ -299,8 +303,8 @@ matches is a simulated flow, and the screens say so.
 | What | Where | Notes |
 |---|---|---|
 | Logo | `Sukinnect_Logo.png` | exact case. Official mark — never redrawn, recoloured, stretched or replaced. It has a white background, so change the surface around it, not the file. |
-| Icons | an inline SVG set inside `Sukinnect-next.html`; `reicon.js` (LFS) for `Sukinnect.html` | The rebuild loads no icon library: 43 glyphs are drawn in the file and every one of the 40 names the app can reach has one — whether the name is written in markup, carried by a service record, or passed to an empty state. The gate checks all three and fails if a new name arrives undrawn. Measured with reicon disabled, that set drew the same icons on every screen of the then-40, so the rebuild dropped the 8 MB custom element and the four seconds of iconless paint it cost when registration lost the race. `Sukinnect.html` still uses reicon, so add a name to both files or neither. |
-| Type | `fonts/` | Fraunces for display, Plus Jakarta Sans for UI. Self-hosted; no remote fonts. |
+| Icons | an inline SVG set inside `Sukinnect-next.html`; `reicon.js` (LFS) for `Sukinnect.html` | The rebuild loads no icon library: 43 glyphs are drawn in the file and every one of the 38 names the app can reach has one — whether the name is written in markup, carried by a service record, or passed to an empty state. Those two figures come from `node tools/measure.cjs`, not from a count kept in prose. The gate checks all three and fails if a new name arrives undrawn. Measured with reicon disabled, that set drew the same icons on every screen the camera walks — 62 now where the claim was made at 40, and `node tools/shot.cjs --list` is the count — so the rebuild dropped the 8 MB custom element and the four seconds of iconless paint it cost when registration lost the race. `Sukinnect.html` still uses reicon, so add a name to both files or neither. |
+| Type | `fonts/` | The two files differ here deliberately. `Sukinnect.html` uses Fraunces for display and Plus Jakarta Sans for UI. `Sukinnect-next.html` runs one sans family across every role — Atkinson Hyperlegible Next in four self-hosted weights, with Plus Jakarta Sans behind it for any glyph Atkinson does not carry — and its `--font-display` is an alias for `--font-ui`, so the serif paints nothing there (AGENTS.md §68). Self-hosted in both; no remote fonts. |
 | Photos | `avatars/` | local PNGs, mapped per persona in `PRO_PHOTOS`. Keep imagery local — the APK runs offline. |
 | Maps | `leaflet/` | vendored. Tiles come from OpenStreetMap, the one network dependency, so a map is blank with no connection. |
 
@@ -313,8 +317,12 @@ To swap an image, replace the file and keep the name. To add a trade, add a row 
   nothing enforces a boundary between roles.
 - No server, so nothing runs while the app is closed — due transitions (a lapsed request, an
   auto-confirmed completion) are evaluated on open, with their real timestamps.
-- Storage can be unavailable (`file://` on some browsers, private windows); the app then keeps
-  records in memory and says so on the money console.
+- Storage can be unavailable (`file://` on some browsers, private windows), can refuse a write
+  (quota), or can hold a dump from an older build. The app keeps records in memory in the first
+  case and discards the dump in the third, but it does not stay quiet about either: `hydrate()`'s
+  report and `persist()`'s boolean are read, and a refused session raises a standing banner above
+  the screen plus a toast naming what was refused and why. A warning nobody who lost their session
+  will read is not a warning.
 - `Sukinnect-Android/app/src/main/assets/` holds a **separate copy** of the web files. Any
   accepted change must be re-synced there before it reaches a device build. It currently holds
   the rebuild, staged for a handset pass — see [`DEVICE-PASS.md`](DEVICE-PASS.md), which also

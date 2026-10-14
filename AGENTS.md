@@ -1400,7 +1400,9 @@ session, `Recent authentication activity` over a card that says none is recorded
 named two of p1's three badges as literals (a false `Top Rated` for seven of eight providers, and
 `Background Checked` hidden from those who hold it), and the public preview card typed 4.9 and 214 —
 p1's own figures, so every screenshot of it looked right. Each now reads its record.
-`node tools/falsify-profile-honesty.cjs` — 9 mutants applied, 9 caught (449 → 456), including one
+`node tools/falsify-profile-honesty.cjs` — 11 mutants applied, 11 caught. It was written as 9
+mutants against 449 → 456 checks, and grew by two when a later screen added a button of the same
+kind, which is the point of keeping the family rather than the number. It includes one
 that deletes only a modal's *heading* branch while leaving its body, which is how the payment picker
 first opened as "Update". One instrument lesson in the same pass: the credential-window check built
 its dates with `toISOString().slice(0,10)` — a **UTC** calendar date — while `credentialState`
@@ -1646,6 +1648,27 @@ the file is `TILE_URL` (`{s}.tile.openstreetmap.org`, 448 requests per 390px swe
 `mapFallback()` degrades honestly when the tiles never paint but which still sends a device IP and
 tile coordinates to a third-party CDN whenever there **is** a connection. Decided 2026-10-12: keep
 it, and treat the exposure as a production DPA/NPC question (slide 16) rather than a prototype bug.
+
+A FIGURE KEPT BY HAND IN PROSE IS THE NEXT FIGURE THAT IS WRONG. `node tools/falsify-all.cjs`
+now runs every mutant family in one sequential pass and prints, per family, how many breaks were
+applied, how many the named check caught, and how many never matched the file. It exists because
+this document still credited profile honesty with 9 mutants after that family had grown to 11, and
+the README said "twenty-six targeted breaks" while the suite was running more than a hundred — the
+same drift named above for the token counts, in a place nobody had pointed a tool at. The runner's
+first run then claimed six families had "printed no summary", which was the runner's own defect:
+its pattern matched `failed to apply 0` and not `not applied 0`. That is a tool failing in the only
+acceptable way — a family it could not parse was reported as unproven rather than counted as zero,
+so the total came out visibly wrong instead of quietly right. Read the flagged rows and the
+not-applied column, never the headline count.
+
+§68's typography rule is pinned by checks in the `hygiene` suite and proven by
+`node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by
+the 479-byte `ATKINSON-AUTHORS.txt` that sits beside it, a `--font-ui` opening with a family
+nothing declares, one of the four weights renamed away, a rule typing a family directly instead of
+through the two tokens, and `--font-display` going back to Fraunces. A missing font deserves its
+own checks precisely because it does not fail: the browser falls back, every screen still paints,
+every render check still passes, and the camera then measures contrast and tap geometry on a face
+the application never loaded.
 
 An animated-illustration pipeline (Lottie) was installed here and then removed again:
 it added 305KB that animated nothing, because the professional artwork it was built for
@@ -2596,11 +2619,27 @@ size. Hierarchy comes from weight and spacing instead. This section still descri
 the shipped `Sukinnect.html`, which keeps Fraunces; the two files differ here on
 purpose, and promotion carries the redesign with the rest of the rebuild.
 
-Two rules the rebuild now holds and the gate can be made to check: no essential
-interface text below 14px (the scale floor moved from 12), and numerals live in the
-same legible face as the words beside them. The type tokens are pixel values, not
-`rem`, so browser zoom reflows the app but an operating-system text-scale setting
-does not — recorded as a known limitation, not as a decision.
+THE REBUILD'S TYPE IS PINNED NOW. The paragraph above it used to read "rules the rebuild
+now holds and the gate *can be made to check*", which is the honest shape of a rule nobody
+holds: a one-line `--font-display:"Fraunces", serif` would have reversed this redesign in
+silence, and four checks were added to stop that. The gate reads `fonts/fonts.css` from disk
+and asserts that every `url()` it declares resolves to a file which exists and is not a
+placeholder stub, that the family `--font-ui` asks for first is one the stylesheet actually
+declares, that this family carries the four faces §68 claims, and that `--font-display` stays
+an alias of `--font-ui` with no rule naming a family directly at all. The reason a missing font
+deserves checks of its own is that it does not fail: the browser falls back, the page paints,
+every screen still passes, and each screenshot and contrast figure in this repository is then
+measured on a face the application never loaded. Proven by
+`node tools/falsify-typography.cjs` — 6 mutants applied, 6 caught.
+
+The two rules the previous paragraph named are enforced in different instruments, which is
+worth saying because they fail differently: no essential interface text below 14px is
+*measured in the browser* by `node tools/shot.cjs --measure`, because a source grep cannot see
+what a scaled `viewBox` or a `<select>` with no declaration paints; and numerals sharing the
+face of the words beside them holds because every `font-family` in the rebuild goes through
+the two tokens rather than being typed into a rule. The type tokens are pixel values, not
+`rem`, so browser zoom reflows the app but an operating-system text-scale setting does not —
+recorded as a known limitation, not as a decision.
 
 Use:
 - strong display type for major page titles

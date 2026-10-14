@@ -2197,3 +2197,61 @@ after two of its mutants were repaired. Nine other families re-run unchanged: id
 fallbacks 24/24, profile honesty 11/11, trust 6/6, history 6/6, admin records 5/5, reputation
 5/5, service area 4/4, id substitutions 4/4, storage truth 5/5, modal stacking 3/3, count
 labels 6/6, escaping 6/6, tap floor 4/4. Camera **62 screens** clean at 320, 390 and 450.
+
+## 43. Every family re-run, and the thing that had drifted was the prose about it
+
+The rule this project already holds is that a mutant family has to be re-run after any change to
+the code it targets, because a passing suite is not evidence that a *check* works. Seven sweeps
+moved a great deal of code, so every family ran again. **115 mutants applied, 115 caught, zero not
+applied** — `node tools/falsify-all.cjs` is the command, and it is new, below. Nothing had silently
+gone stale, which is the good outcome and not one anybody could have claimed from reading source.
+
+What had drifted was the documentation about it, in three places:
+
+- **AGENTS.md credited `falsify-profile-honesty` with 9 mutants.** That family applies **11** today.
+  §42 recorded the growth; §31 was never told. Corrected in place, with the reason it grew kept
+  because it is the point: a later screen added another button of the same kind.
+- **README said the rebuild's display face is Fraunces.** `Sukinnect-next.html` sets
+  `--font-display:var(--font-ui)`, and its `--font-ui` opens with `"Atkinson Next"` — the serif
+  appears in the file exactly once, inside the comment explaining why it is not used. The same
+  section also claimed 40 reachable icon names where `node tools/measure.cjs` prints **38**, a
+  camera table of 40 screens where `node tools/shot.cjs --list` prints **62**, and a storage
+  warning shown "on the money console" that has been a standing banner above every screen since
+  §42.
+- **README quoted "twenty-six targeted breaks"** where the suite is at 115. The number is gone and
+  the command that prints it is in its place, which is the same remedy §31 found for the token
+  counts: a figure kept in prose is the next figure that is wrong.
+
+**§68's typography rule was pinned by nothing.** The document said the rebuild removed the
+decorative serif from headings and runs one sans family in four self-hosted weights, and no check
+said so — `--font-display:"Fraunces", serif` would have reversed the redesign in silence, and the
+gate would have stayed green because the rule lived only in a paragraph. The worse half of that
+class is a font file that is not there: a browser does not raise it, it falls back, the page paints,
+every render check passes, and the camera goes on measuring contrast and tap geometry on a face the
+application never loaded. Seven checks in the `hygiene` suite now read `fonts/fonts.css` from disk
+and assert that every `url()` resolves to a file which exists and is not a placeholder stub, that
+the first family `--font-ui` asks for is one the stylesheet actually declares, that this family
+carries the four faces §68 claims, that no rule names a family directly instead of going through
+the two tokens, and that `--font-display` is an alias. `node tools/falsify-typography.cjs` proves
+them — a dangling woff2, a face pointed at the 479-byte `ATKINSON-AUTHORS.txt` sitting beside it, a
+renamed first family, one weight renamed away, a sheet titling itself in a typed family, and the
+alias going back to the serif: **6 applied, 6 caught**. Gate 495 → **502**.
+
+**`tools/falsify-all.cjs`** runs the families in one sequential pass — sequential because each
+family rewrites the app file and restores it in a `finally`, so two at once would measure each
+other's mutants — and prints per family: applied, caught, not applied, missed. Its first run said
+six families had "printed no summary", and that was its own defect: the pattern matched
+`failed to apply 0` and not `not applied 0`, and six of the sixteen spell it the second way. Worth
+recording as the shape a tool should fail in, because it is not the shape most do — an unparseable
+family was flagged as unproven rather than counted as zero, so the run's total came out visibly
+wrong instead of quietly right. It also found itself until it was excluded from its own glob:
+`falsify-*.cjs` matches `falsify-all.cjs`, and a runner that spawns itself nests a whole gate suite
+per mutant per family.
+
+**No shipped bytes changed.** `Sukinnect-next.html` is identical to the commit before this pass —
+800,763 bytes, 11,124 lines, 11,124 CR, no doubled carriage return — proven with
+`git diff --quiet HEAD -- Sukinnect-next.html`, and intact after 115 apply-and-restore cycles. That
+is why the camera was not run again rather than why it passed: the 62-screen three-width sweep
+recorded at the end of §42 measures these exact bytes, and repainting them would produce the same
+numbers at several minutes' cost. It is also why there is no new device build. The handset pass is
+still owed against `1.2-preview.15`, and nothing in this pass could change what it finds.
