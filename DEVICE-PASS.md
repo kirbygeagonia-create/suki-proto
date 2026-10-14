@@ -34,7 +34,7 @@ title from the day it was written until 2026-10-10, when the label was found to 
 that one `applicationId` means one install: installing this **replaces** the customer build rather
 than sitting beside it, which is why the version code went up as well as the name.
 
-## Building it — re-built 2026-10-13 (`1.2-preview.14`, `versionCode 16`); first compiled 2026-10-09
+## Building it — re-built 2026-10-13 (`1.2-preview.15`, `versionCode 17`); first compiled 2026-10-09
 
 "the Java looks right" is not the same claim as "an APK builds and contains what you changed",
 and neither is the same claim as "the page inside it finds its images". All three are now
@@ -59,13 +59,13 @@ What was verified about the artifact, not assumed:
 
 | Check | Result |
 |---|---|
-| `:app:assembleDebug` | **BUILD SUCCESSFUL in 1m 14s** (34 tasks, 9 executed). Current output `Sukinnect-1.2-preview.14-debug.apk`, **2,127,438 bytes**, `versionCode 16`, `versionName 1.2-preview.14` — read off `aapt dump badging`. It is `.13` plus one mislabelled statistic: the admin console's "Live bookings" tile counted six accepted jobs and four unanswered requests as one number, and its own `aria-label` pointed at Marketplace Intelligence promising the same ten — which that screen does not count, because it counts a date window (eleven on these records). The tile now reads **Bookings in progress** with the waiting requests named beneath it, and the workload ring calls the combined figure **Open work**. Earlier builds: `.13` 2,126,962 / `15` (the last bare index reads, the stored profile through the record door), `.12` 2,125,430 / `14` (identity through the shared lookups, the chat room, the concierge refusing to invent a category, the chart axis at its declared size), `.11` 2,118,834 / `13` (dialogs a sheet was covering, the refusal notice, reputation, service area), `.10` 2,113,374 / `12` (a detail screen stops answering an unknown id), `.9` 2,112,782, `.8` 2,111,574, `.7` 2,105,566, `.6` 2,104,798 |
+| `:app:assembleDebug` | **BUILD SUCCESSFUL in 47s** (34 tasks, 9 executed). Current output `Sukinnect-1.2-preview.15-debug.apk`, **2,130,522 bytes**, `versionCode 17`, `versionName 1.2-preview.15` — read off `aapt dump badging`. It is the build where the app's claims about a reload become true: ten actions that said "saved", "logged" or "shown to the provider" and wrote nothing now write — a typed chat message, a household item, a portfolio entry whose Save button previously stored nothing at all, a concierge answer, an administrator's note and flag, a document request, and both roles' notification checkboxes. The audit log stops stamping every row with one typed date and carries a real instant and the acting name, and a provider's saved profile is no longer overwritten by the demo seed on launch. `SCHEMA_VERSION` is 16, so a handset holding a v15 dump shows the refusal notice on first launch — that is the notice working, and the reason is that v15 audit rows are indistinguishable on disk from real ones. Earlier builds: `.14` 2,127,438 / `16` (the admin console's booking statistic relabelled), `.13` 2,126,962 / `15` (the last bare index reads, the stored profile through the record door), `.12` 2,125,430 / `14` (identity lookups, the chat room, the concierge, the chart axis), `.11` 2,118,834 / `13`, `.10` 2,113,374 / `12`, `.9` 2,112,782, `.8` 2,111,574, `.7` 2,105,566, `.6` 2,104,798 |
 | Launcher label | `aapt dump badging`: **'Sukinnect · preview'** on this debug APK, and still **'Sukinnect'** on the Oct-1 release APK — the override is debug-scoped, measured on both artifacts |
-| `assets/Sukinnect.html` inside the APK | `cmp` says identical to `Sukinnect-next.html` — **792,132 bytes** at the `.14` build (791,013 at `.13`, 786,835 at `.12`, 770,173 at `.11`). Verified by extracting `assets/Sukinnect.html` out of the APK itself with `unzip` and comparing that, not the staged copy. Compared with `cmp`, not with a hash: `.gitattributes` normalises line endings, so a hash match is the wrong question for a text file here |
+| `assets/Sukinnect.html` inside the APK | `cmp` says identical to `Sukinnect-next.html` — **800,763 bytes** at the `.15` build (792,132 at `.14`, 791,013 at `.13`, 786,835 at `.12`). Verified by extracting `assets/Sukinnect.html` out of the APK itself with `unzip` and comparing that, not the staged copy. Compared with `cmp`, not with a hash: `.gitattributes` normalises line endings, so a hash match is the wrong question for a text file here |
 | The seven category PNGs inside the APK | `cmp` says identical to `assets/category-art/*.png`, and they sit at `assets/assets/category-art/` because the WebView root mirrors the repo root |
 | The four Atkinson weights inside the APK | `cmp` says identical, and `unzip -v` says **Stored** — `noCompress 'woff2'` is doing its job |
 | Every path the bundled page asks for | `check-assets.cjs --apk`: **48 of 48 resolve** |
-| The bundled page, painted | `tools/shot.cjs --file=<the staged assets copy> --width=360 --height=640 --measure` on `.14`: **61 screens**, every tally 0 — tap floor, contrast, clipped, off-scale, text below the 14px floor, under-nav, unnamed controls, occlusion, moving artwork, no-pixels images, horizontal overflow, chart labels outside their own box — 9 painted font sizes all ≥14px, and **no console errors**. Run it against the staged copy, which the row above proves is the copy inside the APK: run against a lone extracted file it reports 72 broken images that do not exist in the artifact, because the page resolves `assets/` and `avatars/` beside itself |
+| The bundled page, painted | `tools/shot.cjs --file=<the staged assets copy> --width=360 --height=640 --measure` on `.15`: **62 screens** — the newest is `admin-audit`, reached by clicking the dashboard row a person clicks, because the audit log had never been photographed and its timestamps are exactly what only a screenshot can confirm. Every tally 0: tap floor, contrast, clipped, off-scale, text below the 14px floor, under-nav, unnamed controls, occlusion, moving artwork, no-pixels images, horizontal overflow, chart labels outside their own box. 9 painted font sizes all ≥14px, and **no console errors**. Run it against the staged copy, which the row above proves is the copy inside the APK: run against a lone extracted file it reports 72 broken images that do not exist in the artifact, because the page resolves `assets/` and `avatars/` beside itself |
 | Scratch left behind | none — the capture directories this pass wrote were deleted. The only tracked edits are `tools/shot.cjs` (the `--file=` flag) and this file |
 
 **Three build notes from 2026-10-10/11/12, all learned the hard way.** Rebuilding replaces the
@@ -222,6 +222,15 @@ gesture, and an app killed mid-review.
       whose field arrived as the wrong kind of value, or carrying a field the app never had,
       is now refused at the door with the field **named** — so if the amber banner appears
       after this install, read what it names rather than assuming it is the schema bump.
+- [ ] **A reload keeps what it promised.** Type a chat message on a job, add a household
+      item under Profile → Home, switch a notification off, then kill the app and reopen.
+      All three must still be there — until `.15` none of them were written to storage at
+      all, and the portfolio button stored nothing while printing "Changes saved
+      successfully." Then edit the provider profile (phone or rate), save, reload: the
+      number you typed must be on the card, not the demo seed.
+- [ ] **The audit log tells the truth about when.** Admin → Dashboard → Audit log. Take two
+      actions, then open it: the rows must carry different, plausible times, not one shared
+      stamp, and the name on them must be the administrator who acted.
 - [ ] **The console says what it does not do.** Admin → Dashboard → the card naming what is not
       managed here, and Categories → the line saying the catalogue is read-only. It is disclosure
       for slide 8, not decoration: judge whether it reads as information about the tool rather
