@@ -2370,3 +2370,44 @@ describes.
 
 **No shipped bytes moved, for the third pass running.** `Sukinnect-next.html` and `Sukinnect.html`
 are both identical to `main`; `node tools/verify.cjs` still reports 502 checks.
+
+## 46. The handset pass was attempted, and the parts that do not need a phone got proved instead
+
+Asked for the pass on `1.2-preview.15`, so first the device: `adb devices` answered with an empty
+list, checked repeatedly across two attempts, server started and stopped each time. **The pass is
+blocked on hardware, not on anything in the repository**, and it is recorded as blocked rather than
+as done — the eight thumb checks in §3f, the feel of the keyboard arriving, and one-handed reach
+still need the phone in hand.
+
+What can be proved about the artifact without one was proved, because "the build is current" is the
+kind of claim that has been wrong before in this project:
+
+- `aapt dump badging` → `com.sukinnect.app`, `versionCode 17`, `versionName 1.2-preview.15`, label
+  `Sukinnect · preview`, minSdk 24, targetSdk 36.
+- `unzip` + `cmp` on the APK's `assets/Sukinnect.html` → **byte-identical to the file on `main`**,
+  800,763 bytes. This is the check the change log says must be run against the artifact rather than
+  the staged copy.
+- The APK carries all four Atkinson WOFF2 weights plus the Jakarta fallbacks, the logo, seven
+  category PNGs, the avatars and vendored Leaflet — 57 asset entries. That matters because §68's new
+  font checks prove the *stylesheet* is honest; only the package contents prove the handset will
+  actually load the face rather than silently fall back.
+- The owner's decision on install is recorded in the task: `install -r`, and the amber refusal
+  notice on a v15 dump is treated as the expected first-launch state rather than a fault.
+
+**Then the keyboard-height viewport, which had drifted out of date.** `DEVICE-PASS.md` proved the
+keyboard case at (360×380) for the seven sheets, and its focus row still said "All 46 screens now
+pass" — the table holds **62**, so sixteen screens had never been seen at keyboard height. The whole
+walk was run there: no control under the nav, no clipped text, nothing painting over an open modal,
+no unnameable field, no console error, no horizontal overflow. The mode was verified before the
+numbers were believed — 720×760 PNGs, and `resident-home` scrolling **1,065px** at this height
+against 543px at 390×844 — because identical tallies across runs is exactly what the reduced-motion
+and desktop sweeps taught me to distrust.
+
+**Three hand-kept figures in the live documents caught in the same sweep of prose.** `DEVICE-PASS.md`
+opened by saying the rebuild was rendered in Node with "415 assertions" and painted "at 360×640 and
+390×844 across 46 screens" (now 502 checks, 62 screens, at 320/390/450 plus keyboard height, desktop
+and reduced motion); and AGENTS.md §31 described the instrument as running "across all 60 screens" while naming only some
+of the checks it actually reports. Both corrected to what the tools print, and the §31 list now names
+the form-field, no-pixels and chart-escape tallies it had stopped mentioning.
+
+**No shipped bytes moved, for the fourth pass running.**

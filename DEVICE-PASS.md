@@ -1,9 +1,11 @@
 # Handset pass — the thing no browser check can prove
 
-The rebuild in `Sukinnect-next.html` has been rendered in Node (415 assertions), painted in
-real Chrome at 360×640 and 390×844 across 46 screens, and measured for tap targets, contrast,
-clipping and occlusion. None of that is a phone. Three categories are still unverified because no
-instrument can reach them: a thumb, an on-screen keyboard, and a slow device.
+The rebuild in `Sukinnect-next.html` has been rendered in Node (502 checks), painted in
+real Chrome across 62 screens at 320, 390 and 450 CSS px — and at a keyboard-height viewport of
+360×380, in the desktop shell at 1280×900, and with `prefers-reduced-motion` emulated — then
+measured for tap targets, contrast, clipping and occlusion. None of that is a phone. Three
+categories are still unverified because no instrument can reach them: a thumb, an on-screen
+keyboard, and a slow device.
 
 **The Android assets copy is a third file, and `git status` cannot see it.**
 `Sukinnect-Android/app/src/main/assets/Sukinnect.html` is gitignored, so no working-tree check
@@ -316,8 +318,8 @@ defects — all three now fixed**. Everything below marked **[settled]** does no
 | Checklist item | Status |
 |---|---|
 | §2 — does the right keyboard come up for numeric fields? | **[settled]** every numeric field in the app carries `inputmode` (`decimal` or `numeric`); the instrument found zero relying on a QWERTY pad. |
-| §2 — does the submit button disappear under the keyboard? | **[settled, page-side]** at a keyboard-height viewport (360×380) every one of the seven sheets shrinks to 304px, its body scrolls, and its action row sits flush with the bottom edge. `windowSoftInputMode="adjustResize"` is set in the manifest, so the WebView gives that height up rather than panning. |
-| §2 / §5 — does typing cost you the field? | **[settled, and fixed]** one field did this: the admin's search on verified providers called `render()` on every keystroke, which detached the input and dropped focus. `render()` now restores focus and the caret position the same way it already restores scroll. Proven both ways: with the fix the field keeps focus, without it it does not. All 46 screens now pass. |
+| §2 — does the submit button disappear under the keyboard? | **[settled, page-side, and now proved app-wide]** the whole 62-screen walk was run at keyboard height (360×380): no control sits under the bottom nav, no text is clipped, nothing paints over an open modal, no field is unnameable, no console error, no horizontal overflow — and the mode is real, not a re-labelled default run, because the PNGs measure 720×760 and the same screen scrolls 1,065px there against 543px at 390×844. The older seven-sheet figure — each shrinks to 304px with its action row flush to the bottom edge — was taken when the table held 46 screens and is not re-quoted as current. `windowSoftInputMode="adjustResize"` is set in the manifest, so the WebView gives that height up rather than panning. What the pad *feels* like arriving is still yours. |
+| §2 / §5 — does typing cost you the field? | **[settled, and fixed]** one field did this: the admin's search on verified providers called `render()` on every keystroke, which detached the input and dropped focus. `render()` now restores focus and the caret position the same way it already restores scroll. Proven both ways: with the fix the field keeps focus, without it it does not. The table has since grown to 62 screens; the keyboard-height walk reports zero unnameable fields, no clipped text and no console errors across all of them, but focus retention itself is still exercised by `probe-caret.js` on the two screens named in its own header, not on all 62 — a wider caret walk is unmeasured, not passing. |
 | §3 — white flash on cold open | **[settled in the shell]** `web.setBackgroundColor(#F1F5FF)` matches `--cloud`. Still worth eyes on, but the cause is handled. |
 | §3 — storage after force-close | **[settled in the shell]** `setDomStorageEnabled(true)` and `setAllowFileAccess(true)` are both set, and the round-trip through `hydrate` is gated. |
 | §3 — does the map caption sit there for ever offline? | **[settled]** it cannot: a `tileerror` handler, a painted-tile count, and a hard 4-second timeout all hand over to the fallback message. |
