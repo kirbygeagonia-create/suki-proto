@@ -2411,3 +2411,105 @@ of the checks it actually reports. Both corrected to what the tools print, and t
 the form-field, no-pixels and chart-escape tallies it had stopped mentioning.
 
 **No shipped bytes moved, for the fourth pass running.**
+
+## 47. Asked whether anything is left, everything was re-measured and one more caveat closed
+
+The question was whether the system is complete before the handset is touched, so the answer had to
+come from running things again rather than from listing what was done earlier.
+
+**Where the repository stands.** PR #6 merged at 23:09Z; `main` is at `f28a82f` and
+`git log origin/main..HEAD` is empty, so nothing written this session is stranded on the branch.
+Working tree clean, gate **502 checks**, and both app files identical to `main`.
+
+**Two instrument checks that had never been run in combination.** `node tools/falsify-all.cjs
+credential` proves the runner discovers the family added in §44 — 3 mutants applied, 3 caught,
+0 not applied — which matters because a family the runner cannot parse is silently absent from its
+own headline. Then `node tools/probe-all.cjs` over the current tools: **21 probes, 0 needing
+attention**.
+
+**The last honest caveat in `DEVICE-PASS.md` is now a measurement.** The focus row said the caret
+probe exercises two screens and that a wider walk was "unmeasured, not passing". Run with no
+`--only`, it walked **all 62 screens, typed into 47 visible fields, lost focus on none, threw
+nothing, and left no value unrestored**. One precision kept deliberately: the probe takes the first
+four fields per screen (`els.slice(0, 4)`), so 47 is not every input in the app, and the row does not
+claim it is.
+
+**Hygiene, measured not assumed.** Four tracked files exceed 500 KB — the deck PDF and PPTX and
+`reicon.js` under Git LFS, and the 800,763-byte app itself — and all four are meant to be there; zero
+`TODO`/`FIXME`/`XXX`/`HACK` markers survive anywhere in the app or the 73 files in `tools/`.
+
+**The profile leak is bounded, not cured, and the second claim was retracted.** Re-measuring temp
+after the instrument runs found **11 more folders** despite the sweep added in §45 — because the
+sweep only fires at the START of a run, so a burst of twenty runs inside one hour still makes twenty
+folders. `Browser.close` was then tried as the actual cure. Over four clean single-screen runs it
+**failed three of four times**: the delete still threw EPERM and the count kept growing. It stays in
+the tool because it costs 1.5 s at most and sometimes the delete then succeeds, but the honest
+statement is that `reclaimAbandonedProfiles()` bounds the backlog while each run still usually leaks
+a folder until the next run comes for it. Two smaller lessons sit inside that: an earlier two-run test
+where the count stayed flat was treated as proof, and two runs was far too few — the claim was
+retracted the same session it was written. And the 707 MB that was deleted just now went on
+**ownership rather than age**: a live-Chrome query showed no running browser named any of the 27
+folders, whereas the hour floor would have left all of them for another day.
+
+**What is genuinely still open, and why.** Four things, and none of them is a defect I can fix by
+typing:
+
+1. **The handset pass.** Blocked on hardware — `adb devices` empty across three separate looks today.
+   A thumb, a keyboard arriving, and a slow device are the three categories no instrument reaches, and
+   the eight §3f checks remain the gate on promotion.
+2. **`netlify.toml` publishes the whole repository root.** `publish = "."` with `/` rewritten to
+   `Sukinnect-next.html` means the deployed site also serves the pitch deck PDF and PPTX, `AGENTS.md`,
+   the four prompt documents and `schema/` — anything in the repo, at a guessable path, publicly. This
+   arrived through PR #1, was flagged in PR #2's description, and got merged without a decision; no
+   project document recorded the exposure until this paragraph. *(Closed in §48 the same day: the
+   deploy publishes a built subset instead of the repository root.)* The README documents the rewrite and
+   says nothing about what else it makes readable.
+3. **Four recorded owner decisions** — the type fold cost, generated-art provenance, `px` rather than
+   `rem` tokens, and the `Brgy. Barangay 4` label.
+4. **Promotion has not happened, and merging is not promotion.** `main` now contains the rebuild
+   because three PRs landed, but `Sukinnect.html` is still the shipped prototype, byte-identical to
+   what it was before any of this. "The rebuild is merged" must not be read as "the rebuild ships" —
+   the file a reviewer opens today is still the one §31 says no instrument paints.
+
+## 48. The deploy no longer serves the repository
+
+§47 left one concern the owner had been told about but never asked to decide. Asked, the choice was a
+built subset rather than a blocklist, on the reasoning that a blocklist leaks by default: the first
+new file at the root is public until somebody remembers to list it.
+
+`tools/build-web-dist.cjs` copies the served surface — the two HTML files, the logo, `assets/`,
+`avatars/`, `fonts/`, `leaflet/` and `reicon.js` — into `dist/`, and `netlify.toml` now builds and
+publishes that: **60 files, 11,141 KB**, where the root additionally carried the deck's 26 MB, `AGENTS.md`,
+`CHANGES.md`, `README.md`, `DEVICE-PASS.md`, three prompt documents, `schema/`, 73 tool files and
+`.gitignore`.
+
+Two properties make it more than `cp`:
+
+- **The list is checked against the application.** Every quoted `.css/.js/.png/.woff2` path in both
+  HTML files must resolve inside `dist` — including the ones reached only through `SERVICE_ART`,
+  `PRO_PHOTOS` and `VERIF_PHOTOS`, which are quoted literals in those maps. Proven by breaking it:
+  with `'avatars'` removed from the serve list the build exits **1** reporting **17 of 29** referenced
+  paths missing, printing the first twelve and the true count on the summary line. And the check paid
+  for itself the first time it was run — `Sukinnect.html` loads `reicon.js`, so the version of this
+  that shipped without it would have published the older prototype with no icons anywhere, on a page
+  that boots perfectly well without them.
+- **Presence is not content.** `reicon.js` is under Git LFS, and a clone made without `git lfs install`
+  leaves about 130 bytes of pointer text in its place. `existsSync` accepts a pointer, so the build
+  reads the bytes and refuses one. Proven on a crafted stub. The second branch's exit path is the same
+  `if` shape as the first, whose code was measured live rather than inferred.
+
+**Then the subset was painted, not audited.** `node tools/shot.cjs --file=dist/Sukinnect-next.html
+--measure` walked all 62 screens out of the built directory: **zero images asking for a file and
+getting no pixels**, zero console errors, nothing under the tap floor, no contrast failure, no clipped
+text, no unnameable field, no escaping map pane, no moving category artwork, no overflow, nine painted
+sizes starting at 14 — the same tallies the repository root produces. Relative paths survive because
+`dist/` mirrors the directory names the app asks for, which is precisely why `publish = "."` had felt
+convenient and was in fact the whole exposure.
+
+**What is not proven, stated plainly.** Netlify was never contacted: that their image runs the build
+command, and that it fetches LFS objects before doing so, is expected rather than tested. `reicon.js`
+is the only LFS file in the served set, and the build now fails loudly if it arrives as a pointer,
+which is the best available stand-in for a deploy nobody has run from this machine.
+
+**No shipped bytes moved.** Both HTML files inside `dist` are `cmp`-identical to the ones on `main`,
+and the gate still reports 502 checks.
