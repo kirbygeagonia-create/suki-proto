@@ -2096,3 +2096,49 @@ clean at 390 and 450; the first 320 run reported two console errors, both
 `net::ERR_NAME_NOT_RESOLVED` from the tile CDN rather than the app, and the re-run of the
 same sweep reported none — recorded because a flaky network is not a defect, and quoting only
 the clean run would hide that it took two.
+
+---
+
+## 41. One statistic, two questions: "Live bookings 10" was six jobs and four requests
+
+The next sweep asked a different question than the id hunt did — not *whose record is this
+screen painting* but *does any number appear twice meaning two things*. A probe printed the
+pairs side by side (`tools/probe-count-pairs.cjs`), and the first three DIFFs it reported were
+the probe's own fault: it guessed `k.cases` when the field is `k.liveCases`, compared a
+credential **label** ("2 of 4 expiring soon") against a **state** ("Expiring soon"), and looked
+for a notifications nav badge that does not exist — the resident's unread bell is a
+`aria-label`, not a count. All three were corrected before anything was concluded, which is
+the §31 discipline pointed at a probe instead of at the app.
+
+**The real one.** `adminCounts().open` is 10, and it is printed under the label **"Live
+bookings"** in two places. It is `!FINISHED_STATES && !disputed` — which is six bookings a
+provider has accepted **plus four requests nobody has answered**. The app separates those
+everywhere else: `statusColors` deliberately refuses to give a request the blue that ongoing
+work means, "because nothing has been agreed yet". The dashboard tile folded them back
+together. And its `aria-label` said *"Open marketplace intelligence, where the 10 live
+bookings are counted"* — a promise the destination does not keep: that screen counts bookings
+inside a date window, which on the demo records is **11**, a different question answering to a
+different number. An administrator following the tile's own pointer would not find the number
+they came with.
+
+Now `adminCounts` returns `agreed` and `waiting` beside `open`, the tile prints `agreed` under
+**"Bookings in progress"**, the four unanswered requests are named in the caption beneath the
+grid rather than hidden inside a bigger number, the workload ring's part is called **Open
+work** (which is what 10 actually is), and the aria-label states what the destination counts
+instead of promising a match. The gate moves one request into the accepted set and requires
+`agreed` to rise by one, `waiting` to fall by one, and `open` to hold — so the two figures
+answer to their own statuses, not to each other.
+
+**A false alarm worth recording.** `intelligenceStats({days:30})` came back with `bookings: 0`
+and looked like a fifth disagreement. It is not: `bookingsInWindow` filters on
+`f.category === 'all' || providerOf(b).serviceId === f.category`, so a filter object without
+`category` silently drops every row. The screen's own default (`state.adminIntFilters`) always
+carries it, so no user sees this — but a helper that reads a missing option as "match nothing"
+is one careless caller away from reporting zero marketplace activity, which is the kind of
+number nobody questions. Left as-is; recorded so the next reader does not chase it, and so a
+future change to that signature knows what depends on it.
+
+**After:** gate 490 → **491 checks, all passing**. `tools/falsify-count-labels.cjs`: **6 mutants
+applied, 6 caught**. Camera **61 screens** clean at 320 and 450 on every tally with no console
+errors, and the dashboard was read back from a screenshot at 390 — a caption that only
+*computes* correctly has to also not turn the section into a pile of small grey text.

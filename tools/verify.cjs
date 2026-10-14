@@ -987,6 +987,43 @@ suite('admin', async () => {
       && k.liveCases === DISPUTES.filter(x => x.status === 'under review').length,
     'verified ' + k.verified + ' against a verified roster of ' + app.verifiedProviderList().length
       + ' out of ' + app.PROVIDERS.length);
+  /* "Live bookings 10" was two questions in one number: six jobs a provider had
+     accepted and four requests nobody had answered. The app separates those everywhere
+     else — a request does not even take the colour ongoing work has — and the tile's own
+     aria-label promised Marketplace Intelligence would count the same ten, which it does
+     not: that screen counts bookings inside a date window, and on the demo records that
+     is eleven. So the halves are counted apart, and the check moves a request into the
+     agreed set to prove the two figures answer to their own statuses rather than to each
+     other. */
+  c.check('the console counts accepted work apart from unanswered requests', (() => {
+    const ACTIVE = ['upcoming', 'en_route', 'arrived', 'ongoing'];
+    const k0 = adminCounts();
+    const agreedNow = app.BOOKINGS.filter(b => ACTIVE.includes(b.status)).length;
+    const waitingNow = app.BOOKINGS.filter(b => b.status === 'requested').length;
+    const sumsUp = k0.agreed === agreedNow && k0.waiting === waitingNow
+      && k0.agreed + k0.waiting === k0.open && k0.agreed < k0.open;
+    app.state.view = 'app'; app.state.role = 'admin';
+    app.state.tab = 'admin_dashboard'; app.state.adminScreen = 'overview';
+    app.render();
+    const dash = app._document.getElementById('screen').innerHTML;
+    const tileNamesIt = new RegExp('class="num">' + k0.agreed + '</div><div class="lbl">Bookings in progress')
+      .test(dash);
+    const waitingSaid = new RegExp(k0.waiting + ' request[s]? still waiting').test(dash);
+    const noLie = !/Live bookings/.test(dash)
+      && !/where the \$|live bookings are counted/.test(dash);
+    const donut = app.opsWorkload(adminCounts());
+    const donutNamed = donut.parts.some(p => p.label === 'Open work' && p.items === k0.open)
+      && !donut.parts.some(p => /Live bookings/.test(p.label));
+    /* The control: accept one waiting request and the two figures must trade one unit. */
+    const req = app.BOOKINGS.find(b => b.status === 'requested'
+      && b.providerId === app.CURRENT_PROVIDER_ID);
+    const move = req ? (() => {
+      app.attemptTransition(req.id, 'upcoming', { role: 'provider', name: 'Probe', id: req.providerId });
+      const k1 = adminCounts();
+      return k1.agreed === k0.agreed + 1 && k1.waiting === k0.waiting - 1 && k1.open === k0.open;
+    })() : 'no request to move';
+    return sumsUp && tileNamesIt && waitingSaid && noLie && donutNamed && move === true;
+  })(), 'the in-progress tile, the waiting line or the workload ring does not answer to its own statuses');
   /* The queue and the tile are the same number now that an approval means something. */
   const queueBefore = app.pendingApplicantList().length;
   app.state.view = 'app'; app.state.role = 'admin';

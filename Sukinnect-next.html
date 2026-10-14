@@ -4213,7 +4213,16 @@ function adminCounts() {
      still awaiting review, and the dashboard used to print the whole roster as the
      verified count beside a queue the same screen had just filtered down. */
   const verified = verifiedProviderList().length;
-  const open = BOOKINGS.filter(b => !FINISHED_STATES.includes(b.status) && b.status !== 'disputed').length;
+  /* "Live bookings" used to be one number over two different things: the jobs a
+     provider has accepted and the requests nobody has answered yet. Everywhere else the
+     app keeps them apart — a request does not even take the colour ongoing work does —
+     and the tile's own aria-label promised the intelligence screen would count the same
+     ten, which it does not: that screen counts bookings inside a date window, a different
+     question answering to a different number. So the two halves are counted separately
+     here and the label says which one it is showing. */
+  const agreed = BOOKINGS.filter(b => ['upcoming', 'en_route', 'arrived', 'ongoing'].includes(b.status)).length;
+  const waiting = BOOKINGS.filter(b => b.status === 'requested').length;
+  const open = agreed + waiting;
   /* Everything below is counted, because the dashboard used to type its own
      digits: it showed 6 applications beside a queue of 3, and 5 expiring
      credentials where two providers hold a flagged one. */
@@ -4221,7 +4230,7 @@ function adminCounts() {
   const missingDocs = docsOutstanding();
   const liveCases = DISPUTES.filter(d => caseIsOpen(d)).length;
   const expiringSoon = expiringProviderCount();
-  return { verified, open, pendingVerification, missingDocs, liveCases, expiringSoon };
+  return { verified, open, agreed, waiting, pendingVerification, missingDocs, liveCases, expiringSoon };
 }
 /* Three shares the records can answer. This card used to carry 82%, 68% and 74% as
    literals; "Cases resolved 74%" sat above a help desk holding one open case and no
@@ -4232,7 +4241,7 @@ function adminCounts() {
    45/25/30 on a screen that also said 3 applications and 1 case. */
 function opsWorkload(k){
   const parts = [
-    { label:'Live bookings', items:k.open, tone:'var(--deep)' },
+    { label:'Open work', items:k.open, tone:'var(--deep)' },
     { label:'Verification', items:k.pendingVerification + k.expiringSoon, tone:'var(--gold)' },
     { label:'Help desk', items:k.liveCases, tone:'var(--alert)' }
   ];
@@ -8649,8 +8658,9 @@ function adminDashboard(){
     <h3 style="font-size:var(--t-body); margin:20px 0 8px;">Roster and volume</h3>
     <div class="statgrid">
       <button type="button" class="stat" onclick="state.tab='admin_verifications'; state.adminProviderCategory='verified'; render();"><div class="num">${k.verified}</div><div class="lbl">Verified providers, demo roster</div></button>
-      <button type="button" class="stat" onclick="state.tab='admin_dashboard'; state.adminScreen='intelligence'; render();" aria-label="Open marketplace intelligence, where the ${k.open} live bookings are counted"><div class="num">${k.open}</div><div class="lbl">Live bookings</div></button>
+      <button type="button" class="stat" onclick="state.tab='admin_dashboard'; state.adminScreen='intelligence'; render();" aria-label="Bookings a provider has accepted and not finished: ${k.agreed}. Requests still waiting for an answer are counted separately below, and Marketplace Intelligence counts bookings inside a date window, which is a different question."><div class="num">${k.agreed}</div><div class="lbl">Bookings in progress</div></button>
     </div>
+    <div style="font-size:var(--t-caption); color:var(--mist); margin:4px 0 4px;">${k.waiting} request${k.waiting === 1 ? '' : 's'} still waiting for a provider to answer — not counted above, because nothing has been agreed yet.</div>
     <!-- Two tiles used to sit here repeating, to the digit, the two queue rows above
          them: "Cases open 1" under "Cases open for review 1", and the same for
          applications. A number shown twice is not emphasis, and §29 asks what each

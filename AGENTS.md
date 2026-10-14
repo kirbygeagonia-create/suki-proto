@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 10,967 lines, ONE :root block, 1,746 var() usages, 95 tokens declared with 92
+Sukinnect-next.html— 10,977 lines, ONE :root block, 1,748 var() usages, 95 tokens declared with 92
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1216,7 +1216,7 @@ Sukinnect-next.html— 10,967 lines, ONE :root block, 1,746 var() usages, 95 tok
                     --device-signal. Type is fully on the scale: of the 120 `font-size`
                     declarations in the stylesheet, 119 take a var(), none is a literal px,
                     and the 120th is `inherit` — the reset that lets an <h1> sit in a flex bar
-                    as the div it replaced. The 401 `font-size` declarations inside markup's
+                    as the div it replaced. The 402 `font-size` declarations inside markup's
                     inline styles all take a var() too. Every screen in the app now opens with
                     an <h1> and every sheet with an <h2> — 23 and 6, the sixth being the weighing
                     sheet — because a 61-screen app with no headings has no outline for a screen
@@ -1521,6 +1521,23 @@ first run and the check was at fault: the door's two rules were written as one p
 a key the seed lacks already fails the kind test (`seedKind(undefined)` is `"undefined"`), so
 the check named for unknown fields had never tested unknown fields. Two rules, two reasons.
 `tools/falsify-identity-fallbacks.cjs`: 24 mutants, 24 caught.
+
+A STATISTIC CAN COUNT TWO QUESTIONS UNDER ONE LABEL, AND NO INSTRUMENT SEES IT. The admin
+dashboard printed `adminCounts().open` — 10 — under "Live bookings". It is
+`!FINISHED_STATES && !disputed`, which is six accepted bookings plus four requests nobody has
+answered: the same pair §21 and `statusColors` refuse to merge anywhere else, "because nothing
+has been agreed yet". Its `aria-label` then promised Marketplace Intelligence counts the same
+ten, and that screen counts a date window, which is 11. Now `agreed` and `waiting` are counted
+apart, the tile prints `agreed`, the four requests are named in the caption instead of folded
+into a bigger number, the workload ring says "Open work", and the gate moves a request into the
+accepted set requiring `agreed` +1, `waiting` -1, `open` unchanged. `tools/falsify-count-labels.cjs`:
+6 mutants, 6 caught. Note the shape of the finding: it was invisible to every substitution check
+because nothing was *wrong with the arithmetic* — the number was right and the noun was wrong.
+The first three disagreements the count-pair probe reported were the probe's own errors (a
+guessed field name, a label compared against a state, a nav badge that does not exist), so
+correct the instrument before concluding anything. And `bookingsInWindow(f)` silently drops
+every row when `f.category` is absent — the screens always pass it, but a helper that reads a
+missing option as "match nothing" is one careless caller away from reporting zero activity.
 
 A MODAL OPENED FROM A SHEET HAS TO OUTRANK THE SHEET. `.sheet-layer` sat at `z-index:60` over
 `.modal-layer`'s 50, and the sheet's scrim covers the whole phone and closes the sheet on any tap
