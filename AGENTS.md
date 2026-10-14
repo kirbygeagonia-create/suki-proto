@@ -1672,6 +1672,25 @@ the next document that copies it. `mapFallback()` degrades honestly when the til
 tile coordinates to a third-party CDN whenever there **is** a connection. Decided 2026-10-12: keep
 it, and treat the exposure as a production DPA/NPC question (slide 16) rather than a prototype bug.
 
+THE SHIPPED `Sukinnect.html` IS MEASURED BY NOTHING, and that is now stated rather than implied.
+Every instrument in `tools/` addresses the rebuild: `harness.cjs` pins `APP` to
+`Sukinnect-next.html`, `shot.cjs` defaults the same way, and no tool even contains the string
+`Sukinnect.html` — `measure.cjs` can read it only because it takes a file argument. The static shape
+is therefore known and re-checked (`node tools/measure.cjs Sukinnect.html`: 4,707 lines, one `:root`,
+86 tokens with 9 never reached, 1,138 `var()` uses, 75 hex-shaped strings outside `:root`, matching
+what this section quotes). The painted surface is not. Pointing the camera at it —
+`node tools/shot.cjs --file=Sukinnect.html` — boots the page (`providers 6 | bookings 0 | store no
+Store | schema v?`) and then dies on the first step of the walk, because the `SCREENS` table calls
+seventeen functions the shipped file does not have: `resetDemoData`, `openChatThread`,
+`bookingsForResident`, `applyProviderIdentity`, `openProfileSection`, `openMakeOffer`, `answerOffer`,
+`reviewOf`, `openCaseSheet`, `clickPainted` among them. That is not a flag waiting to be flipped: the
+table encodes the rebuild's own API and the screens the rebuild added, so a shipped-file walk would
+be a second table, written and proved separately. Consequence to keep in mind: the floors the rebuild
+earned — the 44px tap target, the 14px type floor, contrast sampled where the text sits, the `<h1>`
+per screen, modal stacking, motionless category art — are proven for the file that will ship *after*
+promotion and are unproven for the file a reviewer opens today. Recorded 2026-10-13 under the same
+decision the deck gap got: state it, build nothing.
+
 A FIGURE KEPT BY HAND IN PROSE IS THE NEXT FIGURE THAT IS WRONG. `node tools/falsify-all.cjs`
 now runs every mutant family in one sequential pass and prints, per family, how many breaks were
 applied, how many the named check caught, and how many never matched the file. It exists because
