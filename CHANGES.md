@@ -2432,7 +2432,8 @@ probe exercises two screens and that a wider walk was "unmeasured, not passing".
 `--only`, it walked **all 62 screens, typed into 47 visible fields, lost focus on none, threw
 nothing, and left no value unrestored**. One precision kept deliberately: the probe takes the first
 four fields per screen (`els.slice(0, 4)`), so 47 is not every input in the app, and the row does not
-claim it is.
+claim it is. *(Closed in §49: the cap was removed once the population was measured at 69, and the
+walk now covers all of it — which is the better outcome than annotating a sampled claim forever.)*
 
 **Hygiene, measured not assumed.** Four tracked files exceed 500 KB — the deck PDF and PPTX and
 `reicon.js` under Git LFS, and the 800,763-byte app itself — and all four are meant to be there; zero
@@ -2513,3 +2514,33 @@ which is the best available stand-in for a deploy nobody has run from this machi
 
 **No shipped bytes moved.** Both HTML files inside `dist` are `cmp`-identical to the ones on `main`,
 and the gate still reports 502 checks.
+
+## 49. A sampled claim stopped being reported as a census
+
+The handset was polled for six minutes and never appeared, so the pass stays blocked — recorded, not
+worked around. What could be closed meanwhile was a number I had written myself the previous day and
+left imprecise on purpose: `DEVICE-PASS.md` said the caret walk covered **47 fields with zero focus
+loss**, which is true, and which reads as though the app had 47 input fields.
+
+**Getting the denominator was itself the lesson.** The first attempt passed the probe expression
+inline through `--probe='…'`; the shell mangled it, every one of the 62 screens printed
+`probe failed … SyntaxError: Unexpected token ')'`, and my aggregator — written in exactly the careless
+shape this change log keeps documenting — reported **"visible fields across them: 0"**. A run in which
+nothing was measured produced a clean, confident zero. Rewritten as a real file,
+`tools/probe-field-population.js`, with an aggregator that exits `NO CONCLUSION` when it parses
+nothing, it reports **69 visible fields across the 62 screens**: 25 `number`, 21 `text`, 16
+`textarea`, 3 `checkbox`, 2 `password`, 2 `file`.
+
+**Then the sample was replaced by the whole population instead of documented as a sample.**
+`probe-caret.js` capped itself at four fields per screen — a caution about side effects, not a
+finding — so the cap was removed and the walk re-run: **69 fields typed into, which is exactly the
+population the other probe counted independently**, none losing focus, none erroring, none left
+unrestored. Two instruments agreeing to the unit is what makes the walk demonstrably complete; a count
+that merely equals a cap would not.
+
+**Inventory after the change:** `node tools/probe-all.cjs` runs **22** instruments and reports **0
+needing attention**, the new probe discovered and classified as an in-page expression alongside the
+other eleven of its kind. §47's "47 fields" sentence is annotated where it stands, and the
+`DEVICE-PASS.md` row that carried it now states 69 of 69.
+
+**No shipped bytes moved** — three tool files and two documents, and the gate still reports 502 checks.

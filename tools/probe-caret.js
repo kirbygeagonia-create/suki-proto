@@ -7,10 +7,15 @@
    keyboard after one character, which is a defect nobody can reproduce from a screenshot.
    The symptom is device-only. The cause is entirely in the page, and this asks the page.
 
-   It types one character into each of the first four fields on the painted screen, then
-   reports what the live document has focused — not the node it held on to, which is the
-   mistake this probe originally made: a re-render detaches that node, so comparing
-   against it can only ever answer "lost", whether the app is broken or not.
+   It types one character into EVERY visible field on the painted screen, then reports what the
+   live document has focused — not the node it held on to, which is the mistake this probe
+   originally made: a re-render detaches that node, so comparing against it can only ever answer
+   "lost", whether the app is broken or not.
+
+   It used to stop at four fields per screen, and that cap was reported as a result: "47 fields,
+   zero focus loss" read as the app's whole input surface while `probe-field-population.js` says
+   69 exist across the 62 screens. The cap was a caution about side effects, not a finding, so it
+   is gone and the walk covers everything.
 
    Destructive by nature (it dispatches real input events), so run it on the screens you
    are asking about, and re-run tools/shot.cjs --measure afterwards if you want clean
@@ -22,7 +27,7 @@
   var els = [].slice.call(scope.querySelectorAll('input:not([type=hidden]), textarea'))
     .filter(function(e){ var r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; });
 
-  els.slice(0, 4).forEach(function(el){
+  els.forEach(function(el){
     var rec = { field: (el.id || el.className.split(' ')[0] || el.tagName.toLowerCase()).slice(0, 26),
                 in: sheet ? 'sheet' : 'screen' };
     var original = el.value;
