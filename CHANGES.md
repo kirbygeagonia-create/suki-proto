@@ -2461,7 +2461,8 @@ typing:
    `Sukinnect-next.html` means the deployed site also serves the pitch deck PDF and PPTX, `AGENTS.md`,
    the four prompt documents and `schema/` — anything in the repo, at a guessable path, publicly. This
    arrived through PR #1, was flagged in PR #2's description, and got merged without a decision; no
-   project document recorded the exposure until this paragraph. The README documents the rewrite and
+   project document recorded the exposure until this paragraph. *(Closed in §48 the same day: the
+   deploy publishes a built subset instead of the repository root.)* The README documents the rewrite and
    says nothing about what else it makes readable.
 3. **Four recorded owner decisions** — the type fold cost, generated-art provenance, `px` rather than
    `rem` tokens, and the `Brgy. Barangay 4` label.
@@ -2469,3 +2470,46 @@ typing:
    because three PRs landed, but `Sukinnect.html` is still the shipped prototype, byte-identical to
    what it was before any of this. "The rebuild is merged" must not be read as "the rebuild ships" —
    the file a reviewer opens today is still the one §31 says no instrument paints.
+
+## 48. The deploy no longer serves the repository
+
+§47 left one concern the owner had been told about but never asked to decide. Asked, the choice was a
+built subset rather than a blocklist, on the reasoning that a blocklist leaks by default: the first
+new file at the root is public until somebody remembers to list it.
+
+`tools/build-web-dist.cjs` copies the served surface — the two HTML files, the logo, `assets/`,
+`avatars/`, `fonts/`, `leaflet/` and `reicon.js` — into `dist/`, and `netlify.toml` now builds and
+publishes that: **60 files, 11,141 KB**, where the root additionally carried the deck's 26 MB, `AGENTS.md`,
+`CHANGES.md`, `README.md`, `DEVICE-PASS.md`, three prompt documents, `schema/`, 73 tool files and
+`.gitignore`.
+
+Two properties make it more than `cp`:
+
+- **The list is checked against the application.** Every quoted `.css/.js/.png/.woff2` path in both
+  HTML files must resolve inside `dist` — including the ones reached only through `SERVICE_ART`,
+  `PRO_PHOTOS` and `VERIF_PHOTOS`, which are quoted literals in those maps. Proven by breaking it:
+  with `'avatars'` removed from the serve list the build exits **1** reporting **17 of 29** referenced
+  paths missing, printing the first twelve and the true count on the summary line. And the check paid
+  for itself the first time it was run — `Sukinnect.html` loads `reicon.js`, so the version of this
+  that shipped without it would have published the older prototype with no icons anywhere, on a page
+  that boots perfectly well without them.
+- **Presence is not content.** `reicon.js` is under Git LFS, and a clone made without `git lfs install`
+  leaves about 130 bytes of pointer text in its place. `existsSync` accepts a pointer, so the build
+  reads the bytes and refuses one. Proven on a crafted stub. The second branch's exit path is the same
+  `if` shape as the first, whose code was measured live rather than inferred.
+
+**Then the subset was painted, not audited.** `node tools/shot.cjs --file=dist/Sukinnect-next.html
+--measure` walked all 62 screens out of the built directory: **zero images asking for a file and
+getting no pixels**, zero console errors, nothing under the tap floor, no contrast failure, no clipped
+text, no unnameable field, no escaping map pane, no moving category artwork, no overflow, nine painted
+sizes starting at 14 — the same tallies the repository root produces. Relative paths survive because
+`dist/` mirrors the directory names the app asks for, which is precisely why `publish = "."` had felt
+convenient and was in fact the whole exposure.
+
+**What is not proven, stated plainly.** Netlify was never contacted: that their image runs the build
+command, and that it fetches LFS objects before doing so, is expected rather than tested. `reicon.js`
+is the only LFS file in the served set, and the build now fails loudly if it arrives as a pointer,
+which is the best available stand-in for a deploy nobody has run from this machine.
+
+**No shipped bytes moved.** Both HTML files inside `dist` are `cmp`-identical to the ones on `main`,
+and the gate still reports 502 checks.

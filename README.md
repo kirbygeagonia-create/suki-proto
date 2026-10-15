@@ -39,12 +39,22 @@ approved. Both files sit side by side so you can compare the same flow in two ta
 
 ### Launch on Netlify
 
-The Netlify homepage serves `Sukinnect-next.html`. The repository's `netlify.toml`
-publishes the root directory and rewrites `/` to that file, so the existing local
-fonts, logo, illustrations, avatars and Leaflet assets keep their relative paths.
-No build command or package installation is required for this static prototype.
+The Netlify homepage serves `Sukinnect-next.html`. `netlify.toml` runs
+`node tools/build-web-dist.cjs` and publishes the `dist/` it writes, so the deploy carries only what
+the two pages actually ask for — the HTML files, the logo, `assets/`, `avatars/`, `fonts/`,
+`leaflet/`, and `reicon.js`, the older page's icon library — 60 files, about 11 MB. The pitch deck,
+`AGENTS.md`, this file, the change log, the three prompt documents, `schema/` and `tools/` stay in
+the repository and off the internet. Publishing the root had made every one of them fetchable at a
+guessable path; a subset built from an explicit list is the version of this that cannot leak by
+accident, and the build refuses to finish when the app starts asking for something the list does not
+carry. Prove it yourself: remove `'avatars'` from `SERVE` and the run exits 1 reporting 17 of the 29
+referenced paths missing (it prints the first twelve, and the true count on the summary line).
 
-Open `/?app=1` for the full-viewport phone layout without the desktop frame.
+`dist/` is build output and is gitignored. Rebuild it any time with
+`node tools/build-web-dist.cjs`; it also stops if a copied file turns out to be a Git LFS pointer
+rather than its content, which is the failure the clone warning above describes.
+
+Open `/?app=1` for the full-viewport phone layout without the desktop frame. Both
 `Sukinnect-next.html` and the original `Sukinnect.html` remain directly accessible.
 This deployment still runs the demo prototype; it does not add production
 authentication, shared server-side storage or real payment processing.

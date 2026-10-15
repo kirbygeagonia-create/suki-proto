@@ -1693,6 +1693,23 @@ per screen, modal stacking, motionless category art — are proven for the file 
 promotion and are unproven for the file a reviewer opens today. Recorded 2026-10-13 under the same
 decision the deck gap got: state it, build nothing.
 
+THE DEPLOYMENT SURFACE IS A BUILT SUBSET. `netlify.toml` used `publish = "."`, which served the
+entire repository at whatever URL the site resolves to: the deck's 15.8 MB PDF and 10.5 MB PPTX,
+`AGENTS.md`, `CHANGES.md`, the three prompt documents, `schema/`, all 73 files in `tools/`, and
+`.gitignore` itself — each at a path a stranger could guess. It now runs
+`node tools/build-web-dist.cjs` and publishes `dist/`: the two HTML files, the logo, `assets/`,
+`avatars/`, `fonts/`, `leaflet/`, and `reicon.js` — 60 files, 11,141 KB, of which 8.3 MB is the icon
+library only `Sukinnect.html` needs, published because that page is published so a reviewer can run
+one flow in two tabs. What makes this more than a smaller folder is that the copy list is checked
+against the application rather than against memory: every quoted `.css/.js/.png/.woff2` path in both
+HTML files, including those painted from `SERVICE_ART`, `PRO_PHOTOS` and `VERIF_PHOTOS`, must resolve
+inside `dist`, and a build that would ship a hole exits 1 — proved by dropping `avatars/` from the
+list, which reports 17 of 29 referenced paths missing. It also refuses any copied file that turns out
+to be a Git LFS pointer, because `existsSync` is satisfied by 130 bytes of pointer text while the page
+boots happily with no icons at all. Then the subset's completeness was measured rather than argued:
+the camera painted all 62 screens out of `dist/` with zero images asking for a file and getting no
+pixels, zero console errors, and every other tally zero.
+
 A FIGURE KEPT BY HAND IN PROSE IS THE NEXT FIGURE THAT IS WRONG. `node tools/falsify-all.cjs`
 now runs every mutant family in one sequential pass and prints, per family, how many breaks were
 applied, how many the named check caught, and how many never matched the file. It exists because
