@@ -36,18 +36,35 @@ title from the day it was written until 2026-10-10, when the label was found to 
 that one `applicationId` means one install: installing this **replaces** the customer build rather
 than sitting beside it, which is why the version code went up as well as the name.
 
-## Building it — re-built 2026-10-13 (`1.2-preview.15`, `versionCode 17`); first compiled 2026-10-09
+## Building it — re-built 2026-10-15 (`1.2-preview.16`, `versionCode 18`); first compiled 2026-10-09
 
 "the Java looks right" is not the same claim as "an APK builds and contains what you changed",
 and neither is the same claim as "the page inside it finds its images". All three are now
-established, on the assets as they ship rather than as they sit in the repo:
+established, on the assets as they ship rather than as they sit in the repo — and a fourth was
+added today, because the shell fix this build carries is invisible from the source tree:
+**the shipped bytecode contains the handler you wrote**, proven with `dexdump -d classes2.dex`
+showing the compiled method holding the scheme list, `"tel"`, then `"android.intent.action.DIAL"`.
+
+That fourth check nearly produced a false verdict. `unzip -p APK classes.dex | grep -c` returned
+**zero** for all three strings I looked for, including `"blob"`, which the code certainly
+contains: `classes.dex` in this APK is a **2,156-byte stub** and the application lives in
+`classes2.dex` (8,416 bytes). Grepping the first file measured nothing and looked like an absent
+feature. Unzip every `*.dex` and search them all, or use `dexdump`.
 
 ```
 cd Sukinnect-Android
 ./gradlew --offline :app:assembleDebug
-# BUILD SUCCESSFUL in 34s
-adb install -r app/build/outputs/apk/debug/Sukinnect-1.2-preview.6-debug.apk
+# BUILD SUCCESSFUL in 8s   (first attempt today FAILED — see the OneDrive note below)
+adb install -r app/build/outputs/apk/debug/Sukinnect-1.2-preview.16-debug.apk
 ```
+
+**This tree sits under OneDrive, and Gradle sometimes cannot snapshot its own intermediates.** The
+first attempt today died in `:app:packageDebug` with `Cannot access output property
+'incrementalFolder' … java.io.IOException: Cannot snapshot …\zip-cache\javaResources0: not a
+regular file` — a sync placeholder, not a code error, and the source compiled fine on the way in.
+Deleting `app/build/intermediates/incremental/packageDebug` and re-running produced
+`BUILD SUCCESSFUL in 8s`. If that task fails again, clear that directory before suspecting the
+change you just made.
 
 **There is a Gradle wrapper now.** Until 2026-10-11 this project had no `gradlew` and no
 `gradle/wrapper/`, so the build depended on whatever Gradle happened to be installed and a fresh
@@ -61,9 +78,9 @@ What was verified about the artifact, not assumed:
 
 | Check | Result |
 |---|---|
-| `:app:assembleDebug` | **BUILD SUCCESSFUL in 47s** (34 tasks, 9 executed). Current output `Sukinnect-1.2-preview.15-debug.apk`, **2,130,522 bytes**, `versionCode 17`, `versionName 1.2-preview.15` — read off `aapt dump badging`. It is the build where the app's claims about a reload become true: ten actions that said "saved", "logged" or "shown to the provider" and wrote nothing now write — a typed chat message, a household item, a portfolio entry whose Save button previously stored nothing at all, a concierge answer, an administrator's note and flag, a document request, and both roles' notification checkboxes. The audit log stops stamping every row with one typed date and carries a real instant and the acting name, and a provider's saved profile is no longer overwritten by the demo seed on launch. `SCHEMA_VERSION` is 16, so a handset holding a v15 dump shows the refusal notice on first launch — that is the notice working, and the reason is that v15 audit rows are indistinguishable on disk from real ones. Earlier builds: `.14` 2,127,438 / `16` (the admin console's booking statistic relabelled), `.13` 2,126,962 / `15` (the last bare index reads, the stored profile through the record door), `.12` 2,125,430 / `14` (identity lookups, the chat room, the concierge, the chart axis), `.11` 2,118,834 / `13`, `.10` 2,113,374 / `12`, `.9` 2,112,782, `.8` 2,111,574, `.7` 2,105,566, `.6` 2,104,798 |
+| `:app:assembleDebug` | **BUILD SUCCESSFUL in 8s** once a stale OneDrive-blocked intermediate was cleared — the first attempt today failed in `:app:packageDebug` with a snapshot IOException, which is a sync placeholder rather than the change. Current output `Sukinnect-1.2-preview.16-debug.apk`, **2,131,290 bytes**, `versionCode 18`, `versionName 1.2-preview.16`, label `Sukinnect · preview`, minSdk 24 / target 36 — read off `aapt dump badging`. **No page bytes moved between `.15` and `.16`** (the bundled asset is the same 800,763 bytes); what changed is the shell, and it is proven in the shipped bytecode rather than in the source: `dexdump -d classes2.dex` shows `openOutsideTheWebView` holding the scheme list, then `"tel"`, then `"android.intent.action.DIAL"` — so the two support "Call" buttons now hand the number to the dialer instead of failing the scheme into a system error page. `.15` was 2,130,522 / `17` — the build where the app's claims about a reload become true: ten actions that said "saved", "logged" or "shown to the provider" and wrote nothing now write — a typed chat message, a household item, a portfolio entry whose Save button previously stored nothing at all, a concierge answer, an administrator's note and flag, a document request, and both roles' notification checkboxes. The audit log stops stamping every row with one typed date and carries a real instant and the acting name, and a provider's saved profile is no longer overwritten by the demo seed on launch. `SCHEMA_VERSION` is 16, so a handset holding a v15 dump shows the refusal notice on first launch — that is the notice working, and the reason is that v15 audit rows are indistinguishable on disk from real ones. Earlier builds: `.15` 2,130,522 / `17` (ten write claims that stored nothing, the audit log's real instant and actor, the restore that overwrote a saved profile), `.14` 2,127,438 / `16` (the admin console's booking statistic relabelled), `.13` 2,126,962 / `15` (the last bare index reads, the stored profile through the record door), `.12` 2,125,430 / `14` (identity lookups, the chat room, the concierge, the chart axis), `.11` 2,118,834 / `13`, `.10` 2,113,374 / `12`, `.9` 2,112,782, `.8` 2,111,574, `.7` 2,105,566, `.6` 2,104,798 |
 | Launcher label | `aapt dump badging`: **'Sukinnect · preview'** on this debug APK, and still **'Sukinnect'** on the Oct-1 release APK — the override is debug-scoped, measured on both artifacts |
-| `assets/Sukinnect.html` inside the APK | `cmp` says identical to `Sukinnect-next.html` — **800,763 bytes** at the `.15` build (792,132 at `.14`, 791,013 at `.13`, 786,835 at `.12`). Verified by extracting `assets/Sukinnect.html` out of the APK itself with `unzip` and comparing that, not the staged copy. Compared with `cmp`, not with a hash: `.gitattributes` normalises line endings, so a hash match is the wrong question for a text file here |
+| `assets/Sukinnect.html` inside the APK | `cmp` says identical to `Sukinnect-next.html` — **800,763 bytes** at the `.16` build, unchanged from `.15` (792,132 at `.14`, 791,013 at `.13`, 786,835 at `.12`). Verified by extracting `assets/Sukinnect.html` out of the APK itself with `unzip` and comparing that, not the staged copy. Compared with `cmp`, not with a hash: `.gitattributes` normalises line endings, so a hash match is the wrong question for a text file here |
 | The seven category PNGs inside the APK | `cmp` says identical to `assets/category-art/*.png`, and they sit at `assets/assets/category-art/` because the WebView root mirrors the repo root |
 | The four Atkinson weights inside the APK | `cmp` says identical, and `unzip -v` says **Stored** — `noCompress 'woff2'` is doing its job |
 | Every path the bundled page asks for | `check-assets.cjs --apk`: **48 of 48 resolve** |

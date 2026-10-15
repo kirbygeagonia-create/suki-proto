@@ -2584,6 +2584,21 @@ notice on that install is the notice working, not a fault.
 **No shipped bytes moved.** This change lives in the gitignored shell and in `DEVICE-PASS.md`;
 `git status` will never show the first half of it, which is precisely why the checklist carries it.
 
+**The shell fix was then built and proved at the level it can be proved.** `1.2-preview.16`
+(`versionCode 18`, 2,131,290 bytes, `aapt dump badging` read off the artifact) — **no page bytes
+moved**, so the bundled asset is the same 800,763 bytes `cmp`-identical to the file on `main`, and
+`Sukinnect-Android/tools/check-assets.cjs --apk` resolves all 48 paths the page asks for inside the
+APK. The dial routing was confirmed in the **shipped bytecode**, not the source: `dexdump -d
+classes2.dex` shows the compiled method holding `"http" "https" "file" "data" "about" "blob"`, then
+`"tel"`, then `"android.intent.action.DIAL"`. Two things nearly went wrong in the checking, and both
+are the same shape as everything else in this log. The first build attempt **failed** in
+`:app:packageDebug` with an IOException snapshotting an intermediate — a OneDrive placeholder under
+a synced tree, not the change; clearing `app/build/intermediates/incremental/packageDebug` gave
+`BUILD SUCCESSFUL in 8s`. And the first bytecode check grepped `classes.dex`, came back **zero** for
+all three strings including one the code certainly contains, and read as "my fix is missing from the
+APK" — because `classes.dex` here is a 2,156-byte stub and the application is in `classes2.dex`.
+Search every dex, or disassemble; a file that contains nothing also matches nothing.
+
 **The whole mutant suite was re-run across this, and it is clean:** `node tools/falsify-all.cjs`
 reports **17 families, 118 mutants applied, 118 caught, 0 not applied, 0 missed** — the two new
 families from §43/§44 (typography, credential-pair) included alongside the fifteen — and
