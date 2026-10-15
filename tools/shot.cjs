@@ -32,8 +32,14 @@ const ROOT = path.join(__dirname, '..');
 
 const argv = process.argv.slice(2);
 const flag = (name, dflt) => {
-  const hit = argv.find(a => a.startsWith('--' + name + '='));
-  return hit ? hit.split('=')[1] : dflt;
+  const prefix = '--' + name + '=';
+  const hit = argv.find(a => a.startsWith(prefix));
+  /* Take everything after the FIRST '='. This used to be hit.split('=')[1], which truncates any
+     value containing an assignment — so `--probe='(function(){var b=…})()'` reached the page as
+     `(function(){var b`, the page answered `SyntaxError: Unexpected token ')'`, and the tool
+     printed a page fault for a mistake in its own argument parser. Two probes were dismissed as
+     "shell quoting" that way before the parser was read. */
+  return hit ? hit.slice(prefix.length) : dflt;
 };
 const has = (name) => argv.includes('--' + name);
 
@@ -1009,8 +1015,10 @@ async function main() {
       if (PROBE) {
         /* Its own try, because a bad probe string used to be reported as "page threw" —
            which reads as an app defect to whoever is holding the output, when the only
-           thing that broke was the question. (@file is loaded relative to the repo; a
-           bare path without the @ is evaluated as JavaScript and fails on its first ':'.) */
+           thing that broke was the question. (@file is loaded relative to the repo; a bare
+           value is evaluated as JavaScript as written, and until the flag parser stopped
+           cutting it at the first '=' that almost always produced a SyntaxError the page
+           had nothing to do with.) */
         try {
           const expr = PROBE.startsWith('@') ? fs.readFileSync(path.resolve(ROOT, PROBE.slice(1)), 'utf8') : PROBE;
           console.log('    probe → ' + JSON.stringify(await session.evaluate(`(function(){ try { return (${expr}); } catch(e){ return 'threw: ' + e.message; } })()`)));

@@ -2606,3 +2606,60 @@ families from §43/§44 (typography, credential-pair) included alongside the fif
 reports 502 checks with the dial control renamed. What that number does *not* cover is the shell:
 `MainActivity.java` is outside every instrument in this repository, and its proof today is a clean
 `javac` and a checklist item, nothing more.
+
+## 51. Sweeping the class the dial bug belonged to found a caption that lied and a parser that lied
+
+Asked whether anything was left before the handset work, the honest move was to sweep the whole
+category the `tel:` defect belongs to — every browser capability the page might expect the shell to
+mediate — rather than answer from a list.
+
+**The category came back clean.** `tel:` is the only non-web scheme in the page (2 occurrences, both
+handled now). And nothing else asks the phone for anything: `target="_blank"` 0, `window.open` 0,
+geolocation 0, clipboard 0, `requestFullscreen` 0, `navigator.share` 0, vibrate 0, service workers 0,
+IndexedDB 0, `getUserMedia` 0, `FileReader` 0. The 54 "Notification" hits are the app's own
+`NOTIFICATIONS` records, not the web API — checked rather than assumed, because a grep that flatters
+a clean bill is worth as much scepticism as one that finds a defect.
+
+**What the sweep did turn up was a caption.** The concierge button said **"Analyze the text and
+photo"**, while two other screens state plainly that the prototype cannot do that: *"This prototype
+keeps the picture on your device. Nothing is uploaded, so the provider sees the name you gave it, not
+the photo"* and *"This prototype does not read pictures, so a photo on its own cannot be sorted."* The
+handlers keep `file.name` (the fruit draft also `sizeBytes`) and render no thumbnail anywhere. §75
+asks media interactions to include a preview, so a gap exists — but the gap that misleads is the
+label, not the absent thumbnail, and it is now **"Prepare the job briefing"**, which is what the
+in-flight state ("Preparing the job briefing…") and the result ("Briefing ready") already call it.
+The owner chose the relabel over building a preview; §75 records the limit, so nobody "fixes" the
+mismatch by making the copy claim more. Verified in the painted page, not the source: a probe reads
+`{"text":"Prepare the job briefing","w":328,"h":49}` — above the tap floor, inside the screen.
+
+**Chasing the probe twice found a real bug in the camera.** That inline probe failed twice with
+`page threw: SyntaxError: Unexpected token ')'`, and both times the failure was blamed on shell
+quoting. It was `shot.cjs`'s own argument parser: `flag()` did `hit.split('=')[1]`, so
+`--probe='(function(){var b=…})()'` reached the page truncated at its first `=` — as
+`(function(){var b`. Every inline expression containing an assignment, which is nearly all of them,
+was silently amputated and the tool reported the *page* as faulty. Fixed to slice after the first
+`=`; the same command that failed twice now answers. The lesson is the one this log keeps learning:
+**a surprising error is a reason to read the instrument, not to route around it** — routing around it
+twice is what let it survive.
+
+**Re-measured, because this was the first change in several passes to move app bytes** (two bytes, the
+label): camera at 320 / 390 / 450 across 62 screens, every tally zero including clipped text; the
+full mutant suite, **17 families, 118 mutants applied, 118 caught, 0 not applied**; gate 502.
+
+**Re-synced and rebuilt as `1.2-preview.17`** (`versionCode 19`, 2,131,282 bytes, `aapt dump
+badging`). Two bytes of copy were enough to make the previous build wrong to install: an APK showing a
+label the repository no longer contains is exactly the drift `DEVICE-PASS.md` exists to catch. Proved
+at the artifact level — `check-assets.cjs --apk` resolves all 48 paths, the extracted page contains
+`Prepare the job briefing` once and `Analyze the text` nowhere, `ACTION_DIAL` is still in
+`classes2.dex`, and the staged copy repainted at 360×640 with every tally zero.
+
+**And two self-inflicted defects, both caught before they shipped.** Editing a table row with a
+replacement that spanned several lines split a single-line markdown row in two and orphaned its tail —
+invisible in a diff, obvious the moment the row was measured: 202 characters where it had been 1,028,
+and the next line no longer starting with `|`. It happened **twice**, because the first repair did not
+change the habit that caused it; the second row was found only because a check was written after the
+first ("any line starting with `|` must end with one") and it named the `:app:assembleDebug` row
+immediately. Both rejoined and verified by content rather than by hope — `admin-audit` and the
+72-broken-images warning back in the row they belong to, all rows well-formed. The rule that comes out
+of it: a multi-line replacement must never target a single-line structure, and after any edit to a
+table, re-measure the table rather than trusting that the edit landed where it was meant to.

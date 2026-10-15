@@ -2842,6 +2842,22 @@ Media interactions should include:
 
 Do not silently upload private images.
 
+**Decided 2026-10-15, on `Sukinnect-next.html`: the first bullet is deliberately unmet.** The
+concierge and the fruit request sheet take a photo and keep `file.name` (the fruit draft also keeps
+`sizeBytes`) — there is no thumbnail, and `FileReader` / `createObjectURL` appear nowhere in the file.
+The screens say so out loud, which is the part §20 and §63 actually require: *"This prototype keeps
+the picture on your device. Nothing is uploaded, so the provider sees the name you gave it, not the
+photo"*, and when a resident attaches a photo with no words the concierge refuses rather than
+inventing a category — *"This prototype does not read pictures, so a photo on its own cannot be
+sorted."* What was wrong was the button, which read **"Analyze the text and photo"** two screens away
+from a statement that it cannot read pictures — a label promising what the code does not do, the same
+defect class as a tile claiming a count that mixes two questions. It now reads **"Prepare the job
+briefing"**, which is what the in-flight state and the result card already call it. Adding a real
+local preview is a genuine improvement and was declined for now: it is new behaviour (a decoded
+image held in session state), and it would need checks, a camera pass and a screen with pixels in
+it, not a relabel. §75's list stands as the production requirement; the prototype's honest limit is
+recorded here so nobody "fixes" the mismatch by making the copy claim more.
+
 ---
 
 # 76. ADMIN DATA VISUALIZATION
