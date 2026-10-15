@@ -2544,3 +2544,50 @@ other eleven of its kind. §47's "47 fields" sentence is annotated where it stan
 `DEVICE-PASS.md` row that carried it now states 69 of 69.
 
 **No shipped bytes moved** — three tool files and two documents, and the gate still reports 502 checks.
+
+## 50. The shell has a Call button that dials nothing, and the check named after it reads markup
+
+With the handset still absent, the one surface no instrument reaches was reviewed by reading it:
+`Sukinnect-Android/app/src/main/java/com/sukinnect/app/MainActivity.java` — the untracked shell that
+already hid one defect of exactly this shape, the photo button with no `WebChromeClient` that worked
+in every browser and did nothing on a phone.
+
+**The page offers two `tel:` controls.** `href="tel:${DEMO_HOTLINE}"` appears twice
+(`+639170001122`), and the shell set `web.setWebViewClient(new WebViewClient())` — a bare default.
+Android's WebView does not hand an unknown scheme to the system: it *navigates* to `tel:+63…`, fails
+it with `ERR_UNKNOWN_URL_SCHEME`, and replaces the running prototype with a system error page. In a
+desktop browser the same click works, because the browser gives the scheme to the OS before the page
+notices — which is why no instrument in `tools/` could ever have seen this.
+
+**And the gate has a check called "a call control dials" that cannot see it either.** It asserts
+`(body.match(/href="tel:/g) || []).length >= 2` — the markup exists. A control pinned to its own
+presence, the same shape as a check that counts a label instead of a verdict, and the behaviour it
+names lives in a file the gate never loads. The label is now **"the page paints a dial control
+carrying the number on the record"**, because the old name promised a verdict the assertion cannot
+reach, and the dialling itself is a §3f check on the bench.
+
+The fix is in `MainActivity`: `shouldOverrideUrlLoading`, both overloads, routes any scheme that is
+not http/https/file/data/about/blob out to an `Intent` — `ACTION_DIAL` for `tel:`, deliberately not
+`ACTION_CALL`, because dialling asks no permission and placing a call does. A scheme no app on the
+device can take is swallowed rather than navigated, so the failure mode is a button that does nothing,
+not an app that disappears. The evidence available without a phone: `javac -cp
+android-36/android.jar` compiles clean, apart from the expected deprecation note on the `String`
+overload kept as a backstop. It reaches a handset only in a **new build**, and the §3f item added
+alongside this asks the bench to confirm the dialer opens pre-filled, that returning lands on the same
+screen, and that no error page appears.
+
+**One stale instruction found on the way in.** §3f told the bench "`SCHEMA_VERSION` is 15" while the
+app has been at 16 since the reload pass — so the sentence describing the refusal notice mis-named the
+first thing a phone holding an older dump would see. Corrected, and now says plainly that the amber
+notice on that install is the notice working, not a fault.
+
+**No shipped bytes moved.** This change lives in the gitignored shell and in `DEVICE-PASS.md`;
+`git status` will never show the first half of it, which is precisely why the checklist carries it.
+
+**The whole mutant suite was re-run across this, and it is clean:** `node tools/falsify-all.cjs`
+reports **17 families, 118 mutants applied, 118 caught, 0 not applied, 0 missed** — the two new
+families from §43/§44 (typography, credential-pair) included alongside the fifteen — and
+`Sukinnect-next.html` came out `git diff`-identical after 118 apply-and-restore cycles. The gate
+reports 502 checks with the dial control renamed. What that number does *not* cover is the shell:
+`MainActivity.java` is outside every instrument in this repository, and its proof today is a clean
+`javac` and a checklist item, nothing more.

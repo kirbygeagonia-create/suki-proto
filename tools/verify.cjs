@@ -1431,7 +1431,12 @@ suite('hygiene', async () => {
   c.check('a toast is announced, not just painted', /aria-live/.test(body) && /role', 'status'/.test(body));
   c.check('each screen states its title as a heading', /<h1 class="title">/.test(body));
   c.check('and a sheet over it does not pretend to be the page', /<h2 class="sheet-title">/.test(body));
-  c.check('a call control dials', (body.match(/href="tel:/g) || []).length >= 2);
+  /* What this can prove is that the markup is there. Whether the button dials is decided in
+     MainActivity, in a file this harness never loads and git never sees — a bare WebViewClient
+     navigates to tel:, fails it with ERR_UNKNOWN_URL_SCHEME, and replaces the app with a system
+     error page, which no browser-side instrument can observe. Named for what it measures, and the
+     behaviour is a DEVICE-PASS 3f check on the bench. */
+  c.check('the page paints a dial control carrying the number on the record', (body.match(/href="tel:/g) || []).length >= 2);
   c.check('the provider map uses the provider it names', !/setView\(\[6\.3665, 124\.9338\], 15\)/.test(body));
   c.check('no stored-value wallet language survives',
     !/Secure Balance Wallet|Instant Cash-Out|wallet balance/i.test(body));

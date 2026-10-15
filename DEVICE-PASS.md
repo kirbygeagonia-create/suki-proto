@@ -220,10 +220,11 @@ gesture, and an app killed mid-review.
       to choose and the send must refuse — the old code stored `address: undefined` and the
       provider saw a visit with no door. `.13` also clamps a stale day/time choice, so a
       sheet that used to simply fail to appear now opens with a real row marked.
-- [ ] **The refusal notice, on a bad profile.** `SCHEMA_VERSION` is 15. A stored profile
-      whose field arrived as the wrong kind of value, or carrying a field the app never had,
-      is now refused at the door with the field **named** — so if the amber banner appears
-      after this install, read what it names rather than assuming it is the schema bump.
+- [ ] **The refusal notice, on a bad profile.** `SCHEMA_VERSION` is 16, so a handset holding a
+      v15 dump is expected to show the amber notice on first launch — that is the notice working,
+      not a fault. What the check is really for: a stored profile whose field arrived as the wrong
+      kind of value, or carrying a field the app never had, is refused at the door with the field
+      **named** — so read what it names rather than assuming it is only the schema bump.
 - [ ] **A reload keeps what it promised.** Type a chat message on a job, add a household
       item under Profile → Home, switch a notification off, then kill the app and reopen.
       All three must still be there — until `.15` none of them were written to storage at
@@ -239,6 +240,18 @@ gesture, and an app killed mid-review.
       than as an error. A chart's axis is HTML beside the drawing now — on this phone (~450 CSS px)
       the labels should sit clear of the card edge; the narrow case was measured at 320px, which
       this device cannot show.
+- [ ] **The support "Call" button dials.** Resident → the card offering a phone number, and the
+      same control on the provider's side: both are `<a href="tel:+639170001122">`, and until
+      today the shell handed no scheme to the system — the default `WebViewClient` treats `tel:`
+      as a URL, fails it with `ERR_UNKNOWN_URL_SCHEME`, and **replaces the running app with a
+      system error page**. `MainActivity` now routes anything that is not http/https/file/data/
+      about/blob to an Intent (`ACTION_DIAL` for `tel:`, never `ACTION_CALL`, because dialling
+      needs no permission and placing a call does). On the handset: the dialer must open
+      pre-filled, returning must land on the same screen with no error page, and if no app can
+      take the scheme the page must simply stay as it is. This is fixed in the shell and
+      **compiled** (`javac` against `android-36`, clean but for the expected deprecation note on
+      the `String` overload kept as a backstop); it has not run on a device, and it reaches one
+      only in a new build.
 
 This phone renders at **~450 CSS px**, not the 360 the clipping cases were tuned against (720px
 panel at `Override density: 256`), so it will not exercise the narrow-device tab-rail case, and
