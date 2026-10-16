@@ -3802,6 +3802,13 @@ function makeOffer(bookingId, draft, actor){
   const produce = Math.max(0, Math.round(draft.produceCentavos || 0));
   const labour = Math.max(0, Math.round(draft.labourCentavos || 0));
   if (produce + labour <= 0) throw new GuardRejected('An offer has to name an amount.');
+  /* The two totals are clamped because a charge cannot be negative. The per-unit figure used to
+     be written through untouched, so an offer could be recorded at -₱5.00/kg beside a produce
+     line reading ₱0 — reached by typing -5 into the sheet's own unit field and pressing Send
+     offer, which created the record. Refused rather than clamped: a negative price is not a zero
+     price, and rewriting one silently would leave the provider's number and the record disagreeing. */
+  const unit = draft.unitPriceCentavos ? Math.round(draft.unitPriceCentavos) : null;
+  if (unit !== null && unit < 0) throw new GuardRejected('a price cannot be negative.');
   const mode = b.mode || 'harvest_only';
   const behaviour = categoryBehaviour(providerOf(b).serviceId);
   if (!behaviour.modes.some(m => m.id === mode)) throw new GuardRejected('this job is not a ' + mode + ' transaction.');
@@ -3814,7 +3821,7 @@ function makeOffer(bookingId, draft, actor){
     by: (actor && actor.role) === 'customer' ? 'customer' : 'provider',
     basis: draft.basis || 'per_lot',
     quantityGrams: draft.quantityGrams ? Math.round(draft.quantityGrams) : null,
-    unitPriceCentavos: draft.unitPriceCentavos ? Math.round(draft.unitPriceCentavos) : null,
+    unitPriceCentavos: unit,
     produceCentavos: produce, labourCentavos: labour,
     whoHarvests: draft.whoHarvests || 'provider',
     collection: draft.collection || '',
@@ -4544,7 +4551,7 @@ function configPanel() {
       </p>
       ${fields.map(([key, label2, kind]) => `
         <label class="form-label" style="display:block; margin-bottom:10px;">${label2}
-          <input id="cfg-${key}" class="form-input" style="margin-top:5px;" type="number" inputmode="decimal"
+          <input id="cfg-${key}" class="form-input" style="margin-top:5px;" type="number" min="0" inputmode="decimal"
                  min="0" step="${kind === 'percent' ? '1' : '1'}"
                  value="${kind === 'percent' ? Math.round(CONFIG[key] * 100) : kind === 'peso' ? toPesos(CONFIG[key]) : CONFIG[key]}">
           <span style="font-size:var(--t-caption); color:var(--mist);">${kind === 'percent' ? 'percent' : kind === 'peso' ? 'peso' : kind}</span>
@@ -9819,13 +9826,13 @@ function makeOfferSheet(){
 
       <div class="sheet-group offer-fields">
         ${d.basis === 'per_kg' ? `<label class="sheet-label" for="offer-qty">Kilos you expect to take
-          <input class="req-field" id="offer-qty" type="number" inputmode="decimal" value="${esc(d.qtyKg)}" placeholder="38" oninput="offerInput('qtyKg', this.value)"></label>` : ''}
+          <input class="req-field" id="offer-qty" type="number" min="0" inputmode="decimal" value="${esc(d.qtyKg)}" placeholder="38" oninput="offerInput('qtyKg', this.value)"></label>` : ''}
         ${d.basis === 'per_tree' ? `<label class="sheet-label" for="offer-trees">Trees you are pricing
-          <input class="req-field" id="offer-trees" type="number" inputmode="numeric" value="${esc(d.trees)}" placeholder="2" oninput="offerInput('trees', this.value)"></label>` : ''}
+          <input class="req-field" id="offer-trees" type="number" min="0" inputmode="numeric" value="${esc(d.trees)}" placeholder="2" oninput="offerInput('trees', this.value)"></label>` : ''}
         <label class="sheet-label" for="offer-unit">Your price ${unitLabel === 'for the whole lot' ? 'for the lot' : unitLabel}
-          <input class="req-field" id="offer-unit" type="number" inputmode="decimal" value="${esc(d.unitPesos)}" placeholder="${d.basis === 'per_lot' ? '1500' : '55'}" oninput="offerInput('unitPesos', this.value)"></label>
+          <input class="req-field" id="offer-unit" type="number" min="0" inputmode="decimal" value="${esc(d.unitPesos)}" placeholder="${d.basis === 'per_lot' ? '1500' : '55'}" oninput="offerInput('unitPesos', this.value)"></label>
         ${mode.id !== 'sell_fruit' ? `<label class="sheet-label" for="offer-labour">What the harvesting costs
-          <input class="req-field" id="offer-labour" type="number" inputmode="decimal" value="${esc(d.labourPesos)}" placeholder="800" oninput="offerInput('labourPesos', this.value)"></label>` : ''}
+          <input class="req-field" id="offer-labour" type="number" min="0" inputmode="decimal" value="${esc(d.labourPesos)}" placeholder="800" oninput="offerInput('labourPesos', this.value)"></label>` : ''}
       </div>
 
       <div class="sheet-group" id="offer-totals">${offerTotalsBlock(b, d, t)}</div>

@@ -1673,6 +1673,33 @@ mutants, 5 caught — after one was **missed**, and the mutant was right: the fi
 dangled a provider, so the customer half of the same predicate went untested and a mutant that
 disabled it passed. A check that cannot tell which of its two conditions fired is half a check.
 
+A CLAMP ON THE TOTALS IS NOT A GUARD ON THE FIELDS THAT MADE THEM. `makeOffer()` wrote
+`Math.max(0, …)` over `produceCentavos` and `labourCentavos` and passed
+`unitPriceCentavos: draft.unitPriceCentavos ? Math.round(…) : null` straight through, so typing
+`-5` into the offer sheet's unit field — which declared no `min` — produced a record at
+**−₱5.00/kg** beside a produce line reading ₱0, and the labour line made the sum positive enough
+to clear the "has to name an amount" guard. Measured through the sheet's own Send button
+(`OFFERS 1 -> 2`), not read off the source. Now: `min="0"` on the five number fields that lacked a
+lower bound — seven already had one, so this is the file's own convention, and a gate check enforces
+it with a positive control requiring at least ten bounded fields so a regex matching nothing cannot
+pass — and `GuardRejected('a price cannot be negative.')` at the seam, surfaced as a toast.
+Refused rather than clamped on purpose: a negative price is not a zero price, and rewriting one
+silently is the same defect class as a green check agreeing with a bug. `tools/falsify-money-bounds.cjs`:
+4 mutants, 4 caught. Gate 512 → 515; whole suite 20 families, 131 mutants, 131 caught, 0 not applied.
+
+TYPE THE TEXT; DO NOT ASSIGN IT. The comma case in the same sweep was an artifact of the instrument
+and nearly got filed as a defect. A probe that ran `el.value = '1,500'` through the property setter
+watched the sheet's totals fall from ₱181,600 to ₱1,600 and concluded the app silently zeroes a
+comma-typed price. Typing it — `document.execCommand('insertText')`, the path a keystroke takes —
+shows Chrome accepting the comma and holding `1500`. A programmatic write of unparseable text clears
+a number field quietly; a real edit goes through the platform's parser, and only one of those is a
+state a person can produce. This is the third form of a trap this repository has now documented
+twice for screens and once for data: **an instrument that reaches a state nobody can reach measures
+a fiction.** Two of the three probes used here were deleted afterwards so the next reader does not
+inherit the misleading one. Related: a `min` attribute does not block typing a negative — it changes
+what the platform *reports* (`rangeUnderflow`), which the app's own handler never consults. The
+guard is the fix; the attribute is the signal.
+
 REPUTATION IS DERIVED, AND THE SEEDS ARE HELD OUTSIDE THE RECORDS. The deck promises providers "a
 reputation built from completed work" (slides 3, 7); `provider.rating` and `provider.jobs` were
 literals nothing ever wrote, so a resident could rate a job five and the figure would not stir.

@@ -2854,3 +2854,64 @@ because honouring a user's dark preference is a judgement about the product and 
 
 The instrument stays: `--dark` is now part of what a full run can ask, in the same way
 `--reduced-motion` and `--desktop` are, and the sweep it enables is the evidence behind this entry.
+
+## 55. An offer recorded at minus five pesos a kilo
+
+Two classes were left after the money printers were read. Sorting first, because an in-place
+`.sort()` on a module-level record array silently reorders it for every later screen and for
+`persist()`: all **21** `.sort(` sites were opened and every one runs on a fresh array — a
+`.filter()`/`.map()` result, a local, or an explicit `.slice()` — so the class is closed, counted
+rather than assumed. Then money entry, which produced a real defect.
+
+**How it was reached.** `tools/probe-money-typing.js` types into the live offer sheet through
+`document.execCommand('insertText')`, which is the path a keystroke takes, and reads the field
+back:
+
+```
+{"typed":"1500",  "holds":"1500","badInput":false,"valid":true, "rangeUnderflow":false}
+{"typed":"1,500", "holds":"1500","badInput":false,"valid":true, "rangeUnderflow":false}
+{"typed":"1.5.5", "holds":"1.55","badInput":false,"valid":false,"rangeUnderflow":false}
+{"typed":"-5",    "holds":"-5",  "badInput":false,"valid":true, "rangeUnderflow":false}   ← before
+{"typed":"-5",    "holds":"-5",  "badInput":false,"valid":false,"rangeUnderflow":true}    ← after
+```
+
+The comma is **not** a defect and nearly got filed as one. An earlier probe wrote
+`el.value = '1,500'` through the property setter, watched the sheet's totals fall from ₱181,600 to
+₱1,600, and concluded the app silently zeroes a comma-typed price. That was the instrument: a
+programmatic write of unparseable text clears a number field quietly, while typed text goes through
+Chrome's parser, which **accepts the comma and holds `1500`**. Same trap the camera already
+documents — a setup script that moves the model without moving the field photographs a state nobody
+can reach — and the fix is the same: type it, then look.
+
+The negative was real. `offer-unit` declared no `min`, so `-5` was a valid entry; `submitOffer()`
+turned it into `-500` centavos and `makeOffer()` clamped the two **totals** with `Math.max(0, …)`
+while writing `unitPriceCentavos: draft.unitPriceCentavos ? Math.round(…) : null` straight through.
+So the screen read ₱0 and the record was created at **−₱5.00/kg**, beside a labour line that made
+the sum positive enough to pass the "has to name an amount" guard. Measured through the sheet's own
+Send button: `OFFERS 1 -> 2`, `{"id":"of2","unit":-500,"produce":0,"labour":10000}`.
+
+**Fix, in two places, because they answer different questions.** `min="0"` on the five number
+fields that had no lower bound (`offer-qty`, `offer-trees`, `offer-unit`, `offer-labour`, and the
+admin's `cfg-${key}`) — seven already declared one, so the rule is the file's own convention rather
+than a new invention. It changes what the platform reports (`valid: true` → `rangeUnderflow: true`),
+which is the line above. And `makeOffer()` now refuses a negative unit price outright:
+`GuardRejected('a price cannot be negative.')`, surfaced by the existing catch as a toast, so the
+provider is told rather than the number rewritten. Refused rather than clamped is deliberate —
+clamping is what the totals do, and it is exactly why this slipped through: a negative price is not
+a zero price, and silently converting one leaves the person's figure and the record disagreeing.
+After: `OFFERS 1 -> 1`, no record, toast reads `a price cannot be negative.`
+
+**Gate: 512 → 515**, three checks — the refusal, the five-field bound rule with a positive control
+(it requires at least ten bounded number fields to exist, so a regex matching nothing cannot pass),
+and one that the good offer still goes through. `node tools/falsify-money-bounds.cjs` — **4 mutants,
+4 caught, 0 not applied**, and the first run reported one **MISSED** for a reason worth keeping: the
+mutant that made the guard refuse *every* offer crashed the suite, so the gate exited 1 without the
+named check ever rendering a verdict. A runner that looks for `FAIL <label>` cannot see a crash, and
+a check whose positive case can throw does not own its own outcome. The check catches now.
+
+Camera: 62 screens at 450px, every tally zero, no console errors. Whole mutant suite after this
+pass: **20 families, 131 mutants applied, 131 caught, 0 not applied** (was 19 / 127). Three probes
+were used to get here and two were deleted afterwards — the ones that wrote `.value` directly,
+because leaving a tool that measures an unreachable state in `tools/` is how the next reader repeats
+the mistake. `node tools/probe-all.cjs` answers **25 probes, 0 needing attention** — the two money
+probes counted in, and the programmatic-write ones gone.

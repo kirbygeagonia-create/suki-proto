@@ -1200,6 +1200,18 @@ suite('hygiene', async () => {
   c.check('no control claims success it does not deliver', congratulating.length === 0,
     congratulating.map(t => t.slice(0, 60)).join(' | '));
 
+  /* Every number field in this app holds money, a weight, a count of days or a rate, and none of
+     them can sensibly be negative. Seven declared a lower bound and four did not — including the
+     unit price that let a -₱5.00/kg offer through to the record. `min` does not block the typing
+     (the guard does that); it is what tells the platform, the spinner and the :invalid style that
+     the number is out of range, so a field that takes a number and names no floor is the hole. */
+  const numberFields = (body.match(/<input[^>]*type="number"[^>]*/g) || []);
+  const unbounded = numberFields.filter(t => !/\bmin=/.test(t));
+  c.check('every number field declares a lower bound',
+    numberFields.length >= 10 && unbounded.length === 0,
+    unbounded.length + ' of ' + numberFields.length + ' unbounded: '
+      + unbounded.map(t => (t.match(/id="([^"]*)"/) || [])[1] || t.slice(0, 30)).join(','));
+
   /* ── the escaping rule, pinned ─────────────────────────────────────────────
      esc()'s own comment says anything from a keyboard stays data and never becomes markup.
      That held for chat and booking text and never held for the profile objects: 44 sites
@@ -3239,6 +3251,28 @@ suite('fruit', async () => {
   again.hydrate();
   c.check('an offer survives a reload', again.OFFERS.some(o => o.bookingId === 'b10' && o.produceCentavos === 660000),
     JSON.stringify(again.OFFERS.map(o => o.id + ':' + o.status)));
+  /* Found by typing -5 into the sheet's own unit field and pressing Send offer: the totals were
+     clamped so the screen read ₱0, and the offer was still recorded at -₱5.00/kg beside it. */
+  const guard = boot();
+  const offersBefore = guard.OFFERS.length;
+  let refused = '';
+  try {
+    guard.makeOffer('b10', { basis: 'per_kg', quantityGrams: 120000, unitPriceCentavos: -500,
+      produceCentavos: -60000, labourCentavos: 10000, whoHarvests: 'provider' }, { role: 'provider' });
+  } catch (err) { refused = String(err.message || err); }
+  c.check('a negative unit price is refused rather than recorded',
+    refused !== '' && guard.OFFERS.length === offersBefore,
+    'threw "' + refused + '", OFFERS ' + offersBefore + ' -> ' + guard.OFFERS.length);
+  const positive = boot();
+  let okOffer = null;
+  try {
+    okOffer = positive.makeOffer('b10', { basis: 'per_lot', produceCentavos: 50000,
+      labourCentavos: 0 }, { role: 'provider' });
+  } catch (err) { okOffer = null; }
+  c.check('and the refusal stops the bad offer without stopping the good one',
+    !!okOffer && okOffer.unitPriceCentavos === null && okOffer.produceCentavos === 50000,
+    okOffer ? JSON.stringify({ id: okOffer.id, unit: okOffer.unitPriceCentavos, produce: okOffer.produceCentavos })
+      : 'a per-lot offer with no unit price was refused too');
   c.check('the offer sequence starts past the ids a restored dump already used', (() => {
     const made = again.makeOffer('b10', { basis:'per_lot', produceCentavos:50000, labourCentavos:0 },
       { role:'provider' });
