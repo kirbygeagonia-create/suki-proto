@@ -54,6 +54,7 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
      history handle is only worth testing if the step that created it is real */
   'openSheet', 'closeSheet', 'openChatThread', 'stepBack', 'openLayers', 'receiptCard',
   'layerKeys', 'modalAboveSheet', 'openProfileSection', 'residentProfileAction',
+  'startOfDay', 'daysBetween', 'applicantWaitDays', 'applicantWaitLabel', 'credentialState',
   'requestChoices', 'requestAddressBook', 'requestPaymentOptions', 'requestDays',
   'residentChatRoom', 'draftListing',
   'REQUEST_TIMES', 'submitBookingRequest', 'bookingRequestSheet',

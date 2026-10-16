@@ -3999,6 +3999,62 @@ suite('back', async () => {
   return c;
 });
 
+/* A day is a calendar object and an instant is a point on a line, and the app has to keep them
+   apart. One site did not: the verification queue's "waiting N days" measured the elapsed
+   interval from a local midnight and rounded it, so the same application read 6 days all
+   morning and 7 days from noon, with nothing in the record having changed. The timezone sweep
+   that found it (`node tools/shot.cjs --probe=@tools/probe-date-frames.js
+   --timezone=Pacific/Niue` versus Pacific/Kiritimati, diffed) also cleared two neighbours that
+   look like the same bug and are not: `credentialState` ceils an interval against a future
+   midnight, which is stable across every hour of a day, and the "x minutes ago" labels round a
+   minute interval, which is what they mean. */
+suite('dates', async () => {
+  const c = makeChecker();
+  const app = boot();
+  const src = require('fs').readFileSync(require('./harness.cjs').APP, 'utf8');
+  const body = src.slice(src.lastIndexOf('<script>') + 8, src.lastIndexOf('</script>'));
+  const DAY = 86400000;
+  /* Built in the device's own frame and read back in the same one — the shape of the bug is
+     a date written in UTC and read in local time, so a check that mixed the frames would
+     disagree with the app by a day on one side of the meridian and pass on the other. */
+  const pad = n => String(n).padStart(2, '0');
+  const localISO = ms => { const d = new Date(ms); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+  const today = app.startOfDay(Date.now());
+  const fiveAgo = localISO(today - 5 * DAY);
+
+  const hours = [0, 6.5, 12, 18.75, 23.95].map(h => today + Math.round(h * 3600000));
+  const counts = hours.map(t => app.daysBetween(fiveAgo, t));
+  c.check('a wait counted in days says the same thing at any hour of the same day',
+    counts.every(n => n === 5), fiveAgo + ' read at ' + hours.length + ' hours -> ' + counts.join(','));
+  c.check('and it advances by exactly one day when the day does',
+    app.daysBetween(fiveAgo, today + DAY) === 6
+      && app.daysBetween(fiveAgo, today + DAY + 23 * 3600000) === 6,
+    'next day = ' + app.daysBetween(fiveAgo, today + DAY)
+      + ' late next day = ' + app.daysBetween(fiveAgo, today + DAY + 23 * 3600000));
+
+  const queue = app.PENDING_APPLICANTS || [];
+  const ownArithmetic = queue.filter(a => app.applicantWaitDays(a) !== app.daysBetween(a.submittedAt, Date.now()));
+  c.check('the queue prints that count rather than its own arithmetic',
+    queue.length > 0 && ownArithmetic.length === 0,
+    queue.length + ' applicants, disagreeing: ' + ownArithmetic.map(a => a.id).join(','));
+  /* Every branch, not just the ones the seed happens to reach. Written as a comparison
+     against the queue first, which the falsifier then showed it could not fail: no seeded
+     applicant is one day old, so rewording that branch past the gate. */
+  const wrongWords = [['today', localISO(today)], ['1 day ago', localISO(today - DAY)],
+    ['5 days ago', localISO(today - 5 * DAY)]]
+    .filter(([want, iso]) => app.applicantWaitLabel({ submittedAt: iso }) !== want)
+    .map(([want, iso]) => iso + ' said "' + app.applicantWaitLabel({ submittedAt: iso }) + '" want "' + want + '"');
+  c.check('the words on the row are the number the record supports',
+    wrongWords.length === 0, wrongWords.join(' | '));
+
+  const elapsed = body.split(/\r?\n/)
+    .filter(l => /Math\.round\(\(\s*Date\.now\(\)/.test(l) && /86400000/.test(l));
+  c.check('no day count is taken by rounding an elapsed interval', elapsed.length === 0,
+    elapsed.map(l => l.trim().slice(0, 70)).join(' | '));
+
+  return c;
+});
+
 (async () => {
   let total = 0, failed = 0;
   for (const { name, fn } of suites) {

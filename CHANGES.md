@@ -2737,3 +2737,76 @@ reads as a leak — the same node carries `password="true"`, which is exactly wh
 client honours. Both were checked before being written down; the habit that caught them is the
 one already recorded above, *correct the instrument before concluding anything*, and it has now
 saved two false findings in one session rather than one.
+
+## 53. A day count that aged at noon, found by running the whole app in another timezone
+
+The phone is parked, so the next sweep went after a class that had already produced one bug and
+was never measured systematically: **the app's dates**. `parseDay()` fixed a single
+`Verified Mar 14` rendering as Mar 13 weeks ago. Nothing asked whether the rest of the file keeps
+a calendar day and an instant apart.
+
+The instrument is a flag on the camera — `--timezone=Pacific/Niue` — which calls CDP's
+`Emulation.setTimezoneOverride` before the walk, so all 62 screens are photographed and measured in
+another calendar frame without touching this machine's clock. Paired with
+`tools/probe-date-frames.js`, which answers with every date-shaped string a screen paints, split
+into **absolute** tokens (`Mar 14, 2026`) and **relative** ones (`in 23 days`, `Open now`,
+`today`) because those two are allowed to behave differently. Two runs, UTC-11 and UTC+14, diffed:
+27 of 62 lines changed, and 45 screens carry an absolute date.
+
+**What the diff cleared.** Every stored day held its ground. `Mar 14, 2026` — the credential that
+once rendered a day early — appears identically in both runs, as do `Feb 20, 2027`, `Aug 24`,
+`Sep 7`, `Sep 21`, `Oct 5`, `Aug 31`, `Sep 14`, `Sep 28`, `Oct 12`: the eight maintenance-reminder
+dates and the expiry dates. What moved was `Oct 15 → Oct 16` on booking rows and the audit log,
+which is correct: those are seeded as *today plus n* and the audit stamp is an instant from
+`Date.now()`, so a device on the far side of the date line really is on a different today. All 29
+`toISOString()` calls write instants (`at`, `openedAt`, `resolvedAt`, `answeredAt`, `createdAt`) and
+**none** of them slices out a calendar day, which is the shape that causes the bug in the first
+place. Counted, not assumed.
+
+**What it caught.** `applicantWaitDays()` — the verification queue's "waiting N days" — computed
+`Math.round((Date.now() - parseDay(submittedAt)) / 86400000)`. That is an **elapsed interval**
+measured from a local midnight and then rounded, so the fraction it rounds is the hour of the day.
+Measured directly: an application submitted five days before, read across one local day —
+
+```
+ 0:00 → 6 days      12:00 → 7 days      23:00 → 7 days
+```
+
+An administrator who opens the queue in the morning and again after lunch sees the same applicant
+age by a day with nothing in the record changed. Fixed by `startOfDay()` / `daysBetween()`: both
+ends read as days, and the interval between two midnights rounded, which is exact and absorbs a
+DST hour on a device that has one.
+
+**Two neighbours cleared rather than "fixed".** `credentialState()` reads
+`Math.ceil((parseDay(expiresAt) - Date.now()) / 86400000)`, which looks like the same shape and is
+not: within one local day that interval spans `(D-1, D]`, and `ceil` of all of it is `D` — measured
+at six hours against three expiry dates, every reading identical. The `x minutes ago` labels round
+an interval in **minutes**, which is exactly what they mean. Both stay as they are. Writing the
+check would otherwise have introduced an off-by-one into a screen that was correct.
+
+**Gate: 507 → 512**, five checks in a new `dates` suite. `node tools/falsify-date-frames.cjs` —
+**5 mutants applied, 5 caught, 0 not applied**, and one of those five is the point of keeping this
+family: the first version of the label check compared the queue's wording against the same ternary
+the app uses, over the applicants the seed happens to contain. **None of them is one day old**, so
+rewording the `d === 1` branch pasted the gate — the falsifier reported `MISSED`, exit 0, on a
+check that could not fail. It now walks `today`, `yesterday` and `five days ago` explicitly.
+
+One candidate mutant was written, tested and deleted: replacing `Math.round` with `Math.floor` in
+the old expression is an **equivalent** mutant on this data, because every seeded `submittedAt` is
+date-only and floor(elapsed) equals the calendar gap for all of them. Keeping it would have raised
+the count without raising the coverage.
+
+Camera: 62 screens at the handset's own 450px, every tally zero, no console errors. The remote-tile
+line read **692** on this run against **809** on the previous run of a file that had not changed
+except in the Back machinery — which is the third time this repository has caught itself quoting a
+run-dependent number as a property of the build. Whole mutant suite after this pass: **19 families,
+127 mutants applied, 127 caught, 0 not applied** (was 18 / 122). `node tools/probe-all.cjs` runs
+the whole instrument inventory and reports **23 probes, 0 needing attention** — one more than it
+did before this pass, which is the new probe counted in it and answering; it matches the shape the
+classifier looks for (one IIFE, no `require`), and it was already run twice for real, once per
+timezone.
+
+One more class closed while the phone was parked, by the same "count it, do not assume it" habit:
+locale-dependent formatting. Both `toLocaleString` calls in the file pass `'en-PH'` explicitly, and
+all six `toLocaleDateString` calls do too, so no painted number or date depends on the device's
+locale. Nothing to fix, and now it is measured rather than believed.

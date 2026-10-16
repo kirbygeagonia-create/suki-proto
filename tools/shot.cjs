@@ -63,6 +63,11 @@ const MEASURE = has('measure');
    that setting can be measured instead of assumed. */
 const REDUCED = has('reduced-motion');
 const PROBE = flag('probe', '');
+/* Runs the whole walk in another calendar frame without touching this machine's
+   clock or zone. A record's date is a fact about the world; if the words that
+   print it move when the timezone does, something is reading a calendar day
+   through an instant — the class that once rendered "Verified Mar 14" as Mar 13. */
+const TIMEZONE = flag('timezone', '');
 
 /* ------------------------------------------------------------------ the audit
    A screenshot shows one screen to one pair of eyes; these numbers run over every
@@ -893,6 +898,10 @@ async function main() {
   if (REDUCED) {
     await session.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
     console.log('  emulating prefers-reduced-motion: reduce');
+  }
+  if (TIMEZONE) {
+    await session.send('Emulation.setTimezoneOverride', { timezoneId: TIMEZONE });
+    console.log('  emulating timezone: ' + TIMEZONE);
   }
 
   const loaded = new Promise(resolve => {

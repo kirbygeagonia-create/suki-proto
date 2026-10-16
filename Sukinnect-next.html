@@ -1928,7 +1928,7 @@ function applicationDocLabel(kind){
   return k ? k.label : 'Document';
 }
 function applicantWaitDays(a){
-  return Math.max(0, Math.round((Date.now() - parseDay(a.submittedAt)) / 86400000));
+  return Math.max(0, daysBetween(a.submittedAt, Date.now()));
 }
 function applicantWaitLabel(a){
   const d = applicantWaitDays(a);
@@ -5592,6 +5592,19 @@ function parseDay(value){
 function shortDate(value){
   const d = value instanceof Date ? value : new Date(parseDay(value));
   return isNaN(d) ? '' : d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+/* Whole calendar days from one day to another, both ends read as days. Measuring a day
+   count as an elapsed interval makes it depend on the hour it is asked: a queue line
+   reading "6 days ago" all morning became "7 days ago" at 12:00 with no record having
+   changed. Rounding the midnight-to-midnight interval absorbs a DST hour on a device
+   that has one. */
+function startOfDay(value){
+  const d = new Date(value);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+function daysBetween(fromValue, toValue){
+  return Math.round((startOfDay(toValue === undefined ? Date.now() : toValue)
+    - startOfDay(parseDay(fromValue))) / 86400000);
 }
 function residentSectionBody(section){
   const finished = residentFinished();

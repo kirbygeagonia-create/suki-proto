@@ -1367,6 +1367,29 @@ rendered "Verified Mar 13, 2026". Every number in the panel was correct. `parseD
 date-only value as a local day, and the gate now asserts that the day which goes in is the day
 that comes out.
 
+A DAY COUNT IS A CALENDAR OPERATION, AND ONE OF THEM WAS AGEING AT NOON. That fix closed one site
+and left the class unmeasured, so the class was measured: `node tools/shot.cjs
+--probe=@tools/probe-date-frames.js --timezone=Pacific/Niue` (and `Pacific/Kiritimati`, then diff
+the two logs) runs all 62 screens inside another calendar frame through CDP's
+`Emulation.setTimezoneOverride` without touching this machine's clock. The probe answers with every
+date-shaped string a screen paints, split into absolute tokens and relative ones, because a stored
+day must not move and "today + 3" legitimately does. Result: every stored day held — `Mar 14, 2026`
+and all eight maintenance dates are identical across a 25-hour zone spread — and all 29
+`toISOString()` calls write instants rather than slicing a day. One site was wrong:
+`applicantWaitDays()` rounded an elapsed interval measured from a local midnight, so the queue's
+"waiting 6 days" became "waiting 7 days" at 12:00 with nothing in the record changed. `startOfDay()`
+and `daysBetween()` now read both ends as days. **Two neighbours were cleared rather than fixed, and
+that is the part worth keeping:** `credentialState()`'s `Math.ceil` over the same shape is stable
+across every hour of a day (the interval spans `(D-1, D]`), and the `x minutes ago` labels round
+minutes on purpose — "fixing" either would have introduced an off-by-one into a screen that was
+correct. Measure before you normalise. `node tools/falsify-date-frames.cjs`: 5 mutants, 5 caught —
+and the first run reported one **MISSED**, because the label check compared the app's wording
+against the app's own ternary over only the applicants the seed contains, none of which is one day
+old; a check that never reaches a branch cannot see it changed. It walks today, yesterday and five
+days ago explicitly now. A `Math.floor` mutant was deleted as **equivalent**: with date-only seeds,
+floor(elapsed) equals the calendar gap, so it would have raised the count and not the coverage.
+Gate 507 → 512; whole suite 19 families, 127 mutants, 127 caught, 0 not applied.
+
 NO CONTROL IS BELOW THE 44px TAP FLOOR, and the instrument that measures this was itself wrong
 first. The camera walked three ancestors looking for a taller box, printed a comment about "a 23px
 input inside a 56px pill", and then reported the control's own height anyway without consulting
