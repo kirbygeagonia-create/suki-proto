@@ -1,8 +1,9 @@
 # Handset pass — the thing no browser check can prove
 
-The rebuild in `Sukinnect-next.html` has been rendered in Node (502 checks), painted in
-real Chrome across 62 screens at 320, 390 and 450 CSS px — and at a keyboard-height viewport of
-360×380, in the desktop shell at 1280×900, and with `prefers-reduced-motion` emulated — then
+The rebuild in `Sukinnect-next.html` has been rendered in Node (517 checks), painted in
+real Chrome across 63 screens at 320, 390 and 450 CSS px — and at a keyboard-height viewport of
+360×380, in the desktop shell at 1280×900, with `prefers-reduced-motion` emulated, and under
+`prefers-color-scheme: dark` — then
 measured for tap targets, contrast, clipping and occlusion. None of that is a phone. Three
 categories are still unverified because no instrument can reach them: a thumb, an on-screen
 keyboard, and a slow device.
@@ -86,6 +87,19 @@ What was verified about the artifact, not assumed:
 | Every path the bundled page asks for | `check-assets.cjs --apk`: **48 of 48 resolve** |
 | The bundled page, painted | `tools/shot.cjs --file=<the staged assets copy> --width=360 --height=640 --measure` re-run against the staged `.17` copy: **62 screens**, every tally zero — no clipped text from the reworded concierge button, no unnamed control, no image without pixels, no console errors — the newest is `admin-audit`, reached by clicking the dashboard row a person clicks, because the audit log had never been photographed and its timestamps are exactly what only a screenshot can confirm. Every tally 0: tap floor, contrast, clipped, off-scale, text below the 14px floor, under-nav, unnamed controls, occlusion, moving artwork, no-pixels images, horizontal overflow, chart labels outside their own box. 9 painted font sizes all ≥14px, and **no console errors**. Run it against the staged copy, which the row above proves is the copy inside the APK: run against a lone extracted file it reports 72 broken images that do not exist in the artifact, because the page resolves `assets/` and `avatars/` beside itself |
 | Scratch left behind | none — the capture directories this pass wrote were deleted. The only tracked edits are `tools/shot.cjs` (the `--file=` flag) and this file |
+
+**The bench build is `.19` and the repository has moved past it — deliberately.** Since that APK was
+cut, three more page changes landed, none of them device-facing: the verification queue's day count
+(now counted in calendar days), the money guard plus the five number fields' lower bound, and the
+empty branch on the verification queue. `Sukinnect-Android/app/src/main/assets/Sukinnect.html` is
+therefore stale against `Sukinnect-next.html`, and no APK carries these three. That is recorded here
+rather than papered over by bumping to `.20` now, because a version number that has never met a
+device is exactly the drift this file keeps documenting — and the phone dropped its USB
+authorisation mid-session. **When the handset returns: sync the asset, build `.20`, install, and work
+down §3f in the same session**, so one build is cut and one build is verified. The three changes are
+each proved in headless Chrome — a timezone override, a probe that types through the same edit path a
+keystroke uses, and `admin-verifiers-empty` in the camera's walk — so nothing here is a fix nobody
+has run; what is missing is a thumb.
 
 **Three build notes from 2026-10-10/11/12, all learned the hard way.** Rebuilding replaces the
 previous debug APK in place — `Sukinnect-1.1-debug.apk` and then `Sukinnect-1.2-preview-debug.apk`

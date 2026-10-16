@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 11,125 lines, ONE :root block, 1,748 var() usages, 95 tokens declared with 92
+Sukinnect-next.html— 11,163 lines, ONE :root block, 1,748 var() usages, 95 tokens declared with 92
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1686,6 +1686,29 @@ pass — and `GuardRejected('a price cannot be negative.')` at the seam, surface
 Refused rather than clamped on purpose: a negative price is not a zero price, and rewriting one
 silently is the same defect class as a green check agreeing with a bug. `tools/falsify-money-bounds.cjs`:
 4 mutants, 4 caught. Gate 512 → 515; whole suite 20 families, 131 mutants, 131 caught, 0 not applied.
+
+A SCREEN IS ONLY EXPLAINED WHEN ITS DATA RUNS OUT. §48 and §76 cannot be checked against a screen
+that has demo rows on it, so `tools/probe-empty-states.js` empties twelve record sets, re-renders,
+measures the words left, and restores. It found the admin verification queue heading a blank panel
+"Pending verifications" while still advising the admin to prioritise applications that no longer
+exist — and that state is reached by tapping, because approving an applicant removes it from the
+queue, so **finishing the queue is what empties it**. The else branch is an `emptyState(...)` now and
+the tip is gated on the list having rows, with the positive control asserted too (rows present → tip
+shown, empty state not). Two lessons in the same sweep. **An instrument that cannot see reports a
+clean result:** the probe first looked the sets up as `window[name]`, and top-level `const` bindings
+never become window properties, so all twelve came back "not a reachable array" — resolve by bare
+identifier, and print the row count it saw so a silent zero is impossible. The duplicate-id probe
+(`tools/probe-duplicate-ids.js`: 62 screens, **zero collisions**, ids 5–21 per screen, a forced
+duplicate fires immediately) exists in the same shape for the same reason — a static read cannot see
+a collision produced by rendering one template twice, and `getElementById` answering with the first
+match is how a save writes a number from a field nobody touched. And **a fix that has never been
+painted has never been measured**: `admin-verifiers-empty` is in the SCREENS table (walk count
+**63**), because tap targets and contrast apply to the empty branch like any other markup. Its
+single-screen run reported a contrast failure on the admin's translucent "Insights" pill — the
+documented subset artifact, not a defect; the full sweep is zero. `tools/falsify-empty-queue.cjs`:
+3 mutants, 3 caught, after one reported MISSED for deleting a ternary's `:` half, which is a syntax
+error rather than a behaviour. Gate 515 → 517; whole suite 21 families, 134 mutants, 134 caught,
+0 not applied.
 
 TYPE THE TEXT; DO NOT ASSIGN IT. The comma case in the same sweep was an artifact of the instrument
 and nearly got filed as a defect. A probe that ran `el.value = '1,500'` through the property setter

@@ -2915,3 +2915,51 @@ were used to get here and two were deleted afterwards — the ones that wrote `.
 because leaving a tool that measures an unreachable state in `tools/` is how the next reader repeats
 the mistake. `node tools/probe-all.cjs` answers **25 probes, 0 needing attention** — the two money
 probes counted in, and the programmatic-write ones gone.
+
+## 56. Two screens that explained nothing when their data ran out, and one that never existed
+
+Two classes closed by emptying things rather than reading them.
+
+**Duplicate ids — clean, and the probe proves it can speak.** The app reads every form value by
+`document.getElementById` (about seventy sites), so two elements sharing an id on one screen is not
+markup hygiene: `getElementById` answers with the first in tree order and a save writes a number
+from a field the person never touched. `tools/probe-duplicate-ids.js` counts ids in the **painted**
+DOM across all 62 screens — a static read cannot see a collision produced by rendering one template
+twice in a list. Result: **zero collisions**, with id counts of 5–21 per screen proving the walk saw
+elements at all, and a forced duplicate reported immediately.
+
+**Empty states — one real defect.** `tools/probe-empty-states.js` empties each of twelve record
+sets, re-renders, measures the words left, and puts the records back. It found the admin's
+verification queue: with every applicant decided it still headed a blank panel **"Pending
+verifications"** and still printed *"Tip: Prioritize applications with complete documents to faster
+onboarding."* — advice for rows that do not exist, which is §48's "do not show an empty screen with
+no explanation" and §76's no-decorative-content rule at once. And it is reachable by tapping:
+approving an applicant takes it out of the queue, so **finishing the queue is what empties it**.
+Now the else branch renders `emptyState('shield', 'No applications are waiting', 'Every provider who
+applied has been decided. A new one appears here the moment it arrives.')` and the tip is gated on
+the list having rows. The positive control matters as much: with rows present the tip still shows and
+the empty state does not.
+
+**The instrument lied first, and said so.** The probe's first version looked the record sets up as
+`window[name]` and reported all twelve as "not a reachable array" — top-level `const` bindings never
+become window properties. A sweep that finds nothing because it cannot see anything looks exactly
+like a clean result, so the fix was to resolve by bare identifier and to keep printing the row count
+per set, which is what shows the walk actually touched 16 bookings and 42 messages. The emptied
+bookings screen was also read rather than scored: `No bookings yet — Services you request appear here
+with their status, payment record and receipt.` plus a Find-a-service action, which is what §48 asks
+for and why the 60-character "bare" threshold alone would have been too soft a bar.
+
+**The empty branch had never been painted for a camera**, so its tap targets and contrast were
+unmeasured even after the fix. `admin-verifiers-empty` is in the SCREENS table now — the walk counts
+**63 screens** — and the entry says plainly that the state is reached by approving every applicant
+and that the list is cleared because the state, not the clicks, is what is photographed. Measured
+clean at 450px. Its single-screen run reported `text below WCAG contrast: 1` on the admin header's
+translucent "Insights" pill, which is the subset artifact already documented (the sampler depends on
+what was painted earlier in the run); the full 63-screen sweep reports **zero**.
+
+Gate 515 → **517**. `tools/falsify-empty-queue.cjs` — **3 mutants, 3 caught**, and the first run
+reported one MISSED because the mutant deleted a ternary's `: else` half, which is a syntax error
+rather than a behaviour: `Unexpected token ';'` crashed four suites and the gate exited 1 without the
+named check ever rendering a verdict. Rewritten to render `''`, which is exactly how the queue
+shipped. No console errors across 63 screens; every other tally zero. Whole mutant suite: **21 families,
+134 mutants applied, 134 caught, 0 not applied** (was 20 / 131).

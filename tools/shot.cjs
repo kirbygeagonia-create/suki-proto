@@ -711,6 +711,14 @@ const SCREENS = [
                         reviewOf('joel').status='verified'; reviewOf('joel').decidedAt=Date.now();
                         reviewOf('joel').reviewer=state.adminProfileData.name;
                         state.tab='admin_verifications'; state.adminProviderCategory='decided'; render();`],
+  ['admin-verifiers-empty', `state.view='app'; state.role='admin';
+                        /* A person reaches this by approving every applicant: the queue filters
+                           decided applicants out, so finishing the queue is what empties it. The
+                           list is cleared directly because what is being photographed is the
+                           state, not the clicks — the empty branch had never been painted for a
+                           camera, so its tap targets and contrast were unmeasured. */
+                        PENDING_APPLICANTS.length = 0;
+                        state.tab='admin_verifications'; state.adminProviderCategory='pending'; render();`],
   ['case-sheet',       `state.view='app'; state.role='resident'; state.tab='booking_detail';
                         const b=BOOKINGS.find(x=>x.status==='completed'&&x.pricing); b.completedAt=new Date().toISOString();
                         state.selectedBookingId=b.id; render(); openCaseSheet(b.id);`],

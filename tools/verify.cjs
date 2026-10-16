@@ -4086,6 +4086,29 @@ suite('dates', async () => {
   c.check('no day count is taken by rounding an elapsed interval', elapsed.length === 0,
     elapsed.map(l => l.trim().slice(0, 70)).join(' | '));
 
+  /* Found by emptying every record set the app renders from and reading what is left
+     (tools/probe-empty-states.js). The verification queue was the one screen that lost its
+     content and said nothing about it: approve all three applicants — which is what the
+     screen exists for, and what removes them from the queue — and it still headed an empty
+     panel "Pending verifications" and still told the admin to prioritise applications. */
+  const q = boot();
+  q.state.view = 'app'; q.state.role = 'admin'; q.state.tab = 'admin_verifications';
+  q.state.adminProviderCategory = 'pending';
+  const withRows = q.adminVerifications();
+  const savedApplicants = q.PENDING_APPLICANTS.slice();
+  let emptyQueue = '';
+  try { q.PENDING_APPLICANTS.length = 0; emptyQueue = q.adminVerifications(); }
+  finally { savedApplicants.forEach(a => q.PENDING_APPLICANTS.push(a)); }
+  c.check('an emptied verification queue explains itself and stops giving advice',
+    /No applications are waiting/.test(emptyQueue)
+      && !/Prioritize applications/.test(emptyQueue)
+      && /Pending verifications/.test(emptyQueue),
+    'empty says: ' + (emptyQueue.match(/empty-title">([^<]*)</) || [, 'nothing'])[1]
+      + ' / tip still shown: ' + /Prioritize applications/.test(emptyQueue));
+  c.check('and a queue that does have applicants shows them, not the empty state',
+    /Prioritize applications/.test(withRows) && !/No applications are waiting/.test(withRows),
+    'rows=' + q.PENDING_APPLICANTS.length);
+
   return c;
 });
 

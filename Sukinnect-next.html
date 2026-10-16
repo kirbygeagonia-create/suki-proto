@@ -9433,7 +9433,7 @@ function adminVerifications(){
         <div style="display:flex; gap:6px;">${state.adminDocRequests.includes(provider.id) ? `<div style="flex:1; font-size:var(--t-caption); color:var(--warning-ink); background:var(--warning-100); border-radius:8px; padding:9px 10px; font-weight:700;">${ic('clock',12)} Documents requested · awaiting upload</div>` : `<button class="btn sm" style="flex:1;" onclick="openProviderVerification('${provider.id}')">Open verification</button><button class="btn sm secondary" style="flex:1;" onclick="askForDocuments('${provider.id}', '${provider.name}')">Request documents</button>`}</div>
       </div>
     `).join('')}
-    <div style="background:var(--deep-100); color:var(--success-ink); padding:8px 10px; border-radius:8px; font-size:var(--t-caption);">Tip: Prioritize applications with complete documents to faster onboarding.</div>
+    ${pendingDetails.length ? `<div style="background:var(--deep-100); color:var(--success-ink); padding:8px 10px; border-radius:8px; font-size:var(--t-caption);">Tip: Prioritize applications with complete documents to faster onboarding.</div>` : emptyState('shield', 'No applications are waiting', 'Every provider who applied has been decided. A new one appears here the moment it arrives.')}
     `}
   </div>`;
 }
