@@ -1606,6 +1606,35 @@ opened the number. The gate could not see it because it calls the handler direct
 hit-test in a real layout can, which is the whole reason `document.elementFromPoint` is in the
 instrument. `tools/falsify-modal-stacking.cjs`: 3 mutants, 3 caught.
 
+OUTRANKING A SHEET IS NOT THE SAME AS REPLACING IT, AND THE TREE IS A THIRD SURFACE. That fix
+raised the modal's `z-index`; it left the sheet declaring `role="dialog" aria-modal="true"`, and
+Chromium honours that by marking everything outside the dialog inert — so the picker on top was
+painted, hit-testable, and **absent from the platform accessibility tree**. Found only because
+`adb shell uiautomator dump` was run on the walk that §47's fix was supposed to close: the dump
+listed the sheet's nodes and never `Save method`. Nothing in `tools/` can see this. The gate calls
+the handlers; the camera evaluates scripts and hit-tests with `elementFromPoint`; the harness's
+`document.querySelector` returns `null` unconditionally, so even the DOM half of the fix is not
+assertable from Node. Modality now follows whichever layer is on top, decided from state
+(`modalAboveSheet()`) rather than from `.modal-layer`, because the app raises a modal two ways and
+a rule matching one class would disagree with the other. The camera got a tally — `a sheet
+claiming modality under an open modal` — fired on purpose against a copy of the page with the
+release removed (reports 1 on `resident-payment-modal`) and reading 0 on the same screen against
+the real file. `tools/falsify-layer-modality.cjs`: 4 mutants, 4 caught. The same walk found that
+`openLayers()` named four of the five modal fields and missed `state.residentProfileModal`, so
+Back from the resident's "Edit profile" form quit the app to the launcher — the exact defect the
+Back machinery's own comment names, surviving in the one role its list forgot. Neither list was
+repaired by hand: `layerKeys()` derives the fields from `state` by name, and the gate walks every
+field the state object actually has, so a future modal added under that convention is counted by
+the machinery and by the check at the same moment. Gate 502 → 507.
+
+READ AN ACCESSIBILITY DUMP TWICE BEFORE CALLING IT A DEFECT. Two nodes in this walk looked like
+findings and were neither: the sign-in screen dumped **completely empty**, which is Chromium
+building its tree lazily and one tap on a field fixed, and a password node printed
+`text="demo1234"`, which is not a leak because the same node carries `password="true"` and that
+flag is what an accessibility client honours. §"correct the instrument before concluding" has now
+saved two false findings in one session; the rule generalises to any new sensor, and a surface you
+have just started reading is exactly where its silence means least.
+
 THE APP'S OWN ANSWERS ABOUT ITS STORAGE ARE NOT DISCARDABLE. `hydrate()` validated four legal
 values and **no foreign key**, so a dump whose `booking.providerId` named nobody loaded and
 `providerOf()` answered with the first provider — one dangling id repainting a job's name, phone,
@@ -1666,9 +1695,11 @@ grid-column gutter collapsed to zero width and hung every axis label outside the
 three widths. The same device arrived with **no network at all** and the app
 rendered completely, which is an unplanned proof of §81 — and the only remote dependency left in
 the file is `TILE_URL` (`{s}.tile.openstreetmap.org`), which the camera counts on its own line,
-`requests that left the device for a network`. That line read **942** on the 390px sweep today
-(699 at 320, 1,023 at 450); this passage quoted 448 until it was re-read off the tally, and the
-map-bearing screens added since are the reason the figure grew — which is the same argument
+`requests that left the device for a network`. That line read **942** on a 390px sweep (699 at 320,
+1,023 at 450) and **809** on a later 450px sweep of a file whose only page change was two functions
+in the Back machinery — the map-bearing screens added since the first figure was written are why it
+grew, and the run-to-run spread is why quoting any one of them as *the* count is the mistake this
+sentence keeps making. Which is the same argument
 `node tools/measure.cjs` was written for: a count kept in prose is a count that will be wrong in
 the next document that copies it. `mapFallback()` degrades honestly when the tiles never paint but which still sends a device IP and
 tile coordinates to a third-party CDN whenever there **is** a connection. Decided 2026-10-12: keep

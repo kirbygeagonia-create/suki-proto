@@ -7060,10 +7060,16 @@ const ROOT_TABS = {
 let ownedEntries = 0;
 let ignoreNextPop = 0;
 const lastRootTab = { resident: 'home', provider: 'dashboard', admin: 'admin_dashboard' };
+/* Which layer is open, read off the state object instead of a hand-written list. The list
+   here named three of the four modal fields and missed the resident's, so on a real phone
+   Back quit Sukinnect from inside a half-filled "Edit profile" form: the page had recorded
+   nothing to undo, because it never knew a layer was open. Any field named *Modal or
+   *Confirm is a layer by convention, so the next one is counted the moment it exists. */
+function layerKeys(){
+  return Object.keys(state).filter(k => /Modal$/.test(k) || /Confirm$/.test(k));
+}
 function openLayers(){
-  return [state.sheet, state.providerProfileModal, state.verificationModal,
-          state.adminAccountModal, state.providerDeclineConfirm ? 'decline' : '']
-    .filter(Boolean).join('|');
+  return ['sheet', ...layerKeys()].filter(k => state[k]).join('|');
 }
 /* One definition of "you are on a tab, not inside something". render() needs it to decide
    whether to replay the entrance glide, and Back needs it to decide whether there is
@@ -7087,13 +7093,25 @@ function syncBackHandles(isRootTab){
       for (let i = 0; i < spend; i++) h.back();
     }
   } catch (err) { ownedEntries = want; }
+
+  /* Modality follows the layer actually on top. A sheet that keeps declaring aria-modal
+     makes Chromium mark everything outside it inert, and an inert subtree leaves the
+     platform accessibility tree: a modal raised from the sheet painted above it, took
+     taps, and simply did not exist to a screen reader on the handset. */
+  const sheetPanel = document.querySelector('.sheet');
+  if (sheetPanel) {
+    sheetPanel.setAttribute('aria-modal', modalAboveSheet() ? 'false' : 'true');
+  }
+}
+/* Decided from state rather than from the painted classes, because the app raises a modal
+   two different ways — .modal-layer for the profile sheets, an inline fixed overlay for
+   the verification review — and a rule that reads one of them misses the other. */
+function modalAboveSheet(){
+  return layerKeys().some(k => !!state[k]);
 }
 function closeTopLayer(){
   state.sheet = null;
-  state.providerProfileModal = null;
-  state.verificationModal = null;
-  state.adminAccountModal = null;
-  state.providerDeclineConfirm = false;
+  layerKeys().forEach(k => { state[k] = typeof state[k] === 'boolean' ? false : null; });
 }
 function stepBack(){
   if (openLayers()) { closeTopLayer(); render(); return; }

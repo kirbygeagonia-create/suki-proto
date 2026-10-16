@@ -73,7 +73,7 @@ const PROBE = flag('probe', '');
    what a real browser actually laid out.
    -------------------------------------------------------------------------------- */
 const AUDIT_JS = `(function(){
-  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], belowFloor: [], chartEscape: [], contrast: [], overlaps: [], stretched: [], broken: [], remote: [], svgSmall: [], vendor: [], mapEscape: [], occluded: [], nameless: [], placeholderOnly: [], catMotion: [], hOverflow: 0 };
+  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], belowFloor: [], chartEscape: [], contrast: [], overlaps: [], stretched: [], broken: [], remote: [], svgSmall: [], vendor: [], mapEscape: [], occluded: [], modalInert: [], nameless: [], placeholderOnly: [], catMotion: [], hOverflow: 0 };
   const vw = document.documentElement.clientWidth;
   out.hOverflow = document.documentElement.scrollWidth - vw;
   const TAP = 44;
@@ -432,6 +432,21 @@ const AUDIT_JS = `(function(){
           }
         }
       }
+    }
+  }
+  /* And a sheet that keeps declaring aria-modal while a modal paints above it is a lie
+     with a consequence: Chromium marks everything outside the dialog inert, so the modal
+     above it leaves the platform accessibility tree — visible, tappable, and absent to a
+     screen reader. Asked of the app's own derivation rather than of a class, because the
+     rule that decides this lives in one place and an instrument that guessed at a second
+     one would disagree with it. */
+  const sheetPanel = document.querySelector('.sheet');
+  if (sheetPanel) {
+    if (typeof layerKeys !== 'function') {
+      out.modalInert.push({ what: 'the instrument cannot ask which layer is on top: no layerKeys on the page' });
+    } else if (layerKeys().some(k => !!state[k])
+        && sheetPanel.getAttribute('aria-modal') === 'true') {
+      out.modalInert.push({ what: 'the sheet still claims modality under an open modal' });
     }
   }
   return out;
@@ -1072,6 +1087,7 @@ async function main() {
     tally(str, 'images drawn out of proportion', r => r.screen + '  ' + r.src + ' natural ' + r.natural + ' drawn ' + r.drawn);
     tally(flat('mapEscape'), 'map panes painted outside their own frame', r => r.screen + '  ' + r.what + ' — ' + r.why);
     tally(flat('occluded'), 'something painting on top of an open modal layer', r => r.screen + '  ' + r.what + ' at sample ' + r.at);
+    tally(flat('modalInert'), 'a sheet claiming modality under an open modal', r => r.screen + '  ' + r.what);
     tally(flat('catMotion'), 'category artwork moving in the painted page', r => r.screen + '  ' + r.what);
     tally(flat('broken'), 'images that asked for a file and got no pixels', r => r.screen + '  ' + r.src + ' — ' + r.why);
     tally(flat('remote'), 'requests that left the device for a network', r => r.screen + '  ' + r.kind + '  ' + r.url);

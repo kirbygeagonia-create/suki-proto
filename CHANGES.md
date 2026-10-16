@@ -2663,3 +2663,77 @@ immediately. Both rejoined and verified by content rather than by hope — `admi
 72-broken-images warning back in the row they belong to, all rows well-formed. The rule that comes out
 of it: a multi-line replacement must never target a single-line structure, and after any edit to a
 table, re-measure the table rather than trusting that the edit landed where it was meant to.
+
+## 52. The handset produced two defects that no screen on this machine could see
+
+`preview.17` went onto the vivo to work down DEVICE-PASS §3f. Four items passed — the dialler,
+a chat message surviving a force-stop, the audit log stamping `Oct 15, 2026 - 3:17 PM` while
+`adb shell date` read `15:18`, and the console's read-only rows — and the fifth, the payment
+picker, produced two defects in a single walk.
+
+Both were found with `adb shell uiautomator dump`, which is the **system accessibility tree**
+rather than the DOM, and that distinction is the whole entry. Every instrument in `tools/` reads
+the page: the gate calls the functions, the camera evaluates scripts inside Chrome and hit-tests
+with `elementFromPoint`. Both layers were painted correctly. The tree is a third surface, and it
+is the one a screen reader navigates.
+
+**One: Back from the resident's "Edit profile" form quit Sukinnect to the launcher.**
+`openLayers()` — the function that decides whether the page has recorded anything to undo — named
+four modal fields, and the app has five. `state.residentProfileModal` was not one of them, so the
+resident's own forms were invisible to the machinery whose entire comment reads *"the first Back
+press quit Sukinnect from inside a half-filled form"*. The admin's form behaved, which is the
+positive control that made it diagnosable rather than mysterious: same press, same kind of screen,
+`mCurrentFocus` stayed on `MainActivity`.
+
+The fix does not add the missing name to the list. A list is what failed, and a second list in the
+checks would fail the same way, so `layerKeys()` now derives the fields from the state object by
+convention (`*Modal`, `*Confirm`), and `openLayers()`, `closeTopLayer()` and the new checks all
+read that one source — the next modal field is counted the moment it is declared. The gate's
+version walks every field the state actually has and requires each to record a step, so it cannot
+go stale the way the old assertion would have.
+
+**Two: the picker was painted, tappable, and absent from the accessibility tree.** The profile
+sheet renders `role="dialog" aria-modal="true"`, and Chromium honours that by marking everything
+outside the dialog inert — an inert subtree leaves the platform tree entirely. The stacking fix
+in §47 raised the modal's `z-index` above the sheet's, which made it visible and clickable and
+changed nothing about modality: the dump listed the sheet's nodes and never `Save method`. The
+natural experiment that proved the mechanism was accidental — pressing Back closed the sheet, and
+the modal's nodes appeared in the same tree without any other change.
+
+Modality now follows whichever layer is actually on top: `modalAboveSheet()` decides from state
+and `syncBackHandles()` writes `aria-modal` onto the sheet each paint. It reads state rather than
+querying `.modal-layer` because the app raises a modal two ways — that class for the profile
+sheets, an inline fixed overlay for the verification review — and a rule that matched one would
+silently disagree with the other. The camera got a tally for it (`a sheet claiming modality under
+an open modal`) because the harness's fake `document.querySelector` always returns null, so the
+DOM half of this is not testable from Node at all.
+
+**Proved, in both directions.** `node tools/falsify-layer-modality.cjs` — 4 mutants applied, 4
+caught, 0 not applied: dropping the resident's field from the derivation, stopping
+`closeTopLayer()` clearing them, `modalAboveSheet()` pinned false (the original defect), and
+pinned true. The camera's new tally was then fired on purpose against a copy of the page with the
+release removed, where it reports 1 on `resident-payment-modal`, and reads 0 on the same single
+screen against the real file — a tally that cannot fire is the failure mode this repository has
+now been caught in twice. Gate: 502 → **507 checks**, all passing; the whole mutant family run
+reports **18 families, 122 mutants applied, 122 caught, 0 not applied** (was 17 families / 118);
+full 62-screen sweep at the
+device's own 450 px clean, every tally zero, no console errors.
+
+**Re-synced and rebuilt as `1.2-preview.18`** (`versionCode 20`, 2,131,806 bytes, `aapt dump
+badging`) before re-testing anything, because a fix that has only run on a desk has not run where
+the defect did. `cmp` says the `assets/Sukinnect.html` extracted out of that APK is identical to
+`Sukinnect-next.html` at **801,996 bytes**, `grep` finds `modalAboveSheet` twice inside it (the rule
+and its call site), and `check-assets.cjs --apk` resolves all 48 paths the page asks for.
+
+On `preview.18`, re-installed: Back from the resident's form keeps focus on `MainActivity` and
+closes the modal, and the dump taken with the Payment Methods sheet still open lists both
+`Close Payment Methods` and `Save method` in one tree.
+
+**Two instrument readings that were nearly reported as defects, and are the reason this pass is
+worth more than its findings.** The sign-in screen produced a completely empty accessibility
+dump, which reads as "blind users cannot sign in" — it is Chromium building the tree lazily, and
+one tap on a field populated every node. And a password node printed `text="demo1234"`, which
+reads as a leak — the same node carries `password="true"`, which is exactly what an accessibility
+client honours. Both were checked before being written down; the habit that caught them is the
+one already recorded above, *correct the instrument before concluding anything*, and it has now
+saved two false findings in one session rather than one.

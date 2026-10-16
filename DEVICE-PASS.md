@@ -36,7 +36,7 @@ title from the day it was written until 2026-10-10, when the label was found to 
 that one `applicationId` means one install: installing this **replaces** the customer build rather
 than sitting beside it, which is why the version code went up as well as the name.
 
-## Building it — re-built 2026-10-15 (`1.2-preview.17`, `versionCode 19`); first compiled 2026-10-09
+## Building it — re-built 2026-10-15 (`1.2-preview.18`, `versionCode 20`); first compiled 2026-10-09
 
 "the Java looks right" is not the same claim as "an APK builds and contains what you changed",
 and neither is the same claim as "the page inside it finds its images". All three are now
@@ -55,7 +55,7 @@ feature. Unzip every `*.dex` and search them all, or use `dexdump`.
 cd Sukinnect-Android
 ./gradlew --offline :app:assembleDebug
 # BUILD SUCCESSFUL in 8s   (first attempt today FAILED — see the OneDrive note below)
-adb install -r app/build/outputs/apk/debug/Sukinnect-1.2-preview.17-debug.apk
+adb install -r app/build/outputs/apk/debug/Sukinnect-1.2-preview.18-debug.apk
 ```
 
 **This tree sits under OneDrive, and Gradle sometimes cannot snapshot its own intermediates.** The
@@ -78,9 +78,9 @@ What was verified about the artifact, not assumed:
 
 | Check | Result |
 |---|---|
-| `:app:assembleDebug` | **BUILD SUCCESSFUL in 50s** for `.17`, after the same stale-intermediate clear that `.16` needed — the first attempt on each of the last two days failed in `:app:packageDebug` with a snapshot IOException, which is a OneDrive placeholder rather than the change. Current output `Sukinnect-1.2-preview.17-debug.apk`, **2,131,282 bytes**, `versionCode 19`, `versionName 1.2-preview.17`, label `Sukinnect · preview`, minSdk 24 / target 36 — read off `aapt dump badging`. **`.16` moved no page bytes at all** — the bundled asset was the same 800,763 bytes as `.15` — and what changed there was the shell, proven in the shipped bytecode rather than in the source: **`.17` moved two bytes of copy**, the concierge button label, so `.17` is the build the bench should hold; `dexdump -d classes2.dex` shows `openOutsideTheWebView` holding the scheme list, then `"tel"`, then `"android.intent.action.DIAL"` — so the two support "Call" buttons now hand the number to the dialer instead of failing the scheme into a system error page. `.15` was 2,130,522 / `17` — the build where the app's claims about a reload become true: ten actions that said "saved", "logged" or "shown to the provider" and wrote nothing now write — a typed chat message, a household item, a portfolio entry whose Save button previously stored nothing at all, a concierge answer, an administrator's note and flag, a document request, and both roles' notification checkboxes. The audit log stops stamping every row with one typed date and carries a real instant and the acting name, and a provider's saved profile is no longer overwritten by the demo seed on launch. `SCHEMA_VERSION` is 16, so a handset holding a v15 dump shows the refusal notice on first launch — that is the notice working, and the reason is that v15 audit rows are indistinguishable on disk from real ones. Earlier builds: `.15` 2,130,522 / `17` (ten write claims that stored nothing, the audit log's real instant and actor, the restore that overwrote a saved profile), `.14` 2,127,438 / `16` (the admin console's booking statistic relabelled), `.13` 2,126,962 / `15` (the last bare index reads, the stored profile through the record door), `.12` 2,125,430 / `14` (identity lookups, the chat room, the concierge, the chart axis), `.11` 2,118,834 / `13`, `.10` 2,113,374 / `12`, `.9` 2,112,782, `.8` 2,111,574, `.7` 2,105,566, `.6` 2,104,798 |
+| `:app:assembleDebug` | **BUILD SUCCESSFUL in 45s** for `.18`, first try — no stale-intermediate clear needed this time. Current output `Sukinnect-1.2-preview.18-debug.apk`, **2,131,806 bytes**, `versionCode 20`, `versionName 1.2-preview.18`, label `Sukinnect · preview`, minSdk 24 / target 36 — read off `aapt dump badging`. **`.18` is the build the handset produced rather than the bench**: walking §3f on the vivo turned up two defects no instrument on this machine could see, and both are recorded below with the dump that found them. `.17` moved two bytes of copy (the concierge button label) and `dexdump -d classes2.dex` shows `openOutsideTheWebView` holding the scheme list, then `"tel"`, then `"android.intent.action.DIAL"` — so the two support "Call" buttons hand the number to the dialer instead of failing the scheme into a system error page. `SCHEMA_VERSION` is 16, so a handset holding a v15 dump shows the refusal notice on first launch — that is the notice working, and the reason is that v15 audit rows are indistinguishable on disk from real ones. Earlier builds: `.17` 2,131,282 / `19` (the concierge label), `.15` 2,130,522 / `17` (ten write claims that stored nothing, the audit log's real instant and actor, the restore that overwrote a saved profile), `.14` 2,127,438 / `16` (the admin console's booking statistic relabelled), `.13` 2,126,962 / `15` (the last bare index reads, the stored profile through the record door), `.12` 2,125,430 / `14` (identity lookups, the chat room, the concierge, the chart axis), `.11` 2,118,834 / `13`, `.10` 2,113,374 / `12`, `.9` 2,112,782, `.8` 2,111,574, `.7` 2,105,566, `.6` 2,104,798 |
 | Launcher label | `aapt dump badging`: **'Sukinnect · preview'** on this debug APK, and still **'Sukinnect'** on the Oct-1 release APK — the override is debug-scoped, measured on both artifacts |
-| `assets/Sukinnect.html` inside the APK | `cmp` says identical to `Sukinnect-next.html` — **800,761 bytes** at the `.17` build (800,763 at `.16` and `.15`, 792,132 at `.14`, 791,013 at `.13`, 786,835 at `.12`). `.17` is the first build since the rebuild whose page bytes differ from the one before it, and by two bytes: the concierge button's label. `grep` inside the extracted asset proves which copy shipped — `Prepare the job briefing` once, `Analyze the text` nowhere. Verified by extracting `assets/Sukinnect.html` out of the APK itself with `unzip` and comparing that, not the staged copy. Compared with `cmp`, not with a hash: `.gitattributes` normalises line endings, so a hash match is the wrong question for a text file here |
+| `assets/Sukinnect.html` inside the APK | `cmp` says identical to `Sukinnect-next.html` — **801,996 bytes** at the `.18` build (800,761 at `.17`, 800,763 at `.16` and `.15`, 792,132 at `.14`, 791,013 at `.13`, 786,835 at `.12`). `grep` inside the extracted asset proves which copy shipped — `modalAboveSheet` appears twice (the rule and its call site), and `Prepare the job briefing` once with `Analyze the text` nowhere. Verified by extracting `assets/Sukinnect.html` out of the APK itself with `unzip` and comparing that, not the staged copy. Compared with `cmp`, not with a hash: `.gitattributes` normalises line endings, so a hash match is the wrong question for a text file here |
 | The seven category PNGs inside the APK | `cmp` says identical to `assets/category-art/*.png`, and they sit at `assets/assets/category-art/` because the WebView root mirrors the repo root |
 | The four Atkinson weights inside the APK | `cmp` says identical, and `unzip -v` says **Stored** — `noCompress 'woff2'` is doing its job |
 | Every path the bundled page asks for | `check-assets.cjs --apk`: **48 of 48 resolve** |
@@ -269,6 +269,49 @@ gesture, and an app killed mid-review.
       **compiled** (`javac` against `android-36`, clean but for the expected deprecation note on
       the `String` overload kept as a backstop); it has not run on a device, and it reaches one
       only in a new build.
+
+#### What the handset answered — walked 2026-10-15 on a vivo 1906, `preview.17`, then re-walked on `.18`
+
+- [x] **The support "Call" button dials.** Passed. The dialer
+      (`com.android.dialer/.TwelveKeyDialer`) opened with `+63 917 000 1122` pre-filled, and
+      returning landed on the same Booking details screen with no error page.
+- [x] **A reload keeps what it promised.** Passed. A typed chat message survived
+      `am force-stop` and a relaunch and appeared in Messages with its own timestamp.
+- [x] **The audit log tells the truth about when.** Passed. Saving the admin profile wrote
+      `Admin profile updated` against `Master Administrator` stamped **Oct 15, 2026 - 3:17 PM**
+      while `adb shell date` read `15:18` — a real instant, not the `Sep 10, 2026 / 2:42 PM`
+      every row used to carry. Opening the log before any action says
+      "No administrator action has been recorded on this device", which is the honest empty.
+- [x] **The console says what it does not do.** Passed. The admin Account rows read
+      "Not stored on this device", "This device only", "Nothing is recorded here" at ~450 CSS px
+      with nothing clipped.
+- [x] **The payment picker works.** Passed, and it is where the two defects below came from.
+      The native Android radio dialog opened with both methods and the current one marked;
+      choosing Cash on Arrival and tapping **Save method** left the card above reading it, and
+      force-stop + relaunch + re-login still read it.
+- [ ] **The concierge refuses to guess**, **a thread stays with its pair**, **what the sheet
+      marks is what the booking records**, **a request cannot be booked to nowhere**, **the
+      refusal notice on a bad profile** (no v15 dump exists to produce it), and the provider
+      half of the reload check: **not walked.** The two defects below came out of the four
+      items that were, so the remaining five are still the highest-value part of this file.
+
+**Two defects, and neither one is visible to a screen.** They are recorded at length in
+`CHANGES.md` §52; what belongs here is the instrument that produced them, because it is not in
+`tools/` and no bench run will ever produce it again: `adb shell uiautomator dump`, which is the
+system accessibility tree rather than the DOM.
+
+- Back from the resident's "Edit profile" form **quit Sukinnect to the launcher**
+  (`mCurrentFocus` → `com.bbk.launcher2`). On the admin's equivalent form the same press closed
+  the modal and stayed in the app — the positive control that made the difference diagnosable.
+- With the Payment Methods sheet open and the picker painted above it, the dump listed the
+  sheet's nodes and **never the picker's**: no "Change payment method", no "Save method". After
+  the fix the same walk lists both layers in one tree.
+
+Two cautions this walk earned, both about reading the instrument rather than the app. An empty
+dump on the sign-in screen is **not** a finding — Chromium builds its accessibility tree lazily,
+and one tap on a field populated every node; the same was nearly concluded twice. And a password
+field whose dump line reads `text="demo1234"` is not leaking anything: the same node carries
+`password="true"`, which is what a screen reader honours. Read the flag before the string.
 
 This phone renders at **~450 CSS px**, not the 360 the clipping cases were tuned against (720px
 panel at `Override density: 256`), so it will not exercise the narrow-device tab-rail case, and

@@ -3947,6 +3947,55 @@ suite('back', async () => {
   c.check('the sign-in screen keeps no back handles', i._history.entries.length === 0,
     JSON.stringify(i._history.entries.length));
 
+  /* Found on the vivo, not in here: the list of modal fields this suite's machinery
+     depends on named three of the four and missed the resident's, so Back from a half
+     typed "Edit profile" form quit Sukinnect to the launcher. The fix derives the list
+     from state, which makes the next modal field counted the moment it is declared —
+     so this check walks every field the state object actually has rather than a copy
+     of the names, because a list here would drift exactly the way the app's did. */
+  const m = boot();
+  m.state.view = 'app'; m.state.role = 'resident'; m.state.tab = 'profile'; m.render();
+  const modalFields = Object.keys(m.state).filter(k => /Modal$/.test(k) || /Confirm$/.test(k));
+  const uncounted = modalFields.filter(k => {
+    modalFields.forEach(f => { m.state[f] = typeof m.state[f] === 'boolean' ? false : null; });
+    m.render();
+    const before = m._history.entries.length;
+    m.state[k] = typeof m.state[k] === 'boolean' ? true : 'gate_probe';
+    m.render();
+    return m._history.entries.length === before;
+  });
+  c.check('every modal field in state is a layer Back can undo', (() => {
+    modalFields.forEach(f => { m.state[f] = typeof m.state[f] === 'boolean' ? false : null; });
+    m.render();
+    return modalFields.length >= 4 && uncounted.length === 0;
+  })(), modalFields.length + ' fields, uncounted: ' + uncounted.join(','));
+
+  /* The resident's own path, end to end: sheet, then the picker it raises, then Back. */
+  const n = boot();
+  n.state.view = 'app'; n.state.role = 'resident'; n.state.tab = 'profile'; n.render();
+  n.openProfileSection('resident', 'payments', 'Payment Methods', 'A label you choose');
+  n.residentProfileAction('add_payment');
+  c.check('a modal raised from a sheet still records one step',
+    n._history.entries.length === 1 && !!n.state.sheet && !!n.state.residentProfileModal,
+    'entries=' + n._history.entries.length + ' sheet=' + n.state.sheet
+      + ' modal=' + n.state.residentProfileModal);
+  n._history.back();
+  c.check('Back closes the picker and the sheet, and keeps the profile hub under them',
+    n.state.residentProfileModal === null && n.state.sheet === null && n.state.tab === 'profile'
+      && n._history.entries.length === 0,
+    'modal=' + n.state.residentProfileModal + ' sheet=' + n.state.sheet + ' tab=' + n.state.tab);
+
+  /* The other half of the handset finding: a sheet that keeps claiming aria-modal while
+     a modal paints above it makes Chromium drop that modal out of the platform tree. */
+  const o = boot();
+  o.state.view = 'app'; o.state.role = 'resident'; o.state.tab = 'profile'; o.render();
+  o.openProfileSection('resident', 'payments', 'Payment Methods', 'A label you choose');
+  c.check('a sheet alone is the topmost layer, so it owns the modality',
+    !o.modalAboveSheet(), 'modalAboveSheet=true with only a sheet open');
+  o.residentProfileAction('add_payment');
+  c.check('a modal above the sheet takes the modality from it', o.modalAboveSheet(),
+    'modalAboveSheet=false while the picker is open');
+
   return c;
 });
 
