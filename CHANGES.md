@@ -2810,3 +2810,47 @@ One more class closed while the phone was parked, by the same "count it, do not 
 locale-dependent formatting. Both `toLocaleString` calls in the file pass `'en-PH'` explicitly, and
 all six `toLocaleDateString` calls do too, so no painted number or date depends on the device's
 locale. Nothing to fix, and now it is measured rather than believed.
+
+## 54. A sweep that found nothing, and the two measurements that said so
+
+The dark-mode surface had never been asked about. `Sukinnect-next.html` contains **zero**
+occurrences of `color-scheme` or `prefers-color-scheme` — one light palette, authored by hand, and
+no statement to the browser about what to do when the device asks for dark. That reads like a
+defect waiting to be filed, and the obvious patch was the one-line `color-scheme: only light` that
+[Chrome documents](https://developer.chrome.com/blog/auto-dark-theme) as the opt-out from Auto Dark
+Theme. It was not added, because two measurements said the problem is not there.
+
+**One: the media query changes nothing the app paints.** `tools/shot.cjs` gained `--dark`, which
+emulates `prefers-color-scheme: dark` through `Emulation.setEmulatedMedia` — the same mechanism the
+reduced-motion flag already used, now generalised so both features can be requested in one call. All
+62 screens swept under it: **every tally zero, including contrast**, no console errors. Then the
+specific case was probed rather than inferred, because the payment picker's `<select>` carries no
+authored `background` or `color` at all, which is exactly where a UA colour scheme is supposed to
+leak through the app's own palette:
+
+```
+light:  {"scheme":false,"fieldBg":"rgb(255, 255, 255)","fieldColor":"rgb(3, 0, 43)","cardBg":"rgb(255, 255, 255)"}
+dark:   {"scheme":true, "fieldBg":"rgb(255, 255, 255)","fieldColor":"rgb(3, 0, 43)","cardBg":"rgb(255, 255, 255)"}
+```
+
+Identical, with `prefers-color-scheme: dark` genuinely matching. A page that declares no
+`color-scheme` is treated as light-only for its widgets — the UA darkens form controls when the page
+*opts in* and the user prefers dark, not the other way round. So the field cannot come back dark
+grey inside a white card, and the brand palette §30 measured is not at risk from this direction.
+
+**Two: the delivery surface rules out the mechanism that could.** Auto Dark Theme is Chrome for
+Android post-processing painted colours, and it is not reproducible by emulating a media query — so
+the honest answer had to come from the shell. `app/src/main/res/values/app.xml` parents the activity
+on **`@android:style/Theme.Material.Light.NoActionBar`**, a fixed Light theme rather than `.DayNight`,
+and `MainActivity` contains no `setForceDark` / `setAlgorithmicDarkeningAllowed` call at all. The
+WebView is therefore never in night mode, and the one feature that could rewrite the palette is off
+in the configuration of the thing that ships it.
+
+**What is left open, and it is a brand call rather than a bug.** The published `dist/` subset can
+also be opened in a browser, and Chrome for Android *would* apply Auto Dark Theme to a page that
+declares nothing — which is the case `color-scheme: only light` exists for. Adding it costs one
+line, changes nothing measured above, and forecloses any future dark rendering. Left to the owner,
+because honouring a user's dark preference is a judgement about the product and not a defect.
+
+The instrument stays: `--dark` is now part of what a full run can ask, in the same way
+`--reduced-motion` and `--desktop` are, and the sweep it enables is the evidence behind this entry.

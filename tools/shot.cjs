@@ -62,6 +62,11 @@ const MEASURE = has('measure');
 /* Asks Chrome to report prefers-reduced-motion, so a claim that the app honours
    that setting can be measured instead of assumed. */
 const REDUCED = has('reduced-motion');
+/* Asks Chrome for prefers-color-scheme: dark. The app declares no color-scheme, so this is not
+   a question about a theme it has — it is the question of what the *browser* paints on the
+   controls the app leaves to the user agent, which is exactly the Android-in-dark-mode case no
+   desktop session ever shows. */
+const DARK = has('dark');
 const PROBE = flag('probe', '');
 /* Runs the whole walk in another calendar frame without touching this machine's
    clock or zone. A record's date is a fact about the world; if the words that
@@ -895,9 +900,12 @@ async function main() {
     deviceScaleFactor: DPR, mobile: !DESKTOP
   });
   await session.send('Emulation.setScrollbarsHidden', { hidden: true });
-  if (REDUCED) {
-    await session.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
-    console.log('  emulating prefers-reduced-motion: reduce');
+  const mediaFeatures = [];
+  if (REDUCED) mediaFeatures.push({ name: 'prefers-reduced-motion', value: 'reduce' });
+  if (DARK) mediaFeatures.push({ name: 'prefers-color-scheme', value: 'dark' });
+  if (mediaFeatures.length) {
+    await session.send('Emulation.setEmulatedMedia', { features: mediaFeatures });
+    console.log('  emulating ' + mediaFeatures.map(f => f.name + ': ' + f.value).join(', '));
   }
   if (TIMEZONE) {
     await session.send('Emulation.setTimezoneOverride', { timezoneId: TIMEZONE });

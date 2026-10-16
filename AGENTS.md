@@ -1728,6 +1728,24 @@ the next document that copies it. `mapFallback()` degrades honestly when the til
 tile coordinates to a third-party CDN whenever there **is** a connection. Decided 2026-10-12: keep
 it, and treat the exposure as a production DPA/NPC question (slide 16) rather than a prototype bug.
 
+THE APP HAS NO DARK MODE AND THAT WAS MEASURED, NOT ASSUMED. The file declares no `color-scheme`
+and no `prefers-color-scheme` block, which looks like an unhandled surface, and the tempting
+one-line patch was Chrome's documented opt-out. Two measurements said there is nothing to fix.
+`node tools/shot.cjs --measure --dark` (a new flag; it emulates the media query through
+`Emulation.setEmulatedMedia`, the mechanism `--reduced-motion` already used) sweeps all 62 screens
+and reports **every tally zero, contrast included** — and the specific leak case was probed rather
+than reasoned about: the payment `<select>` authors no `background` or `color` at all, and it paints
+`rgb(255,255,255)` on `rgb(3,0,43)` identically with `prefers-color-scheme: dark` matching and not
+matching, because a page that declares nothing is treated as light-only for its widgets and the UA
+darkens them when the page *opts in*. Auto Dark Theme — the one feature that could rewrite the §30
+palette — is not reproducible by emulating a media query, so it was settled from the shipping
+configuration instead: the activity parents `Theme.Material.Light.NoActionBar`, a fixed Light theme,
+and `MainActivity` makes no `setForceDark` / `setAlgorithmicDarkeningAllowed` call. The residual is
+the *browser* surface of the published `dist/`, where Chrome for Android would apply it; declaring
+`only light` is the fix and is left to the owner, because suppressing a user's dark preference is a
+product judgement. What must not happen is a half-built `prefers-color-scheme` block: that would put
+the app in the exact state where UA-darkened controls meet authored light text.
+
 THE SHIPPED `Sukinnect.html` IS MEASURED BY NOTHING, and that is now stated rather than implied.
 Every instrument in `tools/` addresses the rebuild: `harness.cjs` pins `APP` to
 `Sukinnect-next.html`, `shot.cjs` defaults the same way, and no tool even contains the string
