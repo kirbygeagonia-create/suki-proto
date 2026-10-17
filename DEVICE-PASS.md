@@ -767,3 +767,29 @@ cleared, and whether the save refuses is still unknown.
 One thing the attempt did establish, measured rather than assumed: the vivo reports
 `font_scale 1.0`, and at that setting `preview.22` computes a 16px root and paints the same 14px
 caption it always did — the rem conversion is a no-op for a user who has not asked for larger text.
+
+### What the text-scale pass owes a handset — recorded 2026-10-17, none of it verifiable on the bench
+
+The chart-axis and flex-crush work (§60 of `CHANGES.md`) was measured with `--font-scale`, which sets
+the root font size directly because that is what Chromium on Android produces. Four corners are clean
+on the bench: 320px at 200%, default width at 200%, 450px at 135%, and the 100% anchor —
+`node tools/sweep-text-scale.cjs`. What a bench cannot answer is whether the *platform* agrees:
+
+1. **Set the phone's font size to its maximum and dump the navigation.** `Settings > Display > Font
+   size` to the largest step, then `adb shell uiautomator dump` on Resident Home. The nav labels are
+   now ellipsized by CSS at narrow widths (`D… F… B… M… Pr…` at 320px), so the question is what the
+   accessibility tree carries for each button: the whole word from the DOM, or the painted tail. The
+   camera reads the DOM and cannot tell — this is the same surface that hid the sheet-modality
+   defect, and it is the only instrument that answers it. Expect `content-desc` to read "Bookings";
+   if it reads "Booki…" the ellipsis has cost a screen-reader user their navigation, and the fix is
+   an explicit `aria-label` on every nav item, not a layout change.
+2. **Read the root font size on the phone at maximum scale**, through `tools/device-probe.cjs`, and
+   confirm it is `16 × scale` and not capped — the cap in `:root` is inert on Android and the claim
+   should be re-measured on a device that has the setting at 200%, not at the 1.0 this vivo ships
+   with.
+3. **Look at the provider dashboard's two charts at maximum scale.** The axis thins itself by the
+   measured root size now (12 columns → 2 labels at 200%), which is arithmetic the bench proved and
+   a thumb has not: the question is whether two week labels still tell a provider what the period is,
+   or whether the chart should say "last 4 weeks" in its subtitle instead.
+4. The five §3f items above are still open, and the installed build (`preview.22`) predates this
+   pass, so any of them needs a new build first.

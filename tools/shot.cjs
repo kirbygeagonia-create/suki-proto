@@ -93,7 +93,7 @@ const FONT_SCALE = flag('font-scale', '');
    what a real browser actually laid out.
    -------------------------------------------------------------------------------- */
 const AUDIT_JS = `(function(){
-  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], belowFloor: [], chartEscape: [], contrast: [], overlaps: [], stretched: [], broken: [], remote: [], svgSmall: [], vendor: [], mapEscape: [], occluded: [], modalInert: [], nameless: [], placeholderOnly: [], catMotion: [], hOverflow: 0 };
+  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], belowFloor: [], chartEscape: [], navEscape: [], squashedCircle: [], contrast: [], overlaps: [], stretched: [], broken: [], remote: [], svgSmall: [], vendor: [], mapEscape: [], occluded: [], modalInert: [], nameless: [], placeholderOnly: [], catMotion: [], hOverflow: 0 };
   const vw = document.documentElement.clientWidth;
   out.hOverflow = document.documentElement.scrollWidth - vw;
   const TAP = 44;
@@ -206,6 +206,51 @@ const AUDIT_JS = `(function(){
       if (over > 1) out.chartEscape.push({ text: (l.textContent || '').trim().slice(0, 16),
         cls: l.className, over: Math.round(over), box: Math.round(cb.width) });
     });
+  });
+
+  /* A bottom-navigation item pushed off the panel. The row is a flex container whose items are
+     flex:1, and a flex item's min-width defaults to 'auto' — which for a word means the item
+     cannot shrink below that word, so the row overflows instead. Measured at 320px with the
+     phone's text at 200%: the resident's four labels needed 456px of a 320px row and "Profile"
+     painted 132px past the row's right edge — which is the edge of the device, so a destination
+     with no way to reach it.
+     No other tally sees this. The document is not wider than the phone (that check answers
+     "none" on the same screen), nothing clips the item, so the truncation tally is silent, and
+     the tap-target walk covers #screen, which does not contain the nav.
+     (No backticks anywhere in this file's page scripts: they are template literals, and one
+     ends the string early — which is how this comment first broke the camera.) */
+  document.querySelectorAll('.bottomnav').forEach(row => {
+    const rb = row.getBoundingClientRect();
+    if (!rb.width) return;
+    row.querySelectorAll('.navitem').forEach(item => {
+      const r = item.getBoundingClientRect();
+      const over = Math.round(Math.max(r.right - rb.right, rb.left - r.left, 0));
+      if (over > 1) out.navEscape.push({
+        text: ((item.querySelector('.nav-label') || item).textContent || '').trim().slice(0, 12),
+        over: over, box: Math.round(rb.width), scroll: row.scrollWidth });
+    });
+  });
+
+  /* A circle painted as a sliver. A computed "border-radius:50%" is the one declaration that
+     states an element's width and height must agree, and a flex row that runs out of room breaks
+     it in silence: the provider dashboard's 8px "requests waiting" dot sits beside a heading, and
+     at 320px with the phone's text at 200% the heading took the row and the dot painted 2.3px
+     wide by 8px tall — a clipped mark, not a status indicator. Nothing else sees it: it is not
+     overflow, not clipped text, not off the type scale, and its contrast is fine because it
+     paints no text at all. */
+  document.querySelectorAll('#screen *, .sheet *, .auth-sheet *, .bottomnav *').forEach(el => {
+    const cs = getComputedStyle(el);
+    if (cs.borderTopLeftRadius !== '50%' || cs.borderTopRightRadius !== '50%') return;
+    const r = el.getBoundingClientRect();
+    /* Only a box that paints nothing at all is skipped. The first version of this guard asked
+       for 3px on each side, and the defect that motivated the tally — an 8px dot crushed to 2.3
+       — fell straight through it, so the run reported clean while the screenshot showed a
+       sliver. An instrument whose floor sits above its own finding is the worst kind of pass. */
+    if (r.width < 1 || r.height < 1) return;
+    const off = Math.abs(r.width - r.height);
+    if (off > 2) out.squashedCircle.push({ cls: (el.className || '').toString().slice(0, 24),
+      w: Math.round(r.width * 10) / 10, h: Math.round(r.height * 10) / 10,
+      text: (el.textContent || '').trim().slice(0, 18) });
   });
 
   /* Anything the nav actually traps. Content sliding under a glass bar while you
@@ -1163,6 +1208,8 @@ async function main() {
     tally(flat('remote'), 'requests that left the device for a network', r => r.screen + '  ' + r.kind + '  ' + r.url);
     tally(flat('svgSmall'), 'chart text that paints below the 14px floor', r => r.screen + '  "' + r.text + '" declares ' + r.declared + 'px, paints ' + r.rendered + 'px');
     tally(flat('chartEscape'), 'chart labels painted outside their own chart box', r => r.screen + '  "' + r.text + '" (' + r.cls + ') hangs ' + r.over + 'px past a ' + r.box + 'px box');
+    tally(flat('navEscape'), 'bottom-nav items pushed off the panel', r => r.screen + '  "' + r.text + '" hangs ' + r.over + 'px past a ' + r.box + 'px row (the row needs ' + r.scroll + 'px)');
+    tally(flat('squashedCircle'), 'round markers painted as a sliver (a flex row took their width)', r => r.screen + '  .' + r.cls + ' ' + r.w + 'x' + r.h + 'px "' + r.text + '"');
     const vend = flat('vendor');
     console.log('\nvendor-owned controls excluded (Leaflet attribution + markers, not ours to resize): ' +
       vend.length + (vend.length ? '  e.g. ' + [...new Set(vend.map(r => r.what || 'unlabelled <img>'))].slice(0, 4).join(' | ') : ''));

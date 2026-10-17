@@ -1,9 +1,15 @@
-/* Proves the three checks added with the responsive-type change watch the rule they claim to.
+/* Proves the checks added with the responsive-type change watch the rule they claim to.
    The defect they exist for was measured on a phone, not read off the source: an OPPO at
    font_scale 1.35 computed a 21.6px root while the app painted 14px text, because every token was
    a hard px — so Sukinnect was the only app on that device that ignored the user's text-size
    setting. Mutant 3 is the tempting half-fix: pinning the root to 16px would satisfy "it is a
    font-size declaration" while putting the limitation straight back.
+     The last two are the same rule one surface over: a chart's axis thinning is also a budget
+   measured in the wrong units. Mutant 5 is the fixed budget that hung 4px past a 264px chart at
+   200% text; mutant 6 over-thins, and exists because a check that only ever asks "fewer labels?"
+   passes happily when the code draws none. Both are read through the harness's root size, which
+   is a variable for the same reason — a double pinned to a literal 16px cannot see a mutant that
+   stops consulting it.
      node tools/falsify-responsive-type.cjs                                                */
 'use strict';
 const fs = require('fs');
@@ -16,6 +22,8 @@ const original = fs.readFileSync(TARGET, 'utf8');
 
 const CAP = 'font-size: min(1em, 20px);';
 const VAL_RULE = '.chart-val{transform:translate(-50%,-100%); color:var(--ink); font-weight:700;}';
+const FIT = 'const fit = Math.max(1, Math.floor(w / (62 * (rootPx / 16))));';
+const STRIDE = 'const stride = Math.max(1, Math.ceil(rows.length / fit));';
 
 /* Single-line needles: the file is CRLF, so a needle carrying \n never matches and the mutant
    reports itself as SKIP while looking like a pass. */
@@ -32,6 +40,12 @@ const MUTANTS = [
   { name: 'a rule starts setting a literal px font size again',
     needle: VAL_RULE, to: VAL_RULE.replace('}', ' font-size:13px;}'),
     label: 'no rule sets a literal px font size — the scale is the only source' },
+  { name: 'the axis budget stops being measured in type units',
+    needle: FIT, to: 'const fit = Math.max(1, Math.floor(w / 62));',
+    label: 'and it thins harder as the phone’s own text gets bigger' },
+  { name: 'the axis thins so hard a sparse series loses its second label',
+    needle: STRIDE, to: 'const stride = Math.max(1, Math.ceil((rows.length + fit) / fit));',
+    label: 'and it thins harder as the phone’s own text gets bigger' },
 ];
 
 function gateOutput() {

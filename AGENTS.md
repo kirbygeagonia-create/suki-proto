@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 11,163 lines, ONE :root block, 1,748 var() usages, 95 tokens declared with 92
+Sukinnect-next.html— 11,233 lines, ONE :root block, 1,749 var() usages, 95 tokens declared with 92
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -2842,7 +2842,40 @@ their chart at 135%, and it is now `calc(3.75 * var(--t-body-sm))`, which is the
 default and grows only when the type does. Anything that reserves space for text has to be sized in
 type units too — check that when adding a gutter, rail, chip row or fixed-height box.
 
-Measure it with `node tools/shot.cjs --measure --width=320 --height=638 --font-scale=1.35`. The flag
+**The rule has a second half, and it runs the other way: a fixed-size element loses its size to
+growing text.** A flex item's declared width is only a starting size — `flex-shrink` defaults to 1
+— and its `min-width:auto` protects it only down to its own *content*. So at 320px with the phone's
+text at 200% the resident's bottom navigation needed 456px of a 320px row (a label is content, and
+an item cannot shrink below its word) and painted "Profile" 132px past the edge of the device: a
+destination nobody could tap. The fix is the item's own `min-width:0` plus an ellipsized label, so
+every destination keeps its tap area and the word gives up its tail — the DOM text, and with it the
+accessible name, is untouched. The same default in the other direction crushed six 8px waiting dots
+to 1.8px (no content, so nothing protected them) and the 44px round notification button to 31x44
+beside a growing title; both now declare `flex-shrink:0`. Two camera tallies count these —
+`bottom-nav items pushed off the panel` and `round markers painted as a sliver` — and
+`node tools/falsify-flex-crush.cjs` proves both can fail: 4 mutants, 4 caught.
+
+A chart's *decision* about how much text to show is also a budget in the wrong units until it is
+divided by the type. `chartColumns()` thinned its axis when a slot measured under 62 viewBox
+units, which has nothing to do with how wide a word is: at 200% the slot still cleared 62, nothing
+thinned, and an axis label hung 4px past a 264px box. The budget is now `floor(w / (62 * rootPx/16))`
+slots, which is provably the old rule at 100% (`floor(304/62)` = 4, and `ceil(n/4)` is what the old
+line computed for every `n`) and thins progressively above it — 12 columns draw 4 labels at 100%,
+3 at 150%, 2 at 200%. This needed the harness to stop answering `getComputedStyle` with a literal
+`'16px'`: at a pinned metric a mutant that ignores the measured size is indistinguishable from the
+correct code, so the root size is a variable now (`app._setRootFont(32)`) and the gate asserts
+relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
+zero) rather than the numbers 4/3/2.
+
+Gate 521; whole suite **23 families, 144 mutants, 144 caught, 0 not applied**
+(`node tools/falsify-all.cjs`), of which `falsify-flex-crush` is the first family that drives the
+camera rather than the gate — a geometry rule has no Node assertion available to it.
+
+Measure it with `node tools/sweep-text-scale.cjs` — the camera at 320px @ 200% text, default width
+@ 200%, 450px @ 135% (a vivo panel at the OPPO's setting), and the 100% anchor — which fails if any
+tally is nonzero and treats a tally it does not recognise as must-be-zero, so a sensor added
+tomorrow cannot be silently informational. Single corners are still runnable:
+`node tools/shot.cjs --measure --width=320 --height=638 --font-scale=1.35`. The flag
 sets the root font size directly, because that is what the platform's multiplication produces; it
 does **not** substitute into the app's `min()` expression, which was the first version's error — it
 modelled a mechanism Android does not use and reported a cap holding on four phone configurations

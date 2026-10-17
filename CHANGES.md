@@ -3091,3 +3091,99 @@ Consequences, all measured after the correction:
 Gate 520, `falsify-responsive-type` 4 of 4 after its labels were re-pointed at the honest check
 name. The lesson is the one this repository keeps being taught in a new costume: **prove the
 instrument against the thing it claims to model, not against the fix you hope for.**
+
+---
+
+## 60. An axis thinned by the wrong ruler, and a navigation row that walked off the phone
+
+Closing #25's chart-label item found a second defect in the same screenshot, and both turned out
+to be the same mistake: **a number measured in one unit, compared against a thing that lives in
+another.**
+
+**The chart.** `chartColumns()` thinned its own axis when a slot measured under 62 *viewBox units*.
+That threshold was written when the type was fixed px, and §68's rem conversion moved the words out
+from under it: at 200% text on a narrow panel the slot still cleared 62 units, so nothing thinned
+and an axis label hung 4px past a 264px chart box. The budget is divided by the root font size the
+page reports now — `fit = floor(w / (62 * rootPx/16))`, `stride = ceil(rows.length / fit)` — which
+is provably the old rule at 100% (`floor(304/62)` is 4, and `ceil(n/4)` is exactly what the old line
+computed for every `n`) and thins progressively above it: 12 columns draw 4 labels at 100%, 3 at
+150%, 2 at 200%.
+
+**The navigation, found by looking at the chart's screenshot.** At 320px with the text at 200% the
+resident's bottom nav had `scrollWidth` 456 against `clientWidth` 320 and painted "Profile" 132px
+past the row's right edge — which is the edge of the device, so a destination nobody could tap. The
+camera's own overflow check answered "none" on the same screen, because it asks the document and the
+row overflowed instead. A flex item's `min-width` defaults to `auto`, and for a word `auto` *is* the
+word, so the item refused to shrink; the fix is the item's own `min-width:0` with an ellipsized
+label. Every destination keeps its tap area, and the DOM text — and therefore the accessible name —
+is untouched; only the painted tail gives way.
+
+The same flex default, seen from the other side, destroys a fixed-size element: an item's declared
+width is only its starting size, because `flex-shrink` defaults to 1 and `min-width:auto` protects
+nothing below the element's *content*. Six 8px waiting dots painted 1.8px wide (they have no content
+at all) and the 44px round notification button painted 31x44 beside a growing title. Both declare
+`flex-shrink:0` now. Two tallies count them on every sweep — `bottom-nav items pushed off the panel`
+and `round markers painted as a sliver` — and `node tools/falsify-flex-crush.cjs` proves both can
+fail: 4 mutants, 4 caught, on a 3-screen subset at the corner where they all painted.
+
+**Three mistakes by the instruments written in this pass, recorded because each one reads as a
+pass.** The nav tally's first version computed `box.right - item.right` where it meant
+`item.right - box.right`, so it reported 13 findings on screens that fit perfectly and zero on the
+one that did not — the sign was caught by the numbers being absurd (237px "past" the edge for the
+*first* item), not by anything in the harness. The circle tally asked for at least 3px on each side,
+which excluded the 2.3px dot that motivated it: the run reported clean while the screenshot showed a
+sliver. And the sweep runner's first parser matched only `: <number>`, which walked straight past
+`horizontal overflow (a screen wider than the phone)` — that tally answers with a list of screens
+and pixel amounts, not a number, so a phone-sized defect would have passed the command written to
+catch exactly that. Making the parser fail closed on any unrecognised answer is what exposed the
+camera's own `page:` header line as a "defect": the run reported 0 of 4 corners clean with every
+tally at zero. A guard whose floor sits above its own finding is the worst kind of pass, and a
+runner that trusts its own output format is the second worst.
+
+**One fix that was tried, measured, and taken back out.** Replacing the value-label edge band
+(`cxPct > 80 ? ' r' : ...`) with the first and last row *indices* looked strictly better: an axis
+label that is thinned out of existence cannot be anchored by a percentage tuned for the unthinned
+row. It did not fix the 200% overhang, and it moved 150% from clean to one finding. Which of its two
+changes did which is not established — the axis is thinned and the value labels are not, so the two
+sets do not share edges — so the band stays and the code comment says what was measured rather than
+narrating a mechanism nobody proved.
+
+**The harness was part of the problem.** `tools/harness.cjs` answered `getComputedStyle` with a
+literal `'16px'`, which made the new type-aware rule unfalsifiable in Node: a mutant that ignored the
+measured size read identical to the correct code at the only size the double would name. The root
+size is a variable now (`app._setRootFont(32)`), the same knob `--font-scale` turns in a browser, and
+the gate check asserts *relations* — fewer labels as the setting rises, a sparse series untouched at
+every setting, never zero — rather than the numbers 4/3/2, which are derivable and would fail on a
+correct chart if the budget ever moved.
+
+**One command for the standing requirement.** `node tools/sweep-text-scale.cjs` runs the camera at
+320px @ 200%, default width @ 200%, 450px @ 135% (a vivo panel at the OPPO's setting) and the 100%
+anchor, and fails if any tally is nonzero. Anything it does not recognise counts as must-be-zero, so
+a tally added to `shot.cjs` tomorrow cannot be silently informational, and a run that prints no
+tallies at all fails as "measured nothing".
+
+**And one hazard this pass discovered about its own tooling.** A mutant family owns the file it
+breaks: `tools/falsify-*.cjs` reads the target once, writes mutants over it, and restores its
+snapshot in a `finally`. Editing `Sukinnect-next.html` while `tools/falsify-all.cjs` is running —
+which this pass did, twice — loses the edit silently, because the restore writes a copy from before
+it. The tool is right to restore what it read; the rule for the person at the keyboard is that no
+file a family can write is editable while it runs. `falsify-flex-crush` takes minutes rather than
+seconds for exactly that reason, and it is the one family whose window is long enough to be walked
+into.
+
+Numbers: gate **521** (was 520), `falsify-responsive-type` **6 of 6** (was 4, the two new mutants
+break the axis budget and the thinning divisor), `falsify-flex-crush` **4 of 4** as a new family,
+`node tools/falsify-all.cjs` **23 families, 144 mutants applied, 144 caught, 0 not applied**, probes
+**29** with both new ones answering, and the four corners of the sweep clean. The file is 11,233
+lines with `node tools/measure.cjs` to prove it.
+
+Residual, deliberately not fixed: at 320px and 200% text the nav labels read `D… F… B… M… Pr…`.
+Every one is tappable and the icons carry the identity, but the words are effectively gone. Material's
+alternative is to label only the selected item, which is a visual judgement about the app's identity
+and belongs to the owner, not to a defect list. What is *claimed* here is narrower than what a reader
+might assume: the ellipsis is CSS, so each item's DOM text — and the `aria-label` on the badged ones —
+is the whole word (measured: `textContent` is unchanged and the camera's unnamed-control tally is 0).
+Whether Chromium puts the whole word or the painted one into the platform accessibility tree is
+**not** measured on the bench, because the camera reads the DOM, not the tree. It is a
+`uiautomator dump` on a handset at maximum text scale, which is the same instrument that found the
+sheet-modality defect, and it is now an item on the handset pass.

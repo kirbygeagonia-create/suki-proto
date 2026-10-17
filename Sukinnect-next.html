@@ -664,6 +664,12 @@
   }
 
   .notif-btn{
+    /* A declared width on a flex item is only its starting size: flex-shrink defaults to 1, so
+       this 44px circle painted 31x44 at 320px with the phone's text at 200% once the title beside
+       it grew. min-width:auto, the other half of the same default, protects an item only down to
+       its own content, and this button's content is a 19px icon. The camera counts any element
+       whose radius says circle and whose box says otherwise. */
+    flex-shrink:0;
     background:rgba(255,255,255,0.15); border:none; border-radius:50%; width:var(--tap); height:var(--tap);
     display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-on-brand);
     position:relative; transition:background 0.2s;
@@ -963,10 +969,18 @@
   .bottomnav{display:flex; border-top:1px solid var(--line); background:var(--surface); flex-shrink:0; position:relative; z-index:30;}
   .navitem{
     flex:1; text-align:center; padding:6px 4px 7px; min-height:var(--tap);
+    /* `flex:1` sets the basis to zero but leaves min-width at the flex default of auto, which
+       means an item can never shrink below its own words. Measured at the panel's narrowest and
+       the platform's largest text scale (320px, 200%): the four resident labels needed 456px of
+       a 320px row and "Profile" painted 132px past the right edge of the phone — off screen, so
+       a bottom-navigation destination with no way to reach it. Giving up the automatic minimum
+       is what lets the item fit; the label loses its tail rather than its control. */
+    min-width:0;
     background:none; border:none; font-family:inherit;
     font-size:var(--t-caption); font-weight:600;
     color:var(--mist); cursor:pointer;
   }
+  .nav-label{display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .navitem .ic{font-size:var(--t-title); display:block; margin-bottom:2px;}
   .navitem.active{color:var(--deep); font-weight:800;}
   .statgrid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
@@ -1128,7 +1142,11 @@
   @keyframes livePulse{ 0%{ box-shadow:0 0 0 0 rgba(31,138,95,.45); } 70%{ box-shadow:0 0 0 7px rgba(31,138,95,0); } 100%{ box-shadow:0 0 0 0 rgba(31,138,95,0); } }
   /* Awaiting another person is not success, so it does not borrow the green live
      dot: brand blue pulses slowly to read as "in motion, nothing to do yet". */
-  .wait-dot{ display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--deep); vertical-align:-1px; animation:waitPulse 1.9s ease-in-out infinite; }
+  /* flex-shrink:0 for the same reason as .notif-btn above, and the case in its sharpest form:
+     the dot carries no content at all, so min-width:auto protects nothing and the heading beside
+     it took the row until the 8px circle painted 1.8px wide — a clipped mark where a status
+     indicator was. Six of these were painted on six screens at 320px and 200% text. */
+  .wait-dot{ display:inline-block; flex-shrink:0; width:8px; height:8px; border-radius:50%; background:var(--deep); vertical-align:-1px; animation:waitPulse 1.9s ease-in-out infinite; }
   @keyframes waitPulse{ 0%,100%{ opacity:.3; } 50%{ opacity:1; } }
 
   /* Topbar — signature brand gradient with a cyan aura */
@@ -4420,7 +4438,18 @@ function chartColumns(rows, opts) {
   /* At eight columns the week labels touched each other, so a dense series thins
      its own axis rather than rotating or truncating it — a rotated label is unreadable
      at this size and a truncated one is a lie about the period. */
-  const stride = slot < 62 ? Math.ceil(rows.length / 4) : 1;
+  /* The thinning budget is in the label’s own units. A category label needs about the same
+     pixels per character whether the type is 15px or 30px, so a budget fixed at 62 units thins
+     identically whatever the phone’s text-size setting is — and at 200% on a narrow panel that
+     left an axis label hanging 4px past a 264px chart box, which the camera counted and no
+     reading of the source could have. Dividing the budget by the measured root size keeps this
+     exactly the old rule at the default (floor(304/62)=4 slots, and ceil(n/4) is what the old
+     line computed for every n), and thins progressively as the setting grows: 12 columns draw
+     4 labels at 100%, 3 at 150%, 2 at 200%. Measured clean at all four, at 320px and at the
+     vivo’s 450 — node tools/sweep-text-scale.cjs. */
+  const rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  const fit = Math.max(1, Math.floor(w / (62 * (rootPx / 16))));
+  const stride = Math.max(1, Math.ceil(rows.length / fit));
   /* Every position below is written twice: in viewBox units for the shape, and as a
      percentage of the box for the word that belongs to it. The percentage is what
      keeps the label on its anchor when the box is narrower than 320. */
@@ -4458,7 +4487,20 @@ function chartColumns(rows, opts) {
                      : piece(r.value, 0, o.tone || 'var(--brand-primary)'));
     /* A value label is centred on its bar, so the last bar's label hangs past the plot once the
        text is bigger than the drawing — measured at 4px on the provider dashboard with the OS text
-       size raised. Near an edge, anchor to that edge instead of the bar's middle. */
+       size raised. Near an edge, anchor to that edge instead of the bar's middle.
+         This band looks improvable, and the improvement was tried and measured on 2026-10-17:
+       replacing the two percentages with row indices (first row, last row) did not fix the 200%
+       overhang and moved 150% from clean to one finding. The reason is established now rather
+       than guessed, and it is that these two lines emit two different label sets from one
+       decision. The axis is thinned, so on the 8-week earnings chart the last label *drawn* is
+       row 6 while the last *bar* is row 7; keyed on row indices, row 6's axis label gained its
+       right anchor and row 7's value label lost its — 291 of 320 units is 90.9% of the box, past
+       the 80 the band asks for, while row 6's 79.1% falls under it, and an index is not a
+       position. Anchoring each kind by its own last (the final row for the values, the final
+       *drawn* index for the axis) would be correct. It is not done here because the thinning
+       above already moves the last drawn label to 55% of the box at 200% text, so no corner
+       measures a defect this rule would fix — and a change with no failing check behind it is
+       the kind of edit this file keeps getting wrong. */
     const cxPct = (x + bw / 2) / CHART_W * 100;
     const anchor = cxPct > 80 ? ' r' : (cxPct < 20 ? ' l' : '');
     if (topVal > 0) labels.push(`<span class="chart-val${anchor}" style="left:${pctX(x + bw / 2)}; top:${pctY(topY - 5)};">${esc(fmt(topVal))}</span>`);

@@ -2000,11 +2000,42 @@ suite('honesty', async () => {
        coordinate, which stopped existing when the words moved out of the scaled SVG —
        and a check that counts nothing reports a clean floor, which is the worse way for
        a guard to fail. */
-    const axisLabels = html => (html.match(/class="chart-cat"/g) || []).length;
+    /* Matched as a class token, not as the whole attribute: a label may carry an alignment
+       modifier (`chart-cat l`) at the edges of a dense series, and a guard that stops counting
+       the moment one is added reports "no axis labels at all" and fails on a chart that is
+       painting perfectly. The original exact-match form broke two checks that way. */
+    const axisLabels = html => (html.match(/class="chart-cat[ "]/g) || []).length;
     const sparse = app.chartColumns([{ label: 'Mon', value: 2 }, { label: 'Tue', value: 3 }], { format: v => v });
     const n = axisLabels(app.chartColumns(wide, { format: v => v }));
     return n < wide.length && n >= 3 && axisLabels(sparse) === 2;
   })(), 'axis labels overlap on a dense series, or the thinning breaks a sparse one');
+
+  c.check('and it thins harder as the phone’s own text gets bigger', (() => {
+    /* The check above is a step function at the default metrics, so it cannot see the half of
+       the rule that matters on a handset: a fixed 62-unit budget thins the same way whether the
+       user’s type is 15px or 30px, which is how a 12-column axis that fits at 100% still hung
+       4px past the chart at 200%. `fit` divides the budget by the root font size the page
+       reports, so the label count falls as the setting rises and a sparse series is never
+       touched. Asserted as relations rather than as the numbers 4/3/2, because the numbers are
+       derivable and a needle that moves with them would fail on a correct chart. */
+    /* Measured through the harness’s own root size — the same knob `tools/shot.cjs
+       --font-scale` turns in a real browser. A test double pinned to a literal 16px cannot see
+       a mutant that stops consulting it, which is the difference between a check and a mirror. */
+    const axisLabels = html => (html.match(/class="chart-cat[ "]/g) || []).length;
+    const wide = Array.from({ length: 12 }, (_, i) => ({ label: 'W' + (i + 1), value: i + 1 }));
+    const sparse = [{ label: 'Mon', value: 2 }, { label: 'Tue', value: 3 }];
+    const at = (px, rows) => {
+      app._setRootFont(px);
+      return axisLabels(app.chartColumns(rows, { format: v => v }));
+    };
+    try {
+      const [a, b, d] = [16, 24, 32].map(px => at(px, wide));
+      return a < wide.length && a > b && b >= d && d >= 2
+        && [16, 24, 32].every(px => at(px, sparse) === 2);
+    } finally {
+      app._setRootFont(16);
+    }
+  })(), 'the axis keeps one budget whatever the phone’s text size is');
 
   c.check('a column chart draws no words inside the scaled box', (() => {
     /* §68's floor is a rule about painted pixels, and the camera is what measures those.
@@ -2015,8 +2046,8 @@ suite('honesty', async () => {
     const out = app.chartColumns([{ label: 'Mon', value: 2 }, { label: 'Tue', value: 3 }], { format: v => v });
     const svg = out.slice(out.indexOf('<svg'), out.indexOf('</svg>'));
     return !/<text/.test(svg) && /<div class="chart-cols">/.test(out)
-      && /class="chart-tick"/.test(out) && /class="chart-val"/.test(out)
-      && /class="chart-cat"/.test(out);
+      && /class="chart-tick[ "]/.test(out) && /class="chart-val[ "]/.test(out)
+      && /class="chart-cat[ "]/.test(out);
   })(), 'a chart is painting words inside the viewBox again');
 
   c.check('no chart is drawn from a literal data series', (() => {
