@@ -73,12 +73,15 @@ const PROBE = flag('probe', '');
    print it move when the timezone does, something is reading a calendar day
    through an instant — the class that once rendered "Verified Mar 14" as Mar 13. */
 const TIMEZONE = flag('timezone', '');
-/* Emulates an operating-system text-size setting. Nothing in CDP changes Chrome's *default*
-   font size, which is what a phone's text-size setting actually moves and what `1em` on the root
-   resolves against — so this reads the cap out of the app's own stylesheet and substitutes the
-   emulated default for `1em`. The consequence is that the flag follows the rule: change
-   `:root { font-size: … }` in the page and this measures the new behaviour, rather than quietly
-   testing a cap the application no longer has. */
+/* Emulates an operating-system text-size setting.
+   This had to be corrected after it had been trusted. The first version substituted the emulated
+   default for `1em` inside the app's own `font-size: min(1em, 20px)`, which models "the OS changes
+   the browser's default font size". Chromium on Android does not do that — it multiplies the
+   *used* font size after CSS has resolved, so min() sees an unscaled 1em, returns 16px, and the
+   platform scales that. Measured on a vivo at font_scale 1.35 the root computed 21.6px: the cap
+   never engaged, while this flag reported it holding. Setting the root font size directly is what
+   the platform's multiplication produces, so that is what is emulated — and it bypasses the CSS
+   cap on purpose, because the real device bypasses it too. */
 const FONT_SCALE = flag('font-scale', '');
 
 /* ------------------------------------------------------------------ the audit
@@ -1003,22 +1006,10 @@ async function main() {
       process.exit(1);
     }
     const applied = await session.evaluate(`(function(){
-      var rule = null, sheets = document.styleSheets;
-      for (var i = 0; i < sheets.length; i++) {
-        var rs = null; try { rs = sheets[i].cssRules; } catch (crossOrigin) { continue; }
-        if (!rs) continue;
-        for (var j = 0; j < rs.length; j++) {
-          if (rs[j].selectorText && /(^|,)\\s*:root\\s*(,|$)/.test(rs[j].selectorText)
-              && rs[j].style && rs[j].style.fontSize) { rule = rs[j].style.fontSize; break; }
-        }
-        if (rule) break;
-      }
-      var want = 'min(1em, 20px)';
-      if (!rule) return 'NO :root font-size rule found — nothing to emulate against';
-      var emulated = rule.replace(/1em/g, (16 * ${scaleFactor}) + 'px');
-      document.documentElement.style.fontSize = emulated;
-      return 'declared "' + rule + '" -> applied "' + emulated + '" -> computed '
-        + getComputedStyle(document.documentElement).fontSize;
+      document.documentElement.style.fontSize = ${(16).toFixed(0)} * ${scaleFactor} + 'px';
+      return 'root set to ' + document.documentElement.style.fontSize
+        + ' -> computed ' + getComputedStyle(document.documentElement).fontSize
+        + ' -> caption ' + getComputedStyle(document.body).fontSize;
     })()`);
     console.log('  emulating OS text size ' + FONT_SCALE + 'x → ' + applied);
   }

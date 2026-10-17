@@ -1511,7 +1511,7 @@ suite('hygiene', async () => {
   c.check('every type token is relative, so an OS text-size setting reaches the app',
     tokenDecls.length >= 10 && pxTokens.length === 0,
     pxTokens.length + ' of ' + tokenDecls.length + ' declared in px: ' + pxTokens.map(d => d.slice(0, 26)).join(', '));
-  c.check('the root caps how far the device can push it',
+  c.check('the root bounds the browser default on the web surface (Android inflates past this)',
     /:root\s*\{[^}]*font-size:\s*min\(\s*1em\s*,\s*20px\s*\)/.test(css),
     'no font-size: min(1em, 20px) on :root');
   const literalFontSizes = (css.match(/font-size:\s*[0-9.]+px/g) || []);

@@ -3050,3 +3050,44 @@ perfectly well.
 
 No page bytes changed. Gate still 517, `Sukinnect.html` still identical to `main`. The remaining
 device work is the §3f list, tracked separately.
+
+## 59. The cap that passed every test and failed on the phone
+
+The rem conversion shipped with `:root { font-size: min(1em, 20px) }` — honour the device's
+text-size setting, but never past 125%. The camera agreed: at `--font-scale=2` it reported the root
+computing 20px, identical to 1.35, four phone configurations swept clean, and a falsifier family
+caught four mutants including the tempting half-fix of pinning the root to 16px.
+
+**It was wrong, and the phone said so.** Setting `font_scale` to 1.35 on the vivo and reading the
+real page gave a root of **21.6px**, not 20px. Chromium on Android does not change the browser's
+default font size — it **multiplies the used font size after CSS resolves**, so `1em` inside `min()`
+is still the unscaled 16px, `min` returns 16, and the platform scales that to 21.6. Nothing in CSS
+or JS can bound it; the only thing that stops the inflation is `text-size-adjust: none`, which is
+precisely the option that puts the ignored-setting bug back.
+
+The flag was the reason nobody caught it. `--font-scale` emulated the OS by substituting the
+emulated default for `1em` inside the app's own rule — a model of "the OS changes the default font
+size", which is not what the OS does. **An instrument that models a mechanism wrongly will report
+success for a fix that cannot work**, and every downstream number inherited the mistake. It now
+sets the root font size directly, which is what the platform's multiplication produces, and it
+bypasses the cap deliberately because the real device bypasses it too.
+
+Consequences, all measured after the correction:
+
+- The cap stays, but its claim is fixed. It is a real bound on the **web** surface, where `1em` on
+  the root does resolve against a user-settable default; on Android it is inert. The gate check says
+  so in its own label — `the root bounds the browser default on the web surface (Android inflates
+  past this)` — because a check named after a property the app does not have on its primary target
+  is worse than no check.
+- Android therefore honours the setting **uncapped**, and the layout has to absorb it. At 135% on a
+  320px viewport three y-axis ticks escaped their chart: `--chart-gutter` was `56px`, a fixed px
+  gutter holding relative text, so "₱400" hung 4px past the box. The gutter is now
+  `calc(3.75 * var(--t-body-sm))` — 56.25px at the default, so the plot width nobody chose is
+  unchanged, and it grows when the type does. Re-swept at 100%, 135% and 150% on 320px: **every
+  tally zero, camera exit 0** on all three.
+- The value-label anchor fix from the previous pass was real but incomplete — it only caught labels
+  near the plot's edges, and the escapes turned out to be the axis ticks, not the values.
+
+Gate 520, `falsify-responsive-type` 4 of 4 after its labels were re-pointed at the honest check
+name. The lesson is the one this repository keeps being taught in a new costume: **prove the
+instrument against the thing it claims to model, not against the fix you hope for.**

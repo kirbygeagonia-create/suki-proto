@@ -29,10 +29,13 @@
      Semantic state colors stay outside the brand on purpose (section 34).
      ============================================================ */
   :root{
-  /* Honours the device's text-size setting and bounds it at 125%. On the root
-     element 1em resolves against the browser default, which is what an operating
-     system text scale changes — so min() reads as "the user's size, never more than 20px".
-     At the 16px default every token computes to exactly the px value it used to be. */
+  /* Bounds the browser's default font size on the desktop/web surface, where 1em on the root
+     resolves against a size the user can set. It does NOT cap an Android phone: measured on a
+     vivo at font_scale 1.35 the root computed 21.6px, because Chromium multiplies the *used*
+     font size after CSS resolves, so min() sees an unscaled 1em and the platform scales the
+     result. Nothing in CSS or JS can bound that — only text-size-adjust: none, which would put
+     the ignored-setting bug back. On Android the scale is therefore honoured uncapped, and the
+     layout has to absorb it; that is what --font-scale on the camera now measures. */
   font-size: min(1em, 20px);
 
     /* The provider-detail header pill sits on the brand gradient lightened by a 12%
@@ -97,7 +100,11 @@
        tick the app paints (₱400 at 15px) plus its gap plus a margin, and the camera
        measures whether any label escapes the chart box — a gutter sized by eye is how
        the first version of this hung the axis outside the card. */
-    --chart-gutter:56px;
+    /* Sized in type, not in px: the y-axis ticks are right-aligned into this gutter, so a fixed
+     56px gutter holds "₱400" at the default text size and lets it hang 4px past the chart on a
+     phone whose text-size setting is raised. 3.75 × --t-body-sm is 56.25px at 16px, so the plot
+     width nobody chose is unchanged until the type grows — then the gutter grows with it. */
+  --chart-gutter: calc(3.75 * var(--t-body-sm));
     /* Type scale. --t-caption is the floor: nothing on any screen renders below
        12px, and a label that will not fit wraps instead of shrinking. Inputs are
        16px because a smaller input makes a mobile browser zoom the page on focus.
