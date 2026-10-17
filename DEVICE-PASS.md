@@ -745,3 +745,25 @@ convert the tokens to `rem` with the multiplier capped, and fix the top bar to a
 a live `rem` conversion on the phone showed both the benefit (text 35% bigger, readable) and the cost
 ("Resident Profile" wrapped to two lines and "Log Out" ballooned into a square). Tracked as the type
 task; it also closes the long-open `px` vs `rem` owner decision.
+### §3f attempt on the vivo, 2026-10-17 — blocked by my own harness, not by the app
+
+The phone came back unlocked and `preview.22` was already installed. The walk reached the resident
+Edit-profile form with the Home Address field on screen and cleared it with 40 `KEYCODE_DEL`
+presses. Then it was gone: the page was back at sign-in and `state` was all defaults.
+
+**The reload was caused by the test, not the application.** To get the keyboard out of the way the
+harness sent `KEYCODE_BACK`. If the IME has already closed, that same key goes to the app instead —
+and the app's Back handling is correct, so it finished the activity and the next launch starts at
+sign-in. Three separate "the app reloaded mid-session" observations in this pass were all this same
+sequence. Recorded here because the alternative — reporting that the WebView recreates during form
+entry — would have been a fabricated defect, and because the fix belongs in the harness: dismiss the
+keyboard with `KEYCODE_ESCAPE` or by tapping outside the field, never with `BACK`.
+
+What that leaves unverified is unchanged: the five §3f items — concierge refusing to guess, thread
+pairing across a kill/reopen, the sheet's marked payment row against the booking record, booking with
+no address, and the provider reload check. The address item got furthest: the field was reached and
+cleared, and whether the save refuses is still unknown.
+
+One thing the attempt did establish, measured rather than assumed: the vivo reports
+`font_scale 1.0`, and at that setting `preview.22` computes a 16px root and paints the same 14px
+caption it always did — the rem conversion is a no-op for a user who has not asked for larger text.
