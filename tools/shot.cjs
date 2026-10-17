@@ -282,6 +282,12 @@ const AUDIT_JS = `(function(){
   document.querySelectorAll('#screen *, .sheet *, .auth-sheet *').forEach(el => {
     if (el.children.length) return;
     if (!(el.textContent || '').trim()) return;
+    /* Leaflet's controls are excluded from the scale test for the same reason they are
+       excluded from the tap test: their CSS ships with the library. Reporting "22px +" as
+       off the type scale put 16 failures on eight screens and every one of them was the map
+       zoom control — noise that would have sent the next reader to fix a font size the
+       application does not own. */
+    if (vendor(el)) return;
     const f = Math.round(parseFloat(getComputedStyle(el).fontSize) * 10) / 10;
     if (!f) return;
     seenSizes[f] = (seenSizes[f] || 0) + 1;
