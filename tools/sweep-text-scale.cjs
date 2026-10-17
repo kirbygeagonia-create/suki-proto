@@ -14,7 +14,7 @@
    direction, and the opposite (a new sensor silently counted as informational) is the failure
    mode this repository has been bitten by repeatedly.
 
-     node tools/sweep-text-scale.cjs            4 cases, ~5 minutes
+     node tools/sweep-text-scale.cjs            6 cases, ~9 minutes
      node tools/sweep-text-scale.cjs --scale=1.5 --width=450
                                                  a single case                                                            */
 'use strict';
@@ -45,6 +45,15 @@ const DEFAULT_CASES = [
   { why: 'narrowest phone, largest text (the worst corner the platform allows)', scale: '2', width: '320' },
   { why: 'default panel width, largest text', scale: '2', width: '' },
   { why: 'vivo 1906 at 450 CSS px, the OPPO setting that started this (1.35)', scale: '1.35', width: '450' },
+  /* Height is the other half of "any phone" and was never swept until §61: every figure in this
+     repository, including the three above, was measured at the camera's default 844px. At 480px —
+     an Android Go handset, or any phone in split-screen — a booking sheet put its own "Send
+     request" 149px below the bottom edge of the device. */
+  { why: 'short handset / split-screen at largest text (480px tall)', scale: '2', width: '320', height: '480' },
+  /* The keyboard is not emulated anywhere in this repository — there is no flag for it — so the
+     bench proxy is the height it leaves behind. On a 480px-tall phone a keyboard takes roughly
+     half, and 300px is what a resident has left while typing into the booking sheet. */
+  { why: 'a keyboard open on a short phone (300px of viewport left)', scale: '1', width: '320', height: '300' },
   { why: 'default width, default text — the anchor a clean run must also produce', scale: '1', width: '' },
 ];
 
@@ -55,7 +64,8 @@ const flag = name => {
 const only = process.argv.includes('--one');
 
 const cases = flag('scale') || flag('width')
-  ? [{ why: 'asked for on the command line', scale: flag('scale') || '1', width: flag('width') }]
+  ? [{ why: 'asked for on the command line', scale: flag('scale') || '1', width: flag('width'),
+      height: flag('height') }]
   : (only ? DEFAULT_CASES.slice(0, 1) : DEFAULT_CASES);
 
 let bad = 0;
@@ -63,7 +73,9 @@ for (const kase of cases) {
   const args = [SHOT, '--measure'];
   if (kase.scale) args.push('--font-scale=' + kase.scale);
   if (kase.width) args.push('--width=' + kase.width);
-  const shown = (kase.width || 'default') + 'px @ ' + Math.round(Number(kase.scale || 1) * 100) + '% text';
+  if (kase.height) args.push('--height=' + kase.height);
+  const shown = (kase.width || 'default') + 'x' + (kase.height || 'default') + ' @ ' +
+    Math.round(Number(kase.scale || 1) * 100) + '% text';
   process.stdout.write('\n### ' + shown + ' — ' + kase.why + '\n');
   let out;
   try {

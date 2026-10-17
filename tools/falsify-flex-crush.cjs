@@ -13,7 +13,14 @@
    other way round, an item with a declared width still shrinks *below* it when a sibling grows.
    The two are the same rule seen from either side, so they share one family.
 
-     node tools/falsify-flex-crush.cjs    ~3 minutes, needs the machine's Chrome               */
+   Mutant 3 is the one that changed while being written. It removed the notification button's
+   flex-shrink:0 and survived, because §61 gave the top bar `flex-wrap:wrap` — an action group on a
+   line of its own has room to keep its 44px. Two independent guards of one geometry, so the break
+   now removes both; a single-rule break would have reported a rule that does not exist alone. The
+   survivor was still worth having: it is the measurement that says the wrap fixed more than the
+   clipped button label that break was written for.
+
+     node tools/falsify-flex-crush.cjs    ~3 minutes, needs the machine's Chrome                */
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -32,30 +39,34 @@ const TALLIES = {
 const ARGS = [path.join(ROOT, 'tools', 'shot.cjs'), '--measure', '--width=320', '--font-scale=2',
   '--only=resident-home,provider-dash,admin-dash'];
 
-/* Single-line needles where one line can identify the site; a scoped `apply` where the string is
-   not unique (flex-shrink:0 appears five times in the file, and a needle that matches more than
-   once is a mutant applied to the wrong rule — which reads as a pass). */
+/* Each mutant is a list of steps. A step is either a single-line needle/to pair — the file is CRLF,
+   so a needle carrying a bare \n never matches and the mutant reports itself as SKIP while looking
+   like a pass — or a shape-scoped `apply`. Any step that does not land exactly once aborts the
+   mutant: a needle applied to the wrong rule reads as a pass. */
 const MUTANTS = [
   { name: 'the nav item keeps the flex default min-width, so it cannot shrink below its own word',
-    tally: 'nav', needle: '    min-width:0;', to: '    /* min-width left at auto */' },
+    tally: 'nav',
+    steps: [{ needle: '    min-width:0;', to: '    /* min-width left at auto */' }] },
   { name: 'the nav row stops sharing its width and sizes to content instead',
     tally: 'nav',
-    needle: 'flex:1; text-align:center; padding:6px 4px 7px; min-height:var(--tap);',
-    to: 'flex:0 0 auto; text-align:center; padding:6px 4px 7px; min-height:var(--tap);' },
-  { name: 'the notification button lets the title beside it take its declared width',
+    steps: [{ needle: 'flex:1; text-align:center; padding:6px 4px 7px; min-height:var(--tap);',
+      to: 'flex:0 0 auto; text-align:center; padding:6px 4px 7px; min-height:var(--tap);' }] },
+  { name: 'the notification button is left to shrink and the bar is left unable to wrap',
     tally: 'circle',
-    apply: src => cutInside(src, '.notif-btn{', 'flex-shrink:0;'),
-  },
+    steps: [
+      { apply: src => cutInside(src, '.notif-btn{', 'flex-shrink:0;') },
+      { needle: '  .topbar{ flex-wrap:wrap; }', to: '  /* no wrap */' },
+    ] },
   { name: 'the waiting dot is crushed to a sliver by the heading it sits beside',
     tally: 'circle',
-    needle: 'display:inline-block; flex-shrink:0; width:8px;',
-    to: 'display:inline-block; width:8px;' },
+    steps: [{ needle: 'display:inline-block; flex-shrink:0; width:8px;',
+      to: 'display:inline-block; width:8px;' }] },
 ];
 
 /* Remove `what` from the one rule that starts at `start` and actually declares it, or null when
-   that shape is ambiguous or absent. Located by shape rather than by position because the
-   selector is not unique in this file — `.notif-btn{` is written twice, once as the rule and once
-   as `[data-root="1"] .notif-btn` — and a mutant applied to the wrong rule reads as a pass. */
+   that shape is ambiguous or absent. Located by shape rather than by position because the selector
+   is not unique in this file — `.notif-btn{` is written twice, once as the rule and once as
+   `[data-root="1"] .notif-btn` — and because a four-space `flex-shrink:0;` appears five times. */
 function cutInside(src, start, what) {
   const sites = [];
   for (let i = src.indexOf(start); i >= 0; i = src.indexOf(start, i + 1)) {
@@ -97,22 +108,24 @@ try {
   }
   console.log('baseline: 0 items off the panel, 0 slivers at 320px @ 200% text');
   for (const m of MUTANTS) {
-    let mutated = null;
-    if (m.apply) {
-      mutated = m.apply(original);
-      if (mutated === original) mutated = null;
-      unmatched += mutated === null ? 1 : 0;
-    } else {
-      const hits = original.split(m.needle).length - 1;
-      if (hits !== 1) {
-        unmatched++;
-        console.log('SKIP  ' + m.name + '  (needle matched ' + hits + ' times, needs exactly 1)');
-        continue;
+    let mutated = original, why = null;
+    for (const step of m.steps) {
+      if (step.apply) {
+        const next = step.apply(mutated);
+        if (!next || next === mutated) {
+          why = 'a rule the step targets is not where this file expects it';
+          break;
+        }
+        mutated = next;
+      } else {
+        const hits = mutated.split(step.needle).length - 1;
+        if (hits !== 1) { why = 'a needle matched ' + hits + ' times, needs exactly 1'; break; }
+        mutated = mutated.replace(step.needle, step.to);
       }
-      mutated = original.replace(m.needle, m.to);
     }
-    if (mutated === null) {
-      console.log('SKIP  ' + m.name + '  (the rule the mutant targets is not where this file expects it)');
+    if (why) {
+      unmatched++;
+      console.log('SKIP  ' + m.name + '  (' + why + ')');
       continue;
     }
     applied++;

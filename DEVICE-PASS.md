@@ -793,3 +793,24 @@ on the bench: 320px at 200%, default width at 200%, 450px at 135%, and the 100% 
    or whether the chart should say "last 4 weeks" in its subtitle instead.
 4. The five §3f items above are still open, and the installed build (`preview.22`) predates this
    pass, so any of them needs a new build first.
+
+### What the short-viewport pass (§61) owes a handset — recorded 2026-10-17
+
+`320x480 @ 200% text` is now measured on the bench and clean across all 63 screens, but every number
+behind it comes from Chrome emulating a viewport, and the two Android modes that produce that shape
+have behaviours an emulator does not:
+
+1. **Split-screen, for real.** Enter it on the vivo (recents → split icon) and open the booking
+   sheet. The WebView's `innerHeight` drops to roughly half the panel, which is what the sweep
+   models — but Android also resizes the activity, and the keyboard can arrive inside the half.
+   Confirm the sheet's "Send request" is reachable by scrolling the sheet, and that nothing is
+   stranded when the divider is dragged back to full height.
+2. **Maximum font size, then the same sheet.** The bench sets the root font directly; the phone
+   multiplies the used size after CSS resolves. At the largest setting, read `innerHeight` and the
+   root font through `tools/device-probe.cjs` so the 480px/200% corner is confirmed to be reachable
+   by a real configuration rather than only by a flag.
+3. **The top bar now wraps.** On a narrow phone at large text the action drops to a second line, so
+   the bar is taller than it was. That is a visible change to every screen's header at that corner —
+   look at Resident Home, Notifications, and the resident's profile and confirm the bar reads as a
+   design rather than as a broken layout. If it does not, the alternative is truncating the title,
+   which this pass tried and took back out for costing the screen its name.

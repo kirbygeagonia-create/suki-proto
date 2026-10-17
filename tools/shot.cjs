@@ -93,7 +93,7 @@ const FONT_SCALE = flag('font-scale', '');
    what a real browser actually laid out.
    -------------------------------------------------------------------------------- */
 const AUDIT_JS = `(function(){
-  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], belowFloor: [], chartEscape: [], navEscape: [], squashedCircle: [], contrast: [], overlaps: [], stretched: [], broken: [], remote: [], svgSmall: [], vendor: [], mapEscape: [], occluded: [], modalInert: [], nameless: [], placeholderOnly: [], catMotion: [], hOverflow: 0 };
+  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], belowFloor: [], chartEscape: [], navEscape: [], squashedCircle: [], unreachable: [], contrast: [], overlaps: [], stretched: [], broken: [], remote: [], svgSmall: [], vendor: [], mapEscape: [], occluded: [], modalInert: [], nameless: [], placeholderOnly: [], catMotion: [], hOverflow: 0 };
   const vw = document.documentElement.clientWidth;
   out.hOverflow = document.documentElement.scrollWidth - vw;
   const TAP = 44;
@@ -251,6 +251,61 @@ const AUDIT_JS = `(function(){
     if (off > 2) out.squashedCircle.push({ cls: (el.className || '').toString().slice(0, 24),
       w: Math.round(r.width * 10) / 10, h: Math.round(r.height * 10) / 10,
       text: (el.textContent || '').trim().slice(0, 18) });
+  });
+
+  /* A control no tap can reach. Every other geometry tally here asks about painting; this one
+     asks the question a phone actually poses. A button whose box is outside the viewport with
+     nothing that scrolls, or outside an ancestor that clips it without ever offering a scroll,
+     cannot be pressed by a thumb however long the user tries — and it reports clean everywhere
+     else, because it is not clipped text (nothing clips it), not under the nav, not off the
+     type scale, and its contrast is fine. Found by sweeping the heights the repository had never
+     measured: 320x480 is a small handset, an Android Go device, or any phone in split-screen, and
+     at that size with the text at 200% the booking sheet put "Send request" 149px below the
+     bottom edge of the device and the admin's PIN dialog scattered its own Close button off both
+     edges at once. See 61. */
+  const scrollsV = v => v === 'auto' || v === 'scroll';
+  const clipsV = v => scrollsV(v) || v === 'hidden' || v === 'clip';
+  const sticksOut = (r, b) => Math.max(0, b.left - r.left, r.right - b.right, b.top - r.top, r.bottom - b.bottom);
+  const viewH = window.innerHeight;
+  const labelOf = el => (el.getAttribute('aria-label') || el.textContent || el.value || el.placeholder || '')
+    .replace(/\s+/g, ' ').trim().slice(0, 26) || '<' + el.tagName.toLowerCase() + '>';
+  /* The local is named 'over', not 'out': the results object this whole script answers with is
+     'out', and a local of the same name inside this loop would shadow it. Which is also why this
+     file's page-script comments carry no backticks at all — the scripts are template literals, so
+     one ends the string early. That hazard is written three comments above this one, and was hit
+     again while writing this one, which is the best argument for the note being here. */
+  document.querySelectorAll('#screen *, .sheet *, .auth-sheet *, .bottomnav *, .modal-layer *').forEach(el => {
+    if (!el.matches || !el.matches('button, a[href], input, select, textarea, summary, [onclick], [role="button"], .navitem, .chip')) return;
+    if (el.closest('[hidden]') || el.disabled) return;
+    /* Leaflet's panes clip on purpose and its map moves by drag, not scroll. The camera already
+       refuses to resize vendor controls; this refuses to reason about them for the same reason. */
+    if (el.closest('.leaflet-pane, .leaflet-control-container')) return;
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    let governed = false, p = el.parentElement;
+    while (p && !governed) {
+      const cs = getComputedStyle(p);
+      const over = sticksOut(r, p.getBoundingClientRect());
+      const canScroll = (scrollsV(cs.overflowY) && p.scrollHeight > p.clientHeight + 2) ||
+                        (scrollsV(cs.overflowX) && p.scrollWidth > p.clientWidth + 2);
+      if (over > 2 && (clipsV(cs.overflowY) || clipsV(cs.overflowX))) {
+        if (canScroll) { governed = true; break; }
+        out.unreachable.push({ what: labelOf(el), how: 'clipped', px: Math.round(over),
+          by: (p.id ? '#' + p.id : '.' + String(p.className).split(' ')[0]), tag: el.tagName.toLowerCase() });
+        return;
+      }
+      if (canScroll) governed = true;
+      if (cs.position === 'fixed') break;
+      p = p.parentElement;
+    }
+    const below = r.top >= viewH, above = r.bottom <= 0, right = r.left >= vw, left = r.right <= 0;
+    if (!(below || above || right || left)) return;
+    if (document.documentElement.scrollHeight > viewH + 2 || document.documentElement.scrollWidth > vw + 2) governed = true;
+    if (governed) return;
+    out.unreachable.push({ what: labelOf(el),
+      how: below ? 'below' : above ? 'above' : right ? 'right' : 'left',
+      px: Math.round(below ? r.top - viewH : above ? -r.bottom : right ? r.left - vw : -r.right),
+      by: 'viewport', tag: el.tagName.toLowerCase() });
   });
 
   /* Anything the nav actually traps. Content sliding under a glass bar while you
@@ -1210,6 +1265,7 @@ async function main() {
     tally(flat('chartEscape'), 'chart labels painted outside their own chart box', r => r.screen + '  "' + r.text + '" (' + r.cls + ') hangs ' + r.over + 'px past a ' + r.box + 'px box');
     tally(flat('navEscape'), 'bottom-nav items pushed off the panel', r => r.screen + '  "' + r.text + '" hangs ' + r.over + 'px past a ' + r.box + 'px row (the row needs ' + r.scroll + 'px)');
     tally(flat('squashedCircle'), 'round markers painted as a sliver (a flex row took their width)', r => r.screen + '  .' + r.cls + ' ' + r.w + 'x' + r.h + 'px "' + r.text + '"');
+    tally(flat('unreachable'), 'controls no tap can reach (off the viewport or clipped, with nothing that scrolls)', r => r.screen + '  <' + r.tag + '> "' + r.what + '" is ' + r.px + 'px ' + r.how + ' past ' + r.by);
     const vend = flat('vendor');
     console.log('\nvendor-owned controls excluded (Leaflet attribution + markers, not ours to resize): ' +
       vend.length + (vend.length ? '  e.g. ' + [...new Set(vend.map(r => r.what || 'unlabelled <img>'))].slice(0, 4).join(' | ') : ''));

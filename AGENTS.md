@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 11,233 lines, ONE :root block, 1,749 var() usages, 95 tokens declared with 92
+Sukinnect-next.html— 11,286 lines, ONE :root block, 1,749 var() usages, 95 tokens declared with 92
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1778,6 +1778,38 @@ the next document that copies it. `mapFallback()` degrades honestly when the til
 tile coordinates to a third-party CDN whenever there **is** a connection. Decided 2026-10-12: keep
 it, and treat the exposure as a production DPA/NPC question (slide 16) rather than a prototype bug.
 
+EVERY GEOMETRY FIGURE IN THIS REPOSITORY WAS MEASURED AT ONE HEIGHT UNTIL 2026-10-17. Width had been
+swept (320, 390, the vivo's 450) because a handset reported its density and made the question
+obvious; height was never varied from the camera's default 844px. It is the other half of "responsive
+to any phone types": 480px is an Android Go handset, a budget phone, and **any phone in split-screen**.
+Sweeping it found four screens where a primary action fell off the device — the booking sheet's "Send
+request" 149px below the bottom edge, a centred PIN dialog scattering its own Close button off the
+top edge and its action off the bottom one, and a notifications bar clipping "Mark all as read" by
+196px. The camera now counts them with `controls no tap can reach`, which asks the question no other
+tally asks: **can a thumb get to this control at all** — outside the viewport with nothing in its
+ancestor chain scrolling, or outside an ancestor that clips it without offering a scroll. A clipped
+element's rectangle does not move, only its painting does, so a viewport-only check is half the rule;
+that second half was found by a surviving mutant, not by reasoning. Nothing else sees this class: the
+text is not clipped, it is not under the nav, its contrast is fine because it paints no text, and the
+document is neither wider nor taller than the phone. Proven by
+`node tools/falsify-control-reach.cjs` — 3 breaks, 3 caught — and covered on every sweep because
+`node tools/sweep-text-scale.cjs` now includes 320x480 @ 200% text.
+
+Two rules follow from the fixes, and both are about where a sheet's height is allowed to go. A
+bottom sheet is a flex column with a fixed head and a fixed foot and a body that scrolls; the body
+needs `min-height:0` or it refuses to shrink below its content, the content spills past the sheet's
+own cap, **nothing clips a sheet**, and the phone's frame clips it instead. And the cap has to be the
+screen, not 80% of it: a cap only binds on content that exceeds it, and the old value's answer to
+that was to put a control off the device. The same applies to a centred dialog — `max-height:100%`
+and a scroll, or centring splits it off both edges at once.
+
+The fix that was taken back out is worth keeping: the first version of the top-bar rule ellipsized
+the `<h1>` instead of wrapping the bar, which left every control reachable and cost the app its
+screen names — the camera's intended-ellipsis review line went 7 → 36, with "Find Services" reading
+as a fragment. **A taller bar is information kept; a cut title is information lost**, and §40 makes
+saying what the screen is the bar's first job. The reachability tally could not tell those two fixes
+apart; the review tally caught it.
+
 THE APP HAS NO DARK MODE AND THAT WAS MEASURED, NOT ASSUMED. The file declares no `color-scheme`
 and no `prefers-color-scheme` block, which looks like an unhandled surface, and the tempting
 one-line patch was Chrome's documented opt-out. Two measurements said there is nothing to fix.
@@ -2100,6 +2132,15 @@ Prioritize:
 - booking actions
 
 Do not create controls so small that they become difficult to tap on a phone.
+
+Size is only half of reachability. A control that no scroll can bring under a thumb is the same
+defect one step further, and it is invisible to every check that measures the control's own box:
+it is not clipped, it is not covered, its tap target is the right size. It is simply off the screen.
+This is what a short viewport exposes — a 480px-tall WebView is an Android Go handset or any phone in
+split-screen — and a bottom sheet with a fixed header and a fixed footer is where it bites first,
+because the body between them has to be allowed to collapse (`min-height:0`) or the footer is pushed
+off the device with nothing to scroll it back. `node tools/sweep-text-scale.cjs` measures it;
+`node tools/falsify-control-reach.cjs` proves the measurement can fail.
 
 ---
 
@@ -2867,14 +2908,16 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate 521; whole suite **23 families, 144 mutants, 144 caught, 0 not applied**
-(`node tools/falsify-all.cjs`), of which `falsify-flex-crush` is the first family that drives the
-camera rather than the gate — a geometry rule has no Node assertion available to it.
+Gate 521; whole suite **24 families, 147 mutants, 147 caught, 0 not applied**
+(`node tools/falsify-all.cjs`), of which `falsify-flex-crush` and `falsify-control-reach` are the two
+that drive the camera rather than the gate — a geometry rule has no Node assertion available to it.
 
-Measure it with `node tools/sweep-text-scale.cjs` — the camera at 320px @ 200% text, default width
-@ 200%, 450px @ 135% (a vivo panel at the OPPO's setting), and the 100% anchor — which fails if any
-tally is nonzero and treats a tally it does not recognise as must-be-zero, so a sensor added
-tomorrow cannot be silently informational. Single corners are still runnable:
+Measure it with `node tools/sweep-text-scale.cjs` — six phone corners, the camera each time: 320px
+@ 200% text, default width @ 200%, 450px @ 135% (a vivo panel at the OPPO's setting), 320x480 @ 200%
+(a short handset or split-screen), 320x300 @ 100% (what a keyboard leaves on a small phone, since
+nothing here emulates a keyboard), and the 100% anchor — which fails if any tally is nonzero and
+treats a tally it does not recognise as must-be-zero, so a sensor added tomorrow cannot be silently
+informational. Single corners are still runnable:
 `node tools/shot.cjs --measure --width=320 --height=638 --font-scale=1.35`. The flag
 sets the root font size directly, because that is what the platform's multiplication produces; it
 does **not** substitute into the app's `min()` expression, which was the first version's error — it

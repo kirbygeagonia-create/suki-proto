@@ -3187,3 +3187,103 @@ Whether Chromium puts the whole word or the painted one into the platform access
 **not** measured on the bench, because the camera reads the DOM, not the tree. It is a
 `uiautomator dump` on a handset at maximum text scale, which is the same instrument that found the
 sheet-modality defect, and it is now an item on the handset pass.
+
+---
+
+## 61. The dimension nobody had swept: a phone that is short, and the controls that fell off it
+
+Every geometry figure in this repository — 63 screens, four corners, all of it — was measured at
+the camera's default viewport, **390x844**. Width had been swept (320, 390, 450) because a vivo had
+reported its density and made the question obvious. Height had never been varied at all. It is the
+other half of "a mobile application must be responsive to any phone types", and 480px is not a
+hypothetical: it is an Android Go handset, a 2015-era budget phone in a Philippine municipality, and
+**any phone in split-screen**, which is what half of Android's windowing modes gives a WebView.
+
+### The instrument, and why none of the existing ones saw it
+
+A new tally, `controls no tap can reach`, asks the question the others do not: can a thumb get to
+this control at all? Two ways a control fails that test, and the first version of the instrument
+knew only one:
+
+- its box is outside the viewport and **nothing in its ancestor chain scrolls**;
+- it sits outside an ancestor that clips it (`overflow:hidden`) without ever offering a scroll — a
+  clipped element's rectangle does not move, only its painting does, so a check that looks only at
+  the viewport calls it fine.
+
+The second half was found by a surviving mutant, not by reasoning: a deliberate break that pinned
+the modal layer to 110px tall produced no finding at all. Nothing else in the camera sees this class
+either — the text is not clipped (nothing clips it), it is not under the nav, its contrast is fine
+because it paints no text, and the document is not wider or taller than the phone.
+
+### What it found at 320x480 with the text at 200%
+
+Four screens, all of them the app's own primary actions:
+
+- the booking sheet painted **"Send request" 149px below the bottom edge of the device**, and the
+  fruit offer sheet its "Send offer" 370px below. `.sheet` is a flex column capped at `max-height:
+  80%` with a fixed head and a fixed foot (`flex-shrink:0` on both, deliberately), and a body that
+  scrolls — but the body had no `min-height:0`, so it refused to shrink below its content, the
+  content spilled out of the bottom of the sheet, nothing clips a sheet, and the phone's frame
+  clipped it instead.
+- the admin's security PIN dialog put its own **Close button 97px above the top edge and its action
+  90px below the bottom one at the same time**. `.modal-card` had no height cap at all, and the
+  layer centres it — a centred overflow is the worst shape this class takes, because nothing is
+  nearer and the page is not the scroller.
+- the notifications bar clipped **"Mark all as read" by 196px** and the resident's profile bar
+  clipped "Log Out" by 18px: the bar's title group could not give up width, so the action was
+  pushed past the bar's own `overflow:hidden`.
+
+The fixes are the three rules those measurements imply: the sheet's cap is the screen rather than
+80% of it, and it scrolls when even its unshrinkable parts do not fit; the modal card takes
+`max-height:100%` and scrolls; the top bar wraps and lets its children give up width. `tools/
+falsify-control-reach.cjs` puts each defect back and requires the tally to name it: 3 of 3.
+
+### Five things the instruments got wrong on the way, and one thing the fix got wrong
+
+- **The probe blamed the wrong element 209 times.** Its first version walked every ancestor and
+  flagged any clipper, so it reported every control scrolled out of `.screen` as unreachable
+  "because of `.phone`" — the desktop mockup frame, which is the viewport in app mode and is
+  governed by the scroller inside it. Once the walk stops at the first ancestor that can scroll,
+  the same 63 screens answer zero. An instrument that cries wolf gets ignored, which is worse than
+  no instrument, and this one would have been ignored within a week.
+- **The first fix cut the app's titles.** To keep the top bar's action on screen it ellipsized the
+  `<h1>` — and the camera's own review line, `single-line previews shortened with an ellipsis`,
+  went **7 → 36** across the walk, with "Find Services" and "Provider details" reduced to
+  fragments. Bar wrapping costs height; a truncated title costs the screen's identity, which §40
+  makes its first job. The tally could not tell the difference (both leave every control
+  reachable) — the review tally did.
+- **Two mutants survived, and one of them was the interesting one.** Removing `.sheet-body`'s
+  `min-height:0` left everything reachable, because the sheet now scrolls as a whole: that rule
+  governs *which part moves*, a design property no geometry check can see, so the mutant was
+  deleted rather than kept to inflate the count. Removing either top-bar guard on its own also
+  survived, because the wrap and the `min-width:0` are two independent guards of one overflow — so
+  the break removes both, and the family says why. A single-rule break there would have reported a
+  rule that does not exist alone.
+- **A comment warning about backticks in this file's page scripts contained backticks**, which
+  broke `tools/shot.cjs` at parse time. It is the second time in one session, in the very file that
+  documents the hazard.
+- **`tools/falsify-all.cjs` could not read the new family and said so.** The camera families print
+  "N of M breaks caught"; the runner's patterns only knew "mutants", so the family came back as
+  "printed no summary — nothing was proven". That is the runner failing in the only acceptable way:
+  an unparseable result is reported as unproven, so the headline total came out visibly wrong
+  instead of quietly right.
+- **Fixing that nearly introduced the opposite failure.** The two spellings order their numbers
+  differently — "applied 4, caught 3" against "3 of 4 caught" — and a single positional reader would
+  have swapped them, reporting a family that caught 3 of 4 as one that applied 3 and caught 4. The
+  shapes now carry their own readers. A runner that prints a confident wrong total is worse than no
+  runner, and this one was two characters away from doing it.
+
+### Numbers, and what the fixes visibly cost
+
+Gate **521** — unchanged, because this pass is stylesheet rules and instruments, not kernel. New
+family `falsify-control-reach` **3 of 3**; `falsify-flex-crush` **4 of 4** after its third mutant was
+corrected into a pair. `node tools/falsify-all.cjs`: **24 families, 147 mutants applied, 147 caught,
+0 not applied**. Probes **29**, none needing attention. `node tools/sweep-text-scale.cjs`:
+**6 of 6 phone corners clean** — the two new corners being 320x480 @ 200% text and 320x300 @ 100%,
+the second standing in for a keyboard open on a short phone because nothing in `tools/` emulates a
+keyboard at all. The file is 11,286 lines with `node tools/measure.cjs` to prove it.
+
+What it costs, visibly: on a short phone a bottom sheet may now fill the screen instead of stopping
+at 80%, and a top bar may take two lines instead of one. Both are the alternative to a control being
+off the device, and neither has been looked at on hardware — `DEVICE-PASS.md` carries the three
+questions, and the second of them is a judgement about the app's look rather than a defect.

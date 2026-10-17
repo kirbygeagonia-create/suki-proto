@@ -224,6 +224,20 @@
      tall square beside the title — the one place the capped scale still made the bar look wrong.
      Scoped to the bar rather than to every .btn, where a long label legitimately wraps. */
   .topbar .btn, .topbar .back-btn{ white-space:nowrap; flex:0 0 auto; }
+  /* A top bar's title group has to be allowed to give up width, or it pushes an action clean
+     out of the bar — which then clips it, because the bar's own overflow is hidden for the
+     gradient glow. Measured at 320px with the phone's text at 200%: "Mark all as read" was
+     clipped by 196px and "Log Out" by 18px, so two of the app's controls existed on that
+     screen only as a painted edge. .hb already had min-width:0; the notifications and
+     messages bars build their left group inline instead of with that class, so the rule is
+     keyed on the bar's structure rather than on a class a screen can decline to use.
+       The bar then wraps rather than truncating. The first version of this ellipsized the heading
+     instead, which saved the button and cost the screen its name: the camera's intended-ellipsis
+     review line went 7 → 36 across the walk, with "Find Services" and "Provider details" reduced
+     to fragments. A taller bar is information kept; a cut title is information lost, and §40 asks
+     every screen to say what it is. */
+  .topbar{ flex-wrap:wrap; }
+  .topbar > div{ min-width:0; }
   /* The last card on every screen sits above a fixed 62px navigation bar, so the
      scroller has to end above it. Screens used to hand-write `padding-bottom:40px`
      — less than the bar — which is how a real control (the case button, a profile
@@ -311,7 +325,16 @@
     position:fixed; inset:0; background:var(--scrim); z-index:70;
     display:flex; align-items:center; justify-content:center; padding:var(--s-4);
   }
-  .modal-card{ width:100%; max-width:350px; }
+  /* max-height:100% and a scroll, because the layer centres this box: with no cap a dialog
+     taller than the screen overflowed it on BOTH sides, so at 320x480 with the phone's text at
+     200% the admin's PIN dialog put its own Close button 97px above the top edge of the device
+     and its action 90px below the bottom one. A centred overflow is the worst shape this class
+     takes — nothing is nearer, and a user cannot scroll a page that is not the scroller.
+     The cap resolves against the layer's content box, so the padding keeps the dialog off the
+     screen's edges the way it always did. */
+  .modal-card{ width:100%; max-width:350px; max-height:100%; overflow-y:auto;
+    -ms-overflow-style:none; scrollbar-width:none; }
+  .modal-card::-webkit-scrollbar{display:none;}
   /* In the flow above the screen rather than fixed over it: a storage warning that
      covered content would be the second thing on this device hiding the first. */
   .storage-notice{
@@ -668,7 +691,11 @@
        this 44px circle painted 31x44 at 320px with the phone's text at 200% once the title beside
        it grew. min-width:auto, the other half of the same default, protects an item only down to
        its own content, and this button's content is a 19px icon. The camera counts any element
-       whose radius says circle and whose box says otherwise. */
+       whose radius says circle and whose box says otherwise.
+         This is one of two independent guards. The top bar below is allowed to wrap, so at that
+       corner the action group gets a line to itself and keeps 44px with this declaration removed —
+       which a falsifier found by surviving. Removing only one of the two leaves the geometry
+       intact, so the break that proves them removes both; do not read either as redundant. */
     flex-shrink:0;
     background:rgba(255,255,255,0.15); border:none; border-radius:50%; width:var(--tap); height:var(--tap);
     display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-on-brand);
@@ -750,7 +777,25 @@
   .sheet{
     position:relative; background:var(--surface);
     border-radius:var(--r-sheet) var(--r-sheet) 0 0;
-    box-shadow:0 -12px 34px rgba(3,0,43,.24); max-height:80%;
+    /* The cap is the viewport, not 80% of it. A sheet's head and foot are both flex-shrink:0
+       on purpose — a fixed header, a fixed action row, a body that scrolls between them — and
+       at 320x480 with the phone's text at 200% those two parts alone measured 513px of a 384px
+       box. The body collapsed to its own 12px of padding, the foot was pushed past the bottom
+       of the sheet, nothing clips a sheet, and so the phone's frame clipped it: "Send request"
+       painted 149px below the bottom edge of the device with nothing able to scroll, which is
+       the booking flow's primary action on a small handset or any phone in split-screen.
+         This changes no sheet that fits: a cap only binds on content that exceeds it, and the
+       old value's answer to that was to put a control off the screen. */
+    box-shadow:0 -12px 34px rgba(3,0,43,.24); max-height:100%;
+    /* The sheet scrolls as a last resort. Its head and foot are flex-shrink:0, so the body is
+       the only thing that can give — and at 320x480 with the text at 200% the head and foot
+       measured 533px against a 480px screen, so even a body collapsed to its own padding left
+       "Send request" 53px past the bottom edge. With this, the inner body still absorbs every
+       sheet that fits (nothing changes at ordinary heights and scales — the pinned header and
+       action row are the design), and only when the unshrinkable parts themselves overflow does
+       the whole sheet become scrollable. The scrollbars are hidden because every other scroller
+       in the app hides them; the scroll is what matters, not the chrome. */
+    overflow-y:auto; -ms-overflow-style:none; scrollbar-width:none;
     display:flex; flex-direction:column; pointer-events:auto;
     animation:sheetUp .26s cubic-bezier(.22,.9,.32,1.04) both;
   }
@@ -794,8 +839,16 @@
     color:var(--ink-soft); cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;
     font-family:inherit;
   }
-  .sheet-body{ padding:2px 18px 10px; overflow-y:auto; -ms-overflow-style:none; scrollbar-width:none; }
+  /* min-height:0 because .sheet is a flex column capped at 80%: a flex item's automatic
+     minimum is its own content, so without this the body refused to shrink to the cap. The
+     sheet stayed 80% tall and its content spilled out of the bottom of it — nothing clips a
+     sheet — and the action row (Send request, Send offer, Cancel) painted below the bottom of
+     the phone with nothing able to scroll. Measured at 320x480 with the text at 200%, which is
+     a small handset or any phone in split-screen, and the app's primary action was the thing
+     that fell off. */
+  .sheet-body{ padding:2px 18px 10px; overflow-y:auto; min-height:0; -ms-overflow-style:none; scrollbar-width:none; }
   .sheet-body::-webkit-scrollbar{display:none;}
+  .sheet::-webkit-scrollbar{display:none;}
   .sheet-group{ margin-top:14px; }
   /* Each profile body was written to head its own card with a bold title, because
      that title used to be the only thing labelling it on the page. The sheet header
