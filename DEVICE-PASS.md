@@ -375,7 +375,47 @@ and verified at the artifact level: `versionCode 22`, 2,132,502 bytes, `aapt dum
 shipped page proves which bytes are in there — `a price cannot be negative` 1, `No applications are
 waiting` 1, `daysBetween` 2, `modalAboveSheet` 2, and `Analyze the text` **0**. That is the first
 build carrying the accessibility-tree fix, the calendar-day wait count, the money guard and the
-empty verification queue, and **no device has run any of them yet.**
+empty verification queue, and **no device had run any of them until the section below.**
+
+### What has since run on it — 2026-10-17
+
+The owner cleared the storage and `.20` installed: `versionCode=22`, `targetSdk 36`, on WebView
+**148.0.7778.120**.
+
+- **Dark mode, observed rather than inferred.** The system is in night mode and the app renders
+  **fully light** — white card, pale lavender field, navy text, brand-gradient CTA, official logo
+  intact. That is the first real observation of the case the bench could only rule out from
+  `Theme.Material.Light.NoActionBar`: the shell's fixed Light theme does keep Chrome's Auto Dark
+  Theme off the palette on a dark handset.
+- **The narrow layout is clean.** At ~320 CSS px the sign-in role toggle was measured, not eyeballed:
+  `Resident` right edge 158, `Service Pro` right edge 280 inside a parent ending at 283,
+  `scrollWidth == clientWidth == 246`, `overflow: false`. It had looked clipped in a downscaled
+  screenshot and was not — the third time in this pass an instrument corrected an assumption.
+- **The accessibility-tree fix holds on a second, different device.** With the Payment Methods sheet
+  open and the picker painted above it, the platform tree lists **both** layers — `Payment Methods`,
+  `Close Payment Methods`, `Change payment method`, `Preferred payment method`, `Save method` — and
+  the sheet's `aria-modal` reads `false` from inside the real page.
+- **Three instrument traps, all false alarms, all worth keeping.** (1) `uiautomator dump` reports the
+  **active window only** — with the native select popup open it returns just its two rows, which looks
+  like the app's tree collapsed. (2) The WebView's tree is built **lazily**: an early dump returned
+  2 KB and zero text nodes, and the same tree returned 20 KB and 30 nodes a few seconds and one tap
+  later. `accessibility_enabled` was already `1`, and ColorOS refuses `WRITE_SECURE_SETTINGS` from
+  shell, so the fix is patience, not configuration. (3) A probe that sets `state.tab` without setting
+  `state.view` leaves the app on the **sign-in** screen and then reports a modal missing from a DOM
+  that was never painted — `residentProfileHub()` returned the modal while `#screen` began
+  `<div class="auth-screen">`. The same trap the camera documents for setup scripts, now on device.
+
+**`tools/device-probe.cjs` is new, and it is why any of that was answerable.** It forwards to the
+WebView's DevTools socket and evaluates an expression in the page running on the phone, with no npm
+dependencies — a hand-rolled WebSocket client, the same approach `shot.cjs` uses for Chrome. Before
+this, `tools/` could measure headless Chrome and the platform tree but could never ask a shipping
+WebView what it decided, so a disagreement between two phones was not resolvable by measurement. It
+needs `WebView.setWebContentsDebuggingEnabled(true)` in the shell, gated on `FLAG_DEBUGGABLE` so a
+release build never exposes an inspector. Two bugs found on the way there: Chrome's DevTools endpoint
+rejects `Host: localhost`, and its `Content-Length` counts **bytes** while the page title carries an
+em dash, so comparing it against a character count reads as a timeout on a socket that was answering
+perfectly well.
+
 
 Because nothing is installed on this phone, it is also the cleanest persistence fixture available:
 no store, no dump, no leftover session — the write-claims and reload checks start from a genuinely

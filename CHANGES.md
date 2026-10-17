@@ -3005,3 +3005,48 @@ from a real first run rather than whatever the vivo accumulated.
 
 No page bytes changed in this pass. `Sukinnect.html` is unchanged vs `main`, and the gate still
 reports 517 checks.
+
+## 58. A phone that could finally be asked what its WebView decided
+
+`preview.20` installed on the OPPO once its storage was cleared, and the first thing it settled was
+the question the bench could not answer: **is the accessibility-tree fix real on a second device?**
+With the Payment Methods sheet open and the picker painted above it, the platform tree now lists
+both layers — `Payment Methods`, `Close Payment Methods`, `Change payment method`, `Preferred payment
+method`, `Save method` — and the sheet's `aria-modal` reads `false` from inside the real page. Same
+answer as the vivo, different phone, different Android, WebView 148.
+
+Getting that answer needed a new instrument, because none existed. `tools/device-probe.cjs` forwards
+to the WebView's DevTools socket and evaluates an expression in the page running on the phone, with
+no npm dependencies — a hand-rolled WebSocket client, the same approach `shot.cjs` uses against
+Chrome. Until now `tools/` could measure headless Chrome and could read the platform tree, but could
+never ask a shipping WebView what it had decided, so when two phones appeared to disagree there was
+no way to resolve it except by arguing from the source. It required one shell change:
+`WebView.setWebContentsDebuggingEnabled(true)`, gated on `FLAG_DEBUGGABLE` so a release build never
+exposes an inspector.
+
+**Three false alarms, each caught before it was written down.** An early dump returned 2 KB and zero
+text nodes while the modal was on screen — the WebView builds its accessibility tree lazily, and the
+same tree came back 20 KB and 30 nodes a few seconds and one tap later; `accessibility_enabled` was
+already `1` and ColorOS refuses `WRITE_SECURE_SETTINGS` from shell, so the fix is patience, not
+configuration. A dump taken with the native select open returned exactly two rows, which reads as the
+app's tree collapsing but is `uiautomator` reporting only the **active window**. And a probe that set
+`state.tab='profile'` without setting `state.view='app'` left the app on the sign-in screen and then
+reported the modal missing from a DOM that had never been painted — `residentProfileHub()` returned
+the modal markup while `#screen` began `<div class="auth-screen">`. That is the third time this
+repository has been saved by *an instrument that reaches a state nobody can produce measures a
+fiction*, and the first time on a phone.
+
+Two other things the new device was able to say. The system is in night mode (`ui_night_mode=2`) and
+the app renders **fully light** — the first real observation of the case that §31 could only rule out
+from `Theme.Material.Light.NoActionBar`. And at ~320 CSS px, the narrow layout the vivo at 450 never
+exercised, the sign-in role toggle measured clean: both labels inside their parent, `scrollWidth ==
+clientWidth`, no overflow — after a downscaled screenshot had made it look clipped. The instrument
+corrected the eye again.
+
+Two bugs in the new tool were found by running it: Chrome's DevTools endpoint rejects `Host:
+localhost`, and its `Content-Length` counts bytes while the page title contains an em dash, so
+comparing that header against a character count reports a timeout on a socket that is answering
+perfectly well.
+
+No page bytes changed. Gate still 517, `Sukinnect.html` still identical to `main`. The remaining
+device work is the §3f list, tracked separately.
