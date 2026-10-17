@@ -2963,3 +2963,45 @@ rather than a behaviour: `Unexpected token ';'` crashed four suites and the gate
 named check ever rendering a verdict. Rewritten to render `''`, which is exactly how the queue
 shipped. No console errors across 63 screens; every other tally zero. Whole mutant suite: **21 families,
 134 mutants applied, 134 caught, 0 not applied** (was 20 / 131).
+
+## 57. A second handset that could finally test the narrow layout and dark mode, blocked by its own storage
+
+`preview.20` was cut and pushed toward a device: asset synced, `versionCode 21 → 22`,
+`:app:assembleDebug` clean in 47s, then verified at the artifact level before anything was claimed —
+2,132,502 bytes, `aapt dump badging` agreeing on the version, `assets/Sukinnect.html` extracted out
+of the APK `cmp`-identical to `Sukinnect-next.html` at **803,487 bytes**, `check-assets --apk`
+resolving every path, and grepping the shipped page to prove which bytes are in there:
+`a price cannot be negative` 1, `No applications are waiting` 1, `daysBetween` 2, `modalAboveSheet`
+2, `Analyze the text` 0. This is the first build carrying the accessibility-tree fix, the
+calendar-day wait count, the money guard and the empty verification queue.
+
+The phone offered was not the vivo but an **OPPO CPH2179**, and it is a better instrument for two
+cases this file has kept listing as untestable: `wm density` reports physical 320 with
+**`Override density: 360`** on a 720px panel, which lays the app out at **~320 CSS px** — the narrow
+case the clipping fixes were tuned against and the vivo at 450 never reached — and
+`ui_night_mode = 2` makes it the first device here in **system dark mode**, the one configuration
+where Chrome's Auto Dark Theme could rewrite the §30 palette. The bench could only measure the
+media-query half of that and rule the WebView out from `Theme.Material.Light.NoActionBar`; a real
+dark handset is the missing evidence. It does not unlock edge-to-edge: Android 10, API 29, so
+`targetSdk 36` stays closed on both phones.
+
+**Neither was tested, for two reasons that are the finding.**
+
+1. `adb install` failed with `android.os.ParcelableException: java.io.IOException: Requested
+   internal only, but not enough space` out of `PackageInstallerService.createSession`. `df` explains
+   it: `/data` is 50,132,664 KB with 49,545,480 used — **439,728 KB free, 100% used, 0.87%**, below
+   the installer's low-storage threshold. The APK is 2.1 MB, so the refusal is the threshold, not the
+   file. Freeing that partition means deleting the owner's photos and apps, which is not a call to
+   make from here to turn a test green.
+2. The connection would not hold: four drops in ten minutes, `transport_id` changing on each
+   (12 → 14 → gone), the device cycling `unauthorized → device → absent`, and `pnputil` seeing no
+   Android device while it was off the bus.
+
+**What is recorded so the next attempt does not repeat this one.** The device identity and geometry
+are in `DEVICE-PASS.md` under *A second handset*, and the build row now says plainly that no device
+has run `.20`'s bytes. Because nothing was installed, that phone is also the cleanest persistence
+fixture available — no store, no dump, no session — so the write-claims and reload checks would start
+from a real first run rather than whatever the vivo accumulated.
+
+No page bytes changed in this pass. `Sukinnect.html` is unchanged vs `main`, and the gate still
+reports 517 checks.

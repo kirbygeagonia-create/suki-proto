@@ -327,10 +327,66 @@ and one tap on a field populated every node; the same was nearly concluded twice
 field whose dump line reads `text="demo1234"` is not leaking anything: the same node carries
 `password="true"`, which is what a screen reader honours. Read the flag before the string.
 
-This phone renders at **~450 CSS px**, not the 360 the clipping cases were tuned against (720px
-panel at `Override density: 256`), so it will not exercise the narrow-device tab-rail case, and
-being Android 11 it cannot exercise the `targetSdk 36` edge-to-edge behaviour at all. Both remain
-open and neither is a fault in this build.
+## A second handset — OPPO CPH2179, measured across the midnight that cut preview.20, and why it matters
+
+Every figure above belongs to the vivo 1906. A second phone was connected to run `preview.20` on,
+and it is a **better instrument for two of the cases this file has kept calling untestable** — so
+they are recorded here even though the pass never ran, because the reason it did not run is itself
+the finding.
+
+| | Measured off the device |
+|---|---|
+| Identity | `ro.product.brand` **OPPO**, `ro.product.model` **CPH2179**, serial `S4CUYTJB6HNNWC49` |
+| Android | **10**, `ro.build.version.sdk` **29** |
+| Panel | `wm size` → `Physical size: 720x1600` |
+| Density | `wm density` → physical **320**, **`Override density: 360`** |
+| CSS viewport | **720 × 160 ÷ 360 ≈ 320 CSS px** — computed, and it is the narrow case |
+| System theme | `settings get secure ui_night_mode` → **`2` = UI_MODE_NIGHT_YES**, the device is in **dark mode** |
+| App state | `pm list packages com.sukinnect.app` → **empty. Nothing installed, no store, no dump** |
+
+**Two surfaces the vivo could not reach.** At ~320 CSS px this is the narrow layout every clipping
+case was tuned against and the vivo at 450 never exercised — including the provider tab rail that
+clipped its fourth label mid-word at 360px. And `ui_night_mode=2` makes it the first phone here in
+dark mode, which is the one configuration where Chrome's Auto Dark Theme could rewrite the §30
+palette; the bench could only measure the media-query half of that and rule the WebView out from
+`Theme.Material.Light.NoActionBar`, so a real dark handset is the missing evidence.
+
+**Android 10 does not unlock the edge-to-edge question.** `targetSdk 36` forces edge-to-edge at
+API 35+, and this device is API 29 — so that item stays open on both phones, not just the vivo.
+
+**Why the pass did not run, in the order it failed.**
+
+1. **`/data` is full.** `df` reports 50,132,664 KB total, 49,545,480 used, **439,728 KB available —
+   100% used, 0.87% free** — and `adb install` failed with
+   `android.os.ParcelableException: java.io.IOException: Requested internal only, but not enough
+   space` from `PackageInstallerService.createSession`. The APK is 2,132,502 bytes; the refusal is
+   the installer's low-storage threshold, not the size of the file. Freeing space is the owner's
+   call — it is their photos and apps on that partition, and deleting them from here would be
+   destroying someone's data to make a test pass.
+2. **The connection would not hold.** Four drops in ten minutes, `transport_id` changing on each
+   (12 → 14 → gone), the device alternating `unauthorized` → `device` → absent, and `pnputil`
+   seeing no Android device while it was off the bus. Typical of a phone whose ADB daemon is killed
+   when the screen sleeps, or a cable carrying power but not data reliably.
+
+**What is already done for it, so the next attempt starts at the install.** `preview.20` is built
+and verified at the artifact level: `versionCode 22`, 2,132,502 bytes, `aapt dump badging` agrees,
+`assets/Sukinnect.html` extracted out of the APK is `cmp`-identical to `Sukinnect-next.html` at
+**803,487 bytes**, `check-assets --apk` resolves every path the page asks for, and grepping the
+shipped page proves which bytes are in there — `a price cannot be negative` 1, `No applications are
+waiting` 1, `daysBetween` 2, `modalAboveSheet` 2, and `Analyze the text` **0**. That is the first
+build carrying the accessibility-tree fix, the calendar-day wait count, the money guard and the
+empty verification queue, and **no device has run any of them yet.**
+
+Because nothing is installed on this phone, it is also the cleanest persistence fixture available:
+no store, no dump, no leftover session — the write-claims and reload checks start from a genuinely
+first-run state rather than from whatever the vivo accumulated.
+
+The vivo 1906 renders at **~450 CSS px** (720px
+panel at `Override density: 256`), so it does not exercise the narrow-device tab-rail case, and
+being Android 11 it cannot exercise the `targetSdk 36` edge-to-edge behaviour at all. The OPPO
+above reaches neither either — Android 10, so edge-to-edge stays closed on both handsets — but at
+~320 CSS px it is the first device here that would exercise the narrow layout, and it is the first
+in system dark mode, which is one of the reasons the storage block above is worth clearing.
 
 The painted-page row is what the `--file=` flag added to `tools/shot.cjs` exists for. The
 camera could previously photograph only `Sukinnect-next.html` at the repo root, where
