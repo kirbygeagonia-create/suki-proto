@@ -708,3 +708,40 @@ Which of the three groups failed, on which screen, and a photo or screen recordi
 is the subject — a still screenshot cannot show a flash or a stutter. Everything in §1 and §2 is
 fixable in the page; §3's back-button finding may need the shell, and that is a separate change
 to a separate project.
+
+### Second-handset walk, 2026-10-17 — what got settled and what did not
+
+**Settled on the OPPO, by reading the screen or the page:**
+
+- **§22 holds on hardware.** The resident's active-booking card shows **"Stage 5 of 6: In progress"**
+  and **"Pending (Cash on Arrival)"** as two separate pills — booking lifecycle and payment lifecycle
+  are not merged, on a real phone, not just in the gate.
+- **§26 holds.** The Messages list is booking-contextual: each row names the provider, the trade, the
+  barangay and the last message, with `All 7` / `Unread 5` filters — not a social feed.
+- **§75's wording is right on the device.** The concierge carries *"Describe the problem or attach a
+  photo. This…"* and its action reads **"Prepare the job briefing"** — confirmed on a second phone
+  after the label change.
+- **Storage works on this phone even with `/data` at 100%.** The empty `localStorage` looked like the
+  full-disk case the storage-truth pass was built for, and it was not: a raw write succeeded, read
+  back, `persist()` returned `true`, and two keys were present afterwards. The inference was wrong and
+  the measurement caught it before it was written down.
+- **A mid-session reload returned the app to sign-in, which is correct** — no destination is
+  persisted, so a process kill is honest rather than confusing. Not a defect.
+
+**Not settled — the five §3f items remain un-walked** (concierge refusing to guess, thread pairing
+across a kill/reopen, the sheet's marked payment row against the booking record, booking with no
+address, the provider reload check). The concierge test got as far as typing *"The garden gate hinge
+is loose"* through the real edit path and clicking the painted **Prepare the job briefing** button,
+which reported `clicked: true`; the answer was never read, because the page reloaded in between. The
+blocker is the harness, not the app: on this device `adb shell input text` inserts `%20` **literally**
+(`%s` is the working escape), the soft keyboard compresses the layout and pushes the submit button
+under the nav bar so a remembered coordinate taps **Messages** instead, and a synthetic `.click()` on
+the sign-in button does not sign in. Each is solvable; none was worth more of this session.
+
+**The real finding from the phone is not on that list:** the app ignores the device's text-size
+setting. Measured — `font_scale = 1.35`, the root font computes to `21.6px`, and painted text stays
+`14px` because every type token is a hard `px` and no `text-size-adjust` exists. Decided on the spot:
+convert the tokens to `rem` with the multiplier capped, and fix the top bar to absorb larger text —
+a live `rem` conversion on the phone showed both the benefit (text 35% bigger, readable) and the cost
+("Resident Profile" wrapped to two lines and "Log Out" ballooned into a square). Tracked as the type
+task; it also closes the long-open `px` vs `rem` owner decision.
