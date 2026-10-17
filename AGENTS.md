@@ -2820,9 +2820,34 @@ worth saying because they fail differently: no essential interface text below 14
 *measured in the browser* by `node tools/shot.cjs --measure`, because a source grep cannot see
 what a scaled `viewBox` or a `<select>` with no declaration paints; and numerals sharing the
 face of the words beside them holds because every `font-family` in the rebuild goes through
-the two tokens rather than being typed into a rule. The type tokens are pixel values, not
-`rem`, so browser zoom reflows the app but an operating-system text-scale setting does not —
-recorded as a known limitation, not as a decision.
+the two tokens rather than being typed into a rule.
+
+THE TYPE SCALE IS `rem` NOW, AND THAT SENTENCE USED TO SAY THE OPPOSITE. The tokens were
+`14px…30px`, which meant a phone's text-size setting reached the root font and stopped there: on
+an OPPO at `font_scale 1.35` the root computed 21.6px while painted text stayed 14px, so Sukinnect
+was the one app on the device ignoring a setting its user had deliberately turned on. All ten
+tokens are `rem` (521 `font-size` declarations already went through them and none set a literal px,
+so the conversion propagated by itself) and no rule may set a literal px font size — the hygiene
+suite checks all three of those now, with a positive control requiring at least ten token
+declarations.
+
+**Android's inflation cannot be capped from the page.** `:root { font-size: min(1em, 20px) }` bounds
+the *web* surface, where `1em` resolves against a user-settable browser default. It does not bound a
+phone: Chromium multiplies the used font size after CSS resolves, so `min()` sees an unscaled 16px
+and the platform scales the result — measured 21.6px on a vivo at 1.35 with the cap in place. The
+only thing that stops it is `text-size-adjust: none`, which reinstates the original bug, so the
+scale is honoured uncapped on Android and **the layout must absorb it**. That is a real obligation,
+not a preference: a fixed-px `--chart-gutter` holding relative text let three y-axis ticks hang past
+their chart at 135%, and it is now `calc(3.75 * var(--t-body-sm))`, which is the same 56px at the
+default and grows only when the type does. Anything that reserves space for text has to be sized in
+type units too — check that when adding a gutter, rail, chip row or fixed-height box.
+
+Measure it with `node tools/shot.cjs --measure --width=320 --height=638 --font-scale=1.35`. The flag
+sets the root font size directly, because that is what the platform's multiplication produces; it
+does **not** substitute into the app's `min()` expression, which was the first version's error — it
+modelled a mechanism Android does not use and reported a cap holding on four phone configurations
+while the real phone ignored it. An instrument that models a mechanism wrongly certifies a fix that
+cannot work.
 
 Use:
 - strong display type for major page titles
