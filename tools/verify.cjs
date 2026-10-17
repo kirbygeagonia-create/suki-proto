@@ -1501,6 +1501,22 @@ suite('hygiene', async () => {
   c.check('the display face is an alias, so the decorative serif stays out',
     /--font-display:\s*var\(--font-ui\)/.test(css) && !/font-family:\s*[^;]*Fraunces/.test(css),
     '--font-display is not var(--font-ui)');
+
+  /* The type scale has to be relative, or the app ignores the phone's text-size setting.
+     Measured on an OPPO at font_scale 1.35: the root computed 21.6px and painted text stayed
+     14px, because every token was a hard px — so Sukinnect was the one app on the device that
+     did not grow. These three checks are what stops that coming back by edit. */
+  const tokenDecls = (css.match(/--t-[a-z0-9-]+:\s*[^;]+/g) || []);
+  const pxTokens = tokenDecls.filter(d => /:\s*[0-9.]+px/.test(d));
+  c.check('every type token is relative, so an OS text-size setting reaches the app',
+    tokenDecls.length >= 10 && pxTokens.length === 0,
+    pxTokens.length + ' of ' + tokenDecls.length + ' declared in px: ' + pxTokens.map(d => d.slice(0, 26)).join(', '));
+  c.check('the root caps how far the device can push it',
+    /:root\s*\{[^}]*font-size:\s*min\(\s*1em\s*,\s*20px\s*\)/.test(css),
+    'no font-size: min(1em, 20px) on :root');
+  const literalFontSizes = (css.match(/font-size:\s*[0-9.]+px/g) || []);
+  c.check('no rule sets a literal px font size — the scale is the only source',
+    literalFontSizes.length === 0, literalFontSizes.slice(0, 5).join(' | '));
   return c;
 });
 

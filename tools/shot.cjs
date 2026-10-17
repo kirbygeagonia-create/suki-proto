@@ -73,6 +73,13 @@ const PROBE = flag('probe', '');
    print it move when the timezone does, something is reading a calendar day
    through an instant — the class that once rendered "Verified Mar 14" as Mar 13. */
 const TIMEZONE = flag('timezone', '');
+/* Emulates an operating-system text-size setting. Nothing in CDP changes Chrome's *default*
+   font size, which is what a phone's text-size setting actually moves and what `1em` on the root
+   resolves against — so this reads the cap out of the app's own stylesheet and substitutes the
+   emulated default for `1em`. The consequence is that the flag follows the rule: change
+   `:root { font-size: … }` in the page and this measures the new behaviour, rather than quietly
+   testing a cap the application no longer has. */
+const FONT_SCALE = flag('font-scale', '');
 
 /* ------------------------------------------------------------------ the audit
    A screenshot shows one screen to one pair of eyes; these numbers run over every
@@ -238,10 +245,24 @@ const AUDIT_JS = `(function(){
       out.truncated.push({ text: t.slice(0, 30), lost: el.scrollWidth - el.clientWidth, hidden: true });
   });
 
-  /* the type scale */
+  /* the type scale. Read by PAINTING each token, not by parsing its declaration: the tokens
+     are rem now, so parseFloat("--t-caption: 0.875rem") answers 0.875 and every element on the
+     page suddenly looked off-scale — 2831 reports from a reference list that had stopped
+     measuring anything. A probe element resolves whatever unit the token uses to the px the
+     browser actually applies, so this survives px, rem, or a root font size the OS changed. */
   const rootS = getComputedStyle(document.documentElement);
+  const probe = document.createElement('span');
+  probe.style.position = 'absolute';
+  probe.style.fontSize = '0px';
+  probe.style.height = '0';
+  probe.style.overflow = 'hidden';
+  document.body.appendChild(probe);
   const scale = ['t-display','t-title-lg','t-num','t-title','t-lead','t-body-lg','t-input','t-body','t-body-sm','t-caption']
-    .map(t => parseFloat(rootS.getPropertyValue('--' + t))).filter(Boolean);
+    .map(t => { probe.style.fontSize = 'var(--' + t + ')'; return parseFloat(getComputedStyle(probe).fontSize); })
+    .filter(v => isFinite(v) && v > 0);
+  probe.remove();
+  out.scalePx = scale.map(v => Math.round(v * 10) / 10);
+  out.rootPx = parseFloat(rootS.fontSize);
   const seenSizes = {};
   /* A hard floor, checked separately from "is this a declared token". The scale test
      allows 0.7px of rounding noise, and 14 - 13.3 is 0.6999999999 in floating point —
@@ -974,6 +995,33 @@ async function main() {
      return true;
   })()`);
   await sleep(500);
+
+  if (FONT_SCALE) {
+    const scaleFactor = Number(FONT_SCALE);
+    if (!isFinite(scaleFactor) || scaleFactor <= 0) {
+      console.error('--font-scale wants a number like 1.35, got: ' + FONT_SCALE);
+      process.exit(1);
+    }
+    const applied = await session.evaluate(`(function(){
+      var rule = null, sheets = document.styleSheets;
+      for (var i = 0; i < sheets.length; i++) {
+        var rs = null; try { rs = sheets[i].cssRules; } catch (crossOrigin) { continue; }
+        if (!rs) continue;
+        for (var j = 0; j < rs.length; j++) {
+          if (rs[j].selectorText && /(^|,)\\s*:root\\s*(,|$)/.test(rs[j].selectorText)
+              && rs[j].style && rs[j].style.fontSize) { rule = rs[j].style.fontSize; break; }
+        }
+        if (rule) break;
+      }
+      var want = 'min(1em, 20px)';
+      if (!rule) return 'NO :root font-size rule found — nothing to emulate against';
+      var emulated = rule.replace(/1em/g, (16 * ${scaleFactor}) + 'px');
+      document.documentElement.style.fontSize = emulated;
+      return 'declared "' + rule + '" -> applied "' + emulated + '" -> computed '
+        + getComputedStyle(document.documentElement).fontSize;
+    })()`);
+    console.log('  emulating OS text size ' + FONT_SCALE + 'x → ' + applied);
+  }
 
   const manifest = [];
   for (const [name, nav] of wanted) {

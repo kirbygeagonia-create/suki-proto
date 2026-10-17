@@ -29,6 +29,12 @@
      Semantic state colors stay outside the brand on purpose (section 34).
      ============================================================ */
   :root{
+  /* Honours the device's text-size setting and bounds it at 125%. On the root
+     element 1em resolves against the browser default, which is what an operating
+     system text scale changes — so min() reads as "the user's size, never more than 20px".
+     At the 16px default every token computes to exactly the px value it used to be. */
+  font-size: min(1em, 20px);
+
     /* The provider-detail header pill sits on the brand gradient lightened by a 12%
        white overlay, and #FFB800 measures 3.14:1 there — over the 3:1 floor a graphic
        needs, by 0.14. This tint measures 3.80:1. On flat navy #FFB800 is 11.66:1, so
@@ -98,10 +104,10 @@
        The steps below 20px were always in use — 13px was typed by hand sixty-four
        times and 17-18px fourteen — they simply had no names, so every screen chose
        its own. */
-    --t-caption:14px;   --t-body-sm:15px;  --t-body:16px;
-    --t-body-lg:17px;   --t-input:16px;    --t-lead:18px;
-    --t-title:20px;     --t-num:22px;      --t-title-lg:24px;
-    --t-display:30px;
+    --t-caption:0.875rem;   --t-body-sm:0.9375rem;  --t-body:1rem;
+    --t-body-lg:1.0625rem;   --t-input:1rem;    --t-lead:1.125rem;
+    --t-title:1.25rem;     --t-num:1.375rem;      --t-title-lg:1.5rem;
+    --t-display:1.875rem;
     /* One UI family everywhere. Atkinson Hyperlegible Next leads because the
        corrective brief makes letterform distinction a requirement, and its wider
        spacing and larger x-height are the point — the trial measured no clipped
@@ -206,6 +212,11 @@
      instead of pushing the actions off the screen. */
   .topbar .hb{ display:flex; align-items:center; gap:10px; min-width:0; }
   .topbar .hb > div{ min-width:0; }
+  /* An action in a top bar keeps its label on one line and takes only the width it needs.
+     Without this, a bigger text size wrapped "Log Out" onto two lines and the button read as a
+     tall square beside the title — the one place the capped scale still made the bar look wrong.
+     Scoped to the bar rather than to every .btn, where a long label legitimately wraps. */
+  .topbar .btn, .topbar .back-btn{ white-space:nowrap; flex:0 0 auto; }
   /* The last card on every screen sits above a fixed 62px navigation bar, so the
      scroller has to end above it. Screens used to hand-write `padding-bottom:40px`
      — less than the bar — which is how a real control (the case button, a profile
@@ -1030,6 +1041,11 @@
   .chart-tick{left:calc(var(--chart-gutter) - 6px); transform:translate(-100%,-50%); color:var(--mist);}
   .chart-val{transform:translate(-50%,-100%); color:var(--ink); font-weight:700;}
   .chart-cat{transform:translate(-50%,-100%); color:var(--mist);}
+  /* Near the plot's edges, anchor outward rather than centring on the bar — see the
+     cxPct test where these labels are emitted. Two classes beat one, so order is not
+     load-bearing here. */
+  .chart-val.l,.chart-cat.l{transform:translate(0,-100%);}
+  .chart-val.r,.chart-cat.r{transform:translate(-100%,-100%);}
   .devicebar{
     display:flex; justify-content:space-between; padding:8px 24px 2px; font-size:var(--t-caption); font-weight:600; letter-spacing:0.4px; color:var(--ink); flex-shrink:0;
   }
@@ -4433,8 +4449,13 @@ function chartColumns(rows, opts) {
     const topY = CHART_PAD.t + inner - hOf(topVal);
     shapes.push(pair ? piece(r.value, 0, o.tone || 'var(--brand-primary)') + piece(r.value2, one + 3, o.tone2 || 'var(--brand-secondary)')
                      : piece(r.value, 0, o.tone || 'var(--brand-primary)'));
-    if (topVal > 0) labels.push(`<span class="chart-val" style="left:${pctX(x + bw / 2)}; top:${pctY(topY - 5)};">${esc(fmt(topVal))}</span>`);
-    if (i % stride === 0) labels.push(`<span class="chart-cat" style="left:${pctX(x + bw / 2)}; top:${pctY(h - 8)};">${esc(r.label)}</span>`);
+    /* A value label is centred on its bar, so the last bar's label hangs past the plot once the
+       text is bigger than the drawing — measured at 4px on the provider dashboard with the OS text
+       size raised. Near an edge, anchor to that edge instead of the bar's middle. */
+    const cxPct = (x + bw / 2) / CHART_W * 100;
+    const anchor = cxPct > 80 ? ' r' : (cxPct < 20 ? ' l' : '');
+    if (topVal > 0) labels.push(`<span class="chart-val${anchor}" style="left:${pctX(x + bw / 2)}; top:${pctY(topY - 5)};">${esc(fmt(topVal))}</span>`);
+    if (i % stride === 0) labels.push(`<span class="chart-cat${anchor}" style="left:${pctX(x + bw / 2)}; top:${pctY(h - 8)};">${esc(r.label)}</span>`);
   });
   return `<div class="chart-cols"><div class="chart-plot"><svg viewBox="0 0 ${CHART_W} ${h}" role="img" aria-label="${esc(o.aria || chartSummary(rows, fmt))}">${shapes.join('')}</svg>${labels.join('')}</div>${ticks.join('')}</div>`
     + chartSrSummary(rows, fmt);
