@@ -2544,3 +2544,959 @@ other eleven of its kind. §47's "47 fields" sentence is annotated where it stan
 `DEVICE-PASS.md` row that carried it now states 69 of 69.
 
 **No shipped bytes moved** — three tool files and two documents, and the gate still reports 502 checks.
+
+## 50. The shell has a Call button that dials nothing, and the check named after it reads markup
+
+With the handset still absent, the one surface no instrument reaches was reviewed by reading it:
+`Sukinnect-Android/app/src/main/java/com/sukinnect/app/MainActivity.java` — the untracked shell that
+already hid one defect of exactly this shape, the photo button with no `WebChromeClient` that worked
+in every browser and did nothing on a phone.
+
+**The page offers two `tel:` controls.** `href="tel:${DEMO_HOTLINE}"` appears twice
+(`+639170001122`), and the shell set `web.setWebViewClient(new WebViewClient())` — a bare default.
+Android's WebView does not hand an unknown scheme to the system: it *navigates* to `tel:+63…`, fails
+it with `ERR_UNKNOWN_URL_SCHEME`, and replaces the running prototype with a system error page. In a
+desktop browser the same click works, because the browser gives the scheme to the OS before the page
+notices — which is why no instrument in `tools/` could ever have seen this.
+
+**And the gate has a check called "a call control dials" that cannot see it either.** It asserts
+`(body.match(/href="tel:/g) || []).length >= 2` — the markup exists. A control pinned to its own
+presence, the same shape as a check that counts a label instead of a verdict, and the behaviour it
+names lives in a file the gate never loads. The label is now **"the page paints a dial control
+carrying the number on the record"**, because the old name promised a verdict the assertion cannot
+reach, and the dialling itself is a §3f check on the bench.
+
+The fix is in `MainActivity`: `shouldOverrideUrlLoading`, both overloads, routes any scheme that is
+not http/https/file/data/about/blob out to an `Intent` — `ACTION_DIAL` for `tel:`, deliberately not
+`ACTION_CALL`, because dialling asks no permission and placing a call does. A scheme no app on the
+device can take is swallowed rather than navigated, so the failure mode is a button that does nothing,
+not an app that disappears. The evidence available without a phone: `javac -cp
+android-36/android.jar` compiles clean, apart from the expected deprecation note on the `String`
+overload kept as a backstop. It reaches a handset only in a **new build**, and the §3f item added
+alongside this asks the bench to confirm the dialer opens pre-filled, that returning lands on the same
+screen, and that no error page appears.
+
+**One stale instruction found on the way in.** §3f told the bench "`SCHEMA_VERSION` is 15" while the
+app has been at 16 since the reload pass — so the sentence describing the refusal notice mis-named the
+first thing a phone holding an older dump would see. Corrected, and now says plainly that the amber
+notice on that install is the notice working, not a fault.
+
+**No shipped bytes moved.** This change lives in the gitignored shell and in `DEVICE-PASS.md`;
+`git status` will never show the first half of it, which is precisely why the checklist carries it.
+
+**The shell fix was then built and proved at the level it can be proved.** `1.2-preview.16`
+(`versionCode 18`, 2,131,290 bytes, `aapt dump badging` read off the artifact) — **no page bytes
+moved**, so the bundled asset is the same 800,763 bytes `cmp`-identical to the file on `main`, and
+`Sukinnect-Android/tools/check-assets.cjs --apk` resolves all 48 paths the page asks for inside the
+APK. The dial routing was confirmed in the **shipped bytecode**, not the source: `dexdump -d
+classes2.dex` shows the compiled method holding `"http" "https" "file" "data" "about" "blob"`, then
+`"tel"`, then `"android.intent.action.DIAL"`. Two things nearly went wrong in the checking, and both
+are the same shape as everything else in this log. The first build attempt **failed** in
+`:app:packageDebug` with an IOException snapshotting an intermediate — a OneDrive placeholder under
+a synced tree, not the change; clearing `app/build/intermediates/incremental/packageDebug` gave
+`BUILD SUCCESSFUL in 8s`. And the first bytecode check grepped `classes.dex`, came back **zero** for
+all three strings including one the code certainly contains, and read as "my fix is missing from the
+APK" — because `classes.dex` here is a 2,156-byte stub and the application is in `classes2.dex`.
+Search every dex, or disassemble; a file that contains nothing also matches nothing.
+
+**The whole mutant suite was re-run across this, and it is clean:** `node tools/falsify-all.cjs`
+reports **17 families, 118 mutants applied, 118 caught, 0 not applied, 0 missed** — the two new
+families from §43/§44 (typography, credential-pair) included alongside the fifteen — and
+`Sukinnect-next.html` came out `git diff`-identical after 118 apply-and-restore cycles. The gate
+reports 502 checks with the dial control renamed. What that number does *not* cover is the shell:
+`MainActivity.java` is outside every instrument in this repository, and its proof today is a clean
+`javac` and a checklist item, nothing more.
+
+## 51. Sweeping the class the dial bug belonged to found a caption that lied and a parser that lied
+
+Asked whether anything was left before the handset work, the honest move was to sweep the whole
+category the `tel:` defect belongs to — every browser capability the page might expect the shell to
+mediate — rather than answer from a list.
+
+**The category came back clean.** `tel:` is the only non-web scheme in the page (2 occurrences, both
+handled now). And nothing else asks the phone for anything: `target="_blank"` 0, `window.open` 0,
+geolocation 0, clipboard 0, `requestFullscreen` 0, `navigator.share` 0, vibrate 0, service workers 0,
+IndexedDB 0, `getUserMedia` 0, `FileReader` 0. The 54 "Notification" hits are the app's own
+`NOTIFICATIONS` records, not the web API — checked rather than assumed, because a grep that flatters
+a clean bill is worth as much scepticism as one that finds a defect.
+
+**What the sweep did turn up was a caption.** The concierge button said **"Analyze the text and
+photo"**, while two other screens state plainly that the prototype cannot do that: *"This prototype
+keeps the picture on your device. Nothing is uploaded, so the provider sees the name you gave it, not
+the photo"* and *"This prototype does not read pictures, so a photo on its own cannot be sorted."* The
+handlers keep `file.name` (the fruit draft also `sizeBytes`) and render no thumbnail anywhere. §75
+asks media interactions to include a preview, so a gap exists — but the gap that misleads is the
+label, not the absent thumbnail, and it is now **"Prepare the job briefing"**, which is what the
+in-flight state ("Preparing the job briefing…") and the result ("Briefing ready") already call it.
+The owner chose the relabel over building a preview; §75 records the limit, so nobody "fixes" the
+mismatch by making the copy claim more. Verified in the painted page, not the source: a probe reads
+`{"text":"Prepare the job briefing","w":328,"h":49}` — above the tap floor, inside the screen.
+
+**Chasing the probe twice found a real bug in the camera.** That inline probe failed twice with
+`page threw: SyntaxError: Unexpected token ')'`, and both times the failure was blamed on shell
+quoting. It was `shot.cjs`'s own argument parser: `flag()` did `hit.split('=')[1]`, so
+`--probe='(function(){var b=…})()'` reached the page truncated at its first `=` — as
+`(function(){var b`. Every inline expression containing an assignment, which is nearly all of them,
+was silently amputated and the tool reported the *page* as faulty. Fixed to slice after the first
+`=`; the same command that failed twice now answers. The lesson is the one this log keeps learning:
+**a surprising error is a reason to read the instrument, not to route around it** — routing around it
+twice is what let it survive.
+
+**Re-measured, because this was the first change in several passes to move app bytes** (two bytes, the
+label): camera at 320 / 390 / 450 across 62 screens, every tally zero including clipped text; the
+full mutant suite, **17 families, 118 mutants applied, 118 caught, 0 not applied**; gate 502.
+
+**Re-synced and rebuilt as `1.2-preview.17`** (`versionCode 19`, 2,131,282 bytes, `aapt dump
+badging`). Two bytes of copy were enough to make the previous build wrong to install: an APK showing a
+label the repository no longer contains is exactly the drift `DEVICE-PASS.md` exists to catch. Proved
+at the artifact level — `check-assets.cjs --apk` resolves all 48 paths, the extracted page contains
+`Prepare the job briefing` once and `Analyze the text` nowhere, `ACTION_DIAL` is still in
+`classes2.dex`, and the staged copy repainted at 360×640 with every tally zero.
+
+**And two self-inflicted defects, both caught before they shipped.** Editing a table row with a
+replacement that spanned several lines split a single-line markdown row in two and orphaned its tail —
+invisible in a diff, obvious the moment the row was measured: 202 characters where it had been 1,028,
+and the next line no longer starting with `|`. It happened **twice**, because the first repair did not
+change the habit that caused it; the second row was found only because a check was written after the
+first ("any line starting with `|` must end with one") and it named the `:app:assembleDebug` row
+immediately. Both rejoined and verified by content rather than by hope — `admin-audit` and the
+72-broken-images warning back in the row they belong to, all rows well-formed. The rule that comes out
+of it: a multi-line replacement must never target a single-line structure, and after any edit to a
+table, re-measure the table rather than trusting that the edit landed where it was meant to.
+
+## 52. The handset produced two defects that no screen on this machine could see
+
+`preview.17` went onto the vivo to work down DEVICE-PASS §3f. Four items passed — the dialler,
+a chat message surviving a force-stop, the audit log stamping `Oct 15, 2026 - 3:17 PM` while
+`adb shell date` read `15:18`, and the console's read-only rows — and the fifth, the payment
+picker, produced two defects in a single walk.
+
+Both were found with `adb shell uiautomator dump`, which is the **system accessibility tree**
+rather than the DOM, and that distinction is the whole entry. Every instrument in `tools/` reads
+the page: the gate calls the functions, the camera evaluates scripts inside Chrome and hit-tests
+with `elementFromPoint`. Both layers were painted correctly. The tree is a third surface, and it
+is the one a screen reader navigates.
+
+**One: Back from the resident's "Edit profile" form quit Sukinnect to the launcher.**
+`openLayers()` — the function that decides whether the page has recorded anything to undo — named
+four modal fields, and the app has five. `state.residentProfileModal` was not one of them, so the
+resident's own forms were invisible to the machinery whose entire comment reads *"the first Back
+press quit Sukinnect from inside a half-filled form"*. The admin's form behaved, which is the
+positive control that made it diagnosable rather than mysterious: same press, same kind of screen,
+`mCurrentFocus` stayed on `MainActivity`.
+
+The fix does not add the missing name to the list. A list is what failed, and a second list in the
+checks would fail the same way, so `layerKeys()` now derives the fields from the state object by
+convention (`*Modal`, `*Confirm`), and `openLayers()`, `closeTopLayer()` and the new checks all
+read that one source — the next modal field is counted the moment it is declared. The gate's
+version walks every field the state actually has and requires each to record a step, so it cannot
+go stale the way the old assertion would have.
+
+**Two: the picker was painted, tappable, and absent from the accessibility tree.** The profile
+sheet renders `role="dialog" aria-modal="true"`, and Chromium honours that by marking everything
+outside the dialog inert — an inert subtree leaves the platform tree entirely. The stacking fix
+in §47 raised the modal's `z-index` above the sheet's, which made it visible and clickable and
+changed nothing about modality: the dump listed the sheet's nodes and never `Save method`. The
+natural experiment that proved the mechanism was accidental — pressing Back closed the sheet, and
+the modal's nodes appeared in the same tree without any other change.
+
+Modality now follows whichever layer is actually on top: `modalAboveSheet()` decides from state
+and `syncBackHandles()` writes `aria-modal` onto the sheet each paint. It reads state rather than
+querying `.modal-layer` because the app raises a modal two ways — that class for the profile
+sheets, an inline fixed overlay for the verification review — and a rule that matched one would
+silently disagree with the other. The camera got a tally for it (`a sheet claiming modality under
+an open modal`) because the harness's fake `document.querySelector` always returns null, so the
+DOM half of this is not testable from Node at all.
+
+**Proved, in both directions.** `node tools/falsify-layer-modality.cjs` — 4 mutants applied, 4
+caught, 0 not applied: dropping the resident's field from the derivation, stopping
+`closeTopLayer()` clearing them, `modalAboveSheet()` pinned false (the original defect), and
+pinned true. The camera's new tally was then fired on purpose against a copy of the page with the
+release removed, where it reports 1 on `resident-payment-modal`, and reads 0 on the same single
+screen against the real file — a tally that cannot fire is the failure mode this repository has
+now been caught in twice. Gate: 502 → **507 checks**, all passing; the whole mutant family run
+reports **18 families, 122 mutants applied, 122 caught, 0 not applied** (was 17 families / 118);
+full 62-screen sweep at the
+device's own 450 px clean, every tally zero, no console errors.
+
+**Re-synced and rebuilt as `1.2-preview.18`** (`versionCode 20`, 2,131,806 bytes, `aapt dump
+badging`) before re-testing anything, because a fix that has only run on a desk has not run where
+the defect did. `cmp` says the `assets/Sukinnect.html` extracted out of that APK is identical to
+`Sukinnect-next.html` at **801,996 bytes**, `grep` finds `modalAboveSheet` twice inside it (the rule
+and its call site), and `check-assets.cjs --apk` resolves all 48 paths the page asks for.
+
+On `preview.18`, re-installed: Back from the resident's form keeps focus on `MainActivity` and
+closes the modal, and the dump taken with the Payment Methods sheet still open lists both
+`Close Payment Methods` and `Save method` in one tree.
+
+**Two instrument readings that were nearly reported as defects, and are the reason this pass is
+worth more than its findings.** The sign-in screen produced a completely empty accessibility
+dump, which reads as "blind users cannot sign in" — it is Chromium building the tree lazily, and
+one tap on a field populated every node. And a password node printed `text="demo1234"`, which
+reads as a leak — the same node carries `password="true"`, which is exactly what an accessibility
+client honours. Both were checked before being written down; the habit that caught them is the
+one already recorded above, *correct the instrument before concluding anything*, and it has now
+saved two false findings in one session rather than one.
+
+## 53. A day count that aged at noon, found by running the whole app in another timezone
+
+The phone is parked, so the next sweep went after a class that had already produced one bug and
+was never measured systematically: **the app's dates**. `parseDay()` fixed a single
+`Verified Mar 14` rendering as Mar 13 weeks ago. Nothing asked whether the rest of the file keeps
+a calendar day and an instant apart.
+
+The instrument is a flag on the camera — `--timezone=Pacific/Niue` — which calls CDP's
+`Emulation.setTimezoneOverride` before the walk, so all 62 screens are photographed and measured in
+another calendar frame without touching this machine's clock. Paired with
+`tools/probe-date-frames.js`, which answers with every date-shaped string a screen paints, split
+into **absolute** tokens (`Mar 14, 2026`) and **relative** ones (`in 23 days`, `Open now`,
+`today`) because those two are allowed to behave differently. Two runs, UTC-11 and UTC+14, diffed:
+27 of 62 lines changed, and 45 screens carry an absolute date.
+
+**What the diff cleared.** Every stored day held its ground. `Mar 14, 2026` — the credential that
+once rendered a day early — appears identically in both runs, as do `Feb 20, 2027`, `Aug 24`,
+`Sep 7`, `Sep 21`, `Oct 5`, `Aug 31`, `Sep 14`, `Sep 28`, `Oct 12`: the eight maintenance-reminder
+dates and the expiry dates. What moved was `Oct 15 → Oct 16` on booking rows and the audit log,
+which is correct: those are seeded as *today plus n* and the audit stamp is an instant from
+`Date.now()`, so a device on the far side of the date line really is on a different today. All 29
+`toISOString()` calls write instants (`at`, `openedAt`, `resolvedAt`, `answeredAt`, `createdAt`) and
+**none** of them slices out a calendar day, which is the shape that causes the bug in the first
+place. Counted, not assumed.
+
+**What it caught.** `applicantWaitDays()` — the verification queue's "waiting N days" — computed
+`Math.round((Date.now() - parseDay(submittedAt)) / 86400000)`. That is an **elapsed interval**
+measured from a local midnight and then rounded, so the fraction it rounds is the hour of the day.
+Measured directly: an application submitted five days before, read across one local day —
+
+```
+ 0:00 → 6 days      12:00 → 7 days      23:00 → 7 days
+```
+
+An administrator who opens the queue in the morning and again after lunch sees the same applicant
+age by a day with nothing in the record changed. Fixed by `startOfDay()` / `daysBetween()`: both
+ends read as days, and the interval between two midnights rounded, which is exact and absorbs a
+DST hour on a device that has one.
+
+**Two neighbours cleared rather than "fixed".** `credentialState()` reads
+`Math.ceil((parseDay(expiresAt) - Date.now()) / 86400000)`, which looks like the same shape and is
+not: within one local day that interval spans `(D-1, D]`, and `ceil` of all of it is `D` — measured
+at six hours against three expiry dates, every reading identical. The `x minutes ago` labels round
+an interval in **minutes**, which is exactly what they mean. Both stay as they are. Writing the
+check would otherwise have introduced an off-by-one into a screen that was correct.
+
+**Gate: 507 → 512**, five checks in a new `dates` suite. `node tools/falsify-date-frames.cjs` —
+**5 mutants applied, 5 caught, 0 not applied**, and one of those five is the point of keeping this
+family: the first version of the label check compared the queue's wording against the same ternary
+the app uses, over the applicants the seed happens to contain. **None of them is one day old**, so
+rewording the `d === 1` branch pasted the gate — the falsifier reported `MISSED`, exit 0, on a
+check that could not fail. It now walks `today`, `yesterday` and `five days ago` explicitly.
+
+One candidate mutant was written, tested and deleted: replacing `Math.round` with `Math.floor` in
+the old expression is an **equivalent** mutant on this data, because every seeded `submittedAt` is
+date-only and floor(elapsed) equals the calendar gap for all of them. Keeping it would have raised
+the count without raising the coverage.
+
+Camera: 62 screens at the handset's own 450px, every tally zero, no console errors. The remote-tile
+line read **692** on this run against **809** on the previous run of a file that had not changed
+except in the Back machinery — which is the third time this repository has caught itself quoting a
+run-dependent number as a property of the build. Whole mutant suite after this pass: **19 families,
+127 mutants applied, 127 caught, 0 not applied** (was 18 / 122). `node tools/probe-all.cjs` runs
+the whole instrument inventory and reports **23 probes, 0 needing attention** — one more than it
+did before this pass, which is the new probe counted in it and answering; it matches the shape the
+classifier looks for (one IIFE, no `require`), and it was already run twice for real, once per
+timezone.
+
+One more class closed while the phone was parked, by the same "count it, do not assume it" habit:
+locale-dependent formatting. Both `toLocaleString` calls in the file pass `'en-PH'` explicitly, and
+all six `toLocaleDateString` calls do too, so no painted number or date depends on the device's
+locale. Nothing to fix, and now it is measured rather than believed.
+
+## 54. A sweep that found nothing, and the two measurements that said so
+
+The dark-mode surface had never been asked about. `Sukinnect-next.html` contains **zero**
+occurrences of `color-scheme` or `prefers-color-scheme` — one light palette, authored by hand, and
+no statement to the browser about what to do when the device asks for dark. That reads like a
+defect waiting to be filed, and the obvious patch was the one-line `color-scheme: only light` that
+[Chrome documents](https://developer.chrome.com/blog/auto-dark-theme) as the opt-out from Auto Dark
+Theme. It was not added, because two measurements said the problem is not there.
+
+**One: the media query changes nothing the app paints.** `tools/shot.cjs` gained `--dark`, which
+emulates `prefers-color-scheme: dark` through `Emulation.setEmulatedMedia` — the same mechanism the
+reduced-motion flag already used, now generalised so both features can be requested in one call. All
+62 screens swept under it: **every tally zero, including contrast**, no console errors. Then the
+specific case was probed rather than inferred, because the payment picker's `<select>` carries no
+authored `background` or `color` at all, which is exactly where a UA colour scheme is supposed to
+leak through the app's own palette:
+
+```
+light:  {"scheme":false,"fieldBg":"rgb(255, 255, 255)","fieldColor":"rgb(3, 0, 43)","cardBg":"rgb(255, 255, 255)"}
+dark:   {"scheme":true, "fieldBg":"rgb(255, 255, 255)","fieldColor":"rgb(3, 0, 43)","cardBg":"rgb(255, 255, 255)"}
+```
+
+Identical, with `prefers-color-scheme: dark` genuinely matching. A page that declares no
+`color-scheme` is treated as light-only for its widgets — the UA darkens form controls when the page
+*opts in* and the user prefers dark, not the other way round. So the field cannot come back dark
+grey inside a white card, and the brand palette §30 measured is not at risk from this direction.
+
+**Two: the delivery surface rules out the mechanism that could.** Auto Dark Theme is Chrome for
+Android post-processing painted colours, and it is not reproducible by emulating a media query — so
+the honest answer had to come from the shell. `app/src/main/res/values/app.xml` parents the activity
+on **`@android:style/Theme.Material.Light.NoActionBar`**, a fixed Light theme rather than `.DayNight`,
+and `MainActivity` contains no `setForceDark` / `setAlgorithmicDarkeningAllowed` call at all. The
+WebView is therefore never in night mode, and the one feature that could rewrite the palette is off
+in the configuration of the thing that ships it.
+
+**What is left open, and it is a brand call rather than a bug.** The published `dist/` subset can
+also be opened in a browser, and Chrome for Android *would* apply Auto Dark Theme to a page that
+declares nothing — which is the case `color-scheme: only light` exists for. Adding it costs one
+line, changes nothing measured above, and forecloses any future dark rendering. Left to the owner,
+because honouring a user's dark preference is a judgement about the product and not a defect.
+
+The instrument stays: `--dark` is now part of what a full run can ask, in the same way
+`--reduced-motion` and `--desktop` are, and the sweep it enables is the evidence behind this entry.
+
+## 55. An offer recorded at minus five pesos a kilo
+
+Two classes were left after the money printers were read. Sorting first, because an in-place
+`.sort()` on a module-level record array silently reorders it for every later screen and for
+`persist()`: all **21** `.sort(` sites were opened and every one runs on a fresh array — a
+`.filter()`/`.map()` result, a local, or an explicit `.slice()` — so the class is closed, counted
+rather than assumed. Then money entry, which produced a real defect.
+
+**How it was reached.** `tools/probe-money-typing.js` types into the live offer sheet through
+`document.execCommand('insertText')`, which is the path a keystroke takes, and reads the field
+back:
+
+```
+{"typed":"1500",  "holds":"1500","badInput":false,"valid":true, "rangeUnderflow":false}
+{"typed":"1,500", "holds":"1500","badInput":false,"valid":true, "rangeUnderflow":false}
+{"typed":"1.5.5", "holds":"1.55","badInput":false,"valid":false,"rangeUnderflow":false}
+{"typed":"-5",    "holds":"-5",  "badInput":false,"valid":true, "rangeUnderflow":false}   ← before
+{"typed":"-5",    "holds":"-5",  "badInput":false,"valid":false,"rangeUnderflow":true}    ← after
+```
+
+The comma is **not** a defect and nearly got filed as one. An earlier probe wrote
+`el.value = '1,500'` through the property setter, watched the sheet's totals fall from ₱181,600 to
+₱1,600, and concluded the app silently zeroes a comma-typed price. That was the instrument: a
+programmatic write of unparseable text clears a number field quietly, while typed text goes through
+Chrome's parser, which **accepts the comma and holds `1500`**. Same trap the camera already
+documents — a setup script that moves the model without moving the field photographs a state nobody
+can reach — and the fix is the same: type it, then look.
+
+The negative was real. `offer-unit` declared no `min`, so `-5` was a valid entry; `submitOffer()`
+turned it into `-500` centavos and `makeOffer()` clamped the two **totals** with `Math.max(0, …)`
+while writing `unitPriceCentavos: draft.unitPriceCentavos ? Math.round(…) : null` straight through.
+So the screen read ₱0 and the record was created at **−₱5.00/kg**, beside a labour line that made
+the sum positive enough to pass the "has to name an amount" guard. Measured through the sheet's own
+Send button: `OFFERS 1 -> 2`, `{"id":"of2","unit":-500,"produce":0,"labour":10000}`.
+
+**Fix, in two places, because they answer different questions.** `min="0"` on the five number
+fields that had no lower bound (`offer-qty`, `offer-trees`, `offer-unit`, `offer-labour`, and the
+admin's `cfg-${key}`) — seven already declared one, so the rule is the file's own convention rather
+than a new invention. It changes what the platform reports (`valid: true` → `rangeUnderflow: true`),
+which is the line above. And `makeOffer()` now refuses a negative unit price outright:
+`GuardRejected('a price cannot be negative.')`, surfaced by the existing catch as a toast, so the
+provider is told rather than the number rewritten. Refused rather than clamped is deliberate —
+clamping is what the totals do, and it is exactly why this slipped through: a negative price is not
+a zero price, and silently converting one leaves the person's figure and the record disagreeing.
+After: `OFFERS 1 -> 1`, no record, toast reads `a price cannot be negative.`
+
+**Gate: 512 → 515**, three checks — the refusal, the five-field bound rule with a positive control
+(it requires at least ten bounded number fields to exist, so a regex matching nothing cannot pass),
+and one that the good offer still goes through. `node tools/falsify-money-bounds.cjs` — **4 mutants,
+4 caught, 0 not applied**, and the first run reported one **MISSED** for a reason worth keeping: the
+mutant that made the guard refuse *every* offer crashed the suite, so the gate exited 1 without the
+named check ever rendering a verdict. A runner that looks for `FAIL <label>` cannot see a crash, and
+a check whose positive case can throw does not own its own outcome. The check catches now.
+
+Camera: 62 screens at 450px, every tally zero, no console errors. Whole mutant suite after this
+pass: **20 families, 131 mutants applied, 131 caught, 0 not applied** (was 19 / 127). Three probes
+were used to get here and two were deleted afterwards — the ones that wrote `.value` directly,
+because leaving a tool that measures an unreachable state in `tools/` is how the next reader repeats
+the mistake. `node tools/probe-all.cjs` answers **25 probes, 0 needing attention** — the two money
+probes counted in, and the programmatic-write ones gone.
+
+## 56. Two screens that explained nothing when their data ran out, and one that never existed
+
+Two classes closed by emptying things rather than reading them.
+
+**Duplicate ids — clean, and the probe proves it can speak.** The app reads every form value by
+`document.getElementById` (about seventy sites), so two elements sharing an id on one screen is not
+markup hygiene: `getElementById` answers with the first in tree order and a save writes a number
+from a field the person never touched. `tools/probe-duplicate-ids.js` counts ids in the **painted**
+DOM across all 62 screens — a static read cannot see a collision produced by rendering one template
+twice in a list. Result: **zero collisions**, with id counts of 5–21 per screen proving the walk saw
+elements at all, and a forced duplicate reported immediately.
+
+**Empty states — one real defect.** `tools/probe-empty-states.js` empties each of twelve record
+sets, re-renders, measures the words left, and puts the records back. It found the admin's
+verification queue: with every applicant decided it still headed a blank panel **"Pending
+verifications"** and still printed *"Tip: Prioritize applications with complete documents to faster
+onboarding."* — advice for rows that do not exist, which is §48's "do not show an empty screen with
+no explanation" and §76's no-decorative-content rule at once. And it is reachable by tapping:
+approving an applicant takes it out of the queue, so **finishing the queue is what empties it**.
+Now the else branch renders `emptyState('shield', 'No applications are waiting', 'Every provider who
+applied has been decided. A new one appears here the moment it arrives.')` and the tip is gated on
+the list having rows. The positive control matters as much: with rows present the tip still shows and
+the empty state does not.
+
+**The instrument lied first, and said so.** The probe's first version looked the record sets up as
+`window[name]` and reported all twelve as "not a reachable array" — top-level `const` bindings never
+become window properties. A sweep that finds nothing because it cannot see anything looks exactly
+like a clean result, so the fix was to resolve by bare identifier and to keep printing the row count
+per set, which is what shows the walk actually touched 16 bookings and 42 messages. The emptied
+bookings screen was also read rather than scored: `No bookings yet — Services you request appear here
+with their status, payment record and receipt.` plus a Find-a-service action, which is what §48 asks
+for and why the 60-character "bare" threshold alone would have been too soft a bar.
+
+**The empty branch had never been painted for a camera**, so its tap targets and contrast were
+unmeasured even after the fix. `admin-verifiers-empty` is in the SCREENS table now — the walk counts
+**63 screens** — and the entry says plainly that the state is reached by approving every applicant
+and that the list is cleared because the state, not the clicks, is what is photographed. Measured
+clean at 450px. Its single-screen run reported `text below WCAG contrast: 1` on the admin header's
+translucent "Insights" pill, which is the subset artifact already documented (the sampler depends on
+what was painted earlier in the run); the full 63-screen sweep reports **zero**.
+
+Gate 515 → **517**. `tools/falsify-empty-queue.cjs` — **3 mutants, 3 caught**, and the first run
+reported one MISSED because the mutant deleted a ternary's `: else` half, which is a syntax error
+rather than a behaviour: `Unexpected token ';'` crashed four suites and the gate exited 1 without the
+named check ever rendering a verdict. Rewritten to render `''`, which is exactly how the queue
+shipped. No console errors across 63 screens; every other tally zero. Whole mutant suite: **21 families,
+134 mutants applied, 134 caught, 0 not applied** (was 20 / 131).
+
+## 57. A second handset that could finally test the narrow layout and dark mode, blocked by its own storage
+
+`preview.20` was cut and pushed toward a device: asset synced, `versionCode 21 → 22`,
+`:app:assembleDebug` clean in 47s, then verified at the artifact level before anything was claimed —
+2,132,502 bytes, `aapt dump badging` agreeing on the version, `assets/Sukinnect.html` extracted out
+of the APK `cmp`-identical to `Sukinnect-next.html` at **803,487 bytes**, `check-assets --apk`
+resolving every path, and grepping the shipped page to prove which bytes are in there:
+`a price cannot be negative` 1, `No applications are waiting` 1, `daysBetween` 2, `modalAboveSheet`
+2, `Analyze the text` 0. This is the first build carrying the accessibility-tree fix, the
+calendar-day wait count, the money guard and the empty verification queue.
+
+The phone offered was not the vivo but an **OPPO CPH2179**, and it is a better instrument for two
+cases this file has kept listing as untestable: `wm density` reports physical 320 with
+**`Override density: 360`** on a 720px panel, which lays the app out at **~320 CSS px** — the narrow
+case the clipping fixes were tuned against and the vivo at 450 never reached — and
+`ui_night_mode = 2` makes it the first device here in **system dark mode**, the one configuration
+where Chrome's Auto Dark Theme could rewrite the §30 palette. The bench could only measure the
+media-query half of that and rule the WebView out from `Theme.Material.Light.NoActionBar`; a real
+dark handset is the missing evidence. It does not unlock edge-to-edge: Android 10, API 29, so
+`targetSdk 36` stays closed on both phones.
+
+**Neither was tested, for two reasons that are the finding.**
+
+1. `adb install` failed with `android.os.ParcelableException: java.io.IOException: Requested
+   internal only, but not enough space` out of `PackageInstallerService.createSession`. `df` explains
+   it: `/data` is 50,132,664 KB with 49,545,480 used — **439,728 KB free, 100% used, 0.87%**, below
+   the installer's low-storage threshold. The APK is 2.1 MB, so the refusal is the threshold, not the
+   file. Freeing that partition means deleting the owner's photos and apps, which is not a call to
+   make from here to turn a test green.
+2. The connection would not hold: four drops in ten minutes, `transport_id` changing on each
+   (12 → 14 → gone), the device cycling `unauthorized → device → absent`, and `pnputil` seeing no
+   Android device while it was off the bus.
+
+**What is recorded so the next attempt does not repeat this one.** The device identity and geometry
+are in `DEVICE-PASS.md` under *A second handset*, and the build row now says plainly that no device
+has run `.20`'s bytes. Because nothing was installed, that phone is also the cleanest persistence
+fixture available — no store, no dump, no session — so the write-claims and reload checks would start
+from a real first run rather than whatever the vivo accumulated.
+
+No page bytes changed in this pass. `Sukinnect.html` is unchanged vs `main`, and the gate still
+reports 517 checks.
+
+## 58. A phone that could finally be asked what its WebView decided
+
+`preview.20` installed on the OPPO once its storage was cleared, and the first thing it settled was
+the question the bench could not answer: **is the accessibility-tree fix real on a second device?**
+With the Payment Methods sheet open and the picker painted above it, the platform tree now lists
+both layers — `Payment Methods`, `Close Payment Methods`, `Change payment method`, `Preferred payment
+method`, `Save method` — and the sheet's `aria-modal` reads `false` from inside the real page. Same
+answer as the vivo, different phone, different Android, WebView 148.
+
+Getting that answer needed a new instrument, because none existed. `tools/device-probe.cjs` forwards
+to the WebView's DevTools socket and evaluates an expression in the page running on the phone, with
+no npm dependencies — a hand-rolled WebSocket client, the same approach `shot.cjs` uses against
+Chrome. Until now `tools/` could measure headless Chrome and could read the platform tree, but could
+never ask a shipping WebView what it had decided, so when two phones appeared to disagree there was
+no way to resolve it except by arguing from the source. It required one shell change:
+`WebView.setWebContentsDebuggingEnabled(true)`, gated on `FLAG_DEBUGGABLE` so a release build never
+exposes an inspector.
+
+**Three false alarms, each caught before it was written down.** An early dump returned 2 KB and zero
+text nodes while the modal was on screen — the WebView builds its accessibility tree lazily, and the
+same tree came back 20 KB and 30 nodes a few seconds and one tap later; `accessibility_enabled` was
+already `1` and ColorOS refuses `WRITE_SECURE_SETTINGS` from shell, so the fix is patience, not
+configuration. A dump taken with the native select open returned exactly two rows, which reads as the
+app's tree collapsing but is `uiautomator` reporting only the **active window**. And a probe that set
+`state.tab='profile'` without setting `state.view='app'` left the app on the sign-in screen and then
+reported the modal missing from a DOM that had never been painted — `residentProfileHub()` returned
+the modal markup while `#screen` began `<div class="auth-screen">`. That is the third time this
+repository has been saved by *an instrument that reaches a state nobody can produce measures a
+fiction*, and the first time on a phone.
+
+Two other things the new device was able to say. The system is in night mode (`ui_night_mode=2`) and
+the app renders **fully light** — the first real observation of the case that §31 could only rule out
+from `Theme.Material.Light.NoActionBar`. And at ~320 CSS px, the narrow layout the vivo at 450 never
+exercised, the sign-in role toggle measured clean: both labels inside their parent, `scrollWidth ==
+clientWidth`, no overflow — after a downscaled screenshot had made it look clipped. The instrument
+corrected the eye again.
+
+Two bugs in the new tool were found by running it: Chrome's DevTools endpoint rejects `Host:
+localhost`, and its `Content-Length` counts bytes while the page title contains an em dash, so
+comparing that header against a character count reports a timeout on a socket that is answering
+perfectly well.
+
+No page bytes changed. Gate still 517, `Sukinnect.html` still identical to `main`. The remaining
+device work is the §3f list, tracked separately.
+
+## 59. The cap that passed every test and failed on the phone
+
+The rem conversion shipped with `:root { font-size: min(1em, 20px) }` — honour the device's
+text-size setting, but never past 125%. The camera agreed: at `--font-scale=2` it reported the root
+computing 20px, identical to 1.35, four phone configurations swept clean, and a falsifier family
+caught four mutants including the tempting half-fix of pinning the root to 16px.
+
+**It was wrong, and the phone said so.** Setting `font_scale` to 1.35 on the vivo and reading the
+real page gave a root of **21.6px**, not 20px. Chromium on Android does not change the browser's
+default font size — it **multiplies the used font size after CSS resolves**, so `1em` inside `min()`
+is still the unscaled 16px, `min` returns 16, and the platform scales that to 21.6. Nothing in CSS
+or JS can bound it; the only thing that stops the inflation is `text-size-adjust: none`, which is
+precisely the option that puts the ignored-setting bug back.
+
+The flag was the reason nobody caught it. `--font-scale` emulated the OS by substituting the
+emulated default for `1em` inside the app's own rule — a model of "the OS changes the default font
+size", which is not what the OS does. **An instrument that models a mechanism wrongly will report
+success for a fix that cannot work**, and every downstream number inherited the mistake. It now
+sets the root font size directly, which is what the platform's multiplication produces, and it
+bypasses the cap deliberately because the real device bypasses it too.
+
+Consequences, all measured after the correction:
+
+- The cap stays, but its claim is fixed. It is a real bound on the **web** surface, where `1em` on
+  the root does resolve against a user-settable default; on Android it is inert. The gate check says
+  so in its own label — `the root bounds the browser default on the web surface (Android inflates
+  past this)` — because a check named after a property the app does not have on its primary target
+  is worse than no check.
+- Android therefore honours the setting **uncapped**, and the layout has to absorb it. At 135% on a
+  320px viewport three y-axis ticks escaped their chart: `--chart-gutter` was `56px`, a fixed px
+  gutter holding relative text, so "₱400" hung 4px past the box. The gutter is now
+  `calc(3.75 * var(--t-body-sm))` — 56.25px at the default, so the plot width nobody chose is
+  unchanged, and it grows when the type does. Re-swept at 100%, 135% and 150% on 320px: **every
+  tally zero, camera exit 0** on all three.
+- The value-label anchor fix from the previous pass was real but incomplete — it only caught labels
+  near the plot's edges, and the escapes turned out to be the axis ticks, not the values.
+
+Gate 520, `falsify-responsive-type` 4 of 4 after its labels were re-pointed at the honest check
+name. The lesson is the one this repository keeps being taught in a new costume: **prove the
+instrument against the thing it claims to model, not against the fix you hope for.**
+
+---
+
+## 60. An axis thinned by the wrong ruler, and a navigation row that walked off the phone
+
+Closing #25's chart-label item found a second defect in the same screenshot, and both turned out
+to be the same mistake: **a number measured in one unit, compared against a thing that lives in
+another.**
+
+**The chart.** `chartColumns()` thinned its own axis when a slot measured under 62 *viewBox units*.
+That threshold was written when the type was fixed px, and §68's rem conversion moved the words out
+from under it: at 200% text on a narrow panel the slot still cleared 62 units, so nothing thinned
+and an axis label hung 4px past a 264px chart box. The budget is divided by the root font size the
+page reports now — `fit = floor(w / (62 * rootPx/16))`, `stride = ceil(rows.length / fit)` — which
+is provably the old rule at 100% (`floor(304/62)` is 4, and `ceil(n/4)` is exactly what the old line
+computed for every `n`) and thins progressively above it: 12 columns draw 4 labels at 100%, 3 at
+150%, 2 at 200%.
+
+**The navigation, found by looking at the chart's screenshot.** At 320px with the text at 200% the
+resident's bottom nav had `scrollWidth` 456 against `clientWidth` 320 and painted "Profile" 132px
+past the row's right edge — which is the edge of the device, so a destination nobody could tap. The
+camera's own overflow check answered "none" on the same screen, because it asks the document and the
+row overflowed instead. A flex item's `min-width` defaults to `auto`, and for a word `auto` *is* the
+word, so the item refused to shrink; the fix is the item's own `min-width:0` with an ellipsized
+label. Every destination keeps its tap area, and the DOM text — and therefore the accessible name —
+is untouched; only the painted tail gives way.
+
+The same flex default, seen from the other side, destroys a fixed-size element: an item's declared
+width is only its starting size, because `flex-shrink` defaults to 1 and `min-width:auto` protects
+nothing below the element's *content*. Six 8px waiting dots painted 1.8px wide (they have no content
+at all) and the 44px round notification button painted 31x44 beside a growing title. Both declare
+`flex-shrink:0` now. Two tallies count them on every sweep — `bottom-nav items pushed off the panel`
+and `round markers painted as a sliver` — and `node tools/falsify-flex-crush.cjs` proves both can
+fail: 4 mutants, 4 caught, on a 3-screen subset at the corner where they all painted.
+
+**Three mistakes by the instruments written in this pass, recorded because each one reads as a
+pass.** The nav tally's first version computed `box.right - item.right` where it meant
+`item.right - box.right`, so it reported 13 findings on screens that fit perfectly and zero on the
+one that did not — the sign was caught by the numbers being absurd (237px "past" the edge for the
+*first* item), not by anything in the harness. The circle tally asked for at least 3px on each side,
+which excluded the 2.3px dot that motivated it: the run reported clean while the screenshot showed a
+sliver. And the sweep runner's first parser matched only `: <number>`, which walked straight past
+`horizontal overflow (a screen wider than the phone)` — that tally answers with a list of screens
+and pixel amounts, not a number, so a phone-sized defect would have passed the command written to
+catch exactly that. Making the parser fail closed on any unrecognised answer is what exposed the
+camera's own `page:` header line as a "defect": the run reported 0 of 4 corners clean with every
+tally at zero. A guard whose floor sits above its own finding is the worst kind of pass, and a
+runner that trusts its own output format is the second worst.
+
+**One fix that was tried, measured, and taken back out.** Replacing the value-label edge band
+(`cxPct > 80 ? ' r' : ...`) with the first and last row *indices* looked strictly better: an axis
+label that is thinned out of existence cannot be anchored by a percentage tuned for the unthinned
+row. It did not fix the 200% overhang, and it moved 150% from clean to one finding. Which of its two
+changes did which is not established — the axis is thinned and the value labels are not, so the two
+sets do not share edges — so the band stays and the code comment says what was measured rather than
+narrating a mechanism nobody proved.
+
+**The harness was part of the problem.** `tools/harness.cjs` answered `getComputedStyle` with a
+literal `'16px'`, which made the new type-aware rule unfalsifiable in Node: a mutant that ignored the
+measured size read identical to the correct code at the only size the double would name. The root
+size is a variable now (`app._setRootFont(32)`), the same knob `--font-scale` turns in a browser, and
+the gate check asserts *relations* — fewer labels as the setting rises, a sparse series untouched at
+every setting, never zero — rather than the numbers 4/3/2, which are derivable and would fail on a
+correct chart if the budget ever moved.
+
+**One command for the standing requirement.** `node tools/sweep-text-scale.cjs` runs the camera at
+320px @ 200%, default width @ 200%, 450px @ 135% (a vivo panel at the OPPO's setting) and the 100%
+anchor, and fails if any tally is nonzero. Anything it does not recognise counts as must-be-zero, so
+a tally added to `shot.cjs` tomorrow cannot be silently informational, and a run that prints no
+tallies at all fails as "measured nothing".
+
+**And one hazard this pass discovered about its own tooling.** A mutant family owns the file it
+breaks: `tools/falsify-*.cjs` reads the target once, writes mutants over it, and restores its
+snapshot in a `finally`. Editing `Sukinnect-next.html` while `tools/falsify-all.cjs` is running —
+which this pass did, twice — loses the edit silently, because the restore writes a copy from before
+it. The tool is right to restore what it read; the rule for the person at the keyboard is that no
+file a family can write is editable while it runs. `falsify-flex-crush` takes minutes rather than
+seconds for exactly that reason, and it is the one family whose window is long enough to be walked
+into.
+
+Numbers: gate **521** (was 520), `falsify-responsive-type` **6 of 6** (was 4, the two new mutants
+break the axis budget and the thinning divisor), `falsify-flex-crush` **4 of 4** as a new family,
+`node tools/falsify-all.cjs` **23 families, 144 mutants applied, 144 caught, 0 not applied**, probes
+**29** with both new ones answering, and the four corners of the sweep clean. The file is 11,233
+lines with `node tools/measure.cjs` to prove it.
+
+Residual, deliberately not fixed: at 320px and 200% text the nav labels read `D… F… B… M… Pr…`.
+Every one is tappable and the icons carry the identity, but the words are effectively gone. Material's
+alternative is to label only the selected item, which is a visual judgement about the app's identity
+and belongs to the owner, not to a defect list. What is *claimed* here is narrower than what a reader
+might assume: the ellipsis is CSS, so each item's DOM text — and the `aria-label` on the badged ones —
+is the whole word (measured: `textContent` is unchanged and the camera's unnamed-control tally is 0).
+Whether Chromium puts the whole word or the painted one into the platform accessibility tree is
+**not** measured on the bench, because the camera reads the DOM, not the tree. It is a
+`uiautomator dump` on a handset at maximum text scale, which is the same instrument that found the
+sheet-modality defect, and it is now an item on the handset pass.
+
+---
+
+## 61. The dimension nobody had swept: a phone that is short, and the controls that fell off it
+
+Every geometry figure in this repository — 63 screens, four corners, all of it — was measured at
+the camera's default viewport, **390x844**. Width had been swept (320, 390, 450) because a vivo had
+reported its density and made the question obvious. Height had never been varied at all. It is the
+other half of "a mobile application must be responsive to any phone types", and 480px is not a
+hypothetical: it is an Android Go handset, a 2015-era budget phone in a Philippine municipality, and
+**any phone in split-screen**, which is what half of Android's windowing modes gives a WebView.
+
+### The instrument, and why none of the existing ones saw it
+
+A new tally, `controls no tap can reach`, asks the question the others do not: can a thumb get to
+this control at all? Two ways a control fails that test, and the first version of the instrument
+knew only one:
+
+- its box is outside the viewport and **nothing in its ancestor chain scrolls**;
+- it sits outside an ancestor that clips it (`overflow:hidden`) without ever offering a scroll — a
+  clipped element's rectangle does not move, only its painting does, so a check that looks only at
+  the viewport calls it fine.
+
+The second half was found by a surviving mutant, not by reasoning: a deliberate break that pinned
+the modal layer to 110px tall produced no finding at all. Nothing else in the camera sees this class
+either — the text is not clipped (nothing clips it), it is not under the nav, its contrast is fine
+because it paints no text, and the document is not wider or taller than the phone.
+
+### What it found at 320x480 with the text at 200%
+
+Four screens, all of them the app's own primary actions:
+
+- the booking sheet painted **"Send request" 149px below the bottom edge of the device**, and the
+  fruit offer sheet its "Send offer" 370px below. `.sheet` is a flex column capped at `max-height:
+  80%` with a fixed head and a fixed foot (`flex-shrink:0` on both, deliberately), and a body that
+  scrolls — but the body had no `min-height:0`, so it refused to shrink below its content, the
+  content spilled out of the bottom of the sheet, nothing clips a sheet, and the phone's frame
+  clipped it instead.
+- the admin's security PIN dialog put its own **Close button 97px above the top edge and its action
+  90px below the bottom one at the same time**. `.modal-card` had no height cap at all, and the
+  layer centres it — a centred overflow is the worst shape this class takes, because nothing is
+  nearer and the page is not the scroller.
+- the notifications bar clipped **"Mark all as read" by 196px** and the resident's profile bar
+  clipped "Log Out" by 18px: the bar's title group could not give up width, so the action was
+  pushed past the bar's own `overflow:hidden`.
+
+The fixes are the three rules those measurements imply: the sheet's cap is the screen rather than
+80% of it, and it scrolls when even its unshrinkable parts do not fit; the modal card takes
+`max-height:100%` and scrolls; the top bar wraps and lets its children give up width. `tools/
+falsify-control-reach.cjs` puts each defect back and requires the tally to name it: 3 of 3.
+
+### Five things the instruments got wrong on the way, and one thing the fix got wrong
+
+- **The probe blamed the wrong element 209 times.** Its first version walked every ancestor and
+  flagged any clipper, so it reported every control scrolled out of `.screen` as unreachable
+  "because of `.phone`" — the desktop mockup frame, which is the viewport in app mode and is
+  governed by the scroller inside it. Once the walk stops at the first ancestor that can scroll,
+  the same 63 screens answer zero. An instrument that cries wolf gets ignored, which is worse than
+  no instrument, and this one would have been ignored within a week.
+- **The first fix cut the app's titles.** To keep the top bar's action on screen it ellipsized the
+  `<h1>` — and the camera's own review line, `single-line previews shortened with an ellipsis`,
+  went **7 → 36** across the walk, with "Find Services" and "Provider details" reduced to
+  fragments. Bar wrapping costs height; a truncated title costs the screen's identity, which §40
+  makes its first job. The tally could not tell the difference (both leave every control
+  reachable) — the review tally did.
+- **Two mutants survived, and one of them was the interesting one.** Removing `.sheet-body`'s
+  `min-height:0` left everything reachable, because the sheet now scrolls as a whole: that rule
+  governs *which part moves*, a design property no geometry check can see, so the mutant was
+  deleted rather than kept to inflate the count. Removing either top-bar guard on its own also
+  survived, because the wrap and the `min-width:0` are two independent guards of one overflow — so
+  the break removes both, and the family says why. A single-rule break there would have reported a
+  rule that does not exist alone.
+- **A comment warning about backticks in this file's page scripts contained backticks**, which
+  broke `tools/shot.cjs` at parse time. It is the second time in one session, in the very file that
+  documents the hazard.
+- **`tools/falsify-all.cjs` could not read the new family and said so.** The camera families print
+  "N of M breaks caught"; the runner's patterns only knew "mutants", so the family came back as
+  "printed no summary — nothing was proven". That is the runner failing in the only acceptable way:
+  an unparseable result is reported as unproven, so the headline total came out visibly wrong
+  instead of quietly right.
+- **Fixing that nearly introduced the opposite failure.** The two spellings order their numbers
+  differently — "applied 4, caught 3" against "3 of 4 caught" — and a single positional reader would
+  have swapped them, reporting a family that caught 3 of 4 as one that applied 3 and caught 4. The
+  shapes now carry their own readers. A runner that prints a confident wrong total is worse than no
+  runner, and this one was two characters away from doing it.
+
+### Numbers, and what the fixes visibly cost
+
+Gate **521** — unchanged, because this pass is stylesheet rules and instruments, not kernel. New
+family `falsify-control-reach` **3 of 3**; `falsify-flex-crush` **4 of 4** after its third mutant was
+corrected into a pair. `node tools/falsify-all.cjs`: **24 families, 147 mutants applied, 147 caught,
+0 not applied**. Probes **29**, none needing attention. `node tools/sweep-text-scale.cjs`:
+**6 of 6 phone corners clean** — the two new corners being 320x480 @ 200% text and 320x300 @ 100%,
+the second standing in for a keyboard open on a short phone because nothing in `tools/` emulates a
+keyboard at all. The file is 11,286 lines with `node tools/measure.cjs` to prove it.
+
+What it costs, visibly: on a short phone a bottom sheet may now fill the screen instead of stopping
+at 80%, and a top bar may take two lines instead of one. Both are the alternative to a control being
+off the device, and neither has been looked at on hardware — `DEVICE-PASS.md` carries the three
+questions, and the second of them is a judgement about the app's look rather than a defect.
+
+---
+
+## 62. Nobody had ever pressed a key: the keyboard surface, and focus behind the scrim
+
+§72 asks for focus states and keyboard interaction. Nothing in `tools/` had ever produced a key
+event. The camera drives the app by calling its handlers and `el.click()`, the harness has no layout
+at all, and the 29 probes read painted boxes — so the claim that the app has a focus ring for
+"every element the keyboard can actually reach" was a comment in the stylesheet that no instrument
+had ever tested.
+
+### The instrument, and the wrong way it was built first
+
+`node tools/shot.cjs --focus` walks each screen with real `Tab` keypresses over CDP and inspects
+whatever the browser lands on. The first attempt did not use key events: it called
+`el.focus({ focusVisible: true })` for every focusable element and compared computed styles. That
+option does not exist in Chrome, so every element was focused with mouse modality, `:focus-visible`
+never matched, and the walk reported **zero focus rings on all 63 screens** — a result that reads
+as "the app has no focus styles at all" and would have been filed as a defect of the app rather
+than of the tool. Chrome matches `:focus-visible` on keyboard modality, so the only honest way to
+ask the question is to press the key.
+
+What the walk then measured, across **666 stops on 63 screens**: no control is reachable by Tab
+without something visible changing, and nothing falls back to the browser's default ring — the
+`:where()` list is doing its job, and that sentence is now a measurement rather than a claim.
+
+### The defect: 91 of 192 stops were behind the scrim
+
+On the eight screens that open a sheet or a dialog, nearly half the Tab stops landed on controls
+**underneath the open layer** — covered, untappable (the scrim takes the tap and closes the layer),
+and still focusable, so a keyboard user moved through a screen they could not see and could still
+submit fields on it.
+
+The fix is `inert` on everything outside the layer the user is in, which takes a subtree out of the
+tab order, the accessibility tree and the pointer in one move — `aria-hidden` alone would have left
+every control focusable, which is the defect. Two decisions inside it are the reason it will not
+rot:
+
+- **The top layer is derived from state, not from a class.** The app raises a layer three ways:
+  `.modal-layer`, `.sheet-layer`, and the verification review's inline fixed overlay, which has no
+  class at all. A rule naming two of them leaves the third walkable, and that is already written
+  down once in this file for the Back machinery — so all three roots now carry `data-layer`, and
+  `topLayerEl()` reads the convention.
+- **The inerting walks up from the layer and marks each ancestor's siblings**, rather than inenting
+  a list of background ids. On the profile hubs the modal is painted *inside* `#screen`, so
+  inenting `#screen` would have taken the dialog with it; and a list would miss the next surface
+  added.
+
+`node tools/falsify-focus-trap.cjs` puts it back three ways — remove the call, remove the marker
+from one root, and swap the lookup for the old class names. The third only fires on the
+verification screens, which is the proof that the convention is what covers that surface: 46 stops
+behind the scrim there, on a screen the class-based check could never have reported.
+
+### Four instrument mistakes in the same afternoon, each caught by a number that made no sense
+
+1. **The detector read the same marker as the code under test.** Its first version asked "is a
+   `[data-layer]` open, and is this element outside it" — so removing `data-layer` from a layer
+   root blinded the check and the implementation together, and the mutant survived. A check that
+   shares its assumption with the thing it checks is a mirror.
+2. **Hit-testing at the centre called the scrim unreachable.** Switched to
+   `elementFromPoint`, and the baseline reported two controls behind a layer on the unmutated
+   file: the sheet's own scrim, which *is* a button (`aria-label="Close"`, so tapping the dim
+   dismisses it) and is covered at its centre by the panel it dims — by design. The rule became
+   five probe points: a control is unreachable only if **no** part of it is exposed.
+3. **An ancestor's clip is not someone else's overlay.** With five points, one stop remained: the
+   booking sheet's "Tomorrow · Sun, Oct 18" chip, sitting at x 343..523 inside a `.hscroll` rail
+   that is 354 wide. It is clipped by a container that scrolls — one swipe from view, which the
+   reach tally from §61 already judges correctly — so a hit that lands on one of the element's own
+   ancestors no longer counts as covered. Only a foreign element does.
+
+4. **A sticky bar is not a scrim.** With five points the walk still reported one stop app-wide: the
+   verification review's "Open document" button, covered at that moment by the fixed
+   Reject/Request/Approve bar. Scrolling the row to the middle exposed it completely — which is what
+   any list row does when you scroll, so the rule now asks twice, once where focus landed and once
+   with the element brought to the centre, and keeps only the control that stays hidden *after* the
+   scroll. Without that second look the tally would report every ordinary row under every sticky
+   chrome in the app, and would be switched off within a week.
+
+And a fifth that belonged to the previous pass: 19 stops initially reported focus landing off the
+viewport, all of them `.job-row`s below the fold, because `#screen` scrolls *smoothly* and the rect
+was read mid-glide. The walk now installs `scroll-behavior:auto` for its own duration and removes
+it afterwards. This file already names that trap once for the under-nav check; a focus walk is the
+second place it bites, because focusing an element scrolls it and scrolling takes 250ms here.
+
+### Numbers, and what the walk still cannot see
+
+Gate **522** (was 521, for the convention check). New family `falsify-focus-trap` **3 of 3** — the
+three breaks leak 24, 23 and 36 stops respectively. `falsify-layer-modality` **5 of 5** after its new
+mutant. `node tools/falsify-all.cjs`: **25 families, 151 mutants applied, 151 caught, 0 not
+applied**. `node tools/shot.cjs --measure --focus`: **666 stops across 63 screens, all four tallies
+zero**. The six-corner sweep is clean, 29 probes answer, no console errors. The file is 11,316 lines.
+
+What the walk does not see, so nobody reads the zeros as more than they are: it measures Chrome on a
+desktop, and `inert` is only as good as the WebView that ships it (Chromium 102+), so
+`DEVICE-PASS.md` carries the question for the handset; it asserts that *something* visible changes
+for every stop, not that the change has contrast against the surface it paints on, which the
+contrast tally does for text but not for a ring; and it walks the tab order Chrome computes, which
+on a phone is reached by a Bluetooth keyboard or a d-pad, not by anything the app's own touch
+gestures do.
+
+---
+
+## 63. A sensor blind to a whole surface: the dialogs nobody had ever measured
+
+The camera's element walks each carried their own hand-written list of containers to look at. Six
+lists, and they had drifted:
+
+| walk | surfaces it looked at |
+| --- | --- |
+| clipped text, 14px floor, contrast, form-control scale | `#screen`, `.sheet`, `.auth-sheet` |
+| round markers | those three + `.bottomnav` |
+| unreachable controls | those four + `.modal-layer` |
+| tap targets, screen-reader field names | the whole document |
+
+So four text-and-colour sensors had **never looked inside a modal dialog** — and the dialogs are
+where the app's most sensitive typing happens: a name, a phone number, a home address, an emergency
+contact, a service price, a payout account. The one walk that *did* cover them was the newest one
+(the unreachable-control tally from §61), which is how the gap stayed invisible: the file looked
+thorough, and six lists that agree with each other's omissions read as one coverage.
+
+### Fixing the coverage, then what it found on the first run
+
+The lists are one `SURFACES` constant now, and every walk derives its selector from it — the drift
+was the defect, not any single missing `.modal-layer`. Then the other half of the problem: no entry
+in the `SCREENS` table reached the edit forms. Three dialog screens existed (a payment picker, a
+payout field, a PIN note); the six *form* dialogs did not. They are in the table now, reached by
+`clickPainted()` the way every other one-tap destination is, and the walk went 63 screens → 69.
+
+Two findings, both immediate:
+
+- **The portfolio form's two fields painted 13.3px** — the user-agent default, under §68's 14px
+  floor. They were the only two inputs in the app that hand-roll their geometry inline
+  (`width:100%; padding:9px; min-height:var(--tap)`) and declared no font at all. Every other field
+  takes `.form-input`, which has carried `font-family:inherit; font-size:var(--t-input)` since the
+  pass that noticed fields drawing as grey browser boxes. The fix is to use the class and drop the
+  duplicated inline geometry, not to add a font size to the two exceptions.
+- **The camera contradicted itself about the read-only email field.** The unnamed-control tally
+  reported it nameless on all three edit dialogs; the dedicated field-name walk reported zero
+  nameless fields on the same screens. Asked the browser directly, `el.labels.length` is 1 — the
+  wrapping `<label>` names it, correctly. Two tallies disagreeing about one element is a defect in
+  one of them, and it was the text scan: `text()` falls back through `textContent`, `aria-label`,
+  `placeholder`, `title` and `id`, and an `<input>` has no text content by definition, so a field
+  named by its label is invisible to that scan no matter how well it is labelled. Fields are skipped
+  there now; the walk that asks `el.labels` owns that question.
+
+### What this says about the rest of the file
+
+Every "measured across all N screens" claim in this repository means "across all N screens that the
+walks look at". A surface can be in the app and out of the instrument at the same time, and the
+output looks identical to a clean bill of health — which is the sentence this file has written about
+missing screens four times now, and about sensors this is the first time.
+
+### Numbers
+
+Gate **523** (was 522, for the instrument's own surface check). `node tools/shot.cjs --measure`
+across **69 screens**: every failure tally zero, no console errors. `node
+tools/sweep-text-scale.cjs`: **6 of 6 phone corners clean**. `node tools/falsify-all.cjs`:
+**26 families, 153 mutants applied, 153 caught, 0 not applied** — the new family
+`falsify-camera-surfaces` proves the gate check can fail (2 of 2), which is the point of writing a
+check about a tool at all. `node tools/probe-all.cjs`: 29 probes, none needing attention.
+
+One thing this pass did *not* fix, tracked separately: the manifest labels a dialog screen by the
+hub behind it, so `resident-edit-form` reports "Resident Profile" over a picture of the edit form.
+All six new screens carry the wrong label, and so do the three dialogs that predate them. It is the
+same rule as the walks — say what was actually painted — and it misled this pass twice, which is
+why it is a task rather than a footnote.
+
+---
+
+## 64. The instrument mislabels its own pictures
+
+Writing §63's numbers meant reading the walk's output, and the output said:
+
+```
+shot resident-edit-form  shows "Resident Profile"
+```
+
+over a picture of the edit form. All nine dialog screens were labelled by something other than the
+dialog — the six new ones by the hub behind them, the three older ones by the sheet the dialog was
+raised from.
+
+The rule that names each shot is already written down in `tools/shot.cjs`: *a filename is a claim
+about the pixels in it*, and because `querySelector` answers in document order rather than selector
+order, the layers have to be asked one at a time. The list of layers asked was `.sheet .sheet-title`,
+then the chat head, then the auth wordmark, then the screen's own title. **The dialog was simply not
+in it.** The rule had been implemented for two of the three surfaces the app paints over.
+
+This was the second time the same blind spot cost this session time: §62's focus probe reported the
+admin's PIN dialog as `"Admin account"` for the same reason, and during §63 a line reading
+`resident-profile → "Resident Profile"` was taken as evidence that the modal screens were clean when
+it said nothing about them at all. A tool that mislabels its output does not just fail to inform the
+reading — it makes the wrong reading look supported.
+
+The fix is the layer order, which is the paint order: ask the dialog, then the sheet, then the
+screen. It is pinned by a gate check about the *order* of the two lookups rather than their presence
+— a check that only asks whether `.modal-layer b` appears somewhere in the file would pass on a
+lookup that asks it last — and `falsify-camera-surfaces` now carries a mutant that swaps the two and
+requires the named check to fail.
+
+Found in the same line of output: the shot column padded names to a fixed 20 characters, and six of
+the screens added in §63 are longer than that, so the walk printed
+`resident-payment-modalshows "Change payment method"`. The width is derived from the table now,
+because the reason a column stops being worth reading is that someone stopped reading it.
+
+### Numbers
+
+Gate **524** (was 523, for the lookup-order check). `falsify-camera-surfaces` **3 of 3**. `node
+tools/falsify-all.cjs`: **26 families, 154 mutants applied, 154 caught, 0 not applied**. `node
+tools/shot.cjs --measure` across 69 screens: every failure tally zero, no console errors, and the
+nine dialog screens now named by their own headings — `resident-edit-form → "Edit profile"`,
+`provider-service-form → "NEW SERVICE"`, `admin-security-modal → "Change security PIN"`. The splash
+still reads `(untitled)`, which it did before this change too: it is a logo screen with no heading,
+and the gate's `<h1>` rule covers app screens, not the launch.

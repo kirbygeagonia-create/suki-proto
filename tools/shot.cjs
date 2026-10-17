@@ -32,8 +32,14 @@ const ROOT = path.join(__dirname, '..');
 
 const argv = process.argv.slice(2);
 const flag = (name, dflt) => {
-  const hit = argv.find(a => a.startsWith('--' + name + '='));
-  return hit ? hit.split('=')[1] : dflt;
+  const prefix = '--' + name + '=';
+  const hit = argv.find(a => a.startsWith(prefix));
+  /* Take everything after the FIRST '='. This used to be hit.split('=')[1], which truncates any
+     value containing an assignment — so `--probe='(function(){var b=…})()'` reached the page as
+     `(function(){var b`, the page answered `SyntaxError: Unexpected token ')'`, and the tool
+     printed a page fault for a mistake in its own argument parser. Two probes were dismissed as
+     "shell quoting" that way before the parser was read. */
+  return hit ? hit.slice(prefix.length) : dflt;
 };
 const has = (name) => argv.includes('--' + name);
 
@@ -56,7 +62,34 @@ const MEASURE = has('measure');
 /* Asks Chrome to report prefers-reduced-motion, so a claim that the app honours
    that setting can be measured instead of assumed. */
 const REDUCED = has('reduced-motion');
+/* Asks Chrome for prefers-color-scheme: dark. The app declares no color-scheme, so this is not
+   a question about a theme it has — it is the question of what the *browser* paints on the
+   controls the app leaves to the user agent, which is exactly the Android-in-dark-mode case no
+   desktop session ever shows. */
+const DARK = has('dark');
 const PROBE = flag('probe', '');
+/* --focus walks each screen with real Tab keypresses. The distinction is the whole instrument:
+   Chrome matches :focus-visible only for a keyboard-modality focus, so a script that calls
+   el.focus() sees no ring on anything — which is exactly what the first attempt at this did, and
+   it read as an app with no focus states at all rather than as a tool asking the wrong way.
+   --focus-steps caps the walk (default 26 stops, which is more than any screen here has). */
+const FOCUS = has('focus');
+const FOCUS_STEPS = parseInt(flag('focus-steps', '26'), 10);
+/* Runs the whole walk in another calendar frame without touching this machine's
+   clock or zone. A record's date is a fact about the world; if the words that
+   print it move when the timezone does, something is reading a calendar day
+   through an instant — the class that once rendered "Verified Mar 14" as Mar 13. */
+const TIMEZONE = flag('timezone', '');
+/* Emulates an operating-system text-size setting.
+   This had to be corrected after it had been trusted. The first version substituted the emulated
+   default for `1em` inside the app's own `font-size: min(1em, 20px)`, which models "the OS changes
+   the browser's default font size". Chromium on Android does not do that — it multiplies the
+   *used* font size after CSS has resolved, so min() sees an unscaled 1em, returns 16px, and the
+   platform scales that. Measured on a vivo at font_scale 1.35 the root computed 21.6px: the cap
+   never engaged, while this flag reported it holding. Setting the root font size directly is what
+   the platform's multiplication produces, so that is what is emulated — and it bypasses the CSS
+   cap on purpose, because the real device bypasses it too. */
+const FONT_SCALE = flag('font-scale', '');
 
 /* ------------------------------------------------------------------ the audit
    A screenshot shows one screen to one pair of eyes; these numbers run over every
@@ -67,7 +100,7 @@ const PROBE = flag('probe', '');
    what a real browser actually laid out.
    -------------------------------------------------------------------------------- */
 const AUDIT_JS = `(function(){
-  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], belowFloor: [], chartEscape: [], contrast: [], overlaps: [], stretched: [], broken: [], remote: [], svgSmall: [], vendor: [], mapEscape: [], occluded: [], nameless: [], placeholderOnly: [], catMotion: [], hOverflow: 0 };
+  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], belowFloor: [], chartEscape: [], navEscape: [], squashedCircle: [], unreachable: [], contrast: [], overlaps: [], stretched: [], broken: [], remote: [], svgSmall: [], vendor: [], mapEscape: [], occluded: [], modalInert: [], nameless: [], placeholderOnly: [], catMotion: [], hOverflow: 0 };
   const vw = document.documentElement.clientWidth;
   out.hOverflow = document.documentElement.scrollWidth - vw;
   const TAP = 44;
@@ -84,6 +117,17 @@ const AUDIT_JS = `(function(){
      marker is an <img> that Leaflet sizes and positions itself. Resizing either
      means fighting vendor CSS, so they are reported, not fixed. */
   const vendor = (el) => !!(el.closest && el.closest('.leaflet-container'));
+
+  /* Every surface the app can paint content into, named once. Six walks each carried their own
+     hand-written list and they had drifted: the clipped-text, 14px-floor, contrast and
+     form-control-scale walks all skipped .modal-layer, so no sensor had ever looked at the profile
+     hubs' edit forms — the densest form surface in the app, where a name, phone, address, PIN and
+     payout account are typed — and the round-marker walk missed .bottomnav until a defect there
+     made it interesting. Two walks had it right by accident, because they query the whole
+     document: tap targets, and the screen-reader-name check. */
+  const SURFACES = ['#screen', '.sheet', '.auth-sheet', '.bottomnav', '.modal-layer', '#navbar'];
+  const WALK = SURFACES.map(s => s + ' *').join(', ');
+  const isField = el => el.matches('input:not([type=hidden]), select, textarea');
 
   document.querySelectorAll('button, a, input:not([type=hidden]), select, textarea, [role=button], [data-open-chat-id], .navitem, .chip[onclick], .pick, .filter-option').forEach(el => {
     const r = painted(el); if (!r) return;
@@ -113,7 +157,13 @@ const AUDIT_JS = `(function(){
     if (reachH < TAP - 0.6 || reachW < 28)
       out.small.push({ what: text(el).slice(0, 30) || el.tagName.toLowerCase(), h: Math.round(r.height), w: Math.round(r.width),
                        boxH: Math.round(reachH), inline, via, cls: (el.className||'').toString().split(' ')[0] });
-    if (!text(el)) out.unlabelled.push({ unlabelled: el.tagName.toLowerCase() + '.' + ((el.className||'').toString().split(' ')[0] || '-') });
+    /* A form control is not named by its text content — an <input> has none, by definition — and
+       this scan cannot see the wrapping <label> that does name it. The dedicated walk below asks
+       the browser instead, through el.labels, and answers 0 for the very fields this line flagged:
+       the read-only email row on all three edit-profile dialogs. Two tallies disagreeing about the
+       same element is a defect in one of them, and it is this one, so a control the field-name
+       walk already covers is skipped here rather than reported as nameless. */
+    if (!text(el) && !isField(el)) out.unlabelled.push({ unlabelled: el.tagName.toLowerCase() + '.' + ((el.className||'').toString().split(' ')[0] || '-') });
   });
 
   /* A form control a screen reader cannot name. This is asked of the live DOM rather than
@@ -182,6 +232,106 @@ const AUDIT_JS = `(function(){
     });
   });
 
+  /* A bottom-navigation item pushed off the panel. The row is a flex container whose items are
+     flex:1, and a flex item's min-width defaults to 'auto' — which for a word means the item
+     cannot shrink below that word, so the row overflows instead. Measured at 320px with the
+     phone's text at 200%: the resident's four labels needed 456px of a 320px row and "Profile"
+     painted 132px past the row's right edge — which is the edge of the device, so a destination
+     with no way to reach it.
+     No other tally sees this. The document is not wider than the phone (that check answers
+     "none" on the same screen), nothing clips the item, so the truncation tally is silent, and
+     the tap-target walk covers #screen, which does not contain the nav.
+     (No backticks anywhere in this file's page scripts: they are template literals, and one
+     ends the string early — which is how this comment first broke the camera.) */
+  document.querySelectorAll('.bottomnav').forEach(row => {
+    const rb = row.getBoundingClientRect();
+    if (!rb.width) return;
+    row.querySelectorAll('.navitem').forEach(item => {
+      const r = item.getBoundingClientRect();
+      const over = Math.round(Math.max(r.right - rb.right, rb.left - r.left, 0));
+      if (over > 1) out.navEscape.push({
+        text: ((item.querySelector('.nav-label') || item).textContent || '').trim().slice(0, 12),
+        over: over, box: Math.round(rb.width), scroll: row.scrollWidth });
+    });
+  });
+
+  /* A circle painted as a sliver. A computed "border-radius:50%" is the one declaration that
+     states an element's width and height must agree, and a flex row that runs out of room breaks
+     it in silence: the provider dashboard's 8px "requests waiting" dot sits beside a heading, and
+     at 320px with the phone's text at 200% the heading took the row and the dot painted 2.3px
+     wide by 8px tall — a clipped mark, not a status indicator. Nothing else sees it: it is not
+     overflow, not clipped text, not off the type scale, and its contrast is fine because it
+     paints no text at all. */
+  document.querySelectorAll(WALK).forEach(el => {
+    const cs = getComputedStyle(el);
+    if (cs.borderTopLeftRadius !== '50%' || cs.borderTopRightRadius !== '50%') return;
+    const r = el.getBoundingClientRect();
+    /* Only a box that paints nothing at all is skipped. The first version of this guard asked
+       for 3px on each side, and the defect that motivated the tally — an 8px dot crushed to 2.3
+       — fell straight through it, so the run reported clean while the screenshot showed a
+       sliver. An instrument whose floor sits above its own finding is the worst kind of pass. */
+    if (r.width < 1 || r.height < 1) return;
+    const off = Math.abs(r.width - r.height);
+    if (off > 2) out.squashedCircle.push({ cls: (el.className || '').toString().slice(0, 24),
+      w: Math.round(r.width * 10) / 10, h: Math.round(r.height * 10) / 10,
+      text: (el.textContent || '').trim().slice(0, 18) });
+  });
+
+  /* A control no tap can reach. Every other geometry tally here asks about painting; this one
+     asks the question a phone actually poses. A button whose box is outside the viewport with
+     nothing that scrolls, or outside an ancestor that clips it without ever offering a scroll,
+     cannot be pressed by a thumb however long the user tries — and it reports clean everywhere
+     else, because it is not clipped text (nothing clips it), not under the nav, not off the
+     type scale, and its contrast is fine. Found by sweeping the heights the repository had never
+     measured: 320x480 is a small handset, an Android Go device, or any phone in split-screen, and
+     at that size with the text at 200% the booking sheet put "Send request" 149px below the
+     bottom edge of the device and the admin's PIN dialog scattered its own Close button off both
+     edges at once. See 61. */
+  const scrollsV = v => v === 'auto' || v === 'scroll';
+  const clipsV = v => scrollsV(v) || v === 'hidden' || v === 'clip';
+  const sticksOut = (r, b) => Math.max(0, b.left - r.left, r.right - b.right, b.top - r.top, r.bottom - b.bottom);
+  const viewH = window.innerHeight;
+  const labelOf = el => (el.getAttribute('aria-label') || el.textContent || el.value || el.placeholder || '')
+    .replace(/\s+/g, ' ').trim().slice(0, 26) || '<' + el.tagName.toLowerCase() + '>';
+  /* The local is named 'over', not 'out': the results object this whole script answers with is
+     'out', and a local of the same name inside this loop would shadow it. Which is also why this
+     file's page-script comments carry no backticks at all — the scripts are template literals, so
+     one ends the string early. That hazard is written three comments above this one, and was hit
+     again while writing this one, which is the best argument for the note being here. */
+  document.querySelectorAll(WALK).forEach(el => {
+    if (!el.matches || !el.matches('button, a[href], input, select, textarea, summary, [onclick], [role="button"], .navitem, .chip')) return;
+    if (el.closest('[hidden]') || el.disabled) return;
+    /* Leaflet's panes clip on purpose and its map moves by drag, not scroll. The camera already
+       refuses to resize vendor controls; this refuses to reason about them for the same reason. */
+    if (el.closest('.leaflet-pane, .leaflet-control-container')) return;
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    let governed = false, p = el.parentElement;
+    while (p && !governed) {
+      const cs = getComputedStyle(p);
+      const over = sticksOut(r, p.getBoundingClientRect());
+      const canScroll = (scrollsV(cs.overflowY) && p.scrollHeight > p.clientHeight + 2) ||
+                        (scrollsV(cs.overflowX) && p.scrollWidth > p.clientWidth + 2);
+      if (over > 2 && (clipsV(cs.overflowY) || clipsV(cs.overflowX))) {
+        if (canScroll) { governed = true; break; }
+        out.unreachable.push({ what: labelOf(el), how: 'clipped', px: Math.round(over),
+          by: (p.id ? '#' + p.id : '.' + String(p.className).split(' ')[0]), tag: el.tagName.toLowerCase() });
+        return;
+      }
+      if (canScroll) governed = true;
+      if (cs.position === 'fixed') break;
+      p = p.parentElement;
+    }
+    const below = r.top >= viewH, above = r.bottom <= 0, right = r.left >= vw, left = r.right <= 0;
+    if (!(below || above || right || left)) return;
+    if (document.documentElement.scrollHeight > viewH + 2 || document.documentElement.scrollWidth > vw + 2) governed = true;
+    if (governed) return;
+    out.unreachable.push({ what: labelOf(el),
+      how: below ? 'below' : above ? 'above' : right ? 'right' : 'left',
+      px: Math.round(below ? r.top - viewH : above ? -r.bottom : right ? r.left - vw : -r.right),
+      by: 'viewport', tag: el.tagName.toLowerCase() });
+  });
+
   /* Anything the nav actually traps. Content sliding under a glass bar while you
      scroll is normal and wanted; a control that is still covered when the screen
      is scrolled to its end is not. So scroll to the bottom first, then ask. */
@@ -212,7 +362,7 @@ const AUDIT_JS = `(function(){
   }
 
   /* clipped or ellipsised text */
-  document.querySelectorAll('#screen *, .sheet *, .auth-sheet *').forEach(el => {
+  document.querySelectorAll(WALK).forEach(el => {
     if (el.children.length) return;
     const t = (el.textContent || '').trim(); if (!t) return;
     const s = getComputedStyle(el);
@@ -222,10 +372,24 @@ const AUDIT_JS = `(function(){
       out.truncated.push({ text: t.slice(0, 30), lost: el.scrollWidth - el.clientWidth, hidden: true });
   });
 
-  /* the type scale */
+  /* the type scale. Read by PAINTING each token, not by parsing its declaration: the tokens
+     are rem now, so parseFloat("--t-caption: 0.875rem") answers 0.875 and every element on the
+     page suddenly looked off-scale — 2831 reports from a reference list that had stopped
+     measuring anything. A probe element resolves whatever unit the token uses to the px the
+     browser actually applies, so this survives px, rem, or a root font size the OS changed. */
   const rootS = getComputedStyle(document.documentElement);
+  const probe = document.createElement('span');
+  probe.style.position = 'absolute';
+  probe.style.fontSize = '0px';
+  probe.style.height = '0';
+  probe.style.overflow = 'hidden';
+  document.body.appendChild(probe);
   const scale = ['t-display','t-title-lg','t-num','t-title','t-lead','t-body-lg','t-input','t-body','t-body-sm','t-caption']
-    .map(t => parseFloat(rootS.getPropertyValue('--' + t))).filter(Boolean);
+    .map(t => { probe.style.fontSize = 'var(--' + t + ')'; return parseFloat(getComputedStyle(probe).fontSize); })
+    .filter(v => isFinite(v) && v > 0);
+  probe.remove();
+  out.scalePx = scale.map(v => Math.round(v * 10) / 10);
+  out.rootPx = parseFloat(rootS.fontSize);
   const seenSizes = {};
   /* A hard floor, checked separately from "is this a declared token". The scale test
      allows 0.7px of rounding noise, and 14 - 13.3 is 0.6999999999 in floating point —
@@ -239,9 +403,15 @@ const AUDIT_JS = `(function(){
     return { size: f, tag: el.tagName.toLowerCase(),
       text: (el.textContent || el.value || '').trim().slice(0, 24) };
   };
-  document.querySelectorAll('#screen *, .sheet *, .auth-sheet *').forEach(el => {
+  document.querySelectorAll(WALK).forEach(el => {
     if (el.children.length) return;
     if (!(el.textContent || '').trim()) return;
+    /* Leaflet's controls are excluded from the scale test for the same reason they are
+       excluded from the tap test: their CSS ships with the library. Reporting "22px +" as
+       off the type scale put 16 failures on eight screens and every one of them was the map
+       zoom control — noise that would have sent the next reader to fix a font size the
+       application does not own. */
+    if (vendor(el)) return;
     const f = Math.round(parseFloat(getComputedStyle(el).fontSize) * 10) / 10;
     if (!f) return;
     seenSizes[f] = (seenSizes[f] || 0) + 1;
@@ -257,7 +427,8 @@ const AUDIT_JS = `(function(){
      six dropdowns paint at the user-agent default of 13.3px — under the floor 68 sets —
      while the type-scale tally reported clean. Controls that paint no words are skipped
      on purpose: a checkbox has no text to be too small. */
-  document.querySelectorAll('#screen select, #screen textarea, #screen input, .sheet select, .sheet textarea, .sheet input, .auth-sheet select, .auth-sheet textarea, .auth-sheet input').forEach(el => {
+  document.querySelectorAll(WALK).forEach(el => {
+    if (!isField(el)) return;
     if (/^(checkbox|radio|range|color|file|hidden)$/.test(el.type || '')) return;
     if (el.disabled && el.tagName === 'INPUT') return;
     const f = Math.round(parseFloat(getComputedStyle(el).fontSize) * 10) / 10;
@@ -353,7 +524,7 @@ const AUDIT_JS = `(function(){
       acc = over(L.solid || Object.assign(gradAt(L.node, L.grad, cx, cy), { 3: 1 }), acc);
     return acc;
   }
-  document.querySelectorAll('#screen *, .sheet *, .auth-sheet *').forEach(el => {
+  document.querySelectorAll(WALK).forEach(el => {
     if (el.children.length) return;
     const t = (el.textContent || '').trim(); if (t.length < 2) return;
     const r = painted(el); if (!r) return;
@@ -428,7 +599,111 @@ const AUDIT_JS = `(function(){
       }
     }
   }
+  /* And a sheet that keeps declaring aria-modal while a modal paints above it is a lie
+     with a consequence: Chromium marks everything outside the dialog inert, so the modal
+     above it leaves the platform accessibility tree — visible, tappable, and absent to a
+     screen reader. Asked of the app's own derivation rather than of a class, because the
+     rule that decides this lives in one place and an instrument that guessed at a second
+     one would disagree with it. */
+  const sheetPanel = document.querySelector('.sheet');
+  if (sheetPanel) {
+    if (typeof layerKeys !== 'function') {
+      out.modalInert.push({ what: 'the instrument cannot ask which layer is on top: no layerKeys on the page' });
+    } else if (layerKeys().some(k => !!state[k])
+        && sheetPanel.getAttribute('aria-modal') === 'true') {
+      out.modalInert.push({ what: 'the sheet still claims modality under an open modal' });
+    }
+  }
   return out;
+})()`;
+
+/* One stop of the Tab walk, evaluated in the page after a real keypress. It answers three things
+   about whatever the browser just focused:
+
+     changed  — does anything the user could see differ while focused? The comparison is against a
+                clone of the element appended to the same parent: the clone inherits every selector
+                that matches (class, attribute, ancestry) and cannot match a focus pseudo-class, so
+                it is the element's own unfocused style without a second round trip. Comparing
+                against a fixed guess would call a control's permanent shadow a focus ring.
+     uaRing   — the ring that appeared is the browser's default (outline-style: auto), which means
+                the app's own rule did not reach this control. Visible, so not a failure of 2.4.7,
+                and it is exactly the drift a hand-written selector list causes silently.
+     behind   — something else is painted over the element the browser just focused, i.e. Tab walked
+                past the scrim into the screen behind it. Hit-tested at the element's own centre
+                rather than matched against a class or an attribute, because a check that reads the
+                same marker as the code under test cannot see that marker go missing — which is
+                exactly how one mutant survived its first run here.
+
+   No backticks in this file's page scripts: they are template literals. */
+const FOCUS_STOP_JS = `(function(){
+  var el = document.activeElement;
+  if (!el || el === document.body || el === document.documentElement) return null;
+  var r = el.getBoundingClientRect();
+  if (!r.width || !r.height) return null;
+  var a = getComputedStyle(el);
+  var clone = el.cloneNode(false);
+  var b = a;
+  if (el.parentElement) {
+    el.parentElement.appendChild(clone);
+    b = getComputedStyle(clone);
+    clone.remove();
+  }
+  var ring = a.outlineStyle !== 'none' && parseFloat(a.outlineWidth) >= 1;
+  var glow = a.boxShadow !== 'none' && a.boxShadow !== b.boxShadow;
+  var edge = a.borderTopColor !== b.borderTopColor || a.borderTopWidth !== b.borderTopWidth;
+  /* Is any part of the focused element actually exposed to a tap? Probed at the centre and at four
+     inset corners, because the first version asked only the centre and reported the sheet's own
+     scrim as unreachable — its centre is under the panel by design, while the whole rest of it is
+     the thing a user taps to dismiss. An element with no exposed point at all is the real defect:
+     focus landed somewhere a finger cannot go.
+
+     Hit-tested rather than matched against a class or an attribute, because a check that reads the
+     same marker as the code under test cannot see that marker go missing — which is exactly how one
+     mutant survived its first run here. */
+  var exposed = false, foreign = false;
+  var probe = function(){
+    exposed = false; foreign = false;
+    var q = el.getBoundingClientRect();
+    var xs = [q.left + 2, q.right - 2, q.left + 2, q.right - 2, (q.left + q.right) / 2];
+    var ys = [q.top + 2, q.top + 2, q.bottom - 2, q.bottom - 2, (q.top + q.bottom) / 2];
+    for (var k = 0; k < 5; k++) {
+      if (xs[k] < 0 || ys[k] < 0 || xs[k] >= innerWidth || ys[k] >= innerHeight) continue;
+      var hit = document.elementFromPoint(xs[k], ys[k]);
+      if (!hit) continue;
+      if (hit === el || el.contains(hit)) return true;
+      /* A point that lands on one of the element's own ancestors is the element being clipped by a
+         scroll container — reachable by scrolling, which is what the reach tally already judges.
+         Only a hit on something foreign counts as being covered. Without this distinction the date
+         chip in the booking sheet's horizontal rail — clipped by design, one swipe from view — was
+         reported as unreachable. */
+      if (!hit.contains(el)) foreign = true;
+    }
+    return false;
+  };
+  exposed = probe();
+  /* And if it is covered, ask once more with the element brought to the middle of the window. A
+     control sitting under a sticky bar at this scroll offset is not the defect — every ordinary
+     list row is under the bar until you scroll, and the walk would otherwise cry wolf on all of
+     them. What survives the scroll is the case that matters: focus landed somewhere no amount of
+     scrolling can show. */
+  if (!exposed && foreign) {
+    el.scrollIntoView({ block: 'center', inline: 'center' });
+    exposed = probe();
+  }
+  var covered = !exposed && foreign;
+  var name = (el.getAttribute('aria-label') || el.textContent || el.placeholder || el.type || '')
+    .replace(/\\s+/g, ' ').trim().slice(0, 22);
+  return {
+    key: el.tagName.toLowerCase() + '|' + Math.round(r.top) + '|' + Math.round(r.left) + '|' + Math.round(r.width),
+    tag: el.tagName.toLowerCase(), what: name,
+    cls: (el.className || '').toString().slice(0, 26),
+    fv: el.matches(':focus-visible'),
+    changed: (ring && a.outline !== b.outline) || glow || edge,
+    uaRing: ring && a.outlineStyle === 'auto',
+    ring: a.outlineStyle + ' ' + a.outlineWidth,
+    behind: covered,
+    offscreen: r.bottom < 1 || r.top > innerHeight - 1 || r.right < 1 || r.left > innerWidth - 1
+  };
 })()`;
 
 const CHROME_CANDIDATES = [
@@ -621,6 +896,27 @@ const SCREENS = [
   ['admin-security-modal', `state.view='app'; state.role='admin'; state.tab='profile'; render();
                           openProfileSection('admin','security','Security & Sign-in','What this device keeps');
                           clickPainted(/AccountAction\\(.pin.\\)/, 'the security-PIN button');`],
+  /* The six forms where a person types the app's most sensitive facts — a name, a phone, a home
+     address, a household item, a service price, a portfolio entry. Three dialog screens already
+     sat in this table (a payment picker, a payout field, a PIN note), and these had never been
+     painted at all. It mattered twice over: a destination behind a button is a destination, and
+     until this pass every text measurement in the camera skipped .modal-layer, so the fields
+     themselves had been checked by nothing. */
+  ['resident-edit-form', `state.view='app'; state.role='resident'; state.tab='profile'; render();
+                          clickPainted(/residentProfileAction\\('edit'\\)/, 'the Edit Profile button');`],
+  ['resident-household-form', `state.view='app'; state.role='resident'; state.tab='profile'; render();
+                          openProfileSection('resident','home','Home & Maintenance Profile','Items you add on this device');
+                          clickPainted(/residentProfileAction\\('add_item'\\)/, 'the add-household-item button');`],
+  ['provider-edit-form', `state.view='app'; state.role='provider'; state.tab='profile'; render();
+                          clickPainted(/providerProfileAction\\('edit'\\)/, 'the Edit Professional Profile button');`],
+  ['provider-service-form', `state.view='app'; state.role='provider'; state.tab='profile'; render();
+                          openProfileSection('provider','services','Services Offered','What this account takes on');
+                          clickPainted(/providerProfileAction\\('add_service'\\)/, 'the add-service button');`],
+  ['provider-portfolio-form', `state.view='app'; state.role='provider'; state.tab='profile'; render();
+                          openProfileSection('provider','portfolio','Work Portfolio','Service photos and examples');
+                          clickPainted(/providerProfileAction\\('portfolio_add'\\)/, 'the add-work button');`],
+  ['admin-edit-form', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+                          clickPainted(/adminAccountAction\\('edit'\\)/, 'the Edit Profile button');`],
   ['admin-dash',       `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='overview'; render();`],
   /* The audit log is the record §29 exists to keep, and the camera had never painted it:
      it sits one tap off the dashboard, and no table entry reached it. An action is logged
@@ -680,6 +976,14 @@ const SCREENS = [
                         reviewOf('joel').status='verified'; reviewOf('joel').decidedAt=Date.now();
                         reviewOf('joel').reviewer=state.adminProfileData.name;
                         state.tab='admin_verifications'; state.adminProviderCategory='decided'; render();`],
+  ['admin-verifiers-empty', `state.view='app'; state.role='admin';
+                        /* A person reaches this by approving every applicant: the queue filters
+                           decided applicants out, so finishing the queue is what empties it. The
+                           list is cleared directly because what is being photographed is the
+                           state, not the clicks — the empty branch had never been painted for a
+                           camera, so its tap targets and contrast were unmeasured. */
+                        PENDING_APPLICANTS.length = 0;
+                        state.tab='admin_verifications'; state.adminProviderCategory='pending'; render();`],
   ['case-sheet',       `state.view='app'; state.role='resident'; state.tab='booking_detail';
                         const b=BOOKINGS.find(x=>x.status==='completed'&&x.pricing); b.completedAt=new Date().toISOString();
                         state.selectedBookingId=b.id; render(); openCaseSheet(b.id);`],
@@ -869,9 +1173,16 @@ async function main() {
     deviceScaleFactor: DPR, mobile: !DESKTOP
   });
   await session.send('Emulation.setScrollbarsHidden', { hidden: true });
-  if (REDUCED) {
-    await session.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
-    console.log('  emulating prefers-reduced-motion: reduce');
+  const mediaFeatures = [];
+  if (REDUCED) mediaFeatures.push({ name: 'prefers-reduced-motion', value: 'reduce' });
+  if (DARK) mediaFeatures.push({ name: 'prefers-color-scheme', value: 'dark' });
+  if (mediaFeatures.length) {
+    await session.send('Emulation.setEmulatedMedia', { features: mediaFeatures });
+    console.log('  emulating ' + mediaFeatures.map(f => f.name + ': ' + f.value).join(', '));
+  }
+  if (TIMEZONE) {
+    await session.send('Emulation.setTimezoneOverride', { timezoneId: TIMEZONE });
+    console.log('  emulating timezone: ' + TIMEZONE);
   }
 
   const loaded = new Promise(resolve => {
@@ -929,7 +1240,27 @@ async function main() {
   })()`);
   await sleep(500);
 
+  if (FONT_SCALE) {
+    const scaleFactor = Number(FONT_SCALE);
+    if (!isFinite(scaleFactor) || scaleFactor <= 0) {
+      console.error('--font-scale wants a number like 1.35, got: ' + FONT_SCALE);
+      process.exit(1);
+    }
+    const applied = await session.evaluate(`(function(){
+      document.documentElement.style.fontSize = ${(16).toFixed(0)} * ${scaleFactor} + 'px';
+      return 'root set to ' + document.documentElement.style.fontSize
+        + ' -> computed ' + getComputedStyle(document.documentElement).fontSize
+        + ' -> caption ' + getComputedStyle(document.body).fontSize;
+    })()`);
+    console.log('  emulating OS text size ' + FONT_SCALE + 'x → ' + applied);
+  }
+
   const manifest = [];
+  /* Wide enough for the longest screen name in the table, so the column stays readable as the
+     table grows — six of the names added in §63 are longer than the fixed 20 this printed at,
+     and the output started running "resident-payment-modalshows" together, which is the same
+     failure as a mislabelled row: the column stops being worth reading. */
+  const NAME_W = wanted.reduce((n, s) => Math.max(n, s[0].length), 20) + 1;
   for (const [name, nav] of wanted) {
     try {
       /* Stand the app back up the way its own bottom navigation does before each screen.
@@ -985,14 +1316,20 @@ async function main() {
       /* Say what was actually photographed. A filename is a claim about the pixels
          in it, and without this the tool can silently shoot the wrong screen.
          querySelector returns the first match in DOCUMENT order, not in the order of
-         the selector list, so the layers are asked one at a time: a sheet on top
-         outranks the screen behind it. The last two fallbacks exist because the root
-         tabs carry a bare <h1> with no class on it — the resident's name, not a page
-         heading — so the tool printed "(untitled)" over a screen that does have a
-         title, and a column of lies teaches you to stop reading the column.
+         the selector list, so the layers are asked one at a time — and asked in the
+         order they paint: a dialog outranks the sheet it was raised from, a sheet
+         outranks the screen behind it. The dialog used to be missing from this list
+         entirely, which labelled all six form screens by the hub underneath them
+         ("Resident Profile" over a picture of the edit form) and the same for the
+         three dialogs that predated them; the walk's own output misled this pass
+         twice, which is how it was noticed. The last two fallbacks exist because the
+         root tabs carry a bare <h1> with no class on it — the resident's name, not a
+         page heading — so the tool printed "(untitled)" over a screen that does have
+         a title, and a column of lies teaches you to stop reading the column.
          "(untitled)" now means genuinely no heading was found. */
       const seen = await session.evaluate(`(function(){
-         const t = document.querySelector('.sheet .sheet-title') || document.querySelector('.chat-head-name') ||
+         const t = document.querySelector('.modal-layer b') || document.querySelector('.sheet .sheet-title') ||
+                   document.querySelector('.chat-head-name') ||
                    document.querySelector('.auth-sheet .auth-wordmark') || document.querySelector('#screen .topbar .title') ||
                    document.querySelector('#screen .card-title') || document.querySelector('#screen h1') ||
                    document.querySelector('#screen h2');
@@ -1009,8 +1346,10 @@ async function main() {
       if (PROBE) {
         /* Its own try, because a bad probe string used to be reported as "page threw" —
            which reads as an app defect to whoever is holding the output, when the only
-           thing that broke was the question. (@file is loaded relative to the repo; a
-           bare path without the @ is evaluated as JavaScript and fails on its first ':'.) */
+           thing that broke was the question. (@file is loaded relative to the repo; a bare
+           value is evaluated as JavaScript as written, and until the flag parser stopped
+           cutting it at the first '=' that almost always produced a SyntaxError the page
+           had nothing to do with.) */
         try {
           const expr = PROBE.startsWith('@') ? fs.readFileSync(path.resolve(ROOT, PROBE.slice(1)), 'utf8') : PROBE;
           console.log('    probe → ' + JSON.stringify(await session.evaluate(`(function(){ try { return (${expr}); } catch(e){ return 'threw: ' + e.message; } })()`)));
@@ -1024,8 +1363,43 @@ async function main() {
       if (MEASURE) {
         try { audit = await session.evaluate(AUDIT_JS); } catch (e) { audit = { error: e.message }; }
       }
-      manifest.push({ name, shows: seen.title, sheet: seen.sheet, where: seen.where, file: path.relative(ROOT, file), overflow: seen.overflow, viewport: WIDTH + 'x' + HEIGHT, audit });
-      console.log('  shot ' + name.padEnd(20) + 'shows "' + seen.title + '" [' + seen.where +
+      /* The Tab walk runs after the screenshot on purpose: focusing a control paints a ring, and
+         the picture should be of the screen as a customer left it, not as the tool found it. */
+      let focus = null;
+      if (FOCUS) {
+        focus = [];
+        /* Stop the glide before walking. #screen scrolls smoothly by contract, so a Tab that lands
+           below the fold starts an animation, and a rect read in the next breath is the element's
+           *old* position — which this tool would then report as "focus went somewhere off the
+           viewport". 19 of those, every one a profile-hub row, before the cause was the camera
+           rather than the page. The same trap is already named once in this file for the under-nav
+           check; the walk is the second place it bites, because focusing an element scrolls it and
+           scrolling an element takes 250ms here. Restored after the walk so the pixels shot are the
+           app's own. */
+        await session.evaluate(`(function(){
+           const s = document.createElement('style');
+           s.id = 'suki-no-glide';
+           s.textContent = '*{ scroll-behavior:auto !important; }';
+           document.head.appendChild(s);
+           if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+           return true;
+        })()`);
+        for (let i = 0; i < FOCUS_STEPS; i++) {
+          await session.send('Input.dispatchKeyEvent',
+            { type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9, nativeVirtualKeyCode: 9 });
+          await session.send('Input.dispatchKeyEvent',
+            { type: 'keyUp', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9, nativeVirtualKeyCode: 9 });
+          const stop = await session.evaluate(FOCUS_STOP_JS);
+          if (!stop) continue;
+          /* The browser wraps to the address bar and back; seeing a stop twice means the walk has
+             come round, and continuing would only pad the count. */
+          if (focus.some(s => s.key === stop.key && s.what === stop.what)) break;
+          focus.push(stop);
+        }
+        await session.evaluate(`(function(){ const s=document.getElementById('suki-no-glide'); if (s) s.remove(); return true; })()`);
+      }
+      manifest.push({ name, shows: seen.title, sheet: seen.sheet, where: seen.where, file: path.relative(ROOT, file), overflow: seen.overflow, viewport: WIDTH + 'x' + HEIGHT, audit, focus });
+      console.log('  shot ' + name.padEnd(NAME_W) + 'shows "' + seen.title + '" [' + seen.where +
                   (seen.sheet !== '-' ? ' sheet:' + seen.sheet : '') + ']' +
                   (seen.overflow > 4 ? ('  scrolls ' + seen.overflow + 'px past the fold') : ''));
     } catch (e) {
@@ -1064,11 +1438,31 @@ async function main() {
     tally(str, 'images drawn out of proportion', r => r.screen + '  ' + r.src + ' natural ' + r.natural + ' drawn ' + r.drawn);
     tally(flat('mapEscape'), 'map panes painted outside their own frame', r => r.screen + '  ' + r.what + ' — ' + r.why);
     tally(flat('occluded'), 'something painting on top of an open modal layer', r => r.screen + '  ' + r.what + ' at sample ' + r.at);
+    tally(flat('modalInert'), 'a sheet claiming modality under an open modal', r => r.screen + '  ' + r.what);
     tally(flat('catMotion'), 'category artwork moving in the painted page', r => r.screen + '  ' + r.what);
     tally(flat('broken'), 'images that asked for a file and got no pixels', r => r.screen + '  ' + r.src + ' — ' + r.why);
     tally(flat('remote'), 'requests that left the device for a network', r => r.screen + '  ' + r.kind + '  ' + r.url);
     tally(flat('svgSmall'), 'chart text that paints below the 14px floor', r => r.screen + '  "' + r.text + '" declares ' + r.declared + 'px, paints ' + r.rendered + 'px');
     tally(flat('chartEscape'), 'chart labels painted outside their own chart box', r => r.screen + '  "' + r.text + '" (' + r.cls + ') hangs ' + r.over + 'px past a ' + r.box + 'px box');
+    tally(flat('navEscape'), 'bottom-nav items pushed off the panel', r => r.screen + '  "' + r.text + '" hangs ' + r.over + 'px past a ' + r.box + 'px row (the row needs ' + r.scroll + 'px)');
+    tally(flat('squashedCircle'), 'round markers painted as a sliver (a flex row took their width)', r => r.screen + '  .' + r.cls + ' ' + r.w + 'x' + r.h + 'px "' + r.text + '"');
+    tally(flat('unreachable'), 'controls no tap can reach (off the viewport or clipped, with nothing that scrolls)', r => r.screen + '  <' + r.tag + '> "' + r.what + '" is ' + r.px + 'px ' + r.how + ' past ' + r.by);
+    /* Only printed when the walk ran. A tally that reports 0 because its sensor never fired is
+       the exact failure this repository keeps documenting, so silence here is not a pass — the
+       absence of the line is the honest answer for a run without --focus. */
+    if (FOCUS) {
+      const stops = manifest.flatMap(m => (m.focus || []).map(x => ({ screen: m.name, ...x })));
+      console.log('\nkeyboard stops walked: ' + stops.length + ' across ' +
+        manifest.filter(m => m.focus).length + ' screens');
+      tally(stops.filter(s => !s.changed), 'keyboard stops with no visible focus ring',
+        r => r.screen + '  <' + r.tag + '> "' + r.what + '" .' + r.cls + ' outline ' + r.ring);
+      tally(stops.filter(s => s.uaRing), 'keyboard stops covered by the browser default ring rather than the app rule',
+        r => r.screen + '  <' + r.tag + '> "' + r.what + '" .' + r.cls);
+      tally(stops.filter(s => s.behind), 'keyboard stops behind an open layer (Tab walked past the scrim)',
+        r => r.screen + '  <' + r.tag + '> "' + r.what + '" .' + r.cls);
+      tally(stops.filter(s => s.offscreen), 'keyboard stops that focus something off the viewport',
+        r => r.screen + '  <' + r.tag + '> "' + r.what + '" .' + r.cls);
+    }
     const vend = flat('vendor');
     console.log('\nvendor-owned controls excluded (Leaflet attribution + markers, not ours to resize): ' +
       vend.length + (vend.length ? '  e.g. ' + [...new Set(vend.map(r => r.what || 'unlabelled <img>'))].slice(0, 4).join(' | ') : ''));

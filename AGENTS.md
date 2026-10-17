@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 11,125 lines, ONE :root block, 1,748 var() usages, 95 tokens declared with 92
+Sukinnect-next.html— 11,316 lines, ONE :root block, 1,749 var() usages, 95 tokens declared with 92
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1256,13 +1256,17 @@ official mark is a PNG, not an icon, and it is still the only brand image on the
 The rebuild also added a real verification surface, because reading the file cannot
 see a layout: `node tools/shot.cjs` drives the machine's own Chrome headless over the
 DevTools Protocol with no npm packages, and `--measure` runs an in-page instrument
-across all 62 screens for tap targets, WCAG contrast (sampling gradients at the text's
+across all 69 screens for tap targets, WCAG contrast (sampling gradients at the text's
 own position), clipped text, off-scale fonts, content trapped under the nav, unnamed
 controls, form fields a screen reader cannot name, images that asked for a file and got no
 pixels, escaping map panes, chart labels escaping their own chart box, anything painting
-over an open modal, and whether any
+over an open modal, round markers crushed to a sliver by a growing sibling, controls no tap
+can reach at all, and whether any
 category artwork is moving in the painted page — which is the one thing a source grep
 cannot prove, because a class with no rule and a rule with a typo both read fine as text.
+`--focus` adds a fifth pass that walks each screen with real `Tab` presses, and it is the
+only one that produces a key event; everything else in the tool reaches screens by calling
+the app's own handlers.
 A screenshot
 tool that navigates by assigning `state.*` measures a screen nobody can reach — the
 SCREENS table walks the app's real entry points for that reason. The same trap has a
@@ -1303,6 +1307,30 @@ outcome dialogs — the approve, reject, flag and request sheets an admin reache
 moment of deciding (60 screens). The rule after any pass: a destination behind a button
 counts as a destination, and a screen the camera has never painted is a screen nobody has
 checked.
+
+And a fifth form of the same trap, found while widening the walk: **a sensor can be blind to a whole
+surface.** The camera's element walks each carried their own hand-written list of containers, and the
+lists had drifted — the clipped-text, 14px-floor, contrast and form-control-scale walks all skipped
+`.modal-layer`, and the round-marker walk skipped `.bottomnav`. So the dialogs where a person types a
+name, a phone, a home address, a service price and a portfolio entry had never been measured by a
+single text sensor, and the six form screens added with that discovery produced a 13.3px field on the
+first run — the user-agent default, under §68's floor, on the only two inputs in the app that
+hand-roll their geometry instead of taking `.form-input`. The lists are one `SURFACES` constant now
+and every walk derives its selector from it, because the drift was the defect rather than any one
+omission. Two walks had it right by accident, because they query the whole document — and that is
+how the disagreement between them was caught: the tap-target walk's text scan called the read-only
+email field nameless on all three edit dialogs while the browser's own `el.labels` answered with its
+label. **Two tallies disagreeing about the same element is a defect in one of them**, and here it was
+the scan, which cannot name an `<input>` because an input has no text content by definition.
+
+The same drift lives in what the tool *prints about* a screen: the lookup that names each shot asked
+the sheet and the screen but never the dialog, so all nine dialog screens were labelled by whatever
+was behind them — `resident-edit-form` reported "Resident Profile" over a picture of the edit form.
+That cost this session time twice, once per pass, because a line that reads like a clean result about
+one screen is read as a clean result about the screen you are looking at. The lookup now follows the
+paint order (dialog, then sheet, then screen) and a gate check asserts the **order** of the two
+queries, not their presence: a check that only asks whether the dialog is looked up at all passes on
+a lookup that asks it last.
 
 TYPED TEXT NEVER BECOMES MARKUP, and the gate enforces it rather than remembering it.
 `esc()` covers `& < > " '`; `jsStr()` exists for the one context `esc()` cannot serve —
@@ -1366,6 +1394,29 @@ midnight formats as the **previous day** on a machine west of UTC, so a record r
 rendered "Verified Mar 13, 2026". Every number in the panel was correct. `parseDay()` treats a
 date-only value as a local day, and the gate now asserts that the day which goes in is the day
 that comes out.
+
+A DAY COUNT IS A CALENDAR OPERATION, AND ONE OF THEM WAS AGEING AT NOON. That fix closed one site
+and left the class unmeasured, so the class was measured: `node tools/shot.cjs
+--probe=@tools/probe-date-frames.js --timezone=Pacific/Niue` (and `Pacific/Kiritimati`, then diff
+the two logs) runs all 62 screens inside another calendar frame through CDP's
+`Emulation.setTimezoneOverride` without touching this machine's clock. The probe answers with every
+date-shaped string a screen paints, split into absolute tokens and relative ones, because a stored
+day must not move and "today + 3" legitimately does. Result: every stored day held — `Mar 14, 2026`
+and all eight maintenance dates are identical across a 25-hour zone spread — and all 29
+`toISOString()` calls write instants rather than slicing a day. One site was wrong:
+`applicantWaitDays()` rounded an elapsed interval measured from a local midnight, so the queue's
+"waiting 6 days" became "waiting 7 days" at 12:00 with nothing in the record changed. `startOfDay()`
+and `daysBetween()` now read both ends as days. **Two neighbours were cleared rather than fixed, and
+that is the part worth keeping:** `credentialState()`'s `Math.ceil` over the same shape is stable
+across every hour of a day (the interval spans `(D-1, D]`), and the `x minutes ago` labels round
+minutes on purpose — "fixing" either would have introduced an off-by-one into a screen that was
+correct. Measure before you normalise. `node tools/falsify-date-frames.cjs`: 5 mutants, 5 caught —
+and the first run reported one **MISSED**, because the label check compared the app's wording
+against the app's own ternary over only the applicants the seed contains, none of which is one day
+old; a check that never reaches a branch cannot see it changed. It walks today, yesterday and five
+days ago explicitly now. A `Math.floor` mutant was deleted as **equivalent**: with date-only seeds,
+floor(elapsed) equals the calendar gap, so it would have raised the count and not the coverage.
+Gate 507 → 512; whole suite 19 families, 127 mutants, 127 caught, 0 not applied.
 
 NO CONTROL IS BELOW THE 44px TAP FLOOR, and the instrument that measures this was itself wrong
 first. The camera walked three ancestors looking for a taller box, printed a comment about "a 23px
@@ -1606,6 +1657,35 @@ opened the number. The gate could not see it because it calls the handler direct
 hit-test in a real layout can, which is the whole reason `document.elementFromPoint` is in the
 instrument. `tools/falsify-modal-stacking.cjs`: 3 mutants, 3 caught.
 
+OUTRANKING A SHEET IS NOT THE SAME AS REPLACING IT, AND THE TREE IS A THIRD SURFACE. That fix
+raised the modal's `z-index`; it left the sheet declaring `role="dialog" aria-modal="true"`, and
+Chromium honours that by marking everything outside the dialog inert — so the picker on top was
+painted, hit-testable, and **absent from the platform accessibility tree**. Found only because
+`adb shell uiautomator dump` was run on the walk that §47's fix was supposed to close: the dump
+listed the sheet's nodes and never `Save method`. Nothing in `tools/` can see this. The gate calls
+the handlers; the camera evaluates scripts and hit-tests with `elementFromPoint`; the harness's
+`document.querySelector` returns `null` unconditionally, so even the DOM half of the fix is not
+assertable from Node. Modality now follows whichever layer is on top, decided from state
+(`modalAboveSheet()`) rather than from `.modal-layer`, because the app raises a modal two ways and
+a rule matching one class would disagree with the other. The camera got a tally — `a sheet
+claiming modality under an open modal` — fired on purpose against a copy of the page with the
+release removed (reports 1 on `resident-payment-modal`) and reading 0 on the same screen against
+the real file. `tools/falsify-layer-modality.cjs`: 4 mutants, 4 caught. The same walk found that
+`openLayers()` named four of the five modal fields and missed `state.residentProfileModal`, so
+Back from the resident's "Edit profile" form quit the app to the launcher — the exact defect the
+Back machinery's own comment names, surviving in the one role its list forgot. Neither list was
+repaired by hand: `layerKeys()` derives the fields from `state` by name, and the gate walks every
+field the state object actually has, so a future modal added under that convention is counted by
+the machinery and by the check at the same moment. Gate 502 → 507.
+
+READ AN ACCESSIBILITY DUMP TWICE BEFORE CALLING IT A DEFECT. Two nodes in this walk looked like
+findings and were neither: the sign-in screen dumped **completely empty**, which is Chromium
+building its tree lazily and one tap on a field fixed, and a password node printed
+`text="demo1234"`, which is not a leak because the same node carries `password="true"` and that
+flag is what an accessibility client honours. §"correct the instrument before concluding" has now
+saved two false findings in one session; the rule generalises to any new sensor, and a surface you
+have just started reading is exactly where its silence means least.
+
 THE APP'S OWN ANSWERS ABOUT ITS STORAGE ARE NOT DISCARDABLE. `hydrate()` validated four legal
 values and **no foreign key**, so a dump whose `booking.providerId` named nobody loaded and
 `providerOf()` answered with the first provider — one dangling id repainting a job's name, phone,
@@ -1620,6 +1700,56 @@ that covers content is the second thing hiding the first. `tools/falsify-storage
 mutants, 5 caught — after one was **missed**, and the mutant was right: the fixture only ever
 dangled a provider, so the customer half of the same predicate went untested and a mutant that
 disabled it passed. A check that cannot tell which of its two conditions fired is half a check.
+
+A CLAMP ON THE TOTALS IS NOT A GUARD ON THE FIELDS THAT MADE THEM. `makeOffer()` wrote
+`Math.max(0, …)` over `produceCentavos` and `labourCentavos` and passed
+`unitPriceCentavos: draft.unitPriceCentavos ? Math.round(…) : null` straight through, so typing
+`-5` into the offer sheet's unit field — which declared no `min` — produced a record at
+**−₱5.00/kg** beside a produce line reading ₱0, and the labour line made the sum positive enough
+to clear the "has to name an amount" guard. Measured through the sheet's own Send button
+(`OFFERS 1 -> 2`), not read off the source. Now: `min="0"` on the five number fields that lacked a
+lower bound — seven already had one, so this is the file's own convention, and a gate check enforces
+it with a positive control requiring at least ten bounded fields so a regex matching nothing cannot
+pass — and `GuardRejected('a price cannot be negative.')` at the seam, surfaced as a toast.
+Refused rather than clamped on purpose: a negative price is not a zero price, and rewriting one
+silently is the same defect class as a green check agreeing with a bug. `tools/falsify-money-bounds.cjs`:
+4 mutants, 4 caught. Gate 512 → 515; whole suite 20 families, 131 mutants, 131 caught, 0 not applied.
+
+A SCREEN IS ONLY EXPLAINED WHEN ITS DATA RUNS OUT. §48 and §76 cannot be checked against a screen
+that has demo rows on it, so `tools/probe-empty-states.js` empties twelve record sets, re-renders,
+measures the words left, and restores. It found the admin verification queue heading a blank panel
+"Pending verifications" while still advising the admin to prioritise applications that no longer
+exist — and that state is reached by tapping, because approving an applicant removes it from the
+queue, so **finishing the queue is what empties it**. The else branch is an `emptyState(...)` now and
+the tip is gated on the list having rows, with the positive control asserted too (rows present → tip
+shown, empty state not). Two lessons in the same sweep. **An instrument that cannot see reports a
+clean result:** the probe first looked the sets up as `window[name]`, and top-level `const` bindings
+never become window properties, so all twelve came back "not a reachable array" — resolve by bare
+identifier, and print the row count it saw so a silent zero is impossible. The duplicate-id probe
+(`tools/probe-duplicate-ids.js`: 62 screens, **zero collisions**, ids 5–21 per screen, a forced
+duplicate fires immediately) exists in the same shape for the same reason — a static read cannot see
+a collision produced by rendering one template twice, and `getElementById` answering with the first
+match is how a save writes a number from a field nobody touched. And **a fix that has never been
+painted has never been measured**: `admin-verifiers-empty` is in the SCREENS table (walk count
+**63**), because tap targets and contrast apply to the empty branch like any other markup. Its
+single-screen run reported a contrast failure on the admin's translucent "Insights" pill — the
+documented subset artifact, not a defect; the full sweep is zero. `tools/falsify-empty-queue.cjs`:
+3 mutants, 3 caught, after one reported MISSED for deleting a ternary's `:` half, which is a syntax
+error rather than a behaviour. Gate 515 → 517; whole suite 21 families, 134 mutants, 134 caught,
+0 not applied.
+
+TYPE THE TEXT; DO NOT ASSIGN IT. The comma case in the same sweep was an artifact of the instrument
+and nearly got filed as a defect. A probe that ran `el.value = '1,500'` through the property setter
+watched the sheet's totals fall from ₱181,600 to ₱1,600 and concluded the app silently zeroes a
+comma-typed price. Typing it — `document.execCommand('insertText')`, the path a keystroke takes —
+shows Chrome accepting the comma and holding `1500`. A programmatic write of unparseable text clears
+a number field quietly; a real edit goes through the platform's parser, and only one of those is a
+state a person can produce. This is the third form of a trap this repository has now documented
+twice for screens and once for data: **an instrument that reaches a state nobody can reach measures
+a fiction.** Two of the three probes used here were deleted afterwards so the next reader does not
+inherit the misleading one. Related: a `min` attribute does not block typing a negative — it changes
+what the platform *reports* (`rangeUnderflow`), which the app's own handler never consults. The
+guard is the fix; the attribute is the signal.
 
 REPUTATION IS DERIVED, AND THE SEEDS ARE HELD OUTSIDE THE RECORDS. The deck promises providers "a
 reputation built from completed work" (slides 3, 7); `provider.rating` and `provider.jobs` were
@@ -1666,13 +1796,65 @@ grid-column gutter collapsed to zero width and hung every axis label outside the
 three widths. The same device arrived with **no network at all** and the app
 rendered completely, which is an unplanned proof of §81 — and the only remote dependency left in
 the file is `TILE_URL` (`{s}.tile.openstreetmap.org`), which the camera counts on its own line,
-`requests that left the device for a network`. That line read **942** on the 390px sweep today
-(699 at 320, 1,023 at 450); this passage quoted 448 until it was re-read off the tally, and the
-map-bearing screens added since are the reason the figure grew — which is the same argument
+`requests that left the device for a network`. That line read **942** on a 390px sweep (699 at 320,
+1,023 at 450) and **809** on a later 450px sweep of a file whose only page change was two functions
+in the Back machinery — the map-bearing screens added since the first figure was written are why it
+grew, and the run-to-run spread is why quoting any one of them as *the* count is the mistake this
+sentence keeps making. Which is the same argument
 `node tools/measure.cjs` was written for: a count kept in prose is a count that will be wrong in
 the next document that copies it. `mapFallback()` degrades honestly when the tiles never paint but which still sends a device IP and
 tile coordinates to a third-party CDN whenever there **is** a connection. Decided 2026-10-12: keep
 it, and treat the exposure as a production DPA/NPC question (slide 16) rather than a prototype bug.
+
+EVERY GEOMETRY FIGURE IN THIS REPOSITORY WAS MEASURED AT ONE HEIGHT UNTIL 2026-10-17. Width had been
+swept (320, 390, the vivo's 450) because a handset reported its density and made the question
+obvious; height was never varied from the camera's default 844px. It is the other half of "responsive
+to any phone types": 480px is an Android Go handset, a budget phone, and **any phone in split-screen**.
+Sweeping it found four screens where a primary action fell off the device — the booking sheet's "Send
+request" 149px below the bottom edge, a centred PIN dialog scattering its own Close button off the
+top edge and its action off the bottom one, and a notifications bar clipping "Mark all as read" by
+196px. The camera now counts them with `controls no tap can reach`, which asks the question no other
+tally asks: **can a thumb get to this control at all** — outside the viewport with nothing in its
+ancestor chain scrolling, or outside an ancestor that clips it without offering a scroll. A clipped
+element's rectangle does not move, only its painting does, so a viewport-only check is half the rule;
+that second half was found by a surviving mutant, not by reasoning. Nothing else sees this class: the
+text is not clipped, it is not under the nav, its contrast is fine because it paints no text, and the
+document is neither wider nor taller than the phone. Proven by
+`node tools/falsify-control-reach.cjs` — 3 breaks, 3 caught — and covered on every sweep because
+`node tools/sweep-text-scale.cjs` now includes 320x480 @ 200% text.
+
+Two rules follow from the fixes, and both are about where a sheet's height is allowed to go. A
+bottom sheet is a flex column with a fixed head and a fixed foot and a body that scrolls; the body
+needs `min-height:0` or it refuses to shrink below its content, the content spills past the sheet's
+own cap, **nothing clips a sheet**, and the phone's frame clips it instead. And the cap has to be the
+screen, not 80% of it: a cap only binds on content that exceeds it, and the old value's answer to
+that was to put a control off the device. The same applies to a centred dialog — `max-height:100%`
+and a scroll, or centring splits it off both edges at once.
+
+The fix that was taken back out is worth keeping: the first version of the top-bar rule ellipsized
+the `<h1>` instead of wrapping the bar, which left every control reachable and cost the app its
+screen names — the camera's intended-ellipsis review line went 7 → 36, with "Find Services" reading
+as a fragment. **A taller bar is information kept; a cut title is information lost**, and §40 makes
+saying what the screen is the bar's first job. The reachability tally could not tell those two fixes
+apart; the review tally caught it.
+
+THE APP HAS NO DARK MODE AND THAT WAS MEASURED, NOT ASSUMED. The file declares no `color-scheme`
+and no `prefers-color-scheme` block, which looks like an unhandled surface, and the tempting
+one-line patch was Chrome's documented opt-out. Two measurements said there is nothing to fix.
+`node tools/shot.cjs --measure --dark` (a new flag; it emulates the media query through
+`Emulation.setEmulatedMedia`, the mechanism `--reduced-motion` already used) sweeps all 62 screens
+and reports **every tally zero, contrast included** — and the specific leak case was probed rather
+than reasoned about: the payment `<select>` authors no `background` or `color` at all, and it paints
+`rgb(255,255,255)` on `rgb(3,0,43)` identically with `prefers-color-scheme: dark` matching and not
+matching, because a page that declares nothing is treated as light-only for its widgets and the UA
+darkens them when the page *opts in*. Auto Dark Theme — the one feature that could rewrite the §30
+palette — is not reproducible by emulating a media query, so it was settled from the shipping
+configuration instead: the activity parents `Theme.Material.Light.NoActionBar`, a fixed Light theme,
+and `MainActivity` makes no `setForceDark` / `setAlgorithmicDarkeningAllowed` call. The residual is
+the *browser* surface of the published `dist/`, where Chrome for Android would apply it; declaring
+`only light` is the fix and is left to the owner, because suppressing a user's dark preference is a
+product judgement. What must not happen is a half-built `prefers-color-scheme` block: that would put
+the app in the exact state where UA-darkened controls meet authored light text.
 
 THE SHIPPED `Sukinnect.html` IS MEASURED BY NOTHING, and that is now stated rather than implied.
 Every instrument in `tools/` addresses the rebuild: `harness.cjs` pins `APP` to
@@ -1978,6 +2160,15 @@ Prioritize:
 - booking actions
 
 Do not create controls so small that they become difficult to tap on a phone.
+
+Size is only half of reachability. A control that no scroll can bring under a thumb is the same
+defect one step further, and it is invisible to every check that measures the control's own box:
+it is not clipped, it is not covered, its tap target is the right size. It is simply off the screen.
+This is what a short viewport exposes — a 480px-tall WebView is an Android Go handset or any phone in
+split-screen — and a bottom sheet with a fixed header and a fixed footer is where it bites first,
+because the body between them has to be allowed to collapse (`min-height:0`) or the footer is pushed
+off the device with nothing to scroll it back. `node tools/sweep-text-scale.cjs` measures it;
+`node tools/falsify-control-reach.cjs` proves the measurement can fail.
 
 ---
 
@@ -2698,9 +2889,71 @@ worth saying because they fail differently: no essential interface text below 14
 *measured in the browser* by `node tools/shot.cjs --measure`, because a source grep cannot see
 what a scaled `viewBox` or a `<select>` with no declaration paints; and numerals sharing the
 face of the words beside them holds because every `font-family` in the rebuild goes through
-the two tokens rather than being typed into a rule. The type tokens are pixel values, not
-`rem`, so browser zoom reflows the app but an operating-system text-scale setting does not —
-recorded as a known limitation, not as a decision.
+the two tokens rather than being typed into a rule.
+
+THE TYPE SCALE IS `rem` NOW, AND THAT SENTENCE USED TO SAY THE OPPOSITE. The tokens were
+`14px…30px`, which meant a phone's text-size setting reached the root font and stopped there: on
+an OPPO at `font_scale 1.35` the root computed 21.6px while painted text stayed 14px, so Sukinnect
+was the one app on the device ignoring a setting its user had deliberately turned on. All ten
+tokens are `rem` (521 `font-size` declarations already went through them and none set a literal px,
+so the conversion propagated by itself) and no rule may set a literal px font size — the hygiene
+suite checks all three of those now, with a positive control requiring at least ten token
+declarations.
+
+**Android's inflation cannot be capped from the page.** `:root { font-size: min(1em, 20px) }` bounds
+the *web* surface, where `1em` resolves against a user-settable browser default. It does not bound a
+phone: Chromium multiplies the used font size after CSS resolves, so `min()` sees an unscaled 16px
+and the platform scales the result — measured 21.6px on a vivo at 1.35 with the cap in place. The
+only thing that stops it is `text-size-adjust: none`, which reinstates the original bug, so the
+scale is honoured uncapped on Android and **the layout must absorb it**. That is a real obligation,
+not a preference: a fixed-px `--chart-gutter` holding relative text let three y-axis ticks hang past
+their chart at 135%, and it is now `calc(3.75 * var(--t-body-sm))`, which is the same 56px at the
+default and grows only when the type does. Anything that reserves space for text has to be sized in
+type units too — check that when adding a gutter, rail, chip row or fixed-height box.
+
+**The rule has a second half, and it runs the other way: a fixed-size element loses its size to
+growing text.** A flex item's declared width is only a starting size — `flex-shrink` defaults to 1
+— and its `min-width:auto` protects it only down to its own *content*. So at 320px with the phone's
+text at 200% the resident's bottom navigation needed 456px of a 320px row (a label is content, and
+an item cannot shrink below its word) and painted "Profile" 132px past the edge of the device: a
+destination nobody could tap. The fix is the item's own `min-width:0` plus an ellipsized label, so
+every destination keeps its tap area and the word gives up its tail — the DOM text, and with it the
+accessible name, is untouched. The same default in the other direction crushed six 8px waiting dots
+to 1.8px (no content, so nothing protected them) and the 44px round notification button to 31x44
+beside a growing title; both now declare `flex-shrink:0`. Two camera tallies count these —
+`bottom-nav items pushed off the panel` and `round markers painted as a sliver` — and
+`node tools/falsify-flex-crush.cjs` proves both can fail: 4 mutants, 4 caught.
+
+A chart's *decision* about how much text to show is also a budget in the wrong units until it is
+divided by the type. `chartColumns()` thinned its axis when a slot measured under 62 viewBox
+units, which has nothing to do with how wide a word is: at 200% the slot still cleared 62, nothing
+thinned, and an axis label hung 4px past a 264px box. The budget is now `floor(w / (62 * rootPx/16))`
+slots, which is provably the old rule at 100% (`floor(304/62)` = 4, and `ceil(n/4)` is what the old
+line computed for every `n`) and thins progressively above it — 12 columns draw 4 labels at 100%,
+3 at 150%, 2 at 200%. This needed the harness to stop answering `getComputedStyle` with a literal
+`'16px'`: at a pinned metric a mutant that ignores the measured size is indistinguishable from the
+correct code, so the root size is a variable now (`app._setRootFont(32)`) and the gate asserts
+relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
+zero) rather than the numbers 4/3/2.
+
+Gate 524; whole suite **26 families, 154 mutants, 154 caught, 0 not applied**
+(`node tools/falsify-all.cjs`), of which `falsify-flex-crush`, `falsify-control-reach` and
+`falsify-focus-trap` are the three that drive the camera rather than the gate — a geometry rule or a
+real keypress has no Node assertion available to it — and `falsify-camera-surfaces` is the one that
+reads the instrument instead of the application.
+
+Measure it with `node tools/sweep-text-scale.cjs` — six phone corners, the camera each time: 320px
+@ 200% text, default width @ 200%, 450px @ 135% (a vivo panel at the OPPO's setting), 320x480 @ 200%
+(a short handset or split-screen), 320x300 @ 100% (what a keyboard leaves on a small phone, since
+nothing here emulates a keyboard), and the 100% anchor — which fails if any tally is nonzero and
+treats a tally it does not recognise as must-be-zero, so a sensor added tomorrow cannot be silently
+informational. Single corners are still runnable:
+`node tools/shot.cjs --measure --width=320 --height=638 --font-scale=1.35`. The flag
+sets the root font size directly, because that is what the platform's multiplication produces; it
+does **not** substitute into the app's `min()` expression, which was the first version's error — it
+modelled a mechanism Android does not use and reported a cap holding on four phone configurations
+while the real phone ignored it. An instrument that models a mechanism wrongly certifies a fix that
+cannot work.
 
 Use:
 - strong display type for major page titles
@@ -2793,6 +3046,34 @@ Do not communicate important state only through color.
 
 Respect prefers-reduced-motion.
 
+**FOCUS AND KEYBOARD ARE MEASURED, NOT ASSUMED.** `node tools/shot.cjs --measure --focus` walks
+every screen with real `Tab` keypresses and reports four numbers: stops with no visible focus ring,
+stops covered by the browser's default ring rather than the app's rule, stops that land on a control
+no part of which is exposed, and stops that focus something off the viewport. It is proven by
+`node tools/falsify-focus-trap.cjs` (3 breaks, 3 caught). Two rules follow from what it found.
+
+*A layer is modal to the keyboard, not just to the eye.* Everything outside the layer the user is in
+carries `inert`, which removes it from the tab order, the accessibility tree and the pointer at once
+— `aria-hidden` alone leaves every covered control focusable. The top layer is derived from state
+through the `data-layer` convention, because the app raises a layer three ways (`.modal-layer`,
+`.sheet-layer`, and the verification review's inline fixed overlay, which has no class at all) and a
+rule naming two of them leaves the third walkable; the gate check that every full-screen layer root
+carries the marker is what stops a fourth surface being added without it. The inerting walks up from
+the layer marking each ancestor's siblings, because on the profile hubs the modal is painted
+*inside* `#screen`.
+
+*An instrument must not share its assumption with the code it checks.* The detector first asked
+"is a `[data-layer]` open and is this element outside it", so deleting the marker blinded both at
+once and a mutant survived. It now hit-tests: a control is unreachable only when none of five probe
+points on it resolves to it or to one of its own ancestors — an ancestor's clip is a scroll
+container, which is reachable, while a foreign element at every point is a scrim.
+
+*Ask with the mechanism, not an approximation of it.* `el.focus()` never matches `:focus-visible` in
+Chrome, so the first version of this walk reported zero focus rings on all 63 screens and read as an
+app defect. And `#screen` scrolls smoothly by contract, so a rect read in the breath after a Tab is
+the element's old position — the walk suppresses the glide for its own duration, which is the second
+place in this file where that trap has bitten.
+
 ---
 
 # 73. MOBILE INPUT / KEYBOARD BEHAVIOR
@@ -2841,6 +3122,22 @@ Media interactions should include:
 - privacy awareness
 
 Do not silently upload private images.
+
+**Decided 2026-10-15, on `Sukinnect-next.html`: the first bullet is deliberately unmet.** The
+concierge and the fruit request sheet take a photo and keep `file.name` (the fruit draft also keeps
+`sizeBytes`) — there is no thumbnail, and `FileReader` / `createObjectURL` appear nowhere in the file.
+The screens say so out loud, which is the part §20 and §63 actually require: *"This prototype keeps
+the picture on your device. Nothing is uploaded, so the provider sees the name you gave it, not the
+photo"*, and when a resident attaches a photo with no words the concierge refuses rather than
+inventing a category — *"This prototype does not read pictures, so a photo on its own cannot be
+sorted."* What was wrong was the button, which read **"Analyze the text and photo"** two screens away
+from a statement that it cannot read pictures — a label promising what the code does not do, the same
+defect class as a tile claiming a count that mixes two questions. It now reads **"Prepare the job
+briefing"**, which is what the in-flight state and the result card already call it. Adding a real
+local preview is a genuine improvement and was declined for now: it is new behaviour (a decoded
+image held in session state), and it would need checks, a camera pass and a screen with pixels in
+it, not a relabel. §75's list stands as the production requirement; the prototype's honest limit is
+recorded here so nobody "fixes" the mismatch by making the copy claim more.
 
 ---
 

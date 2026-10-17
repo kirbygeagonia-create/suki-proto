@@ -29,6 +29,15 @@
      Semantic state colors stay outside the brand on purpose (section 34).
      ============================================================ */
   :root{
+  /* Bounds the browser's default font size on the desktop/web surface, where 1em on the root
+     resolves against a size the user can set. It does NOT cap an Android phone: measured on a
+     vivo at font_scale 1.35 the root computed 21.6px, because Chromium multiplies the *used*
+     font size after CSS resolves, so min() sees an unscaled 1em and the platform scales the
+     result. Nothing in CSS or JS can bound that — only text-size-adjust: none, which would put
+     the ignored-setting bug back. On Android the scale is therefore honoured uncapped, and the
+     layout has to absorb it; that is what --font-scale on the camera now measures. */
+  font-size: min(1em, 20px);
+
     /* The provider-detail header pill sits on the brand gradient lightened by a 12%
        white overlay, and #FFB800 measures 3.14:1 there — over the 3:1 floor a graphic
        needs, by 0.14. This tint measures 3.80:1. On flat navy #FFB800 is 11.66:1, so
@@ -91,17 +100,21 @@
        tick the app paints (₱400 at 15px) plus its gap plus a margin, and the camera
        measures whether any label escapes the chart box — a gutter sized by eye is how
        the first version of this hung the axis outside the card. */
-    --chart-gutter:56px;
+    /* Sized in type, not in px: the y-axis ticks are right-aligned into this gutter, so a fixed
+     56px gutter holds "₱400" at the default text size and lets it hang 4px past the chart on a
+     phone whose text-size setting is raised. 3.75 × --t-body-sm is 56.25px at 16px, so the plot
+     width nobody chose is unchanged until the type grows — then the gutter grows with it. */
+  --chart-gutter: calc(3.75 * var(--t-body-sm));
     /* Type scale. --t-caption is the floor: nothing on any screen renders below
        12px, and a label that will not fit wraps instead of shrinking. Inputs are
        16px because a smaller input makes a mobile browser zoom the page on focus.
        The steps below 20px were always in use — 13px was typed by hand sixty-four
        times and 17-18px fourteen — they simply had no names, so every screen chose
        its own. */
-    --t-caption:14px;   --t-body-sm:15px;  --t-body:16px;
-    --t-body-lg:17px;   --t-input:16px;    --t-lead:18px;
-    --t-title:20px;     --t-num:22px;      --t-title-lg:24px;
-    --t-display:30px;
+    --t-caption:0.875rem;   --t-body-sm:0.9375rem;  --t-body:1rem;
+    --t-body-lg:1.0625rem;   --t-input:1rem;    --t-lead:1.125rem;
+    --t-title:1.25rem;     --t-num:1.375rem;      --t-title-lg:1.5rem;
+    --t-display:1.875rem;
     /* One UI family everywhere. Atkinson Hyperlegible Next leads because the
        corrective brief makes letterform distinction a requirement, and its wider
        spacing and larger x-height are the point — the trial measured no clipped
@@ -206,6 +219,25 @@
      instead of pushing the actions off the screen. */
   .topbar .hb{ display:flex; align-items:center; gap:10px; min-width:0; }
   .topbar .hb > div{ min-width:0; }
+  /* An action in a top bar keeps its label on one line and takes only the width it needs.
+     Without this, a bigger text size wrapped "Log Out" onto two lines and the button read as a
+     tall square beside the title — the one place the capped scale still made the bar look wrong.
+     Scoped to the bar rather than to every .btn, where a long label legitimately wraps. */
+  .topbar .btn, .topbar .back-btn{ white-space:nowrap; flex:0 0 auto; }
+  /* A top bar's title group has to be allowed to give up width, or it pushes an action clean
+     out of the bar — which then clips it, because the bar's own overflow is hidden for the
+     gradient glow. Measured at 320px with the phone's text at 200%: "Mark all as read" was
+     clipped by 196px and "Log Out" by 18px, so two of the app's controls existed on that
+     screen only as a painted edge. .hb already had min-width:0; the notifications and
+     messages bars build their left group inline instead of with that class, so the rule is
+     keyed on the bar's structure rather than on a class a screen can decline to use.
+       The bar then wraps rather than truncating. The first version of this ellipsized the heading
+     instead, which saved the button and cost the screen its name: the camera's intended-ellipsis
+     review line went 7 → 36 across the walk, with "Find Services" and "Provider details" reduced
+     to fragments. A taller bar is information kept; a cut title is information lost, and §40 asks
+     every screen to say what it is. */
+  .topbar{ flex-wrap:wrap; }
+  .topbar > div{ min-width:0; }
   /* The last card on every screen sits above a fixed 62px navigation bar, so the
      scroller has to end above it. Screens used to hand-write `padding-bottom:40px`
      — less than the bar — which is how a real control (the case button, a profile
@@ -293,7 +325,16 @@
     position:fixed; inset:0; background:var(--scrim); z-index:70;
     display:flex; align-items:center; justify-content:center; padding:var(--s-4);
   }
-  .modal-card{ width:100%; max-width:350px; }
+  /* max-height:100% and a scroll, because the layer centres this box: with no cap a dialog
+     taller than the screen overflowed it on BOTH sides, so at 320x480 with the phone's text at
+     200% the admin's PIN dialog put its own Close button 97px above the top edge of the device
+     and its action 90px below the bottom one. A centred overflow is the worst shape this class
+     takes — nothing is nearer, and a user cannot scroll a page that is not the scroller.
+     The cap resolves against the layer's content box, so the padding keeps the dialog off the
+     screen's edges the way it always did. */
+  .modal-card{ width:100%; max-width:350px; max-height:100%; overflow-y:auto;
+    -ms-overflow-style:none; scrollbar-width:none; }
+  .modal-card::-webkit-scrollbar{display:none;}
   /* In the flow above the screen rather than fixed over it: a storage warning that
      covered content would be the second thing on this device hiding the first. */
   .storage-notice{
@@ -646,6 +687,16 @@
   }
 
   .notif-btn{
+    /* A declared width on a flex item is only its starting size: flex-shrink defaults to 1, so
+       this 44px circle painted 31x44 at 320px with the phone's text at 200% once the title beside
+       it grew. min-width:auto, the other half of the same default, protects an item only down to
+       its own content, and this button's content is a 19px icon. The camera counts any element
+       whose radius says circle and whose box says otherwise.
+         This is one of two independent guards. The top bar below is allowed to wrap, so at that
+       corner the action group gets a line to itself and keeps 44px with this declaration removed —
+       which a falsifier found by surviving. Removing only one of the two leaves the geometry
+       intact, so the break that proves them removes both; do not read either as redundant. */
+    flex-shrink:0;
     background:rgba(255,255,255,0.15); border:none; border-radius:50%; width:var(--tap); height:var(--tap);
     display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-on-brand);
     position:relative; transition:background 0.2s;
@@ -726,7 +777,25 @@
   .sheet{
     position:relative; background:var(--surface);
     border-radius:var(--r-sheet) var(--r-sheet) 0 0;
-    box-shadow:0 -12px 34px rgba(3,0,43,.24); max-height:80%;
+    /* The cap is the viewport, not 80% of it. A sheet's head and foot are both flex-shrink:0
+       on purpose — a fixed header, a fixed action row, a body that scrolls between them — and
+       at 320x480 with the phone's text at 200% those two parts alone measured 513px of a 384px
+       box. The body collapsed to its own 12px of padding, the foot was pushed past the bottom
+       of the sheet, nothing clips a sheet, and so the phone's frame clipped it: "Send request"
+       painted 149px below the bottom edge of the device with nothing able to scroll, which is
+       the booking flow's primary action on a small handset or any phone in split-screen.
+         This changes no sheet that fits: a cap only binds on content that exceeds it, and the
+       old value's answer to that was to put a control off the screen. */
+    box-shadow:0 -12px 34px rgba(3,0,43,.24); max-height:100%;
+    /* The sheet scrolls as a last resort. Its head and foot are flex-shrink:0, so the body is
+       the only thing that can give — and at 320x480 with the text at 200% the head and foot
+       measured 533px against a 480px screen, so even a body collapsed to its own padding left
+       "Send request" 53px past the bottom edge. With this, the inner body still absorbs every
+       sheet that fits (nothing changes at ordinary heights and scales — the pinned header and
+       action row are the design), and only when the unshrinkable parts themselves overflow does
+       the whole sheet become scrollable. The scrollbars are hidden because every other scroller
+       in the app hides them; the scroll is what matters, not the chrome. */
+    overflow-y:auto; -ms-overflow-style:none; scrollbar-width:none;
     display:flex; flex-direction:column; pointer-events:auto;
     animation:sheetUp .26s cubic-bezier(.22,.9,.32,1.04) both;
   }
@@ -770,8 +839,16 @@
     color:var(--ink-soft); cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;
     font-family:inherit;
   }
-  .sheet-body{ padding:2px 18px 10px; overflow-y:auto; -ms-overflow-style:none; scrollbar-width:none; }
+  /* min-height:0 because .sheet is a flex column capped at 80%: a flex item's automatic
+     minimum is its own content, so without this the body refused to shrink to the cap. The
+     sheet stayed 80% tall and its content spilled out of the bottom of it — nothing clips a
+     sheet — and the action row (Send request, Send offer, Cancel) painted below the bottom of
+     the phone with nothing able to scroll. Measured at 320x480 with the text at 200%, which is
+     a small handset or any phone in split-screen, and the app's primary action was the thing
+     that fell off. */
+  .sheet-body{ padding:2px 18px 10px; overflow-y:auto; min-height:0; -ms-overflow-style:none; scrollbar-width:none; }
   .sheet-body::-webkit-scrollbar{display:none;}
+  .sheet::-webkit-scrollbar{display:none;}
   .sheet-group{ margin-top:14px; }
   /* Each profile body was written to head its own card with a bold title, because
      that title used to be the only thing labelling it on the page. The sheet header
@@ -945,10 +1022,18 @@
   .bottomnav{display:flex; border-top:1px solid var(--line); background:var(--surface); flex-shrink:0; position:relative; z-index:30;}
   .navitem{
     flex:1; text-align:center; padding:6px 4px 7px; min-height:var(--tap);
+    /* `flex:1` sets the basis to zero but leaves min-width at the flex default of auto, which
+       means an item can never shrink below its own words. Measured at the panel's narrowest and
+       the platform's largest text scale (320px, 200%): the four resident labels needed 456px of
+       a 320px row and "Profile" painted 132px past the right edge of the phone — off screen, so
+       a bottom-navigation destination with no way to reach it. Giving up the automatic minimum
+       is what lets the item fit; the label loses its tail rather than its control. */
+    min-width:0;
     background:none; border:none; font-family:inherit;
     font-size:var(--t-caption); font-weight:600;
     color:var(--mist); cursor:pointer;
   }
+  .nav-label{display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .navitem .ic{font-size:var(--t-title); display:block; margin-bottom:2px;}
   .navitem.active{color:var(--deep); font-weight:800;}
   .statgrid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
@@ -1030,6 +1115,11 @@
   .chart-tick{left:calc(var(--chart-gutter) - 6px); transform:translate(-100%,-50%); color:var(--mist);}
   .chart-val{transform:translate(-50%,-100%); color:var(--ink); font-weight:700;}
   .chart-cat{transform:translate(-50%,-100%); color:var(--mist);}
+  /* Near the plot's edges, anchor outward rather than centring on the bar — see the
+     cxPct test where these labels are emitted. Two classes beat one, so order is not
+     load-bearing here. */
+  .chart-val.l,.chart-cat.l{transform:translate(0,-100%);}
+  .chart-val.r,.chart-cat.r{transform:translate(-100%,-100%);}
   .devicebar{
     display:flex; justify-content:space-between; padding:8px 24px 2px; font-size:var(--t-caption); font-weight:600; letter-spacing:0.4px; color:var(--ink); flex-shrink:0;
   }
@@ -1105,7 +1195,11 @@
   @keyframes livePulse{ 0%{ box-shadow:0 0 0 0 rgba(31,138,95,.45); } 70%{ box-shadow:0 0 0 7px rgba(31,138,95,0); } 100%{ box-shadow:0 0 0 0 rgba(31,138,95,0); } }
   /* Awaiting another person is not success, so it does not borrow the green live
      dot: brand blue pulses slowly to read as "in motion, nothing to do yet". */
-  .wait-dot{ display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--deep); vertical-align:-1px; animation:waitPulse 1.9s ease-in-out infinite; }
+  /* flex-shrink:0 for the same reason as .notif-btn above, and the case in its sharpest form:
+     the dot carries no content at all, so min-width:auto protects nothing and the heading beside
+     it took the row until the 8px circle painted 1.8px wide — a clipped mark where a status
+     indicator was. Six of these were painted on six screens at 320px and 200% text. */
+  .wait-dot{ display:inline-block; flex-shrink:0; width:8px; height:8px; border-radius:50%; background:var(--deep); vertical-align:-1px; animation:waitPulse 1.9s ease-in-out infinite; }
   @keyframes waitPulse{ 0%,100%{ opacity:.3; } 50%{ opacity:1; } }
 
   /* Topbar — signature brand gradient with a cyan aura */
@@ -1928,7 +2022,7 @@ function applicationDocLabel(kind){
   return k ? k.label : 'Document';
 }
 function applicantWaitDays(a){
-  return Math.max(0, Math.round((Date.now() - parseDay(a.submittedAt)) / 86400000));
+  return Math.max(0, daysBetween(a.submittedAt, Date.now()));
 }
 function applicantWaitLabel(a){
   const d = applicantWaitDays(a);
@@ -3802,6 +3896,13 @@ function makeOffer(bookingId, draft, actor){
   const produce = Math.max(0, Math.round(draft.produceCentavos || 0));
   const labour = Math.max(0, Math.round(draft.labourCentavos || 0));
   if (produce + labour <= 0) throw new GuardRejected('An offer has to name an amount.');
+  /* The two totals are clamped because a charge cannot be negative. The per-unit figure used to
+     be written through untouched, so an offer could be recorded at -₱5.00/kg beside a produce
+     line reading ₱0 — reached by typing -5 into the sheet's own unit field and pressing Send
+     offer, which created the record. Refused rather than clamped: a negative price is not a zero
+     price, and rewriting one silently would leave the provider's number and the record disagreeing. */
+  const unit = draft.unitPriceCentavos ? Math.round(draft.unitPriceCentavos) : null;
+  if (unit !== null && unit < 0) throw new GuardRejected('a price cannot be negative.');
   const mode = b.mode || 'harvest_only';
   const behaviour = categoryBehaviour(providerOf(b).serviceId);
   if (!behaviour.modes.some(m => m.id === mode)) throw new GuardRejected('this job is not a ' + mode + ' transaction.');
@@ -3814,7 +3915,7 @@ function makeOffer(bookingId, draft, actor){
     by: (actor && actor.role) === 'customer' ? 'customer' : 'provider',
     basis: draft.basis || 'per_lot',
     quantityGrams: draft.quantityGrams ? Math.round(draft.quantityGrams) : null,
-    unitPriceCentavos: draft.unitPriceCentavos ? Math.round(draft.unitPriceCentavos) : null,
+    unitPriceCentavos: unit,
     produceCentavos: produce, labourCentavos: labour,
     whoHarvests: draft.whoHarvests || 'provider',
     collection: draft.collection || '',
@@ -4390,7 +4491,18 @@ function chartColumns(rows, opts) {
   /* At eight columns the week labels touched each other, so a dense series thins
      its own axis rather than rotating or truncating it — a rotated label is unreadable
      at this size and a truncated one is a lie about the period. */
-  const stride = slot < 62 ? Math.ceil(rows.length / 4) : 1;
+  /* The thinning budget is in the label’s own units. A category label needs about the same
+     pixels per character whether the type is 15px or 30px, so a budget fixed at 62 units thins
+     identically whatever the phone’s text-size setting is — and at 200% on a narrow panel that
+     left an axis label hanging 4px past a 264px chart box, which the camera counted and no
+     reading of the source could have. Dividing the budget by the measured root size keeps this
+     exactly the old rule at the default (floor(304/62)=4 slots, and ceil(n/4) is what the old
+     line computed for every n), and thins progressively as the setting grows: 12 columns draw
+     4 labels at 100%, 3 at 150%, 2 at 200%. Measured clean at all four, at 320px and at the
+     vivo’s 450 — node tools/sweep-text-scale.cjs. */
+  const rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  const fit = Math.max(1, Math.floor(w / (62 * (rootPx / 16))));
+  const stride = Math.max(1, Math.ceil(rows.length / fit));
   /* Every position below is written twice: in viewBox units for the shape, and as a
      percentage of the box for the word that belongs to it. The percentage is what
      keeps the label on its anchor when the box is narrower than 320. */
@@ -4426,8 +4538,26 @@ function chartColumns(rows, opts) {
     const topY = CHART_PAD.t + inner - hOf(topVal);
     shapes.push(pair ? piece(r.value, 0, o.tone || 'var(--brand-primary)') + piece(r.value2, one + 3, o.tone2 || 'var(--brand-secondary)')
                      : piece(r.value, 0, o.tone || 'var(--brand-primary)'));
-    if (topVal > 0) labels.push(`<span class="chart-val" style="left:${pctX(x + bw / 2)}; top:${pctY(topY - 5)};">${esc(fmt(topVal))}</span>`);
-    if (i % stride === 0) labels.push(`<span class="chart-cat" style="left:${pctX(x + bw / 2)}; top:${pctY(h - 8)};">${esc(r.label)}</span>`);
+    /* A value label is centred on its bar, so the last bar's label hangs past the plot once the
+       text is bigger than the drawing — measured at 4px on the provider dashboard with the OS text
+       size raised. Near an edge, anchor to that edge instead of the bar's middle.
+         This band looks improvable, and the improvement was tried and measured on 2026-10-17:
+       replacing the two percentages with row indices (first row, last row) did not fix the 200%
+       overhang and moved 150% from clean to one finding. The reason is established now rather
+       than guessed, and it is that these two lines emit two different label sets from one
+       decision. The axis is thinned, so on the 8-week earnings chart the last label *drawn* is
+       row 6 while the last *bar* is row 7; keyed on row indices, row 6's axis label gained its
+       right anchor and row 7's value label lost its — 291 of 320 units is 90.9% of the box, past
+       the 80 the band asks for, while row 6's 79.1% falls under it, and an index is not a
+       position. Anchoring each kind by its own last (the final row for the values, the final
+       *drawn* index for the axis) would be correct. It is not done here because the thinning
+       above already moves the last drawn label to 55% of the box at 200% text, so no corner
+       measures a defect this rule would fix — and a change with no failing check behind it is
+       the kind of edit this file keeps getting wrong. */
+    const cxPct = (x + bw / 2) / CHART_W * 100;
+    const anchor = cxPct > 80 ? ' r' : (cxPct < 20 ? ' l' : '');
+    if (topVal > 0) labels.push(`<span class="chart-val${anchor}" style="left:${pctX(x + bw / 2)}; top:${pctY(topY - 5)};">${esc(fmt(topVal))}</span>`);
+    if (i % stride === 0) labels.push(`<span class="chart-cat${anchor}" style="left:${pctX(x + bw / 2)}; top:${pctY(h - 8)};">${esc(r.label)}</span>`);
   });
   return `<div class="chart-cols"><div class="chart-plot"><svg viewBox="0 0 ${CHART_W} ${h}" role="img" aria-label="${esc(o.aria || chartSummary(rows, fmt))}">${shapes.join('')}</svg>${labels.join('')}</div>${ticks.join('')}</div>`
     + chartSrSummary(rows, fmt);
@@ -4544,7 +4674,7 @@ function configPanel() {
       </p>
       ${fields.map(([key, label2, kind]) => `
         <label class="form-label" style="display:block; margin-bottom:10px;">${label2}
-          <input id="cfg-${key}" class="form-input" style="margin-top:5px;" type="number" inputmode="decimal"
+          <input id="cfg-${key}" class="form-input" style="margin-top:5px;" type="number" min="0" inputmode="decimal"
                  min="0" step="${kind === 'percent' ? '1' : '1'}"
                  value="${kind === 'percent' ? Math.round(CONFIG[key] * 100) : kind === 'peso' ? toPesos(CONFIG[key]) : CONFIG[key]}">
           <span style="font-size:var(--t-caption); color:var(--mist);">${kind === 'percent' ? 'percent' : kind === 'peso' ? 'peso' : kind}</span>
@@ -5592,6 +5722,19 @@ function parseDay(value){
 function shortDate(value){
   const d = value instanceof Date ? value : new Date(parseDay(value));
   return isNaN(d) ? '' : d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+/* Whole calendar days from one day to another, both ends read as days. Measuring a day
+   count as an elapsed interval makes it depend on the hour it is asked: a queue line
+   reading "6 days ago" all morning became "7 days ago" at 12:00 with no record having
+   changed. Rounding the midnight-to-midnight interval absorbs a DST hour on a device
+   that has one. */
+function startOfDay(value){
+  const d = new Date(value);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+function daysBetween(fromValue, toValue){
+  return Math.round((startOfDay(toValue === undefined ? Date.now() : toValue)
+    - startOfDay(parseDay(fromValue))) / 86400000);
 }
 function residentSectionBody(section){
   const finished = residentFinished();
@@ -6999,7 +7142,7 @@ function renderSheet(){
   if(!root) return;
   if(!state.sheet){ root.innerHTML = ''; root._open = null; return; }
   if(root._open !== state.sheet){
-    root.innerHTML = `<div class="sheet-layer">
+    root.innerHTML = `<div class="sheet-layer" data-layer="sheet">
       <button type="button" class="sheet-scrim" onclick="closeSheet()" aria-label="Close"></button>
       <div class="sheet" role="dialog" aria-modal="true"></div>
     </div>`;
@@ -7060,10 +7203,16 @@ const ROOT_TABS = {
 let ownedEntries = 0;
 let ignoreNextPop = 0;
 const lastRootTab = { resident: 'home', provider: 'dashboard', admin: 'admin_dashboard' };
+/* Which layer is open, read off the state object instead of a hand-written list. The list
+   here named three of the four modal fields and missed the resident's, so on a real phone
+   Back quit Sukinnect from inside a half-filled "Edit profile" form: the page had recorded
+   nothing to undo, because it never knew a layer was open. Any field named *Modal or
+   *Confirm is a layer by convention, so the next one is counted the moment it exists. */
+function layerKeys(){
+  return Object.keys(state).filter(k => /Modal$/.test(k) || /Confirm$/.test(k));
+}
 function openLayers(){
-  return [state.sheet, state.providerProfileModal, state.verificationModal,
-          state.adminAccountModal, state.providerDeclineConfirm ? 'decline' : '']
-    .filter(Boolean).join('|');
+  return ['sheet', ...layerKeys()].filter(k => state[k]).join('|');
 }
 /* One definition of "you are on a tab, not inside something". render() needs it to decide
    whether to replay the entrance glide, and Back needs it to decide whether there is
@@ -7087,13 +7236,55 @@ function syncBackHandles(isRootTab){
       for (let i = 0; i < spend; i++) h.back();
     }
   } catch (err) { ownedEntries = want; }
+
+  /* Modality follows the layer actually on top. A sheet that keeps declaring aria-modal
+     makes Chromium mark everything outside it inert, and an inert subtree leaves the
+     platform accessibility tree: a modal raised from the sheet painted above it, took
+     taps, and simply did not exist to a screen reader on the handset. */
+  const sheetPanel = document.querySelector('.sheet');
+  if (sheetPanel) {
+    sheetPanel.setAttribute('aria-modal', modalAboveSheet() ? 'false' : 'true');
+  }
+  /* And everything outside the layer the user is in is inert. Tab walked straight past the scrim:
+     measured across the eight screens that open a sheet or a dialog, 91 of 192 keyboard stops
+     landed on controls behind it — content that is covered, cannot be clicked (the scrim takes the
+     tap and closes the layer), and can still be typed into and submitted. */
+  setInertOutside(topLayerEl());
+}
+/* The layer the user is actually in, decided from state rather than from a class list: a modal
+   outranks a sheet and a sheet outranks the screen, and nothing outranks either when both are
+   closed. The roots carry data-layer because the app raises a modal three ways — .modal-layer,
+   the sheet layer, and the verification review's inline fixed overlay — and a rule naming two of
+   them would leave the third walkable, which is the exact mistake this file already records once. */
+function topLayerEl(){
+  if (modalAboveSheet()) return document.querySelector('[data-layer="modal"]');
+  if (state.sheet) return document.querySelector('[data-layer="sheet"]');
+  return null;
+}
+/* `inert` is what does the work, not aria-hidden: a hidden subtree stays in the tab order, which is
+   the defect. Walking up from the layer and marking each ancestor's *siblings* is what makes it
+   structural — on the profile hubs the modal is painted inside #screen, so inenting #screen would
+   have taken the dialog with it, and a list of background ids would miss the next one added. */
+function setInertOutside(topEl){
+  const was = document.querySelectorAll('[inert]');
+  for (let i = 0; i < was.length; i++) was[i].inert = false;
+  if (!topEl) return;
+  let node = topEl, guard = 0;
+  while (node && node !== document.body && node.parentElement && guard++ < 24) {
+    const parent = node.parentElement;
+    for (const sib of parent.children) if (sib !== node) sib.inert = true;
+    node = parent;
+  }
+}
+/* Decided from state rather than from the painted classes, because the app raises a modal
+   two different ways — .modal-layer for the profile sheets, an inline fixed overlay for
+   the verification review — and a rule that reads one of them misses the other. */
+function modalAboveSheet(){
+  return layerKeys().some(k => !!state[k]);
 }
 function closeTopLayer(){
   state.sheet = null;
-  state.providerProfileModal = null;
-  state.verificationModal = null;
-  state.adminAccountModal = null;
-  state.providerDeclineConfirm = false;
+  layerKeys().forEach(k => { state[k] = typeof state[k] === 'boolean' ? false : null; });
 }
 function stepBack(){
   if (openLayers()) { closeTopLayer(); render(); return; }
@@ -7790,7 +7981,7 @@ function residentConcierge(){
       <button class="btn" style="width:100%; border-radius:12px; padding:14px; font-size:var(--t-body);" id="concierge-analyze-btn" ${state.conciergeAnalyzing ? 'disabled' : ''}>
         ${state.conciergeAnalyzing
           ? '<span class="spinner"></span> Preparing the job briefing&hellip;'
-          : 'Analyze the text and photo ' + ic("arrow-right",12)}
+          : 'Prepare the job briefing ' + ic("arrow-right",12)}
       </button>
     </div>
 
@@ -8744,7 +8935,7 @@ function residentProfileHub(){
   const rp = state.profileData;
 const row = (id, title, detail) => settingsRow('residentProfileSection', id, title, detail);
   const modal = state.residentProfileModal;
-  return `<div class="topbar" style="display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:10px;"><button onclick="state.tab='home'; render();" class="back-btn" aria-label="Back">${ic("chevron-left",18)}</button><h1>Resident Profile</h1></div><button class="btn sm" style="background:var(--brand-navy-deep); color:var(--on-brand); box-shadow:none;" onclick="residentProfileAction('logout')">Log Out</button></div><div class="pad" style="background:var(--cloud);"><div class="card" style="text-align:center">${photoAvatar('resident', 56)}<div style="font-size:var(--t-lead); font-weight:800; margin-top:10px;">${esc(rp.name)}</div><div style="font-size:var(--t-caption); color:var(--mist); margin-top:3px;">${esc(rp.email)}<br>${esc(rp.phone)}<br><span style="color:var(--success-ink);">Verified - Brgy. ${esc(rp.barangay)}</span></div><button class="btn sm secondary" style="margin-top:10px;" onclick="residentProfileAction('edit')">Edit Profile</button></div><div class="card card-quiet"><div style="font-size:var(--t-body-sm); font-weight:800; margin-bottom:9px;">Account &amp; residence details</div><div style="font-size:var(--t-caption); line-height:1.8;">Home Address: <b>${esc(rp.address)}</b><br>Barangay District: <b>Brgy. ${esc(rp.barangay)}</b><br>Emergency Contact: <b>${esc(rp.emergencyContact)}</b><br>Preferred Payment: <b>${esc(rp.preferredPayment)}</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="residentProfileAction('edit')">Edit Profile</button></div><div style="background:var(--brand-navy); border-radius:18px; padding:16px; color:var(--on-brand); margin-bottom:16px;"><div style="font-size:var(--t-caption); font-weight:800; color:var(--brand-secondary); margin-bottom:12px;">Account activity</div><div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;"><button onclick="openProfileSection('resident','history','Service history','Jobs finished on this account')" style="text-align:left; background:transparent; border:0; color:var(--on-brand); cursor:pointer;"><div style="font-family:var(--font-display); font-size:var(--t-title-lg);">${residentFinished().length}</div><div style="font-size:var(--t-caption);">Completed bookings</div></button><button onclick="openProfileSection('resident','spending','Spending summary','Paid, by service')" style="text-align:left; background:transparent; border:0; color:var(--on-brand); cursor:pointer;"><div style="font-family:var(--font-display); font-size:var(--t-title-lg);">${esc(pesoShort(residentPaid().reduce((s, b) => s + bookingTotal(b), 0)))}</div><div style="font-size:var(--t-caption);">Paid so far</div></button></div></div><div class="section-label">My services</div>${row('history','Service History','Jobs finished on this account')}${row('saved','Saved Providers','Not part of this prototype yet')}${row('warranty','Warranties & Disputes','Covered work and open cases')}<div class="section-label">My home</div>${row('home','Home & Maintenance Profile','Items you add on this device')}${row('reminders','Maintenance Reminders','Built from the items above')}<div class="section-label">Payments</div>${row('payments','Payment Methods','A label you choose, not an account')}${row('receipts','Receipts & Transactions','Jobs whose payment has settled')}<div class="section-label">Account</div>${row('notifications','Notifications','Alerts you choose to receive')}${row('privacy','Privacy & Security','How your details are shared')}</div>${modal ? `<div class="modal-layer"><div class="card modal-card"  ><div class="row"><b>${modal==='edit'?'Edit profile':modal==='add_item'?'Add household item':modal==='add_payment'?'Change payment method':modal==='logout'?'Log out?':'Update'}</b><button aria-label="Close" onclick="state.residentProfileModal=null; render();" style="border:0; background:transparent; font-size:var(--t-title); min-width:var(--tap); min-height:var(--tap); display:inline-flex; align-items:center; justify-content:center;">&times;</button></div>${modal==='edit'?`<label class="form-label">Full Name<input id="resident-profile-name" value="${esc(rp.name)}" class="form-input"></label><label class="form-label-8">Email (read-only)<input value="${esc(rp.email)}" readonly class="form-input-readonly"></label><label class="form-label-8">Phone Number<input id="resident-profile-phone" value="${esc(rp.phone)}" class="form-input"></label><label class="form-label-8">Home Address<input id="resident-profile-address" value="${esc(rp.address)}" class="form-input"></label><label class="form-label-8">Barangay<input id="resident-profile-barangay" value="${esc(rp.barangay)}" class="form-input"></label><label class="form-label-8">Emergency Contact<input id="resident-profile-emergency" value="${esc(rp.emergencyContact)}" class="form-input"></label><button class="btn btn-block"   onclick="saveResidentProfile()">Save Changes</button>`:modal==='add_item'?`<label class="form-label">Item Type<select id="household-type" aria-label="What kind of place this address is" style="width:100%; padding:9px; margin-top:4px;"><option>Air Conditioner</option><option>Refrigerator</option><option>Water Pump</option><option>Kitchen Plumbing</option><option>Water Heater</option><option>Other</option></select></label><label class="form-label-8">Nickname<input id="household-nickname" class="form-input"></label><label class="form-label-8">Brand / Model (Optional)<input id="household-brand" class="form-input"></label><button class="btn btn-block"   onclick="saveHouseholdItem()">Save Item</button>`:modal==='logout'?`<div style="font-size:var(--t-caption); margin-top:12px;">Are you sure you want to log out of your Sukinnect account?</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm secondary" style="flex:1;" onclick="state.residentProfileModal=null; render();">Cancel</button><button class="btn sm danger" style="flex:1;" onclick="signOut()">Log Out</button></div>`:modal==='add_payment'?`<label class="form-label">Preferred payment method<select id="resident-preferred-payment" aria-label="Preferred payment method" style="width:100%; min-height:var(--tap); padding:9px; margin-top:6px; border:1px solid var(--line); border-radius:8px; font:inherit; font-size:var(--t-caption);">${preferredPaymentOptions()}</select></label><div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px; line-height:1.5;">A label for the provider to work against. No account is linked and no money moves here.</div><button class="btn btn-block" onclick="savePreferredPayment()">Save method</button>`:`<div style="font-size:var(--t-caption); color:var(--success-ink); margin-top:12px;">Changes saved successfully.</div><button class="btn btn-block"   onclick="state.residentProfileModal=null; render();">Close</button>`}</div></div>`:''}`;
+  return `<div class="topbar" style="display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:10px;"><button onclick="state.tab='home'; render();" class="back-btn" aria-label="Back">${ic("chevron-left",18)}</button><h1>Resident Profile</h1></div><button class="btn sm" style="background:var(--brand-navy-deep); color:var(--on-brand); box-shadow:none;" onclick="residentProfileAction('logout')">Log Out</button></div><div class="pad" style="background:var(--cloud);"><div class="card" style="text-align:center">${photoAvatar('resident', 56)}<div style="font-size:var(--t-lead); font-weight:800; margin-top:10px;">${esc(rp.name)}</div><div style="font-size:var(--t-caption); color:var(--mist); margin-top:3px;">${esc(rp.email)}<br>${esc(rp.phone)}<br><span style="color:var(--success-ink);">Verified - Brgy. ${esc(rp.barangay)}</span></div><button class="btn sm secondary" style="margin-top:10px;" onclick="residentProfileAction('edit')">Edit Profile</button></div><div class="card card-quiet"><div style="font-size:var(--t-body-sm); font-weight:800; margin-bottom:9px;">Account &amp; residence details</div><div style="font-size:var(--t-caption); line-height:1.8;">Home Address: <b>${esc(rp.address)}</b><br>Barangay District: <b>Brgy. ${esc(rp.barangay)}</b><br>Emergency Contact: <b>${esc(rp.emergencyContact)}</b><br>Preferred Payment: <b>${esc(rp.preferredPayment)}</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="residentProfileAction('edit')">Edit Profile</button></div><div style="background:var(--brand-navy); border-radius:18px; padding:16px; color:var(--on-brand); margin-bottom:16px;"><div style="font-size:var(--t-caption); font-weight:800; color:var(--brand-secondary); margin-bottom:12px;">Account activity</div><div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;"><button onclick="openProfileSection('resident','history','Service history','Jobs finished on this account')" style="text-align:left; background:transparent; border:0; color:var(--on-brand); cursor:pointer;"><div style="font-family:var(--font-display); font-size:var(--t-title-lg);">${residentFinished().length}</div><div style="font-size:var(--t-caption);">Completed bookings</div></button><button onclick="openProfileSection('resident','spending','Spending summary','Paid, by service')" style="text-align:left; background:transparent; border:0; color:var(--on-brand); cursor:pointer;"><div style="font-family:var(--font-display); font-size:var(--t-title-lg);">${esc(pesoShort(residentPaid().reduce((s, b) => s + bookingTotal(b), 0)))}</div><div style="font-size:var(--t-caption);">Paid so far</div></button></div></div><div class="section-label">My services</div>${row('history','Service History','Jobs finished on this account')}${row('saved','Saved Providers','Not part of this prototype yet')}${row('warranty','Warranties & Disputes','Covered work and open cases')}<div class="section-label">My home</div>${row('home','Home & Maintenance Profile','Items you add on this device')}${row('reminders','Maintenance Reminders','Built from the items above')}<div class="section-label">Payments</div>${row('payments','Payment Methods','A label you choose, not an account')}${row('receipts','Receipts & Transactions','Jobs whose payment has settled')}<div class="section-label">Account</div>${row('notifications','Notifications','Alerts you choose to receive')}${row('privacy','Privacy & Security','How your details are shared')}</div>${modal ? `<div class="modal-layer" data-layer="modal"><div class="card modal-card"  ><div class="row"><b>${modal==='edit'?'Edit profile':modal==='add_item'?'Add household item':modal==='add_payment'?'Change payment method':modal==='logout'?'Log out?':'Update'}</b><button aria-label="Close" onclick="state.residentProfileModal=null; render();" style="border:0; background:transparent; font-size:var(--t-title); min-width:var(--tap); min-height:var(--tap); display:inline-flex; align-items:center; justify-content:center;">&times;</button></div>${modal==='edit'?`<label class="form-label">Full Name<input id="resident-profile-name" value="${esc(rp.name)}" class="form-input"></label><label class="form-label-8">Email (read-only)<input value="${esc(rp.email)}" readonly class="form-input-readonly"></label><label class="form-label-8">Phone Number<input id="resident-profile-phone" value="${esc(rp.phone)}" class="form-input"></label><label class="form-label-8">Home Address<input id="resident-profile-address" value="${esc(rp.address)}" class="form-input"></label><label class="form-label-8">Barangay<input id="resident-profile-barangay" value="${esc(rp.barangay)}" class="form-input"></label><label class="form-label-8">Emergency Contact<input id="resident-profile-emergency" value="${esc(rp.emergencyContact)}" class="form-input"></label><button class="btn btn-block"   onclick="saveResidentProfile()">Save Changes</button>`:modal==='add_item'?`<label class="form-label">Item Type<select id="household-type" aria-label="What kind of place this address is" style="width:100%; padding:9px; margin-top:4px;"><option>Air Conditioner</option><option>Refrigerator</option><option>Water Pump</option><option>Kitchen Plumbing</option><option>Water Heater</option><option>Other</option></select></label><label class="form-label-8">Nickname<input id="household-nickname" class="form-input"></label><label class="form-label-8">Brand / Model (Optional)<input id="household-brand" class="form-input"></label><button class="btn btn-block"   onclick="saveHouseholdItem()">Save Item</button>`:modal==='logout'?`<div style="font-size:var(--t-caption); margin-top:12px;">Are you sure you want to log out of your Sukinnect account?</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm secondary" style="flex:1;" onclick="state.residentProfileModal=null; render();">Cancel</button><button class="btn sm danger" style="flex:1;" onclick="signOut()">Log Out</button></div>`:modal==='add_payment'?`<label class="form-label">Preferred payment method<select id="resident-preferred-payment" aria-label="Preferred payment method" style="width:100%; min-height:var(--tap); padding:9px; margin-top:6px; border:1px solid var(--line); border-radius:8px; font:inherit; font-size:var(--t-caption);">${preferredPaymentOptions()}</select></label><div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px; line-height:1.5;">A label for the provider to work against. No account is linked and no money moves here.</div><button class="btn btn-block" onclick="savePreferredPayment()">Save method</button>`:`<div style="font-size:var(--t-caption); color:var(--success-ink); margin-top:12px;">Changes saved successfully.</div><button class="btn btn-block"   onclick="state.residentProfileModal=null; render();">Close</button>`}</div></div>`:''}`;
 }
 
 function adminDashboard(){
@@ -9395,7 +9586,7 @@ function adminVerifications(){
         <div style="display:flex; gap:6px;">${state.adminDocRequests.includes(provider.id) ? `<div style="flex:1; font-size:var(--t-caption); color:var(--warning-ink); background:var(--warning-100); border-radius:8px; padding:9px 10px; font-weight:700;">${ic('clock',12)} Documents requested · awaiting upload</div>` : `<button class="btn sm" style="flex:1;" onclick="openProviderVerification('${provider.id}')">Open verification</button><button class="btn sm secondary" style="flex:1;" onclick="askForDocuments('${provider.id}', '${provider.name}')">Request documents</button>`}</div>
       </div>
     `).join('')}
-    <div style="background:var(--deep-100); color:var(--success-ink); padding:8px 10px; border-radius:8px; font-size:var(--t-caption);">Tip: Prioritize applications with complete documents to faster onboarding.</div>
+    ${pendingDetails.length ? `<div style="background:var(--deep-100); color:var(--success-ink); padding:8px 10px; border-radius:8px; font-size:var(--t-caption);">Tip: Prioritize applications with complete documents to faster onboarding.</div>` : emptyState('shield', 'No applications are waiting', 'Every provider who applied has been decided. A new one appears here the moment it arrives.')}
     `}
   </div>`;
 }
@@ -9595,7 +9786,7 @@ function providerVerificationReview(){
     + '<button class="btn sm secondary" style="width:100%; min-width:0; height:52px;" onclick="verificationAction(\'request\')">Request update</button>'
     + '<button class="btn sm" style="width:100%; min-width:0; height:52px; opacity:' + (complete ? '1' : '0.5') + ';" ' + (complete ? 'onclick="verificationAction(\'approve_confirm\')"' : 'disabled aria-describedby="approve-why"') + '>Approve</button>'
     + '</div></div>'}
-  ${modal ? `<div style="position:fixed; inset:0; background:var(--scrim); z-index:50; display:flex; align-items:center; justify-content:center; padding:18px;"><div class="card" style="width:100%; max-width:350px; max-height:85vh; overflow:auto"><div class="row"><b style="font-size:var(--t-body-lg);">${modal === 'document' ? (about ? esc(about.label) : 'Document') : modal === 'request' ? 'Request outstanding documents' : modal === 'flag' ? 'Flag this document' : modal === 'reject' ? 'Reject this application' : modal === 'approve_confirm' ? 'Approve this applicant?' : modal === 'approved' ? 'Approved' : modal === 'rejected' ? 'Rejected' : modal === 'request_sent' ? 'Request recorded' : 'Note saved'}</b><button onclick="state.verificationModal=null; render();" aria-label="Close" style="border:0; background:transparent; font-size:var(--t-title); cursor:pointer; min-width:var(--tap); min-height:var(--tap); display:inline-flex; align-items:center; justify-content:center;">&times;</button></div>${modal === 'document' ? `<div style="height:110px; background:var(--brand-tint-soft); border:1px solid var(--line); border-radius:8px; margin:12px 0; display:flex; align-items:center; justify-content:center; text-align:center; padding:12px; color:var(--mist); font-size:var(--t-caption);">No image is stored in this prototype.<br>What follows is the record of the filing, not the document itself.</div><div style="font-size:var(--t-caption); line-height:1.7;">${about ? 'Document: <b>' + esc(about.label) + '</b><br>Filed as: <b>' + esc(about.detail) + '</b><br>Filed on: <b>' + esc(about.submittedAt ? shortDate(about.submittedAt) : 'not filed') + '</b>' + (about.expiresAt ? '<br>Expires: <b>' + esc(shortDate(about.expiresAt)) + '</b>' : '') + '<br>Your mark: <b>' + esc(WORD[docState(about)]) + '</b><br>Applicant: <b>' + esc(app.name) + '</b>' : 'Open a document from the list to review it.'}</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm" onclick="verificationAction('doc_state')">Mark as verified</button><button class="btn sm secondary" onclick="verificationAction('flag', ${about ? "'" + about.kind + "'" : 'null'})">Flag an issue</button></div>` : modal === 'flag' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0;">What is wrong with ${about ? esc(about.label) : 'this document'}?</div><select id="flag-issue" aria-label="Possible issue with this document" style="width:100%; min-height:var(--tap); padding:9px; border:1px solid var(--line); border-radius:8px;"><option>Information does not match the application</option><option>Document has expired</option><option>Image is unreadable</option><option>Wrong document type</option><option>Other</option></select><textarea id="flag-note" aria-label="Administrator note about this document" placeholder="What the applicant should fix" style="width:100%; min-height:70px; margin-top:10px; padding:8px; border:1px solid var(--line); border-radius:8px; font:inherit;"></textarea><button class="btn danger btn-block" style="margin-top:10px;" onclick="flagDocument()">Flag document</button>` : modal === 'approve_confirm' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin:12px 0;">${esc(app.name)}, ${esc(app.service)}. All ${docs.length} documents are filed and none is flagged. Approving records the decision on this device with your name and the time, and takes the application out of the pending queue.</div><div style="display:flex; gap:6px;"><button class="btn sm secondary" style="flex:1;" onclick="state.verificationModal=null; render();">Cancel</button><button class="btn sm" style="flex:1;" onclick="verificationAction('approved')">Confirm approval</button></div>` : modal === 'request' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0 8px;">Pick what you need back from ${esc(app.name)}. Only documents still outstanding are listed.</div>${outstanding.length ? outstanding.map(d => '<label class="row" style="font-size:var(--t-caption); padding:8px 0; min-height:var(--tap);">' + esc(d.label) + '<input type="checkbox" id="request-' + d.kind + '" checked style="width:20px; height:20px; accent-color:var(--deep); flex-shrink:0;"></label>').join('') : '<div style="font-size:var(--t-caption); color:var(--mist);">Nothing is outstanding on this application.</div>'}<label class="form-label" style="margin-top:10px;">Note to attach<div style="font-size:var(--t-caption); color:var(--mist); margin-top:4px;">Kept with the review record. This prototype has no applicant inbox, so nothing is delivered.</div></label><textarea id="request-message" aria-label="Note attached to the document request" style="width:100%; min-height:70px; border:1px solid var(--line); border-radius:8px; padding:8px; margin-top:6px; font:inherit;">Please upload the outstanding document to continue verification.</textarea><button class="btn btn-block" style="margin-top:10px;" onclick="sendDocumentRequest()">Record request</button>` : modal === 'reject' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0 8px;">A reason is required — it is what the record will show.</div><select id="reject-reason" aria-label="Reason for rejecting this application" style="width:100%; padding:9px; min-height:var(--tap); border:1px solid var(--line); border-radius:8px;"><option>Invalid required document</option><option>Unable to verify identity</option><option>Required qualification not met</option><option>Other</option></select><textarea id="reject-note" aria-label="Reason for rejecting this application" placeholder="What the applicant should know" style="width:100%; min-height:70px; margin-top:10px; padding:8px; border:1px solid var(--line); border-radius:8px; font:inherit;"></textarea><button class="btn danger btn-block" style="margin-top:10px;" onclick="rejectApplication()">Record rejection</button>` : `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin:12px 0;">${modal === 'approved' ? esc(app.name) + ' is approved as of ' + esc(shortDate(review.decidedAt)) + ' ' + esc(clockText(review.decidedAt)) + ' and no longer appears in the pending queue.' : modal === 'rejected' ? esc(app.name) + ' is rejected' + (review.reason ? ': ' + esc(review.reason) : '.') + ' The application stays on this device with that reason.' : modal === 'request_sent' ? 'The request is recorded against this application. The pending queue now shows it as awaiting upload.' + (review.requestMessage ? ' Your note: ' + esc(review.requestMessage) + '.' : '') : 'Your note is saved with this application on this device.'}</div><button class="btn" style="width:100%;" onclick="state.verificationModal=null; render();">Close</button>`}</div></div>` : ''}`;
+  ${modal ? `<div data-layer="modal" style="position:fixed; inset:0; background:var(--scrim); z-index:50; display:flex; align-items:center; justify-content:center; padding:18px;"><div class="card" style="width:100%; max-width:350px; max-height:85vh; overflow:auto"><div class="row"><b style="font-size:var(--t-body-lg);">${modal === 'document' ? (about ? esc(about.label) : 'Document') : modal === 'request' ? 'Request outstanding documents' : modal === 'flag' ? 'Flag this document' : modal === 'reject' ? 'Reject this application' : modal === 'approve_confirm' ? 'Approve this applicant?' : modal === 'approved' ? 'Approved' : modal === 'rejected' ? 'Rejected' : modal === 'request_sent' ? 'Request recorded' : 'Note saved'}</b><button onclick="state.verificationModal=null; render();" aria-label="Close" style="border:0; background:transparent; font-size:var(--t-title); cursor:pointer; min-width:var(--tap); min-height:var(--tap); display:inline-flex; align-items:center; justify-content:center;">&times;</button></div>${modal === 'document' ? `<div style="height:110px; background:var(--brand-tint-soft); border:1px solid var(--line); border-radius:8px; margin:12px 0; display:flex; align-items:center; justify-content:center; text-align:center; padding:12px; color:var(--mist); font-size:var(--t-caption);">No image is stored in this prototype.<br>What follows is the record of the filing, not the document itself.</div><div style="font-size:var(--t-caption); line-height:1.7;">${about ? 'Document: <b>' + esc(about.label) + '</b><br>Filed as: <b>' + esc(about.detail) + '</b><br>Filed on: <b>' + esc(about.submittedAt ? shortDate(about.submittedAt) : 'not filed') + '</b>' + (about.expiresAt ? '<br>Expires: <b>' + esc(shortDate(about.expiresAt)) + '</b>' : '') + '<br>Your mark: <b>' + esc(WORD[docState(about)]) + '</b><br>Applicant: <b>' + esc(app.name) + '</b>' : 'Open a document from the list to review it.'}</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm" onclick="verificationAction('doc_state')">Mark as verified</button><button class="btn sm secondary" onclick="verificationAction('flag', ${about ? "'" + about.kind + "'" : 'null'})">Flag an issue</button></div>` : modal === 'flag' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0;">What is wrong with ${about ? esc(about.label) : 'this document'}?</div><select id="flag-issue" aria-label="Possible issue with this document" style="width:100%; min-height:var(--tap); padding:9px; border:1px solid var(--line); border-radius:8px;"><option>Information does not match the application</option><option>Document has expired</option><option>Image is unreadable</option><option>Wrong document type</option><option>Other</option></select><textarea id="flag-note" aria-label="Administrator note about this document" placeholder="What the applicant should fix" style="width:100%; min-height:70px; margin-top:10px; padding:8px; border:1px solid var(--line); border-radius:8px; font:inherit;"></textarea><button class="btn danger btn-block" style="margin-top:10px;" onclick="flagDocument()">Flag document</button>` : modal === 'approve_confirm' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin:12px 0;">${esc(app.name)}, ${esc(app.service)}. All ${docs.length} documents are filed and none is flagged. Approving records the decision on this device with your name and the time, and takes the application out of the pending queue.</div><div style="display:flex; gap:6px;"><button class="btn sm secondary" style="flex:1;" onclick="state.verificationModal=null; render();">Cancel</button><button class="btn sm" style="flex:1;" onclick="verificationAction('approved')">Confirm approval</button></div>` : modal === 'request' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0 8px;">Pick what you need back from ${esc(app.name)}. Only documents still outstanding are listed.</div>${outstanding.length ? outstanding.map(d => '<label class="row" style="font-size:var(--t-caption); padding:8px 0; min-height:var(--tap);">' + esc(d.label) + '<input type="checkbox" id="request-' + d.kind + '" checked style="width:20px; height:20px; accent-color:var(--deep); flex-shrink:0;"></label>').join('') : '<div style="font-size:var(--t-caption); color:var(--mist);">Nothing is outstanding on this application.</div>'}<label class="form-label" style="margin-top:10px;">Note to attach<div style="font-size:var(--t-caption); color:var(--mist); margin-top:4px;">Kept with the review record. This prototype has no applicant inbox, so nothing is delivered.</div></label><textarea id="request-message" aria-label="Note attached to the document request" style="width:100%; min-height:70px; border:1px solid var(--line); border-radius:8px; padding:8px; margin-top:6px; font:inherit;">Please upload the outstanding document to continue verification.</textarea><button class="btn btn-block" style="margin-top:10px;" onclick="sendDocumentRequest()">Record request</button>` : modal === 'reject' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0 8px;">A reason is required — it is what the record will show.</div><select id="reject-reason" aria-label="Reason for rejecting this application" style="width:100%; padding:9px; min-height:var(--tap); border:1px solid var(--line); border-radius:8px;"><option>Invalid required document</option><option>Unable to verify identity</option><option>Required qualification not met</option><option>Other</option></select><textarea id="reject-note" aria-label="Reason for rejecting this application" placeholder="What the applicant should know" style="width:100%; min-height:70px; margin-top:10px; padding:8px; border:1px solid var(--line); border-radius:8px; font:inherit;"></textarea><button class="btn danger btn-block" style="margin-top:10px;" onclick="rejectApplication()">Record rejection</button>` : `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin:12px 0;">${modal === 'approved' ? esc(app.name) + ' is approved as of ' + esc(shortDate(review.decidedAt)) + ' ' + esc(clockText(review.decidedAt)) + ' and no longer appears in the pending queue.' : modal === 'rejected' ? esc(app.name) + ' is rejected' + (review.reason ? ': ' + esc(review.reason) : '.') + ' The application stays on this device with that reason.' : modal === 'request_sent' ? 'The request is recorded against this application. The pending queue now shows it as awaiting upload.' + (review.requestMessage ? ' Your note: ' + esc(review.requestMessage) + '.' : '') : 'Your note is saved with this application on this device.'}</div><button class="btn" style="width:100%;" onclick="state.verificationModal=null; render();">Close</button>`}</div></div>` : ''}`;
 }
 
 function reopenReview(){
@@ -9633,7 +9824,7 @@ function adminProfile(){
   const ap = state.adminProfileData;
 const row = (id, title, detail) => settingsRow('adminAccountSection', id, title, detail, true);
   const modal = state.adminAccountModal;
-  return `<div class="topbar"><h1>Admin account</h1></div><div class="pad" style="background:var(--cloud);"><div class="card" style="text-align:center">${photoAvatar('admin', 56)}<div style="font-size:var(--t-lead); font-weight:800; margin-top:10px;">${esc(ap.name)}</div><div style="font-size:var(--t-caption); color:var(--mist); margin-top:3px;">Super Administrator<br>Full Municipal Control</div><button class="btn sm secondary" style="margin-top:12px;" onclick="adminAccountAction('edit')">Edit Profile</button></div><div style="font-size:var(--t-caption); font-weight:800; color:var(--mist); margin:14px 0 7px;">Account</div>${row('account','Account Information',ap.email)}${row('role', 'Role & Access', ap.accessLevel)}<div style="font-size:var(--t-caption); font-weight:800; color:var(--mist); margin:14px 0 7px;">Security</div>${row('security', 'Security & Sign-in', 'Not stored on this device')}${row('sessions', 'Active Sessions', 'This device only')}${row('login_activity', 'Login Activity', 'Nothing is recorded here')}<div style="font-size:var(--t-caption); font-weight:800; color:var(--mist); margin:14px 0 7px;">Preferences</div>${row('notifications','Notifications','Choose which Admin alerts you receive')}${row('preferences','App Preferences','System Default')}<div style="font-size:var(--t-caption); font-weight:800; color:var(--mist); margin:14px 0 7px;">Administration</div>${row('activity','My Admin Activity','Review your recent administrative actions')}<button class="btn secondary" style="width:100%; margin-top:8px;" onclick="adminAccountAction('lock')">Lock Admin Session</button><button class="btn" style="width:100%; margin-top:8px; background:var(--surface); color:var(--error-ink); border:1px solid var(--alert); box-shadow:none;" onclick="adminAccountAction('logout')">Log Out</button></div>${modal ? `<div class="modal-layer"><div class="card modal-card"  ><div class="row"><b>${modal==='edit'?'Edit admin profile':modal==='pin'?'Change security PIN':modal==='password'?'Change password':modal==='twofa'?'Two-factor authentication':modal==='sessions'?'Sign out this device?':modal==='lock'?'Admin session locked':modal==='logout'?'Log out?':'Account update'}</b><button aria-label="Close" onclick="state.adminAccountModal=null; render();" style="border:0; background:transparent; font-size:var(--t-title); min-width:var(--tap); min-height:var(--tap); display:inline-flex; align-items:center; justify-content:center;">&times;</button></div>${modal==='edit'?`<label class="form-label">Display Name<input id="admin-profile-name" value="${esc(ap.name)}" class="form-input"></label><label class="form-label-8">Email (read-only)<input value="${esc(ap.email)}" readonly class="form-input-readonly"></label><label class="form-label-8">Phone<input id="admin-profile-phone" value="${esc(ap.phone)}" class="form-input"></label><label class="form-label-8">Office / Department<input id="admin-profile-office" value="${esc(ap.officeLocation)}" class="form-input"></label><button class="btn btn-block"   onclick="saveAdminProfile()">Save Changes</button>`:modal==='pin'?`<div style="font-size:var(--t-caption); line-height:1.6; margin-top:10px;">This prototype signs in from the sample account and keeps no PIN, so there is nothing to change here and nothing to write to the Audit Log. A real deployment would store a hashed secret server-side and record the change as an audited action.</div><button class="btn btn-block" onclick="state.adminAccountModal=null; render();">Close</button>`:modal==='password'?`<div style="font-size:var(--t-caption); line-height:1.6; margin-top:10px;">No password is stored, so nothing could be checked against it and nothing would change if you typed one. The sign-in screen reads the sample account directly.</div><button class="btn btn-block" onclick="state.adminAccountModal=null; render();">Close</button>`:modal==='twofa'?`<div style="font-size:var(--t-caption); line-height:1.6; margin-top:10px;">Status: <b>Not configured</b><br>No second factor exists to enable, and no secret is held to display.</div><button class="btn btn-block" onclick="state.adminAccountModal=null; render();">Close</button>`:modal==='sessions'?`<div style="font-size:var(--t-caption); line-height:1.6; margin-top:10px;">This is the only session the prototype knows about. It keeps no session record, so it cannot list another device or revoke one — signing out here clears the local view on this device and nothing else.</div><button class="btn btn-block"   onclick="adminLog('Admin session signed out','This device','Local view cleared'); state.adminAccountModal='saved'; render();">Sign out of this device</button>`:modal==='lock'?`<div style="font-size:var(--t-caption); margin-top:12px;">Master Administrator<br><br>Enter PIN to continue:</div><input type="password" placeholder="PIN" style="width:100%; padding:9px; margin-top:8px;"><button class="btn btn-block"   onclick="state.adminAccountModal=null; render();">Unlock</button><button class="btn sm secondary" style="width:100%; margin-top:8px;" onclick="adminAccountAction('logout')">Log Out Instead</button>`:modal==='logout'?`<div style="font-size:var(--t-caption); margin-top:12px;">Are you sure you want to log out of the Sukinnect Administrator account?</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm secondary" style="flex:1;" onclick="state.adminAccountModal=null; render();">Cancel</button><button class="btn sm danger" style="flex:1;" onclick="signOut()">Log Out</button></div>`:`<div style="font-size:var(--t-caption); color:var(--success-ink); margin-top:12px;">Update saved and recorded in the Audit Log.</div><button class="btn btn-block"   onclick="state.adminAccountModal=null; render();">Close</button>`}</div></div>`:''}`;
+  return `<div class="topbar"><h1>Admin account</h1></div><div class="pad" style="background:var(--cloud);"><div class="card" style="text-align:center">${photoAvatar('admin', 56)}<div style="font-size:var(--t-lead); font-weight:800; margin-top:10px;">${esc(ap.name)}</div><div style="font-size:var(--t-caption); color:var(--mist); margin-top:3px;">Super Administrator<br>Full Municipal Control</div><button class="btn sm secondary" style="margin-top:12px;" onclick="adminAccountAction('edit')">Edit Profile</button></div><div style="font-size:var(--t-caption); font-weight:800; color:var(--mist); margin:14px 0 7px;">Account</div>${row('account','Account Information',ap.email)}${row('role', 'Role & Access', ap.accessLevel)}<div style="font-size:var(--t-caption); font-weight:800; color:var(--mist); margin:14px 0 7px;">Security</div>${row('security', 'Security & Sign-in', 'Not stored on this device')}${row('sessions', 'Active Sessions', 'This device only')}${row('login_activity', 'Login Activity', 'Nothing is recorded here')}<div style="font-size:var(--t-caption); font-weight:800; color:var(--mist); margin:14px 0 7px;">Preferences</div>${row('notifications','Notifications','Choose which Admin alerts you receive')}${row('preferences','App Preferences','System Default')}<div style="font-size:var(--t-caption); font-weight:800; color:var(--mist); margin:14px 0 7px;">Administration</div>${row('activity','My Admin Activity','Review your recent administrative actions')}<button class="btn secondary" style="width:100%; margin-top:8px;" onclick="adminAccountAction('lock')">Lock Admin Session</button><button class="btn" style="width:100%; margin-top:8px; background:var(--surface); color:var(--error-ink); border:1px solid var(--alert); box-shadow:none;" onclick="adminAccountAction('logout')">Log Out</button></div>${modal ? `<div class="modal-layer" data-layer="modal"><div class="card modal-card"  ><div class="row"><b>${modal==='edit'?'Edit admin profile':modal==='pin'?'Change security PIN':modal==='password'?'Change password':modal==='twofa'?'Two-factor authentication':modal==='sessions'?'Sign out this device?':modal==='lock'?'Admin session locked':modal==='logout'?'Log out?':'Account update'}</b><button aria-label="Close" onclick="state.adminAccountModal=null; render();" style="border:0; background:transparent; font-size:var(--t-title); min-width:var(--tap); min-height:var(--tap); display:inline-flex; align-items:center; justify-content:center;">&times;</button></div>${modal==='edit'?`<label class="form-label">Display Name<input id="admin-profile-name" value="${esc(ap.name)}" class="form-input"></label><label class="form-label-8">Email (read-only)<input value="${esc(ap.email)}" readonly class="form-input-readonly"></label><label class="form-label-8">Phone<input id="admin-profile-phone" value="${esc(ap.phone)}" class="form-input"></label><label class="form-label-8">Office / Department<input id="admin-profile-office" value="${esc(ap.officeLocation)}" class="form-input"></label><button class="btn btn-block"   onclick="saveAdminProfile()">Save Changes</button>`:modal==='pin'?`<div style="font-size:var(--t-caption); line-height:1.6; margin-top:10px;">This prototype signs in from the sample account and keeps no PIN, so there is nothing to change here and nothing to write to the Audit Log. A real deployment would store a hashed secret server-side and record the change as an audited action.</div><button class="btn btn-block" onclick="state.adminAccountModal=null; render();">Close</button>`:modal==='password'?`<div style="font-size:var(--t-caption); line-height:1.6; margin-top:10px;">No password is stored, so nothing could be checked against it and nothing would change if you typed one. The sign-in screen reads the sample account directly.</div><button class="btn btn-block" onclick="state.adminAccountModal=null; render();">Close</button>`:modal==='twofa'?`<div style="font-size:var(--t-caption); line-height:1.6; margin-top:10px;">Status: <b>Not configured</b><br>No second factor exists to enable, and no secret is held to display.</div><button class="btn btn-block" onclick="state.adminAccountModal=null; render();">Close</button>`:modal==='sessions'?`<div style="font-size:var(--t-caption); line-height:1.6; margin-top:10px;">This is the only session the prototype knows about. It keeps no session record, so it cannot list another device or revoke one — signing out here clears the local view on this device and nothing else.</div><button class="btn btn-block"   onclick="adminLog('Admin session signed out','This device','Local view cleared'); state.adminAccountModal='saved'; render();">Sign out of this device</button>`:modal==='lock'?`<div style="font-size:var(--t-caption); margin-top:12px;">Master Administrator<br><br>Enter PIN to continue:</div><input type="password" placeholder="PIN" style="width:100%; padding:9px; margin-top:8px;"><button class="btn btn-block"   onclick="state.adminAccountModal=null; render();">Unlock</button><button class="btn sm secondary" style="width:100%; margin-top:8px;" onclick="adminAccountAction('logout')">Log Out Instead</button>`:modal==='logout'?`<div style="font-size:var(--t-caption); margin-top:12px;">Are you sure you want to log out of the Sukinnect Administrator account?</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm secondary" style="flex:1;" onclick="state.adminAccountModal=null; render();">Cancel</button><button class="btn sm danger" style="flex:1;" onclick="signOut()">Log Out</button></div>`:`<div style="font-size:var(--t-caption); color:var(--success-ink); margin-top:12px;">Update saved and recorded in the Audit Log.</div><button class="btn btn-block"   onclick="state.adminAccountModal=null; render();">Close</button>`}</div></div>`:''}`;
 }
 
 /* ── provider-side views built on the kernel ─────────────────────────────── */
@@ -9788,13 +9979,13 @@ function makeOfferSheet(){
 
       <div class="sheet-group offer-fields">
         ${d.basis === 'per_kg' ? `<label class="sheet-label" for="offer-qty">Kilos you expect to take
-          <input class="req-field" id="offer-qty" type="number" inputmode="decimal" value="${esc(d.qtyKg)}" placeholder="38" oninput="offerInput('qtyKg', this.value)"></label>` : ''}
+          <input class="req-field" id="offer-qty" type="number" min="0" inputmode="decimal" value="${esc(d.qtyKg)}" placeholder="38" oninput="offerInput('qtyKg', this.value)"></label>` : ''}
         ${d.basis === 'per_tree' ? `<label class="sheet-label" for="offer-trees">Trees you are pricing
-          <input class="req-field" id="offer-trees" type="number" inputmode="numeric" value="${esc(d.trees)}" placeholder="2" oninput="offerInput('trees', this.value)"></label>` : ''}
+          <input class="req-field" id="offer-trees" type="number" min="0" inputmode="numeric" value="${esc(d.trees)}" placeholder="2" oninput="offerInput('trees', this.value)"></label>` : ''}
         <label class="sheet-label" for="offer-unit">Your price ${unitLabel === 'for the whole lot' ? 'for the lot' : unitLabel}
-          <input class="req-field" id="offer-unit" type="number" inputmode="decimal" value="${esc(d.unitPesos)}" placeholder="${d.basis === 'per_lot' ? '1500' : '55'}" oninput="offerInput('unitPesos', this.value)"></label>
+          <input class="req-field" id="offer-unit" type="number" min="0" inputmode="decimal" value="${esc(d.unitPesos)}" placeholder="${d.basis === 'per_lot' ? '1500' : '55'}" oninput="offerInput('unitPesos', this.value)"></label>
         ${mode.id !== 'sell_fruit' ? `<label class="sheet-label" for="offer-labour">What the harvesting costs
-          <input class="req-field" id="offer-labour" type="number" inputmode="decimal" value="${esc(d.labourPesos)}" placeholder="800" oninput="offerInput('labourPesos', this.value)"></label>` : ''}
+          <input class="req-field" id="offer-labour" type="number" min="0" inputmode="decimal" value="${esc(d.labourPesos)}" placeholder="800" oninput="offerInput('labourPesos', this.value)"></label>` : ''}
       </div>
 
       <div class="sheet-group" id="offer-totals">${offerTotalsBlock(b, d, t)}</div>
@@ -10934,7 +11125,7 @@ function providerProfileHub(){
   const pp = state.providerProfileData;
 const row = (id, title, detail) => settingsRow('providerProfileSection', id, title, detail);
   const modal = state.providerProfileModal;
-  return `<div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><button onclick="state.tab='dashboard'; render();" class="back-btn" aria-label="Back">${ic("chevron-left",18)}</button><h1>Provider Profile</h1></div></div><div class="pad" style="background:var(--cloud);"><div class="card" style="text-align:center">${photoAvatar('self', 56)}<div style="font-size:var(--t-lead); font-weight:800; margin-top:10px;">${esc(pp.name)}</div><div style="font-size:var(--t-caption); color:var(--mist); margin-top:3px;">${esc(pp.service)} - Brgy. ${esc(pp.barangay)}</div><div style="display:flex; justify-content:center; gap:6px; margin-top:10px;">${providerOf({providerId:CURRENT_PROVIDER_ID}).badges.map(b => '<span class="chip">' + esc(b) + '</span>').join('')}</div><button class="btn sm secondary" style="margin-top:10px;" onclick="providerProfileAction('edit')">Edit Professional Profile</button></div><div class="card"><div class="row"><b class="card-title">Professional status</b><span class="chip">Active</span></div><div style="font-size:var(--t-caption); line-height:1.8; margin-top:8px;">Availability: <b style="color:var(--success-ink);">${state.providerAvailability}</b><br>Trust Score: <button class="auth-switch" style="font-size:var(--t-body);" onclick="openProfileSection('provider','reputation','Reputation','Ratings, jobs and completion history')">${providerOf({providerId:CURRENT_PROVIDER_ID}).trustScore} / 100</button><br>Credentials: <b style="color:${credentialSummaryFor(CURRENT_PROVIDER_ID).tone};">${esc(credentialSummaryFor(CURRENT_PROVIDER_ID).label)}</b></div></div><div class="card"><div class="row" style="margin-bottom:9px;"><b class="card-title">Contact and service details</b><button class="btn sm secondary" onclick="providerProfileAction('edit')">Edit</button></div><div style="font-size:var(--t-caption); line-height:1.8;">Email: <b>${esc(pp.email)}</b><br>Phone: <b>${esc(pp.phone)}</b><br>Rate: <b>${rateLabel(pp.rateCentavos, pp.rateUnit)}</b><br>Service radius: <b>${esc(pp.serviceRadius)}</b><br>Working hours: <b>${esc(pp.workingHours)}</b><br>Emergency dispatch: <b>${state.providerEmergencyDispatch ? 'Enabled' : 'Disabled'}</b><br>Payout account: <b>${esc(pp.bankAccount)}</b></div></div>${capabilityCard(providerOf({providerId:CURRENT_PROVIDER_ID}))}<div class="section-label">Service settings</div>${row('services','Services Offered', listingsOf(CURRENT_PROVIDER_ID).filter(l=>l.isActive).map(l=>l.title).join(', ') || 'Nothing listed yet')}${row('pricing','Pricing & Rates',rateLabel(pp.rateCentavos, pp.rateUnit))}${row('area','Service Area',pp.serviceRadius)}${row('hours','Working Hours',pp.workingHours)}${row('dispatch','Emergency Dispatch',state.providerEmergencyDispatch?'Enabled':'Disabled')}<div class="section-label">Professional</div>${row('credentials', 'Credentials & Verification', credentialSummaryFor(CURRENT_PROVIDER_ID).label)}${row('reputation','Reputation & Trust Score', providerOf({providerId:CURRENT_PROVIDER_ID}).trustScore + ' / 100 · ' + providerOf({providerId:CURRENT_PROVIDER_ID}).rating + ' rating')}${row('portfolio','Work Portfolio','Service photos and examples')}${row('preview','Preview Public Profile','See what Residents see')}<div class="section-label">Financial</div>${row('payout', 'Payout & Earnings', pp.bankAccount)}<div class="section-label">Account</div>${row('security', 'Password & Sign-in', 'Not stored on this device')}${row('notifications','Notification Preferences','Service and security alerts')}<button class="btn" style="width:100%; margin-top:12px; background:var(--surface); color:var(--error-ink); border:1px solid var(--alert); box-shadow:none;" onclick="providerProfileAction('logout')">Log Out</button></div>${modal ? `<div class="modal-layer"><div class="card modal-card"  ><div class="row"><b>${modal==='edit'?'Edit service profile':modal==='logout'?'Log out?':modal==='payout'?'Payout account':modal==='dispatch'?'Enable emergency dispatch?':modal==='add_service'?((state.listingDraft&&state.listingDraft.id)?'Edit service':'NEW SERVICE'):modal==='portfolio_add'?'Add work':'Update'}</b><button aria-label="Close" onclick="state.providerProfileModal=null; render();" style="border:0; background:transparent; font-size:var(--t-title); min-width:var(--tap); min-height:var(--tap); display:inline-flex; align-items:center; justify-content:center;">&times;</button></div>${modal==='edit'?`<label class="form-label">Email (read-only)<input value="${esc(pp.email)}" readonly class="form-input-readonly"></label><label class="form-label-8">Phone Number<input id="provider-profile-phone" value="${esc(pp.phone)}" class="form-input"></label><label class="form-label-8">Service Rate (peso per unit)<input id="provider-profile-rate" type="number" min="0" step="1" inputmode="numeric" value="${toPesos(pp.rateCentavos)}" class="form-input"></label><label class="form-label-8">Service Radius<input id="provider-profile-radius" value="${esc(pp.serviceRadius)}" class="form-input"></label><label class="form-label-8">Working Hours<input id="provider-profile-hours" value="${esc(pp.workingHours)}" class="form-input"></label><button class="btn btn-block"   onclick="saveProviderProfessionalProfile()">Save Changes</button>`:modal==='dispatch'?`<div style="font-size:var(--t-caption); margin-top:12px;">You may receive urgent service requests during selected emergency hours.</div><button class="btn btn-block"   onclick="state.providerEmergencyDispatch=!state.providerEmergencyDispatch; state.providerProfileModal=null; render();">Enable</button>`:modal==='payout'?`<label class="form-label">Payout account<input id="provider-payout-account" class="form-input" style="margin-top:6px;" value="${esc(pp.bankAccount)}"></label><div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px; line-height:1.5;">This is where a payout would go. The prototype keeps it on this device and sends it nowhere.</div><button class="btn btn-block" onclick="savePayoutAccount()">Save payout account</button>`:modal==='logout'?`<div style="font-size:var(--t-caption); margin-top:12px;">Are you sure you want to log out of your Sukinnect provider account?</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm secondary" style="flex:1;" onclick="state.providerProfileModal=null; render();">Cancel</button><button class="btn sm danger" style="flex:1;" onclick="signOut()">Log Out</button></div>`:modal==='add_service'?`<label class="form-label">Service name<input id="listing-title" class="form-input" style="margin-top:6px;" placeholder="e.g. Water heater inspection" value="${esc((state.listingDraft||{}).title||'')}"></label><label class="form-label">Price in pesos<input id="listing-price" type="number" min="100" step="1" inputmode="numeric" class="form-input" style="margin-top:6px;" value="${(state.listingDraft||{}).pricePesos||''}"></label><label class="form-label">Typical duration, minutes<input id="listing-mins" type="number" min="5" step="5" inputmode="numeric" class="form-input" style="margin-top:6px;" value="${(state.listingDraft||{}).durationMin||45}"></label>${state.profileError?`<div class="inline-error" role="alert">${esc(state.profileError)}</div>`:''}<button class="btn btn-block" onclick="commitListingDraft()">Save service</button>`:modal==='portfolio_add'?`<input id="portfolio-service" aria-label="Which service this work was for" placeholder="Service" style="width:100%; min-height:var(--tap); margin-top:12px; padding:9px;"><textarea id="portfolio-description" aria-label="Describe this piece of work" placeholder="Description" style="width:100%; min-height:70px; margin-top:8px; padding:9px;"></textarea>${state.profileError?`<div class="inline-error" role="alert">${esc(state.profileError)}</div>`:''}<button class="btn btn-block" onclick="savePortfolioWork()">Save work</button>`:`<div style="font-size:var(--t-caption); color:var(--success-ink); margin-top:12px;">Changes saved successfully.</div><button class="btn btn-block"   onclick="state.providerProfileModal=null; render();">Close</button>`}</div></div>`:''}`;
+  return `<div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><button onclick="state.tab='dashboard'; render();" class="back-btn" aria-label="Back">${ic("chevron-left",18)}</button><h1>Provider Profile</h1></div></div><div class="pad" style="background:var(--cloud);"><div class="card" style="text-align:center">${photoAvatar('self', 56)}<div style="font-size:var(--t-lead); font-weight:800; margin-top:10px;">${esc(pp.name)}</div><div style="font-size:var(--t-caption); color:var(--mist); margin-top:3px;">${esc(pp.service)} - Brgy. ${esc(pp.barangay)}</div><div style="display:flex; justify-content:center; gap:6px; margin-top:10px;">${providerOf({providerId:CURRENT_PROVIDER_ID}).badges.map(b => '<span class="chip">' + esc(b) + '</span>').join('')}</div><button class="btn sm secondary" style="margin-top:10px;" onclick="providerProfileAction('edit')">Edit Professional Profile</button></div><div class="card"><div class="row"><b class="card-title">Professional status</b><span class="chip">Active</span></div><div style="font-size:var(--t-caption); line-height:1.8; margin-top:8px;">Availability: <b style="color:var(--success-ink);">${state.providerAvailability}</b><br>Trust Score: <button class="auth-switch" style="font-size:var(--t-body);" onclick="openProfileSection('provider','reputation','Reputation','Ratings, jobs and completion history')">${providerOf({providerId:CURRENT_PROVIDER_ID}).trustScore} / 100</button><br>Credentials: <b style="color:${credentialSummaryFor(CURRENT_PROVIDER_ID).tone};">${esc(credentialSummaryFor(CURRENT_PROVIDER_ID).label)}</b></div></div><div class="card"><div class="row" style="margin-bottom:9px;"><b class="card-title">Contact and service details</b><button class="btn sm secondary" onclick="providerProfileAction('edit')">Edit</button></div><div style="font-size:var(--t-caption); line-height:1.8;">Email: <b>${esc(pp.email)}</b><br>Phone: <b>${esc(pp.phone)}</b><br>Rate: <b>${rateLabel(pp.rateCentavos, pp.rateUnit)}</b><br>Service radius: <b>${esc(pp.serviceRadius)}</b><br>Working hours: <b>${esc(pp.workingHours)}</b><br>Emergency dispatch: <b>${state.providerEmergencyDispatch ? 'Enabled' : 'Disabled'}</b><br>Payout account: <b>${esc(pp.bankAccount)}</b></div></div>${capabilityCard(providerOf({providerId:CURRENT_PROVIDER_ID}))}<div class="section-label">Service settings</div>${row('services','Services Offered', listingsOf(CURRENT_PROVIDER_ID).filter(l=>l.isActive).map(l=>l.title).join(', ') || 'Nothing listed yet')}${row('pricing','Pricing & Rates',rateLabel(pp.rateCentavos, pp.rateUnit))}${row('area','Service Area',pp.serviceRadius)}${row('hours','Working Hours',pp.workingHours)}${row('dispatch','Emergency Dispatch',state.providerEmergencyDispatch?'Enabled':'Disabled')}<div class="section-label">Professional</div>${row('credentials', 'Credentials & Verification', credentialSummaryFor(CURRENT_PROVIDER_ID).label)}${row('reputation','Reputation & Trust Score', providerOf({providerId:CURRENT_PROVIDER_ID}).trustScore + ' / 100 · ' + providerOf({providerId:CURRENT_PROVIDER_ID}).rating + ' rating')}${row('portfolio','Work Portfolio','Service photos and examples')}${row('preview','Preview Public Profile','See what Residents see')}<div class="section-label">Financial</div>${row('payout', 'Payout & Earnings', pp.bankAccount)}<div class="section-label">Account</div>${row('security', 'Password & Sign-in', 'Not stored on this device')}${row('notifications','Notification Preferences','Service and security alerts')}<button class="btn" style="width:100%; margin-top:12px; background:var(--surface); color:var(--error-ink); border:1px solid var(--alert); box-shadow:none;" onclick="providerProfileAction('logout')">Log Out</button></div>${modal ? `<div class="modal-layer" data-layer="modal"><div class="card modal-card"  ><div class="row"><b>${modal==='edit'?'Edit service profile':modal==='logout'?'Log out?':modal==='payout'?'Payout account':modal==='dispatch'?'Enable emergency dispatch?':modal==='add_service'?((state.listingDraft&&state.listingDraft.id)?'Edit service':'NEW SERVICE'):modal==='portfolio_add'?'Add work':'Update'}</b><button aria-label="Close" onclick="state.providerProfileModal=null; render();" style="border:0; background:transparent; font-size:var(--t-title); min-width:var(--tap); min-height:var(--tap); display:inline-flex; align-items:center; justify-content:center;">&times;</button></div>${modal==='edit'?`<label class="form-label">Email (read-only)<input value="${esc(pp.email)}" readonly class="form-input-readonly"></label><label class="form-label-8">Phone Number<input id="provider-profile-phone" value="${esc(pp.phone)}" class="form-input"></label><label class="form-label-8">Service Rate (peso per unit)<input id="provider-profile-rate" type="number" min="0" step="1" inputmode="numeric" value="${toPesos(pp.rateCentavos)}" class="form-input"></label><label class="form-label-8">Service Radius<input id="provider-profile-radius" value="${esc(pp.serviceRadius)}" class="form-input"></label><label class="form-label-8">Working Hours<input id="provider-profile-hours" value="${esc(pp.workingHours)}" class="form-input"></label><button class="btn btn-block"   onclick="saveProviderProfessionalProfile()">Save Changes</button>`:modal==='dispatch'?`<div style="font-size:var(--t-caption); margin-top:12px;">You may receive urgent service requests during selected emergency hours.</div><button class="btn btn-block"   onclick="state.providerEmergencyDispatch=!state.providerEmergencyDispatch; state.providerProfileModal=null; render();">Enable</button>`:modal==='payout'?`<label class="form-label">Payout account<input id="provider-payout-account" class="form-input" style="margin-top:6px;" value="${esc(pp.bankAccount)}"></label><div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px; line-height:1.5;">This is where a payout would go. The prototype keeps it on this device and sends it nowhere.</div><button class="btn btn-block" onclick="savePayoutAccount()">Save payout account</button>`:modal==='logout'?`<div style="font-size:var(--t-caption); margin-top:12px;">Are you sure you want to log out of your Sukinnect provider account?</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm secondary" style="flex:1;" onclick="state.providerProfileModal=null; render();">Cancel</button><button class="btn sm danger" style="flex:1;" onclick="signOut()">Log Out</button></div>`:modal==='add_service'?`<label class="form-label">Service name<input id="listing-title" class="form-input" style="margin-top:6px;" placeholder="e.g. Water heater inspection" value="${esc((state.listingDraft||{}).title||'')}"></label><label class="form-label">Price in pesos<input id="listing-price" type="number" min="100" step="1" inputmode="numeric" class="form-input" style="margin-top:6px;" value="${(state.listingDraft||{}).pricePesos||''}"></label><label class="form-label">Typical duration, minutes<input id="listing-mins" type="number" min="5" step="5" inputmode="numeric" class="form-input" style="margin-top:6px;" value="${(state.listingDraft||{}).durationMin||45}"></label>${state.profileError?`<div class="inline-error" role="alert">${esc(state.profileError)}</div>`:''}<button class="btn btn-block" onclick="commitListingDraft()">Save service</button>`:modal==='portfolio_add'?`<input id="portfolio-service" class="form-input" aria-label="Which service this work was for" placeholder="Service" style="margin-top:12px;"><textarea id="portfolio-description" class="form-input" aria-label="Describe this piece of work" placeholder="Description" style="min-height:70px; margin-top:8px;"></textarea>${state.profileError?`<div class="inline-error" role="alert">${esc(state.profileError)}</div>`:''}<button class="btn btn-block" onclick="savePortfolioWork()">Save work</button>`:`<div style="font-size:var(--t-caption); color:var(--success-ink); margin-top:12px;">Changes saved successfully.</div><button class="btn btn-block"   onclick="state.providerProfileModal=null; render();">Close</button>`}</div></div>`:''}`;
 }
 
 function bindTabHandlers(){

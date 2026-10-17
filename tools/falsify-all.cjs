@@ -35,16 +35,32 @@ const families = fs.readdirSync(TOOLS)
   .filter(f => !filter || f.includes(filter))
   .sort();
 
-/* The two summary shapes the families print, plus the skip line each one emits when its needle
-   no longer matches the file. The second family of endings is written two ways across the suite
-   — `not applied 0` and `failed to apply 0` — and a first version of this pattern matched only
-   one of them, which made six families look like they had crashed when they had finished cleanly
-   four lines earlier. A runner that mis-parses a result is worse than no runner, because it
-   prints a confident total: so the pattern accepts either spelling, and a family whose line
-   matches neither still reports itself as unproven rather than as zero. */
+/* The summary shapes the families print, plus the skip line each one emits when its needle no
+   longer matches the file. A runner that mis-parses a result is worse than no runner, because it
+   prints a confident total. The endings are written two ways across the suite — `not applied 0`
+   and `failed to apply 0` — and a first version of this pattern matched only one of them, which
+   made six families look like they had crashed when they had finished cleanly four lines earlier.
+   A third spelling arrived with the camera families: they say "breaks" rather than "mutants"
+   because they restore a defect that was measured on a phone rather than mutate a token, and the
+   pattern now accepts either word. A family whose summary the runner cannot read still reports
+   itself as unproven rather than as zero — which is exactly what happened on its first run here,
+   and is the line to read rather than the headline count. */
+/* Each shape carries its own reader, because the families do not agree on the order of their own
+   numbers: the Node families print "applied N, caught M", the camera families print "N of M", so a
+   single positional rule would read one of the two backwards and print a confident wrong total —
+   which is the exact failure this runner exists to avoid, and the reason it reports an
+   unparseable family as unproven rather than as zero. */
 const SHAPES = [
-  /^mutants applied (\d+), caught (\d+), (?:not|failed to) appl(?:y|ied) (\d+)/m,
-  /^(\d+) of (\d+) mutants caught/m,
+  { re: /^mutants applied (\d+), caught (\d+), (?:not|failed to) appl(?:y|ied) (\d+)/m,
+    read: m => ({ applied: +m[1], caught: +m[2], skipped: +m[3] }) },
+  /* The camera families print "N of M mutants caught, K not applied". Without this shape the
+     runner derives K as M − N, which conflates a mutant that survived with a needle that no longer
+     matches the file — the two things most worth telling apart, because one is a bug in the app
+     and the other is a bug in the family. Listed before the shorter shape so it wins. */
+  { re: /^(\d+) of (\d+) (?:mutants|breaks) caught, (\d+) (?:not applied|skipped)/m,
+    read: m => ({ applied: +m[2], caught: +m[1], skipped: +m[3] }) },
+  { re: /^(\d+) of (\d+) (?:mutants|breaks) caught/m,
+    read: m => ({ applied: +m[2], caught: +m[1], skipped: +m[2] - +m[1] }) },
 ];
 
 function runOne(file) {
@@ -59,13 +75,11 @@ function runOne(file) {
     out = (err.stdout || '') + (err.stderr || '');
     if (err.status === undefined || err.status === null) crashed = err.message;
   }
-  for (const re of SHAPES) {
-    const m = out.match(re);
+  for (const shape of SHAPES) {
+    const m = out.match(shape.re);
     if (m) {
-      const applied = m[1] !== undefined && m[3] !== undefined ? +m[1] : +m[2];
-      const caught = m[1] !== undefined && m[3] !== undefined ? +m[2] : +m[1];
-      const skipped = m[3] !== undefined ? +m[3] : applied - caught;
-      return { applied, caught, skipped, crashed, missed: (out.match(/^MISSED\b/gm) || []).length };
+      const r = shape.read(m);
+      return { ...r, crashed, missed: (out.match(/^MISSED\b/gm) || []).length };
     }
   }
   return { applied: 0, caught: 0, skipped: 0, crashed, missed: 0, silent: true };

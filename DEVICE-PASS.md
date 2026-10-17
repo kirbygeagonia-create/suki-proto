@@ -1,8 +1,9 @@
 # Handset pass — the thing no browser check can prove
 
-The rebuild in `Sukinnect-next.html` has been rendered in Node (502 checks), painted in
-real Chrome across 62 screens at 320, 390 and 450 CSS px — and at a keyboard-height viewport of
-360×380, in the desktop shell at 1280×900, and with `prefers-reduced-motion` emulated — then
+The rebuild in `Sukinnect-next.html` has been rendered in Node (517 checks), painted in
+real Chrome across 63 screens at 320, 390 and 450 CSS px — and at a keyboard-height viewport of
+360×380, in the desktop shell at 1280×900, with `prefers-reduced-motion` emulated, and under
+`prefers-color-scheme: dark` — then
 measured for tap targets, contrast, clipping and occlusion. None of that is a phone. Three
 categories are still unverified because no instrument can reach them: a thumb, an on-screen
 keyboard, and a slow device.
@@ -36,18 +37,35 @@ title from the day it was written until 2026-10-10, when the label was found to 
 that one `applicationId` means one install: installing this **replaces** the customer build rather
 than sitting beside it, which is why the version code went up as well as the name.
 
-## Building it — re-built 2026-10-13 (`1.2-preview.15`, `versionCode 17`); first compiled 2026-10-09
+## Building it — re-built 2026-10-15 (`1.2-preview.19`, `versionCode 21`); first compiled 2026-10-09
 
 "the Java looks right" is not the same claim as "an APK builds and contains what you changed",
 and neither is the same claim as "the page inside it finds its images". All three are now
-established, on the assets as they ship rather than as they sit in the repo:
+established, on the assets as they ship rather than as they sit in the repo — and a fourth was
+added today, because the shell fix this build carries is invisible from the source tree:
+**the shipped bytecode contains the handler you wrote**, proven with `dexdump -d classes2.dex`
+showing the compiled method holding the scheme list, `"tel"`, then `"android.intent.action.DIAL"`.
+
+That fourth check nearly produced a false verdict. `unzip -p APK classes.dex | grep -c` returned
+**zero** for all three strings I looked for, including `"blob"`, which the code certainly
+contains: `classes.dex` in this APK is a **2,156-byte stub** and the application lives in
+`classes2.dex` (8,416 bytes). Grepping the first file measured nothing and looked like an absent
+feature. Unzip every `*.dex` and search them all, or use `dexdump`.
 
 ```
 cd Sukinnect-Android
 ./gradlew --offline :app:assembleDebug
-# BUILD SUCCESSFUL in 34s
-adb install -r app/build/outputs/apk/debug/Sukinnect-1.2-preview.6-debug.apk
+# BUILD SUCCESSFUL in 8s   (first attempt today FAILED — see the OneDrive note below)
+adb install -r app/build/outputs/apk/debug/Sukinnect-1.2-preview.19-debug.apk
 ```
+
+**This tree sits under OneDrive, and Gradle sometimes cannot snapshot its own intermediates.** The
+first attempt today died in `:app:packageDebug` with `Cannot access output property
+'incrementalFolder' … java.io.IOException: Cannot snapshot …\zip-cache\javaResources0: not a
+regular file` — a sync placeholder, not a code error, and the source compiled fine on the way in.
+Deleting `app/build/intermediates/incremental/packageDebug` and re-running produced
+`BUILD SUCCESSFUL in 8s`. If that task fails again, clear that directory before suspecting the
+change you just made.
 
 **There is a Gradle wrapper now.** Until 2026-10-11 this project had no `gradlew` and no
 `gradle/wrapper/`, so the build depended on whatever Gradle happened to be installed and a fresh
@@ -61,14 +79,27 @@ What was verified about the artifact, not assumed:
 
 | Check | Result |
 |---|---|
-| `:app:assembleDebug` | **BUILD SUCCESSFUL in 47s** (34 tasks, 9 executed). Current output `Sukinnect-1.2-preview.15-debug.apk`, **2,130,522 bytes**, `versionCode 17`, `versionName 1.2-preview.15` — read off `aapt dump badging`. It is the build where the app's claims about a reload become true: ten actions that said "saved", "logged" or "shown to the provider" and wrote nothing now write — a typed chat message, a household item, a portfolio entry whose Save button previously stored nothing at all, a concierge answer, an administrator's note and flag, a document request, and both roles' notification checkboxes. The audit log stops stamping every row with one typed date and carries a real instant and the acting name, and a provider's saved profile is no longer overwritten by the demo seed on launch. `SCHEMA_VERSION` is 16, so a handset holding a v15 dump shows the refusal notice on first launch — that is the notice working, and the reason is that v15 audit rows are indistinguishable on disk from real ones. Earlier builds: `.14` 2,127,438 / `16` (the admin console's booking statistic relabelled), `.13` 2,126,962 / `15` (the last bare index reads, the stored profile through the record door), `.12` 2,125,430 / `14` (identity lookups, the chat room, the concierge, the chart axis), `.11` 2,118,834 / `13`, `.10` 2,113,374 / `12`, `.9` 2,112,782, `.8` 2,111,574, `.7` 2,105,566, `.6` 2,104,798 |
+| `:app:assembleDebug` | **BUILD SUCCESSFUL in 8s** for `.19` (2,132,422 bytes, `versionCode 21`, `versionName 1.2-preview.19`, `aapt dump badging`; 48 of 48 paths resolve inside the APK). **No behavioral device check has been run against `.19`** — the phone dropped its USB authorisation mid-session — and none is owed by its two page changes, both of which were found and proved in headless Chrome: a timezone override on the camera, and a probe that types through the same edit path a keystroke uses. The number moved anyway, because an install holding bytes the repository no longer contains is the drift this file exists to catch. `.18` was **BUILD SUCCESSFUL in 45s**, first try — no stale-intermediate clear needed this time. Current output `Sukinnect-1.2-preview.18-debug.apk`, **2,131,806 bytes**, `versionCode 20`, `versionName 1.2-preview.18`, label `Sukinnect · preview`, minSdk 24 / target 36 — read off `aapt dump badging`. **`.18` is the build the handset produced rather than the bench**: walking §3f on the vivo turned up two defects no instrument on this machine could see, and both are recorded below with the dump that found them. `.17` moved two bytes of copy (the concierge button label) and `dexdump -d classes2.dex` shows `openOutsideTheWebView` holding the scheme list, then `"tel"`, then `"android.intent.action.DIAL"` — so the two support "Call" buttons hand the number to the dialer instead of failing the scheme into a system error page. `SCHEMA_VERSION` is 16, so a handset holding a v15 dump shows the refusal notice on first launch — that is the notice working, and the reason is that v15 audit rows are indistinguishable on disk from real ones. Earlier builds: `.17` 2,131,282 / `19` (the concierge label), `.15` 2,130,522 / `17` (ten write claims that stored nothing, the audit log's real instant and actor, the restore that overwrote a saved profile), `.14` 2,127,438 / `16` (the admin console's booking statistic relabelled), `.13` 2,126,962 / `15` (the last bare index reads, the stored profile through the record door), `.12` 2,125,430 / `14` (identity lookups, the chat room, the concierge, the chart axis), `.11` 2,118,834 / `13`, `.10` 2,113,374 / `12`, `.9` 2,112,782, `.8` 2,111,574, `.7` 2,105,566, `.6` 2,104,798 |
 | Launcher label | `aapt dump badging`: **'Sukinnect · preview'** on this debug APK, and still **'Sukinnect'** on the Oct-1 release APK — the override is debug-scoped, measured on both artifacts |
-| `assets/Sukinnect.html` inside the APK | `cmp` says identical to `Sukinnect-next.html` — **800,763 bytes** at the `.15` build (792,132 at `.14`, 791,013 at `.13`, 786,835 at `.12`). Verified by extracting `assets/Sukinnect.html` out of the APK itself with `unzip` and comparing that, not the staged copy. Compared with `cmp`, not with a hash: `.gitattributes` normalises line endings, so a hash match is the wrong question for a text file here |
+| `assets/Sukinnect.html` inside the APK | `cmp` says identical to `Sukinnect-next.html` — **803,310 bytes** at the `.19` build (801,996 at `.18` (800,761 at `.17`, 800,763 at `.16` and `.15`, 792,132 at `.14`, 791,013 at `.13`, 786,835 at `.12`). `grep` inside the extracted asset proves which copy shipped — `modalAboveSheet` appears twice (the rule and its call site), and `Prepare the job briefing` once with `Analyze the text` nowhere. Verified by extracting `assets/Sukinnect.html` out of the APK itself with `unzip` and comparing that, not the staged copy. Compared with `cmp`, not with a hash: `.gitattributes` normalises line endings, so a hash match is the wrong question for a text file here |
 | The seven category PNGs inside the APK | `cmp` says identical to `assets/category-art/*.png`, and they sit at `assets/assets/category-art/` because the WebView root mirrors the repo root |
 | The four Atkinson weights inside the APK | `cmp` says identical, and `unzip -v` says **Stored** — `noCompress 'woff2'` is doing its job |
 | Every path the bundled page asks for | `check-assets.cjs --apk`: **48 of 48 resolve** |
-| The bundled page, painted | `tools/shot.cjs --file=<the staged assets copy> --width=360 --height=640 --measure` on `.15`: **62 screens** — the newest is `admin-audit`, reached by clicking the dashboard row a person clicks, because the audit log had never been photographed and its timestamps are exactly what only a screenshot can confirm. Every tally 0: tap floor, contrast, clipped, off-scale, text below the 14px floor, under-nav, unnamed controls, occlusion, moving artwork, no-pixels images, horizontal overflow, chart labels outside their own box. 9 painted font sizes all ≥14px, and **no console errors**. Run it against the staged copy, which the row above proves is the copy inside the APK: run against a lone extracted file it reports 72 broken images that do not exist in the artifact, because the page resolves `assets/` and `avatars/` beside itself |
+| The bundled page, painted | `tools/shot.cjs --file=<the staged assets copy> --width=360 --height=640 --measure` re-run against the staged `.17` copy: **62 screens**, every tally zero — no clipped text from the reworded concierge button, no unnamed control, no image without pixels, no console errors — the newest is `admin-audit`, reached by clicking the dashboard row a person clicks, because the audit log had never been photographed and its timestamps are exactly what only a screenshot can confirm. Every tally 0: tap floor, contrast, clipped, off-scale, text below the 14px floor, under-nav, unnamed controls, occlusion, moving artwork, no-pixels images, horizontal overflow, chart labels outside their own box. 9 painted font sizes all ≥14px, and **no console errors**. Run it against the staged copy, which the row above proves is the copy inside the APK: run against a lone extracted file it reports 72 broken images that do not exist in the artifact, because the page resolves `assets/` and `avatars/` beside itself |
 | Scratch left behind | none — the capture directories this pass wrote were deleted. The only tracked edits are `tools/shot.cjs` (the `--file=` flag) and this file |
+
+**The bench build is `.19` and the repository has moved past it — deliberately.** Since that APK was
+cut, three more page changes landed, none of them device-facing: the verification queue's day count
+(now counted in calendar days), the money guard plus the five number fields' lower bound, and the
+empty branch on the verification queue. `Sukinnect-Android/app/src/main/assets/Sukinnect.html` is
+therefore stale against `Sukinnect-next.html`, and no APK carries these three. That is recorded here
+rather than papered over by bumping to `.20` now, because a version number that has never met a
+device is exactly the drift this file keeps documenting — and the phone dropped its USB
+authorisation mid-session. **When the handset returns: sync the asset, build `.20`, install, and work
+down §3f in the same session**, so one build is cut and one build is verified. The three changes are
+each proved in headless Chrome — a timezone override, a probe that types through the same edit path a
+keystroke uses, and `admin-verifiers-empty` in the camera's walk — so nothing here is a fix nobody
+has run; what is missing is a thumb.
 
 **Three build notes from 2026-10-10/11/12, all learned the hard way.** Rebuilding replaces the
 previous debug APK in place — `Sukinnect-1.1-debug.apk` and then `Sukinnect-1.2-preview-debug.apk`
@@ -220,10 +251,11 @@ gesture, and an app killed mid-review.
       to choose and the send must refuse — the old code stored `address: undefined` and the
       provider saw a visit with no door. `.13` also clamps a stale day/time choice, so a
       sheet that used to simply fail to appear now opens with a real row marked.
-- [ ] **The refusal notice, on a bad profile.** `SCHEMA_VERSION` is 15. A stored profile
-      whose field arrived as the wrong kind of value, or carrying a field the app never had,
-      is now refused at the door with the field **named** — so if the amber banner appears
-      after this install, read what it names rather than assuming it is the schema bump.
+- [ ] **The refusal notice, on a bad profile.** `SCHEMA_VERSION` is 16, so a handset holding a
+      v15 dump is expected to show the amber notice on first launch — that is the notice working,
+      not a fault. What the check is really for: a stored profile whose field arrived as the wrong
+      kind of value, or carrying a field the app never had, is refused at the door with the field
+      **named** — so read what it names rather than assuming it is only the schema bump.
 - [ ] **A reload keeps what it promised.** Type a chat message on a job, add a household
       item under Profile → Home, switch a notification off, then kill the app and reopen.
       All three must still be there — until `.15` none of them were written to storage at
@@ -239,11 +271,162 @@ gesture, and an app killed mid-review.
       than as an error. A chart's axis is HTML beside the drawing now — on this phone (~450 CSS px)
       the labels should sit clear of the card edge; the narrow case was measured at 320px, which
       this device cannot show.
+- [ ] **The support "Call" button dials.** Resident → the card offering a phone number, and the
+      same control on the provider's side: both are `<a href="tel:+639170001122">`, and until
+      today the shell handed no scheme to the system — the default `WebViewClient` treats `tel:`
+      as a URL, fails it with `ERR_UNKNOWN_URL_SCHEME`, and **replaces the running app with a
+      system error page**. `MainActivity` now routes anything that is not http/https/file/data/
+      about/blob to an Intent (`ACTION_DIAL` for `tel:`, never `ACTION_CALL`, because dialling
+      needs no permission and placing a call does). On the handset: the dialer must open
+      pre-filled, returning must land on the same screen with no error page, and if no app can
+      take the scheme the page must simply stay as it is. This is fixed in the shell and
+      **compiled** (`javac` against `android-36`, clean but for the expected deprecation note on
+      the `String` overload kept as a backstop); it has not run on a device, and it reaches one
+      only in a new build.
 
-This phone renders at **~450 CSS px**, not the 360 the clipping cases were tuned against (720px
-panel at `Override density: 256`), so it will not exercise the narrow-device tab-rail case, and
-being Android 11 it cannot exercise the `targetSdk 36` edge-to-edge behaviour at all. Both remain
-open and neither is a fault in this build.
+#### What the handset answered — walked 2026-10-15 on a vivo 1906, `preview.17`, then re-walked on `.18`
+
+- [x] **The support "Call" button dials.** Passed. The dialer
+      (`com.android.dialer/.TwelveKeyDialer`) opened with `+63 917 000 1122` pre-filled, and
+      returning landed on the same Booking details screen with no error page.
+- [x] **A reload keeps what it promised.** Passed. A typed chat message survived
+      `am force-stop` and a relaunch and appeared in Messages with its own timestamp.
+- [x] **The audit log tells the truth about when.** Passed. Saving the admin profile wrote
+      `Admin profile updated` against `Master Administrator` stamped **Oct 15, 2026 - 3:17 PM**
+      while `adb shell date` read `15:18` — a real instant, not the `Sep 10, 2026 / 2:42 PM`
+      every row used to carry. Opening the log before any action says
+      "No administrator action has been recorded on this device", which is the honest empty.
+- [x] **The console says what it does not do.** Passed. The admin Account rows read
+      "Not stored on this device", "This device only", "Nothing is recorded here" at ~450 CSS px
+      with nothing clipped.
+- [x] **The payment picker works.** Passed, and it is where the two defects below came from.
+      The native Android radio dialog opened with both methods and the current one marked;
+      choosing Cash on Arrival and tapping **Save method** left the card above reading it, and
+      force-stop + relaunch + re-login still read it.
+- [ ] **The concierge refuses to guess**, **a thread stays with its pair**, **what the sheet
+      marks is what the booking records**, **a request cannot be booked to nowhere**, **the
+      refusal notice on a bad profile** (no v15 dump exists to produce it), and the provider
+      half of the reload check: **not walked.** The two defects below came out of the four
+      items that were, so the remaining five are still the highest-value part of this file.
+
+**Two defects, and neither one is visible to a screen.** They are recorded at length in
+`CHANGES.md` §52; what belongs here is the instrument that produced them, because it is not in
+`tools/` and no bench run will ever produce it again: `adb shell uiautomator dump`, which is the
+system accessibility tree rather than the DOM.
+
+- Back from the resident's "Edit profile" form **quit Sukinnect to the launcher**
+  (`mCurrentFocus` → `com.bbk.launcher2`). On the admin's equivalent form the same press closed
+  the modal and stayed in the app — the positive control that made the difference diagnosable.
+- With the Payment Methods sheet open and the picker painted above it, the dump listed the
+  sheet's nodes and **never the picker's**: no "Change payment method", no "Save method". After
+  the fix the same walk lists both layers in one tree.
+
+Two cautions this walk earned, both about reading the instrument rather than the app. An empty
+dump on the sign-in screen is **not** a finding — Chromium builds its accessibility tree lazily,
+and one tap on a field populated every node; the same was nearly concluded twice. And a password
+field whose dump line reads `text="demo1234"` is not leaking anything: the same node carries
+`password="true"`, which is what a screen reader honours. Read the flag before the string.
+
+## A second handset — OPPO CPH2179, measured across the midnight that cut preview.20, and why it matters
+
+Every figure above belongs to the vivo 1906. A second phone was connected to run `preview.20` on,
+and it is a **better instrument for two of the cases this file has kept calling untestable** — so
+they are recorded here even though the pass never ran, because the reason it did not run is itself
+the finding.
+
+| | Measured off the device |
+|---|---|
+| Identity | `ro.product.brand` **OPPO**, `ro.product.model` **CPH2179**, serial `S4CUYTJB6HNNWC49` |
+| Android | **10**, `ro.build.version.sdk` **29** |
+| Panel | `wm size` → `Physical size: 720x1600` |
+| Density | `wm density` → physical **320**, **`Override density: 360`** |
+| CSS viewport | **720 × 160 ÷ 360 ≈ 320 CSS px** — computed, and it is the narrow case |
+| System theme | `settings get secure ui_night_mode` → **`2` = UI_MODE_NIGHT_YES**, the device is in **dark mode** |
+| App state | `pm list packages com.sukinnect.app` → **empty. Nothing installed, no store, no dump** |
+
+**Two surfaces the vivo could not reach.** At ~320 CSS px this is the narrow layout every clipping
+case was tuned against and the vivo at 450 never exercised — including the provider tab rail that
+clipped its fourth label mid-word at 360px. And `ui_night_mode=2` makes it the first phone here in
+dark mode, which is the one configuration where Chrome's Auto Dark Theme could rewrite the §30
+palette; the bench could only measure the media-query half of that and rule the WebView out from
+`Theme.Material.Light.NoActionBar`, so a real dark handset is the missing evidence.
+
+**Android 10 does not unlock the edge-to-edge question.** `targetSdk 36` forces edge-to-edge at
+API 35+, and this device is API 29 — so that item stays open on both phones, not just the vivo.
+
+**Why the pass did not run, in the order it failed.**
+
+1. **`/data` is full.** `df` reports 50,132,664 KB total, 49,545,480 used, **439,728 KB available —
+   100% used, 0.87% free** — and `adb install` failed with
+   `android.os.ParcelableException: java.io.IOException: Requested internal only, but not enough
+   space` from `PackageInstallerService.createSession`. The APK is 2,132,502 bytes; the refusal is
+   the installer's low-storage threshold, not the size of the file. Freeing space is the owner's
+   call — it is their photos and apps on that partition, and deleting them from here would be
+   destroying someone's data to make a test pass.
+2. **The connection would not hold.** Four drops in ten minutes, `transport_id` changing on each
+   (12 → 14 → gone), the device alternating `unauthorized` → `device` → absent, and `pnputil`
+   seeing no Android device while it was off the bus. Typical of a phone whose ADB daemon is killed
+   when the screen sleeps, or a cable carrying power but not data reliably.
+
+**What is already done for it, so the next attempt starts at the install.** `preview.20` is built
+and verified at the artifact level: `versionCode 22`, 2,132,502 bytes, `aapt dump badging` agrees,
+`assets/Sukinnect.html` extracted out of the APK is `cmp`-identical to `Sukinnect-next.html` at
+**803,487 bytes**, `check-assets --apk` resolves every path the page asks for, and grepping the
+shipped page proves which bytes are in there — `a price cannot be negative` 1, `No applications are
+waiting` 1, `daysBetween` 2, `modalAboveSheet` 2, and `Analyze the text` **0**. That is the first
+build carrying the accessibility-tree fix, the calendar-day wait count, the money guard and the
+empty verification queue, and **no device had run any of them until the section below.**
+
+### What has since run on it — 2026-10-17
+
+The owner cleared the storage and `.20` installed: `versionCode=22`, `targetSdk 36`, on WebView
+**148.0.7778.120**.
+
+- **Dark mode, observed rather than inferred.** The system is in night mode and the app renders
+  **fully light** — white card, pale lavender field, navy text, brand-gradient CTA, official logo
+  intact. That is the first real observation of the case the bench could only rule out from
+  `Theme.Material.Light.NoActionBar`: the shell's fixed Light theme does keep Chrome's Auto Dark
+  Theme off the palette on a dark handset.
+- **The narrow layout is clean.** At ~320 CSS px the sign-in role toggle was measured, not eyeballed:
+  `Resident` right edge 158, `Service Pro` right edge 280 inside a parent ending at 283,
+  `scrollWidth == clientWidth == 246`, `overflow: false`. It had looked clipped in a downscaled
+  screenshot and was not — the third time in this pass an instrument corrected an assumption.
+- **The accessibility-tree fix holds on a second, different device.** With the Payment Methods sheet
+  open and the picker painted above it, the platform tree lists **both** layers — `Payment Methods`,
+  `Close Payment Methods`, `Change payment method`, `Preferred payment method`, `Save method` — and
+  the sheet's `aria-modal` reads `false` from inside the real page.
+- **Three instrument traps, all false alarms, all worth keeping.** (1) `uiautomator dump` reports the
+  **active window only** — with the native select popup open it returns just its two rows, which looks
+  like the app's tree collapsed. (2) The WebView's tree is built **lazily**: an early dump returned
+  2 KB and zero text nodes, and the same tree returned 20 KB and 30 nodes a few seconds and one tap
+  later. `accessibility_enabled` was already `1`, and ColorOS refuses `WRITE_SECURE_SETTINGS` from
+  shell, so the fix is patience, not configuration. (3) A probe that sets `state.tab` without setting
+  `state.view` leaves the app on the **sign-in** screen and then reports a modal missing from a DOM
+  that was never painted — `residentProfileHub()` returned the modal while `#screen` began
+  `<div class="auth-screen">`. The same trap the camera documents for setup scripts, now on device.
+
+**`tools/device-probe.cjs` is new, and it is why any of that was answerable.** It forwards to the
+WebView's DevTools socket and evaluates an expression in the page running on the phone, with no npm
+dependencies — a hand-rolled WebSocket client, the same approach `shot.cjs` uses for Chrome. Before
+this, `tools/` could measure headless Chrome and the platform tree but could never ask a shipping
+WebView what it decided, so a disagreement between two phones was not resolvable by measurement. It
+needs `WebView.setWebContentsDebuggingEnabled(true)` in the shell, gated on `FLAG_DEBUGGABLE` so a
+release build never exposes an inspector. Two bugs found on the way there: Chrome's DevTools endpoint
+rejects `Host: localhost`, and its `Content-Length` counts **bytes** while the page title carries an
+em dash, so comparing it against a character count reads as a timeout on a socket that was answering
+perfectly well.
+
+
+Because nothing is installed on this phone, it is also the cleanest persistence fixture available:
+no store, no dump, no leftover session — the write-claims and reload checks start from a genuinely
+first-run state rather than from whatever the vivo accumulated.
+
+The vivo 1906 renders at **~450 CSS px** (720px
+panel at `Override density: 256`), so it does not exercise the narrow-device tab-rail case, and
+being Android 11 it cannot exercise the `targetSdk 36` edge-to-edge behaviour at all. The OPPO
+above reaches neither either — Android 10, so edge-to-edge stays closed on both handsets — but at
+~320 CSS px it is the first device here that would exercise the narrow layout, and it is the first
+in system dark mode, which is one of the reasons the storage block above is worth clearing.
 
 The painted-page row is what the `--file=` flag added to `tools/shot.cjs` exists for. The
 camera could previously photograph only `Sukinnect-next.html` at the repo root, where
@@ -525,3 +708,131 @@ Which of the three groups failed, on which screen, and a photo or screen recordi
 is the subject — a still screenshot cannot show a flash or a stutter. Everything in §1 and §2 is
 fixable in the page; §3's back-button finding may need the shell, and that is a separate change
 to a separate project.
+
+### Second-handset walk, 2026-10-17 — what got settled and what did not
+
+**Settled on the OPPO, by reading the screen or the page:**
+
+- **§22 holds on hardware.** The resident's active-booking card shows **"Stage 5 of 6: In progress"**
+  and **"Pending (Cash on Arrival)"** as two separate pills — booking lifecycle and payment lifecycle
+  are not merged, on a real phone, not just in the gate.
+- **§26 holds.** The Messages list is booking-contextual: each row names the provider, the trade, the
+  barangay and the last message, with `All 7` / `Unread 5` filters — not a social feed.
+- **§75's wording is right on the device.** The concierge carries *"Describe the problem or attach a
+  photo. This…"* and its action reads **"Prepare the job briefing"** — confirmed on a second phone
+  after the label change.
+- **Storage works on this phone even with `/data` at 100%.** The empty `localStorage` looked like the
+  full-disk case the storage-truth pass was built for, and it was not: a raw write succeeded, read
+  back, `persist()` returned `true`, and two keys were present afterwards. The inference was wrong and
+  the measurement caught it before it was written down.
+- **A mid-session reload returned the app to sign-in, which is correct** — no destination is
+  persisted, so a process kill is honest rather than confusing. Not a defect.
+
+**Not settled — the five §3f items remain un-walked** (concierge refusing to guess, thread pairing
+across a kill/reopen, the sheet's marked payment row against the booking record, booking with no
+address, the provider reload check). The concierge test got as far as typing *"The garden gate hinge
+is loose"* through the real edit path and clicking the painted **Prepare the job briefing** button,
+which reported `clicked: true`; the answer was never read, because the page reloaded in between. The
+blocker is the harness, not the app: on this device `adb shell input text` inserts `%20` **literally**
+(`%s` is the working escape), the soft keyboard compresses the layout and pushes the submit button
+under the nav bar so a remembered coordinate taps **Messages** instead, and a synthetic `.click()` on
+the sign-in button does not sign in. Each is solvable; none was worth more of this session.
+
+**The real finding from the phone is not on that list:** the app ignores the device's text-size
+setting. Measured — `font_scale = 1.35`, the root font computes to `21.6px`, and painted text stays
+`14px` because every type token is a hard `px` and no `text-size-adjust` exists. Decided on the spot:
+convert the tokens to `rem` with the multiplier capped, and fix the top bar to absorb larger text —
+a live `rem` conversion on the phone showed both the benefit (text 35% bigger, readable) and the cost
+("Resident Profile" wrapped to two lines and "Log Out" ballooned into a square). Tracked as the type
+task; it also closes the long-open `px` vs `rem` owner decision.
+### §3f attempt on the vivo, 2026-10-17 — blocked by my own harness, not by the app
+
+The phone came back unlocked and `preview.22` was already installed. The walk reached the resident
+Edit-profile form with the Home Address field on screen and cleared it with 40 `KEYCODE_DEL`
+presses. Then it was gone: the page was back at sign-in and `state` was all defaults.
+
+**The reload was caused by the test, not the application.** To get the keyboard out of the way the
+harness sent `KEYCODE_BACK`. If the IME has already closed, that same key goes to the app instead —
+and the app's Back handling is correct, so it finished the activity and the next launch starts at
+sign-in. Three separate "the app reloaded mid-session" observations in this pass were all this same
+sequence. Recorded here because the alternative — reporting that the WebView recreates during form
+entry — would have been a fabricated defect, and because the fix belongs in the harness: dismiss the
+keyboard with `KEYCODE_ESCAPE` or by tapping outside the field, never with `BACK`.
+
+What that leaves unverified is unchanged: the five §3f items — concierge refusing to guess, thread
+pairing across a kill/reopen, the sheet's marked payment row against the booking record, booking with
+no address, and the provider reload check. The address item got furthest: the field was reached and
+cleared, and whether the save refuses is still unknown.
+
+One thing the attempt did establish, measured rather than assumed: the vivo reports
+`font_scale 1.0`, and at that setting `preview.22` computes a 16px root and paints the same 14px
+caption it always did — the rem conversion is a no-op for a user who has not asked for larger text.
+
+### What the text-scale pass owes a handset — recorded 2026-10-17, none of it verifiable on the bench
+
+The chart-axis and flex-crush work (§60 of `CHANGES.md`) was measured with `--font-scale`, which sets
+the root font size directly because that is what Chromium on Android produces. Four corners are clean
+on the bench: 320px at 200%, default width at 200%, 450px at 135%, and the 100% anchor —
+`node tools/sweep-text-scale.cjs`. What a bench cannot answer is whether the *platform* agrees:
+
+1. **Set the phone's font size to its maximum and dump the navigation.** `Settings > Display > Font
+   size` to the largest step, then `adb shell uiautomator dump` on Resident Home. The nav labels are
+   now ellipsized by CSS at narrow widths (`D… F… B… M… Pr…` at 320px), so the question is what the
+   accessibility tree carries for each button: the whole word from the DOM, or the painted tail. The
+   camera reads the DOM and cannot tell — this is the same surface that hid the sheet-modality
+   defect, and it is the only instrument that answers it. Expect `content-desc` to read "Bookings";
+   if it reads "Booki…" the ellipsis has cost a screen-reader user their navigation, and the fix is
+   an explicit `aria-label` on every nav item, not a layout change.
+2. **Read the root font size on the phone at maximum scale**, through `tools/device-probe.cjs`, and
+   confirm it is `16 × scale` and not capped — the cap in `:root` is inert on Android and the claim
+   should be re-measured on a device that has the setting at 200%, not at the 1.0 this vivo ships
+   with.
+3. **Look at the provider dashboard's two charts at maximum scale.** The axis thins itself by the
+   measured root size now (12 columns → 2 labels at 200%), which is arithmetic the bench proved and
+   a thumb has not: the question is whether two week labels still tell a provider what the period is,
+   or whether the chart should say "last 4 weeks" in its subtitle instead.
+4. The five §3f items above are still open, and the installed build (`preview.22`) predates this
+   pass, so any of them needs a new build first.
+
+### What the short-viewport pass (§61) owes a handset — recorded 2026-10-17
+
+`320x480 @ 200% text` is now measured on the bench and clean across all 63 screens, but every number
+behind it comes from Chrome emulating a viewport, and the two Android modes that produce that shape
+have behaviours an emulator does not:
+
+1. **Split-screen, for real.** Enter it on the vivo (recents → split icon) and open the booking
+   sheet. The WebView's `innerHeight` drops to roughly half the panel, which is what the sweep
+   models — but Android also resizes the activity, and the keyboard can arrive inside the half.
+   Confirm the sheet's "Send request" is reachable by scrolling the sheet, and that nothing is
+   stranded when the divider is dragged back to full height.
+2. **Maximum font size, then the same sheet.** The bench sets the root font directly; the phone
+   multiplies the used size after CSS resolves. At the largest setting, read `innerHeight` and the
+   root font through `tools/device-probe.cjs` so the 480px/200% corner is confirmed to be reachable
+   by a real configuration rather than only by a flag.
+3. **The top bar now wraps.** On a narrow phone at large text the action drops to a second line, so
+   the bar is taller than it was. That is a visible change to every screen's header at that corner —
+   look at Resident Home, Notifications, and the resident's profile and confirm the bar reads as a
+   design rather than as a broken layout. If it does not, the alternative is truncating the title,
+   which this pass tried and took back out for costing the screen its name.
+
+### What the keyboard pass (§62) owes a handset — recorded 2026-10-17
+
+The Tab walk runs in Chrome on this machine. Three of its answers are Chrome's, not the WebView's,
+and only the phone can settle them:
+
+1. **`inert` on the WebView's actual build.** The background stops being focusable because Chromium
+   honours `inert`, which shipped in WebView 102. Open a booking sheet, attach a keyboard (or use
+   TalkBack's explore-by-touch), and confirm Tab cannot reach the screen behind the scrim. If the
+   device's WebView is older, the fix silently does nothing and the 91 stops come back.
+2. **TalkBack with a layer open.** `inert` should also take the background out of the accessibility
+   tree the screen reader reads. `adb shell uiautomator dump` with the booking sheet open, then
+   again with the resident's payment picker raised over it — the same pair of dumps that found the
+   sheet-modality defect. Expect no nodes from `#screen` while the sheet is up.
+3. **The focus ring on a real panel.** The walk asserts that something visible changes for every
+   keyboard stop; it cannot say whether a 3px brand-blue outline at `outline-offset:2px` reads on a
+   phone at arm's length, or on the dark gradient top bar where the ring is the same hue as the
+   surface. Tab through Resident Home, the provider dashboard and the admin console and look.
+
+None of this needs a new build to answer 1 and 2 — the installed `preview.22` predates the `inert`
+work, so it needs one. Item 3 can be read off any build that has the ring, which is the one already
+installed.

@@ -1200,6 +1200,18 @@ suite('hygiene', async () => {
   c.check('no control claims success it does not deliver', congratulating.length === 0,
     congratulating.map(t => t.slice(0, 60)).join(' | '));
 
+  /* Every number field in this app holds money, a weight, a count of days or a rate, and none of
+     them can sensibly be negative. Seven declared a lower bound and four did not — including the
+     unit price that let a -₱5.00/kg offer through to the record. `min` does not block the typing
+     (the guard does that); it is what tells the platform, the spinner and the :invalid style that
+     the number is out of range, so a field that takes a number and names no floor is the hole. */
+  const numberFields = (body.match(/<input[^>]*type="number"[^>]*/g) || []);
+  const unbounded = numberFields.filter(t => !/\bmin=/.test(t));
+  c.check('every number field declares a lower bound',
+    numberFields.length >= 10 && unbounded.length === 0,
+    unbounded.length + ' of ' + numberFields.length + ' unbounded: '
+      + unbounded.map(t => (t.match(/id="([^"]*)"/) || [])[1] || t.slice(0, 30)).join(','));
+
   /* ── the escaping rule, pinned ─────────────────────────────────────────────
      esc()'s own comment says anything from a keyboard stays data and never becomes markup.
      That held for chat and booking text and never held for the profile objects: 44 sites
@@ -1431,7 +1443,12 @@ suite('hygiene', async () => {
   c.check('a toast is announced, not just painted', /aria-live/.test(body) && /role', 'status'/.test(body));
   c.check('each screen states its title as a heading', /<h1 class="title">/.test(body));
   c.check('and a sheet over it does not pretend to be the page', /<h2 class="sheet-title">/.test(body));
-  c.check('a call control dials', (body.match(/href="tel:/g) || []).length >= 2);
+  /* What this can prove is that the markup is there. Whether the button dials is decided in
+     MainActivity, in a file this harness never loads and git never sees — a bare WebViewClient
+     navigates to tel:, fails it with ERR_UNKNOWN_URL_SCHEME, and replaces the app with a system
+     error page, which no browser-side instrument can observe. Named for what it measures, and the
+     behaviour is a DEVICE-PASS 3f check on the bench. */
+  c.check('the page paints a dial control carrying the number on the record', (body.match(/href="tel:/g) || []).length >= 2);
   c.check('the provider map uses the provider it names', !/setView\(\[6\.3665, 124\.9338\], 15\)/.test(body));
   c.check('no stored-value wallet language survives',
     !/Secure Balance Wallet|Instant Cash-Out|wallet balance/i.test(body));
@@ -1484,6 +1501,47 @@ suite('hygiene', async () => {
   c.check('the display face is an alias, so the decorative serif stays out',
     /--font-display:\s*var\(--font-ui\)/.test(css) && !/font-family:\s*[^;]*Fraunces/.test(css),
     '--font-display is not var(--font-ui)');
+
+  /* The type scale has to be relative, or the app ignores the phone's text-size setting.
+     Measured on an OPPO at font_scale 1.35: the root computed 21.6px and painted text stayed
+     14px, because every token was a hard px — so Sukinnect was the one app on the device that
+     did not grow. These three checks are what stops that coming back by edit. */
+  const tokenDecls = (css.match(/--t-[a-z0-9-]+:\s*[^;]+/g) || []);
+  const pxTokens = tokenDecls.filter(d => /:\s*[0-9.]+px/.test(d));
+  c.check('every type token is relative, so an OS text-size setting reaches the app',
+    tokenDecls.length >= 10 && pxTokens.length === 0,
+    pxTokens.length + ' of ' + tokenDecls.length + ' declared in px: ' + pxTokens.map(d => d.slice(0, 26)).join(', '));
+  c.check('the root bounds the browser default on the web surface (Android inflates past this)',
+    /:root\s*\{[^}]*font-size:\s*min\(\s*1em\s*,\s*20px\s*\)/.test(css),
+    'no font-size: min(1em, 20px) on :root');
+  const literalFontSizes = (css.match(/font-size:\s*[0-9.]+px/g) || []);
+  c.check('no rule sets a literal px font size — the scale is the only source',
+    literalFontSizes.length === 0, literalFontSizes.slice(0, 5).join(' | '));
+
+  /* The instrument polices itself. §63 found four of the camera's element walks skipping
+     .modal-layer because each carried its own hand-written list of containers and the lists had
+     drifted — so every text sensor in the tool had never once looked inside the dialogs where a
+     person types a phone number and a home address. The lists are one constant now; this is what
+     stops a new walk quietly reintroducing one, because the failure mode is invisible in the
+     output: a surface nobody measures reports the same zero as a surface with nothing wrong.
+     The positive control counts the walks that use the shared selector, so a pattern that matches
+     nothing cannot pass as tidiness. */
+  const cameraPath = require('path').join(appDir, 'tools', 'shot.cjs');
+  const camera = fsx.existsSync(cameraPath) ? fsx.readFileSync(cameraPath, 'utf8') : '';
+  const driftedLists = (camera.match(/\.sheet \*, \.auth-sheet \*/g) || []).length;
+  const sharedWalks = (camera.match(/querySelectorAll\(WALK\)/g) || []).length;
+  c.check('no walk in the camera carries its own list of surfaces',
+    camera.length > 0 && /const SURFACES = /.test(camera) && driftedLists === 0 && sharedWalks >= 5,
+    driftedLists + ' hand-written surface lists, ' + sharedWalks + ' walks on the shared one');
+  /* The same instrument also labels each shot, and a label is a claim about the pixels: the
+     lookup asked the sheet and the screen but never the dialog, so all six form screens were
+     reported by the hub underneath them. Order is the whole rule here — a dialog outranks the
+     sheet it was raised from — so the check is about the order, not the presence, of the lookups. */
+  const modalAsked = camera.indexOf("querySelector('.modal-layer b')");
+  const sheetAsked = camera.indexOf("querySelector('.sheet .sheet-title')");
+  c.check('the camera names a shot by the topmost layer, so a dialog outranks its sheet',
+    modalAsked > -1 && sheetAsked > -1 && modalAsked < sheetAsked,
+    'dialog lookup at ' + modalAsked + ', sheet lookup at ' + sheetAsked);
   return c;
 });
 
@@ -1967,11 +2025,42 @@ suite('honesty', async () => {
        coordinate, which stopped existing when the words moved out of the scaled SVG —
        and a check that counts nothing reports a clean floor, which is the worse way for
        a guard to fail. */
-    const axisLabels = html => (html.match(/class="chart-cat"/g) || []).length;
+    /* Matched as a class token, not as the whole attribute: a label may carry an alignment
+       modifier (`chart-cat l`) at the edges of a dense series, and a guard that stops counting
+       the moment one is added reports "no axis labels at all" and fails on a chart that is
+       painting perfectly. The original exact-match form broke two checks that way. */
+    const axisLabels = html => (html.match(/class="chart-cat[ "]/g) || []).length;
     const sparse = app.chartColumns([{ label: 'Mon', value: 2 }, { label: 'Tue', value: 3 }], { format: v => v });
     const n = axisLabels(app.chartColumns(wide, { format: v => v }));
     return n < wide.length && n >= 3 && axisLabels(sparse) === 2;
   })(), 'axis labels overlap on a dense series, or the thinning breaks a sparse one');
+
+  c.check('and it thins harder as the phone’s own text gets bigger', (() => {
+    /* The check above is a step function at the default metrics, so it cannot see the half of
+       the rule that matters on a handset: a fixed 62-unit budget thins the same way whether the
+       user’s type is 15px or 30px, which is how a 12-column axis that fits at 100% still hung
+       4px past the chart at 200%. `fit` divides the budget by the root font size the page
+       reports, so the label count falls as the setting rises and a sparse series is never
+       touched. Asserted as relations rather than as the numbers 4/3/2, because the numbers are
+       derivable and a needle that moves with them would fail on a correct chart. */
+    /* Measured through the harness’s own root size — the same knob `tools/shot.cjs
+       --font-scale` turns in a real browser. A test double pinned to a literal 16px cannot see
+       a mutant that stops consulting it, which is the difference between a check and a mirror. */
+    const axisLabels = html => (html.match(/class="chart-cat[ "]/g) || []).length;
+    const wide = Array.from({ length: 12 }, (_, i) => ({ label: 'W' + (i + 1), value: i + 1 }));
+    const sparse = [{ label: 'Mon', value: 2 }, { label: 'Tue', value: 3 }];
+    const at = (px, rows) => {
+      app._setRootFont(px);
+      return axisLabels(app.chartColumns(rows, { format: v => v }));
+    };
+    try {
+      const [a, b, d] = [16, 24, 32].map(px => at(px, wide));
+      return a < wide.length && a > b && b >= d && d >= 2
+        && [16, 24, 32].every(px => at(px, sparse) === 2);
+    } finally {
+      app._setRootFont(16);
+    }
+  })(), 'the axis keeps one budget whatever the phone’s text size is');
 
   c.check('a column chart draws no words inside the scaled box', (() => {
     /* §68's floor is a rule about painted pixels, and the camera is what measures those.
@@ -1982,8 +2071,8 @@ suite('honesty', async () => {
     const out = app.chartColumns([{ label: 'Mon', value: 2 }, { label: 'Tue', value: 3 }], { format: v => v });
     const svg = out.slice(out.indexOf('<svg'), out.indexOf('</svg>'));
     return !/<text/.test(svg) && /<div class="chart-cols">/.test(out)
-      && /class="chart-tick"/.test(out) && /class="chart-val"/.test(out)
-      && /class="chart-cat"/.test(out);
+      && /class="chart-tick[ "]/.test(out) && /class="chart-val[ "]/.test(out)
+      && /class="chart-cat[ "]/.test(out);
   })(), 'a chart is painting words inside the viewBox again');
 
   c.check('no chart is drawn from a literal data series', (() => {
@@ -3234,6 +3323,28 @@ suite('fruit', async () => {
   again.hydrate();
   c.check('an offer survives a reload', again.OFFERS.some(o => o.bookingId === 'b10' && o.produceCentavos === 660000),
     JSON.stringify(again.OFFERS.map(o => o.id + ':' + o.status)));
+  /* Found by typing -5 into the sheet's own unit field and pressing Send offer: the totals were
+     clamped so the screen read ₱0, and the offer was still recorded at -₱5.00/kg beside it. */
+  const guard = boot();
+  const offersBefore = guard.OFFERS.length;
+  let refused = '';
+  try {
+    guard.makeOffer('b10', { basis: 'per_kg', quantityGrams: 120000, unitPriceCentavos: -500,
+      produceCentavos: -60000, labourCentavos: 10000, whoHarvests: 'provider' }, { role: 'provider' });
+  } catch (err) { refused = String(err.message || err); }
+  c.check('a negative unit price is refused rather than recorded',
+    refused !== '' && guard.OFFERS.length === offersBefore,
+    'threw "' + refused + '", OFFERS ' + offersBefore + ' -> ' + guard.OFFERS.length);
+  const positive = boot();
+  let okOffer = null;
+  try {
+    okOffer = positive.makeOffer('b10', { basis: 'per_lot', produceCentavos: 50000,
+      labourCentavos: 0 }, { role: 'provider' });
+  } catch (err) { okOffer = null; }
+  c.check('and the refusal stops the bad offer without stopping the good one',
+    !!okOffer && okOffer.unitPriceCentavos === null && okOffer.produceCentavos === 50000,
+    okOffer ? JSON.stringify({ id: okOffer.id, unit: okOffer.unitPriceCentavos, produce: okOffer.produceCentavos })
+      : 'a per-lot offer with no unit price was refused too');
   c.check('the offer sequence starts past the ids a restored dump already used', (() => {
     const made = again.makeOffer('b10', { basis:'per_lot', produceCentavos:50000, labourCentavos:0 },
       { role:'provider' });
@@ -3941,6 +4052,147 @@ suite('back', async () => {
   i.state.authMode = 'register'; i.render();
   c.check('the sign-in screen keeps no back handles', i._history.entries.length === 0,
     JSON.stringify(i._history.entries.length));
+
+  /* Found on the vivo, not in here: the list of modal fields this suite's machinery
+     depends on named three of the four and missed the resident's, so Back from a half
+     typed "Edit profile" form quit Sukinnect to the launcher. The fix derives the list
+     from state, which makes the next modal field counted the moment it is declared —
+     so this check walks every field the state object actually has rather than a copy
+     of the names, because a list here would drift exactly the way the app's did. */
+  const m = boot();
+  m.state.view = 'app'; m.state.role = 'resident'; m.state.tab = 'profile'; m.render();
+  const modalFields = Object.keys(m.state).filter(k => /Modal$/.test(k) || /Confirm$/.test(k));
+  const uncounted = modalFields.filter(k => {
+    modalFields.forEach(f => { m.state[f] = typeof m.state[f] === 'boolean' ? false : null; });
+    m.render();
+    const before = m._history.entries.length;
+    m.state[k] = typeof m.state[k] === 'boolean' ? true : 'gate_probe';
+    m.render();
+    return m._history.entries.length === before;
+  });
+  c.check('every modal field in state is a layer Back can undo', (() => {
+    modalFields.forEach(f => { m.state[f] = typeof m.state[f] === 'boolean' ? false : null; });
+    m.render();
+    return modalFields.length >= 4 && uncounted.length === 0;
+  })(), modalFields.length + ' fields, uncounted: ' + uncounted.join(','));
+
+  /* The resident's own path, end to end: sheet, then the picker it raises, then Back. */
+  const n = boot();
+  n.state.view = 'app'; n.state.role = 'resident'; n.state.tab = 'profile'; n.render();
+  n.openProfileSection('resident', 'payments', 'Payment Methods', 'A label you choose');
+  n.residentProfileAction('add_payment');
+  c.check('a modal raised from a sheet still records one step',
+    n._history.entries.length === 1 && !!n.state.sheet && !!n.state.residentProfileModal,
+    'entries=' + n._history.entries.length + ' sheet=' + n.state.sheet
+      + ' modal=' + n.state.residentProfileModal);
+  n._history.back();
+  c.check('Back closes the picker and the sheet, and keeps the profile hub under them',
+    n.state.residentProfileModal === null && n.state.sheet === null && n.state.tab === 'profile'
+      && n._history.entries.length === 0,
+    'modal=' + n.state.residentProfileModal + ' sheet=' + n.state.sheet + ' tab=' + n.state.tab);
+
+  /* The other half of the handset finding: a sheet that keeps claiming aria-modal while
+     a modal paints above it makes Chromium drop that modal out of the platform tree. */
+  const o = boot();
+  o.state.view = 'app'; o.state.role = 'resident'; o.state.tab = 'profile'; o.render();
+  o.openProfileSection('resident', 'payments', 'Payment Methods', 'A label you choose');
+  c.check('a sheet alone is the topmost layer, so it owns the modality',
+    !o.modalAboveSheet(), 'modalAboveSheet=true with only a sheet open');
+  o.residentProfileAction('add_payment');
+  c.check('a modal above the sheet takes the modality from it', o.modalAboveSheet(),
+    'modalAboveSheet=false while the picker is open');
+
+  c.check('every full-screen layer root carries the convention the keyboard walk reads', (() => {
+    /* The app raises a layer three ways — .modal-layer, .sheet-layer, and an inline fixed overlay
+       with no class at all — and the inert sync can only find the one on top if all of them say
+       so. This is the failure mode this file already documents twice for hand-written lists: a
+       fourth surface added tomorrow would be silently walkable by Tab while every existing screen
+       reported clean. So the check counts the roots and requires the marker on each, rather than
+       trusting that the three known ones still carry it. */
+    const tags = (app._source.match(/<div [^>]*(?:modal-layer|sheet-layer|position:fixed; inset:0)[^>]*>/g) || [])
+      /* The CSS rule and a comment are not markup; every match here must be a real root. */
+      .filter(t => /^<div /.test(t));
+    return tags.length >= 5 && tags.every(t => /data-layer=/.test(t));
+  })(), 'a layer root exists without data-layer, so Tab can walk past its scrim');
+
+  return c;
+});
+
+/* A day is a calendar object and an instant is a point on a line, and the app has to keep them
+   apart. One site did not: the verification queue's "waiting N days" measured the elapsed
+   interval from a local midnight and rounded it, so the same application read 6 days all
+   morning and 7 days from noon, with nothing in the record having changed. The timezone sweep
+   that found it (`node tools/shot.cjs --probe=@tools/probe-date-frames.js
+   --timezone=Pacific/Niue` versus Pacific/Kiritimati, diffed) also cleared two neighbours that
+   look like the same bug and are not: `credentialState` ceils an interval against a future
+   midnight, which is stable across every hour of a day, and the "x minutes ago" labels round a
+   minute interval, which is what they mean. */
+suite('dates', async () => {
+  const c = makeChecker();
+  const app = boot();
+  const src = require('fs').readFileSync(require('./harness.cjs').APP, 'utf8');
+  const body = src.slice(src.lastIndexOf('<script>') + 8, src.lastIndexOf('</script>'));
+  const DAY = 86400000;
+  /* Built in the device's own frame and read back in the same one — the shape of the bug is
+     a date written in UTC and read in local time, so a check that mixed the frames would
+     disagree with the app by a day on one side of the meridian and pass on the other. */
+  const pad = n => String(n).padStart(2, '0');
+  const localISO = ms => { const d = new Date(ms); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+  const today = app.startOfDay(Date.now());
+  const fiveAgo = localISO(today - 5 * DAY);
+
+  const hours = [0, 6.5, 12, 18.75, 23.95].map(h => today + Math.round(h * 3600000));
+  const counts = hours.map(t => app.daysBetween(fiveAgo, t));
+  c.check('a wait counted in days says the same thing at any hour of the same day',
+    counts.every(n => n === 5), fiveAgo + ' read at ' + hours.length + ' hours -> ' + counts.join(','));
+  c.check('and it advances by exactly one day when the day does',
+    app.daysBetween(fiveAgo, today + DAY) === 6
+      && app.daysBetween(fiveAgo, today + DAY + 23 * 3600000) === 6,
+    'next day = ' + app.daysBetween(fiveAgo, today + DAY)
+      + ' late next day = ' + app.daysBetween(fiveAgo, today + DAY + 23 * 3600000));
+
+  const queue = app.PENDING_APPLICANTS || [];
+  const ownArithmetic = queue.filter(a => app.applicantWaitDays(a) !== app.daysBetween(a.submittedAt, Date.now()));
+  c.check('the queue prints that count rather than its own arithmetic',
+    queue.length > 0 && ownArithmetic.length === 0,
+    queue.length + ' applicants, disagreeing: ' + ownArithmetic.map(a => a.id).join(','));
+  /* Every branch, not just the ones the seed happens to reach. Written as a comparison
+     against the queue first, which the falsifier then showed it could not fail: no seeded
+     applicant is one day old, so rewording that branch past the gate. */
+  const wrongWords = [['today', localISO(today)], ['1 day ago', localISO(today - DAY)],
+    ['5 days ago', localISO(today - 5 * DAY)]]
+    .filter(([want, iso]) => app.applicantWaitLabel({ submittedAt: iso }) !== want)
+    .map(([want, iso]) => iso + ' said "' + app.applicantWaitLabel({ submittedAt: iso }) + '" want "' + want + '"');
+  c.check('the words on the row are the number the record supports',
+    wrongWords.length === 0, wrongWords.join(' | '));
+
+  const elapsed = body.split(/\r?\n/)
+    .filter(l => /Math\.round\(\(\s*Date\.now\(\)/.test(l) && /86400000/.test(l));
+  c.check('no day count is taken by rounding an elapsed interval', elapsed.length === 0,
+    elapsed.map(l => l.trim().slice(0, 70)).join(' | '));
+
+  /* Found by emptying every record set the app renders from and reading what is left
+     (tools/probe-empty-states.js). The verification queue was the one screen that lost its
+     content and said nothing about it: approve all three applicants — which is what the
+     screen exists for, and what removes them from the queue — and it still headed an empty
+     panel "Pending verifications" and still told the admin to prioritise applications. */
+  const q = boot();
+  q.state.view = 'app'; q.state.role = 'admin'; q.state.tab = 'admin_verifications';
+  q.state.adminProviderCategory = 'pending';
+  const withRows = q.adminVerifications();
+  const savedApplicants = q.PENDING_APPLICANTS.slice();
+  let emptyQueue = '';
+  try { q.PENDING_APPLICANTS.length = 0; emptyQueue = q.adminVerifications(); }
+  finally { savedApplicants.forEach(a => q.PENDING_APPLICANTS.push(a)); }
+  c.check('an emptied verification queue explains itself and stops giving advice',
+    /No applications are waiting/.test(emptyQueue)
+      && !/Prioritize applications/.test(emptyQueue)
+      && /Pending verifications/.test(emptyQueue),
+    'empty says: ' + (emptyQueue.match(/empty-title">([^<]*)</) || [, 'nothing'])[1]
+      + ' / tip still shown: ' + /Prioritize applications/.test(emptyQueue));
+  c.check('and a queue that does have applicants shows them, not the empty state',
+    /Prioritize applications/.test(withRows) && !/No applications are waiting/.test(withRows),
+    'rows=' + q.PENDING_APPLICANTS.length);
 
   return c;
 });

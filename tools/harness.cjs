@@ -53,6 +53,9 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   /* the Back suite drives the app through its own navigation entry points, because a
      history handle is only worth testing if the step that created it is real */
   'openSheet', 'closeSheet', 'openChatThread', 'stepBack', 'openLayers', 'receiptCard',
+  'layerKeys', 'modalAboveSheet', 'openProfileSection', 'residentProfileAction',
+  'startOfDay', 'daysBetween', 'applicantWaitDays', 'applicantWaitLabel', 'credentialState',
+  'adminVerifications', 'emptyState',
   'requestChoices', 'requestAddressBook', 'requestPaymentOptions', 'requestDays',
   'residentChatRoom', 'draftListing',
   'REQUEST_TIMES', 'submitBookingRequest', 'bookingRequestSheet',
@@ -158,6 +161,15 @@ function boot({ appMode = false, storage = null } = {}) {
     matchMedia: () => ({ matches: false, addEventListener() {} }) };
   const location = { search: appMode ? '?app=1' : '' };
   const navigator = { userAgent: 'node-test' };
+  /* The chart thins its axis labels by how wide the type actually is, so render code asks the
+     page for its root font size. Node has no page, so the double answers the default — and a
+     fixed 16 here would make that rule untestable: a mutant that ignores the measured size
+     reads identical at the default metrics. The size is therefore a variable a suite can raise
+     through `app._setRootFont(32)`, which is the same thing `tools/shot.cjs --font-scale=2`
+     does in a real browser, so the two instruments disagree only about layout, not about this.
+     Returning anything else would be a number invented to make a check pass. */
+  let rootFontPx = 16;
+  const getComputedStyle = () => ({ fontSize: rootFontPx + 'px', getPropertyValue: () => '' });
   class Image { set src(v) { this._src = v; } get src() { return this._src; } }
   const chain = () => {
     const o = {};
@@ -171,18 +183,21 @@ function boot({ appMode = false, storage = null } = {}) {
   else delete globalThis.localStorage;
 
   const ctx = new Function('window', 'document', 'location', 'navigator', 'L', 'Image', 'console',
+    'getComputedStyle',
     body + `
     const out = {};
     const names = ${JSON.stringify(EXPORTS)};
     names.forEach(name => { try { out[name] = eval(name); } catch (err) { out[name] = undefined; } });
     return out;`
-  )(window, document, location, navigator, L, Image, { log() {}, warn() {}, error() {} });
+  )(window, document, location, navigator, L, Image, { log() {}, warn() {}, error() {} },
+    getComputedStyle);
 
   ctx._document = document;
   ctx._window = window;
   ctx._history = history;
   ctx._els = els;
   ctx._source = src;
+  ctx._setRootFont = px => { rootFontPx = px; };
   return ctx;
 }
 
