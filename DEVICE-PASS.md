@@ -925,3 +925,66 @@ would run are the bytes the bench measured. Artifact:
 `--no-daemon` was used again for the same reason recorded above; the daemon has not started on this
 machine since. `.25` is now dead — if a handset is loaded with it, it is one build behind and the
 Back-button behaviour on a root tab after a chat will not match the source.
+
+## Handset walk, `1.2-preview.27` on the OPPO CPH2179 — 2026-10-18, installed and measured
+
+`versionCode 29`, installed with `adb install -r -t` and read back with `dumpsys package` rather than
+assumed from `build.gradle`. The app was attachable over the DevTools socket the debug build opens, so
+every number below is the phone's own answer, not an emulation of it.
+
+**What the device actually is.** `Physical size: 720x1600`, `Physical density: 320`,
+`Override density: 360`, `font_scale 1.35`, WebView `155.0.8059.45`. And the measurement that matters:
+`window.innerWidth = 320`, `innerHeight = 638`, computed root `21.6px`. **320 CSS px, not 360** —
+`Override density` is a density, and 720 ÷ (360/160) = 320. The sweep corner added yesterday under the
+label "360 CSS px, the OPPO's own combination" was therefore modelling a width this phone never uses,
+and it is now `{ width: 320, height: 638, scale: 1.35 }`. The corrected corner reproduces the handset
+to the pixel, which is the check that says the correction was right:
+
+| | device | bench at 320×638 @ 1.35 |
+| --- | --- | --- |
+| root font | 21.6px | 21.6px |
+| `Bookings` label | clipped by 14px | "loses 14px" |
+| `Messages` label | clipped by 20px | "loses 20px" |
+| `Home`, `Profile` | whole | whole |
+
+**§66 on hardware.** `getComputedStyle(document.body).overflowWrap` answers `anywhere` on the phone.
+The rule that stops a 60-character word running off the device is live in the installed build, not
+just in the file.
+
+**§67 on hardware, through the real controls.** Messages list → tap a thread card → tap Home in the
+bottom navigation:
+
+```
+A. messages list   tab=messages isChatOpen=false onRootTab=true  data-root=1 backDepth=0
+B. room open       tab=messages isChatOpen=true  onRootTab=false data-root=0 backDepth=1
+C. after nav Home  tab=home     isChatOpen=false onRootTab=true  data-root=1 backDepth=0
+```
+
+Then one press of the physical Back button (`input keyevent 4`) put
+`com.oppo.launcher/.Launcher` in `mCurrentFocus`: **the app exits in one press from a root tab it
+reached through a chat.** Before the fix, state C carried `backDepth=1` and the first press spent a
+step that did not exist — a Back button that appeared to do nothing.
+
+**§68 on hardware, with a real edit typed.** `admin-profile-name` edited through
+`document.execCommand('insertText')` (the path a keystroke takes), saved, then saved again untouched:
+
+```
+audit rows: 0 -> edited+save 1 ("Account update") -> untouched save again 1 ("No change to save")
+row: {"action":"Admin profile updated","result":"name changed","stamped":true}
+```
+
+One edit, one row. The second press wrote nothing and said so.
+
+**Two probe errors found on the way, both worth remembering.** The first device walk reported
+`NOT PAINTED: /openChatThread/` — the messages list binds its rows through `data-open-chat-id`, not an
+inline `onclick`, so the run silently tested nothing about the chat path while still printing three
+plausible-looking lines. And the audit row appeared to hold `detail: "undefined"`, which was the probe
+reading a field the record does not have; the field is `result`, and it reads `"name changed"`.
+**A device probe that cannot find its control must fail loudly**, which is why the lines now say
+`NO CHAT CARD PAINTED` rather than continuing quietly.
+
+**Still open on a handset:** the provider dashboard's two charts at maximum text (does two week labels
+still say what the period is); real split-screen via `adb shell wm size` rather than the emulated
+480px-tall viewport; the keyboard-open viewport, which nothing here emulates; whether the 3px
+brand-blue focus ring reads on the dark gradient top bar at arm's length; TalkBack itself; and the
+five §3f items.

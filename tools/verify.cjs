@@ -2384,6 +2384,30 @@ suite('honesty', async () => {
         : 'only ' + walked + ' profile actions were reachable — the walk lost its grip' };
   })());
 
+  /* Found by clicking a control TWICE rather than once — which nothing in this file had ever done,
+     and which is the single most common thing a thumb does. tools/probe-double-tap.js fills a form
+     the way a person fills one, taps Save, taps it again, and counts what each tap wrote. The admin's
+     save appended "Admin profile updated" to the Audit Log on BOTH taps, and on a first tap of an
+     untouched form too: §29's auditable record, claiming a change that had not happened. The other
+     two roles wrote no row but still opened "Changes saved successfully."
+     The fix keeps the writes idempotent and makes only the CLAIM conditional. That shape matters:
+     rewriting the handlers to assign into a `next` object made the escaping audit's
+     `state.x.f = el.value` pattern answer 3 instead of 12 and failed two checks that were guarding
+     something real — an instrument's assumption is part of the code it checks. */
+  c.check('a profile save records or claims only a change that actually happened', (() => {
+    const NL = String.fromCharCode(10);
+    const missing = ['saveResidentProfile', 'saveProviderProfessionalProfile', 'saveAdminProfile']
+      .filter(fn => {
+        const body = (appSrc.match(new RegExp('function ' + fn + '\\(\\)[\\s\\S]{0,1800}?' + NL + '\\}')) || [''])[0];
+        return body.length === 0 || !/const changed =/.test(body) || !/unchanged/.test(body);
+      });
+    const branches = (appSrc.match(/modal==='unchanged'/g) || []).length;
+    /* The audit row is the part with consequences, so it is asserted where it is written rather than
+       inferred from the dialog: an unconditional adminLog() would still pass every test above. */
+    const loggedInsideGuard = /if \(changed\.length\) \{\s*\n?\s*adminLog\(/.test(appSrc);
+    return missing.length === 0 && branches >= 6 && loggedInsideGuard;
+  })(), 'a save still writes an audit row, or a dialog still says "saved" about an untouched form');
+
   /* Two rows of the same screen disagreed by a factor of two devices: the list said
      "2 devices signed in", the sheet it opened said this is the only session the
      prototype knows about. The card had already been corrected; the row above it had not. */

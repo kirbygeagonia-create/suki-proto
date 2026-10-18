@@ -45,14 +45,14 @@ const DEFAULT_CASES = [
   { why: 'narrowest phone, largest text (the worst corner the platform allows)', scale: '2', width: '320' },
   { why: 'default panel width, largest text', scale: '2', width: '' },
   { why: 'vivo 1906 at 450 CSS px, the OPPO setting that started this (1.35)', scale: '1.35', width: '450' },
-  /* The corner the six above all missed, found by looking at a photograph rather than a tally: the
-     OPPO CPH2179 lays out at 360 CSS px and ships its text at 1.35, which is neither the vivo's 450
-     nor the 320 the worst-case corner assumes. Its Back-button screenshot showed the nav reading
-     "Booki…" and "Mess…" and the active-booking card putting one word on each of nine lines — a
-     layout every hard rule calls clean. Measured here it agrees with the phone exactly (root 21.6px)
-     and reports 163 ellipsized strings against the anchor's 5, which is the number the review line
-     exists to produce. */
-  { why: 'OPPO CPH2179: 360 CSS px at its own 1.35 text setting', scale: '1.35', width: '360' },
+  /* The corner a photograph of a real handset produced, and then a measurement of that same handset
+     corrected. The first version said "360 CSS px at 1.35" because the device reports
+     `Override density: 360`, which is the DENSITY, not the layout width: 720 physical px over
+     360/160 = 2.25 is **320 CSS px**, and `window.innerWidth` on the phone answers 320 with
+     innerHeight 638 — the 638 is the panel minus the status and navigation bars, which no emulated
+     corner had ever used either. Measuring the thing the label claims to name is the whole point of
+     having the label. */
+  { why: 'OPPO CPH2179 as measured on the device: 320x638 CSS px at its own 1.35 text', scale: '1.35', width: '320', height: '638' },
   /* Height is the other half of "any phone" and was never swept until §61: every figure in this
      repository, including the three above, was measured at the camera's default 844px. At 480px —
      an Android Go handset, or any phone in split-screen — a booking sheet put its own "Send

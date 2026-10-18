@@ -917,6 +917,18 @@ const SCREENS = [
                           clickPainted(/providerProfileAction\\('portfolio_add'\\)/, 'the add-work button');`],
   ['admin-edit-form', `state.view='app'; state.role='admin'; state.tab='profile'; render();
                           clickPainted(/adminAccountAction\\('edit'\\)/, 'the Edit Profile button');`],
+  /* The dialog a save shows when nothing on the form was edited (§68). Reached the way a person
+     reaches it — open the form, press Save — because a screen that has never been painted has never
+     been measured, and this one carries the sentence the pass exists to make true. */
+  ['resident-save-unchanged', `state.view='app'; state.role='resident'; state.tab='profile'; render();
+                          clickPainted(/residentProfileAction\\('edit'\\)/, 'the Edit Profile button');
+                          clickPainted(/saveResidentProfile\(\)/, 'the Save Changes button');`],
+  ['provider-save-unchanged', `state.view='app'; state.role='provider'; state.tab='profile'; render();
+                          clickPainted(/providerProfileAction\\('edit'\\)/, 'the Edit Professional Profile button');
+                          clickPainted(/saveProviderProfessionalProfile\(\)/, 'the Save Changes button');`],
+  ['admin-save-unchanged', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+                          clickPainted(/adminAccountAction\\('edit'\\)/, 'the Edit Profile button');
+                          clickPainted(/saveAdminProfile\(\)/, 'the Save Changes button');`],
   ['admin-dash',       `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='overview'; render();`],
   /* The audit log is the record §29 exists to keep, and the camera had never painted it:
      it sits one tap off the dashboard, and no table entry reached it. An action is logged

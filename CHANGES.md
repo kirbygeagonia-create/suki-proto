@@ -3677,13 +3677,13 @@ mutants applied, 156 caught, 0 not applied.** The pass quoted above that reporte
 three families flagged is retracted; it was two passes reading each other's mutations.
 
 `node tools/shot.cjs --measure` across 69 screens at the default width: every failure tally zero, no
-console errors, 1,092 requests left the device for map tiles. The phone's own corner — 360 CSS px at
-1.35 text, which no sweep had measured because the only real panel width in the list was the vivo's
-450 — is a permanent seventh case now, and it agrees with the handset both ways: `root set to 21.6px
--> computed 21.6px`, every failure tally zero, and the ellipsized-string review line at **163**
-against the anchor's **5**, its first examples being `"Bookings" loses 4px` and `"Messages" loses
-10px`. `node tools/sweep-text-scale.cjs` with the seventh case added: **7 of 7 phone corners measured
-clean, 20 tallies each.**
+console errors, 1,092 requests left the device for map tiles. The phone's own corner — which this
+section first recorded as **360 CSS px at 1.35 text**, a figure taken off `Override density` rather
+than off the page and corrected in §68 to the measured 320×638 — is a permanent case in the sweep now,
+and it agrees with the handset on the mechanism (`root set to 21.6px -> computed 21.6px`), with every
+failure tally zero, and with the ellipsized-string review line far above the anchor's 5. Its first
+examples are the nav labels. `node tools/sweep-text-scale.cjs` with the case added: every phone corner
+measured clean, 20 tallies each.
 
 ## 66. A word with no space in it: every field in the app is writable and `maxlength` appears nowhere
 
@@ -3910,3 +3910,132 @@ now measured as the root tabs they are instead of as drill-ins, and fewer of the
 is the count doing its job, not a regression, and it is the reason the figure is quoted with the
 command rather than kept in prose. `node tools/falsify-all.cjs`, one uncontested pass with the new
 family in it: **28 families, 161 mutants applied, 161 caught, 0 not applied.**
+
+## 68. Nobody had ever clicked anything twice — and the phone corrected the corner built for it
+
+Every check in this repository performs its action once. The gate calls a handler and asserts the
+world afterwards; the camera clicks a control and photographs the result. A thumb does neither: it
+taps twice, because a tap on glass has no travel to feel. `tools/probe-double-tap.js` is the
+instrument for that — it fills a form the way a person fills one, clicks a painted control, clicks
+the **same node** again, and counts what each click wrote.
+
+### Four instrument defects before the first real answer
+
+None of this is the app's fault, and all of it would have produced a false report if it had been
+trusted:
+
+1. **A snapshot compared the wrong thing.** The first version subtracted a snapshot of record
+   *contents* (an array of JSON strings) from another, answered `NaN` for every record family, and
+   reported every single control as `SECOND TAP WRITES AGAIN`. A sensor whose only answer is failure
+   is measuring itself. Counts are now a separate snapshot from the strings that restore the records.
+2. **A control whose first tap does nothing is not a guarded control.** Both read as "the second tap
+   wrote nothing", so the taxonomy has three verdicts now — `guarded`, `SECOND TAP WRITES AGAIN`, and
+   `NOT EXERCISED` — and `NOT EXERCISED` prints what the app said when it refused.
+3. **Filling only the empty fields made every edit form inert.** An edit dialog arrives populated, so
+   nothing was typed, the save wrote back identical values, and the probe reported "not exercised"
+   about a control that had simply been handed nothing to change. It now edits one field when the
+   form was already full, because a real edit is a *change*.
+4. **A synchronous double-click cannot see an asynchronous commit.** The booking sheet — the app's
+   most important action — came back `NOT EXERCISED` with no refusal message, and looked like a dead
+   button. It is neither: `submitBookingRequest()` sets `requestSubmitting`, paints the §47 loading
+   state, and commits from a `setTimeout(…, 900)`. The second tap is refused by that in-flight flag,
+   which is exactly the guard this pass was hoping to find — invisible until the probe waited 1.3 s
+   between clicks. `shot.cjs` evaluates a probe with `awaitPromise`, so an async probe is enough.
+
+### What it found in the application
+
+Twelve record-writing controls across the screens that paint them. Eleven were already guarded —
+including the booking submit, the offer answer, the dispute, the payout listing and the portfolio
+save. One was not:
+
+```
+SECOND TAP WRITES AGAIN  [saveAdminProfile()]  state.adminAuditLog +1
+```
+
+`saveAdminProfile()` appended `"Admin profile updated"` to the Audit Log on **every** press, so a
+double tap recorded one edit twice, and — the same defect with one fewer tap — a first press on an
+untouched form recorded a change that had not happened. That is §29's auditable record, writing
+things that did not occur.
+
+The fix keeps the writes idempotent and makes only the **claim** conditional:
+
+```js
+const changed = Object.keys(state.adminProfileData)
+  .filter(k => state.adminProfileData[k] !== before[k]);
+if (changed.length) {
+  adminLog('Admin profile updated', state.adminProfileData.name,
+    changed.map(k => k === 'officeLocation' ? 'office' : k).join(', ') + ' changed');
+  state.adminAccountModal = 'saved';
+} else {
+  state.adminAccountModal = 'unchanged';
+}
+```
+
+and the same shape in the resident's and provider's saves, which wrote no row but did open `"Changes
+saved successfully."` about a form nobody had edited. The dialog now has a third state that says
+`No change to save` / `Nothing on this form changed, so nothing was saved.`
+
+### The refactor that broke two unrelated checks, and why that is the finding
+
+The first version of this fix rewrote the handlers to compute a `next` object and then assign it. The
+gate went red on two checks that had nothing to do with saving:
+
+```
+FAIL  the page declares fields a keyboard can write   3 found
+FAIL  the rule has something to bite on   7 writable reads into markup
+```
+
+Those checks resolve the app's keyboard-writable fields by matching `state.x.field = el.value` in the
+source — deliberately, because a hand-maintained list of field names goes stale the moment somebody
+adds one. Writing the assignments into a `next` object made the pattern answer 3 instead of 12, and
+the escaping audit quietly lost two thirds of its coverage while still printing a green line for
+everything it could still see. **An instrument's assumption about how code is shaped is part of what
+the code has to respect.** The final version keeps the original assignment lines — they are
+idempotent, so running them always is harmless — and conditions only what the app then claims and
+records.
+
+### Three screens the walk had never painted
+
+`resident-save-unchanged`, `provider-save-unchanged`, `admin-save-unchanged`: open the edit form,
+press Save. A destination behind a button is a destination, and a fix that has never been painted has
+never been measured — the walk is now **72 screens**, and all three dialogs pass the tap floor, the
+contrast sample and the reachability check like any other markup.
+
+### The phone corrected the corner built for it
+
+The handset came back mid-pass, and the first measurement out of it undid a figure §65 recorded
+yesterday. The OPPO CPH2179 reports `Override density: 360` on a `720x1600` panel. That is a
+**density**, not a layout width: 720 ÷ (360/160) = **320 CSS px**, and `window.innerWidth` on the
+device answers `320`, with `innerHeight 638` — the panel minus the status and navigation bars. The
+sweep case added yesterday was labelled "360 CSS px at 1.35 text, the OPPO's own combination" and was
+not that phone's combination at all. It is now `{ width: 320, height: 638, scale: 1.35 }`, and the
+bench reproduces the handset to the pixel:
+
+```
+device  nav=Home[whole] Bookings[CLIPPED 14px] Messages[CLIPPED 20px] Profile[whole]
+bench   "Bookings" loses 14px, "Messages" loses 20px        213 ellipsized strings
+```
+
+`1.2-preview.27` (`versionCode 29`) was installed and asked:
+
+- `body overflow-wrap` computes `anywhere` on the device — §66's rule is live on real hardware.
+- The §67 fix, through the real path: messages list → open a thread (`isChatOpen=true`,
+  `data-root=0`, `backDepth=1`) → tap Home in the bottom nav → `isChatOpen=false`, `onRootTab=true`,
+  `data-root=1`, **`backDepth=0`**. One press of the physical Back button then put
+  `com.oppo.launcher/.Launcher` in the focus window: the app exits from a root tab in one press,
+  where before the fix that same state carried a phantom entry and the first press did nothing
+  visible.
+- The §68 fix, with a real edit typed into the admin name: audit rows `0 → 1` for the edit, still
+  `1` for the untouched second save, and the row reads
+  `{"action":"Admin profile updated","result":"name changed","stamped":true}`.
+
+### Numbers
+
+Gate **528** (was 527). `falsify-double-tap` **2 of 2** — the audit-row break is caught by both the
+gate and the probe, the dialog break by the gate only, and the file says why rather than pretending
+to a test it does not have. `falsify-camera-surfaces` **3 of 3** after the walk grew.
+`node tools/falsify-all.cjs`, one uncontested pass with both new families in it: **29 families, 163
+mutants applied, 163 caught, 0 not applied.**
+`node tools/shot.cjs --measure` over the new **72 screens**: every failure tally zero, no console
+errors. The corrected device corner run alone (`--width=320 --height=638 --font-scale=1.35`) reports
+the same: zero on every hard tally, and 213 on the ellipsized-string review line.

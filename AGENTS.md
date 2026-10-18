@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 11,359 lines, ONE :root block, 1,748 var() usages, 95 tokens declared with 92
+Sukinnect-next.html— 11,382 lines, ONE :root block, 1,748 var() usages, 95 tokens declared with 92
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1256,7 +1256,8 @@ official mark is a PNG, not an icon, and it is still the only brand image on the
 The rebuild also added a real verification surface, because reading the file cannot
 see a layout: `node tools/shot.cjs` drives the machine's own Chrome headless over the
 DevTools Protocol with no npm packages, and `--measure` runs an in-page instrument
-across all 69 screens for tap targets, WCAG contrast (sampling gradients at the text's
+across every screen in the walk (72 as of §68; `node tools/shot.cjs --list` is the count) for tap
+targets, WCAG contrast (sampling gradients at the text's
 own position), clipped text, off-scale fonts, content trapped under the nav, unnamed
 controls, form fields a screen reader cannot name, images that asked for a file and got no
 pixels, escaping map panes, chart labels escaping their own chart box, anything painting
@@ -1700,6 +1701,34 @@ the root tab with the app still running, and Back at a root tab exited. **The sh
 not in any diff**: `Sukinnect-Android/` is untracked by the owner's standing decision, so the Java
 lives on this machine and in the installed APK. It is written out in full in `CHANGES.md` §65 for
 exactly that reason — a fix recorded only on one machine is a fix the next rebuild re-breaks.
+
+NO CHECK IN THIS REPOSITORY HAD EVER CLICKED ANYTHING TWICE. The gate calls a handler once; the camera
+clicks a control once and photographs the result. A thumb taps twice. `tools/probe-double-tap.js`
+fills a form the way a person does, clicks a painted control, clicks the **same node** again, and
+counts what each click wrote — and it found `saveAdminProfile()` appending
+`"Admin profile updated"` to the Audit Log on every press, so one edit recorded twice, and a press on
+an untouched form recorded a change that had never happened. The fix keeps the writes idempotent and
+makes only the claim conditional: `changed.length` decides whether a row is written and which dialog
+opens, and a third modal state now says `No change to save`. The same shape was applied to the
+resident's and provider's saves, which wrote no row but still promised `Changes saved successfully.`
+Four instrument defects came with it, and every one of them would have produced a confident false
+report: subtracting a snapshot of record *contents* answered `NaN` and flagged all twelve controls as
+duplicating; a control whose first tap does nothing is not a guarded control, so the taxonomy needs
+three verdicts and prints what the app said when it refused; filling only the *empty* fields made
+every edit form inert, because an edit dialog arrives populated; and **a synchronous double-click
+cannot see an asynchronous commit** — the booking submit looked dead until it was understood that
+`submitBookingRequest()` sets `requestSubmitting`, paints the §47 loading state, and commits from a
+`setTimeout(…, 900)`, which is precisely the guard this pass hoped to find. `shot.cjs` evaluates a
+probe with `awaitPromise`, so an async probe is enough. Then the refactor itself broke two unrelated
+checks: rewriting the handlers to assign through a `next` object made the escaping audit's
+`state.x.field = el.value` pattern answer 3 instead of 12, so two checks that resolve the writable
+field set from that shape went red while still printing green for everything they could still see.
+**An instrument's assumption about how code is shaped is part of what the code has to respect** —
+which is why the committed version keeps the original assignment lines. `node
+tools/falsify-double-tap.cjs` proves it, 2 of 2; the dialog-state break is gate-only and says so,
+because saving an unchanged form writes no record either way, so no count can see it. The walk gained
+three screens for the new dialogs (72 now), because a fix that has never been painted has never been
+measured.
 
 READ AN ACCESSIBILITY DUMP TWICE BEFORE CALLING IT A DEFECT. Two nodes in this walk looked like
 findings and were neither: the sign-in screen dumped **completely empty**, which is Chromium
@@ -3027,17 +3056,20 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate 527; whole suite **28 families, 161 mutants, 161 caught, 0 not applied**
+Gate 528; whole suite **29 families, 163 mutants, 163 caught, 0 not applied**
 (`node tools/falsify-all.cjs`), of which `falsify-flex-crush`, `falsify-control-reach`,
-`falsify-focus-trap`, `falsify-long-input` and `falsify-stale-overlay` are the five that drive the
-camera rather than the gate — a geometry rule or a real tap has no Node assertion available to it —
-and `falsify-camera-surfaces` is the one that reads the instrument instead of the application.
+`falsify-focus-trap`, `falsify-long-input`, `falsify-stale-overlay` and `falsify-double-tap` are the
+six that drive the camera rather than the gate — a geometry rule, a real tap, or a second tap has no
+Node assertion available to it — and `falsify-camera-surfaces` is the one that reads the instrument
+instead of the application.
 
 Measure it with `node tools/sweep-text-scale.cjs` — seven phone corners, the camera each time: 320px
-@ 200% text, default width @ 200%, 450px @ 135% (a vivo panel at the OPPO's setting), 360px @ 135%
-(the OPPO CPH2179's own combination — added on 2026-10-18 because a photograph of that handset showed
-nav labels reading `Booki…` and `Mess…` and no corner reproduced it: the sweep had the OPPO's text
-setting at the vivo's width, and the OPPO's width at no text setting at all), 320x480 @ 200%
+@ 200% text, default width @ 200%, 450px @ 135% (a vivo panel at the OPPO's setting), **320x638 @
+135%** (the OPPO CPH2179 as measured on the device — added on 2026-10-18 from a photograph of that
+handset whose nav labels read `Booki…` and `Mess…`, and corrected the next day from the device itself:
+`Override density: 360` on a 720px panel is a **density**, so the layout width is 720 ÷ 2.25 = **320
+CSS px**, `innerHeight` 638 with the system bars taken off. The case was labelled 360 for a day, which
+is what happens when a corner is named after a device without asking the device), 320x480 @ 200%
 (a short handset or split-screen), 320x300 @ 100% (what a keyboard leaves on a small phone, since
 nothing here emulates a keyboard), and the 100% anchor — which fails if any tally is nonzero and
 treats a tally it does not recognise as must-be-zero, so a sensor added tomorrow cannot be silently
@@ -3049,12 +3081,14 @@ modelled a mechanism Android does not use and reported a cap holding on four pho
 while the real phone ignored it. An instrument that models a mechanism wrongly certifies a fix that
 cannot work.
 
-**A CORNER CAN BE CLEAN AND THE SCREEN STILL BE WRONG.** 360 @ 135 reports every failure tally zero
-and an ellipsized-string review line of 163, against the anchor's 5. The hard rules are geometry and
-contrast; they cannot see that the active-booking card has put one word on each of nine lines because
-its 44px avatar will not shrink and its text column will. That is not a defect the suite can fail on,
-and it is not a reason to trust the zero: it is the reason the review lines are printed at all, and
-the reason a screenshot of a real handset still outranks a sweep of emulated ones.
+**A CORNER CAN BE CLEAN AND THE SCREEN STILL BE WRONG.** The phone's own corner — 320×638 at 135%
+text — reports every failure tally zero and an ellipsized-string review line of **213**, against the
+anchor's 5, and the first two entries on that line (`"Bookings" loses 14px`, `"Messages" loses 20px`)
+are the same two pixels the handset itself measured through the DevTools socket. The hard rules are
+geometry and contrast; they cannot see that the active-booking card has put one word on each of nine
+lines because its 44px avatar will not shrink and its text column will. That is not a defect the suite
+can fail on, and it is not a reason to trust the zero: it is the reason the review lines are printed
+at all, and the reason a screenshot of a real handset still outranks a sweep of emulated ones.
 
 Use:
 - strong display type for major page titles
