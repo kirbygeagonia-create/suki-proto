@@ -3791,3 +3791,8 @@ caught by the gate, with the reason written next to it in the file. Gate **526**
 console errors, and both review lines unchanged from the run before it — 5 intended ellipses, 0
 fields named only by a placeholder — so the inherited break cost nothing on the text the app ships
 with. The one thing it changed is what happens to text the app does *not* ship with.
+
+The device tree was re-synced and cut as `1.2-preview.25` (`versionCode 27`) so the untracked shell
+carries both this rule and §65's Back entry point; the bundled page was proved identical to this file
+from *inside the APK*, and the whole thing is written up in `DEVICE-PASS.md` because git will never
+show any of it. No handset was attached, so nothing about that build is verified on hardware.

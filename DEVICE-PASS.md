@@ -883,3 +883,31 @@ a number and a photograph attached instead of a description.
 4. The five §3f items, unchanged, and `inert` on the WebView's own build — answered here in part:
    the dump with a sheet open (`.scratch/sheet-dump.xml`) shows no nodes from `#screen` behind it,
    on WebView 155, which is well past the 102 that shipped `inert`. TalkBack itself was not run.
+
+## `1.2-preview.25` — built 2026-10-18, not yet installed
+
+This tree is untracked, so everything about it has to be written down here or it never existed.
+
+- **What went in:** `CHANGES.md` §65 (the `systemBack()` entry point and the `SukiShell.setBackDepth`
+  call the shell reads) and §66 (the `body{ overflow-wrap:anywhere; }` rule). The staged page was
+  copied from `Sukinnect-next.html` and proved identical with `cmp` — 818,307 bytes — and then proved
+  *again from the artifact*: `unzip -p <apk> assets/Sukinnect.html | cmp - ../../Sukinnect-next.html`
+  passes, so the bytes a phone would run are the bytes the bench measured, not the bytes sitting in
+  the staging directory.
+- **Version:** `versionCode 27`, `versionName '1.2-preview.25'`, read back out of the built file with
+  `aapt dump badging` rather than from `build.gradle` — `package: name='com.sukinnect.app'
+  versionCode='27' versionName='1.2-preview.25'`. Artifact:
+  `app/build/outputs/apk/debug/Sukinnect-1.2-preview.25-debug.apk`, 2,139,506 bytes.
+- **A build gotcha worth keeping:** `./gradlew assembleDebug` failed with
+  `Could not create service of type FileLockContentionHandler using
+  BasicGlobalScopeServices.createFileLockContentionHandler()` — "Unable to start the daemon process" —
+  while *no* `java.exe` was running, so it was not a contending daemon. `--no-daemon` built clean in
+  the same directory with no other change. The wrapper still reported the failed run as exit 0,
+  because the last command in the pipeline succeeded; the only thing that told the truth was
+  `gradle exit=1` written from `$?` and the absence of a `.25` APK on disk.
+- **Not verified on hardware.** No device was attached when this was built. The two things it carries
+  that a bench cannot settle are already on the list above: whether the focus ring reads on the dark
+  top bar, and whether the provider charts at maximum text still say what the period is. The §66 rule
+  is a CSS change the camera measured on 69 screens, so it needs no new handset claim — but if a
+  handset ever shows a long name clipped where the bench does not, that is WebView text measurement
+  disagreeing with Chrome, and `tools/probe-long-input.js` is the instrument to point at it.
