@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 11,286 lines, ONE :root block, 1,749 var() usages, 95 tokens declared with 92
+Sukinnect-next.html— 11,316 lines, ONE :root block, 1,749 var() usages, 95 tokens declared with 92
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -2908,9 +2908,10 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate 521; whole suite **24 families, 147 mutants, 147 caught, 0 not applied**
-(`node tools/falsify-all.cjs`), of which `falsify-flex-crush` and `falsify-control-reach` are the two
-that drive the camera rather than the gate — a geometry rule has no Node assertion available to it.
+Gate 522; whole suite **25 families, 151 mutants, 151 caught, 0 not applied**
+(`node tools/falsify-all.cjs`), of which `falsify-flex-crush`, `falsify-control-reach` and
+`falsify-focus-trap` are the three that drive the camera rather than the gate — a geometry rule or a
+real keypress has no Node assertion available to it.
 
 Measure it with `node tools/sweep-text-scale.cjs` — six phone corners, the camera each time: 320px
 @ 200% text, default width @ 200%, 450px @ 135% (a vivo panel at the OPPO's setting), 320x480 @ 200%
@@ -3015,6 +3016,34 @@ Always consider:
 Do not communicate important state only through color.
 
 Respect prefers-reduced-motion.
+
+**FOCUS AND KEYBOARD ARE MEASURED, NOT ASSUMED.** `node tools/shot.cjs --measure --focus` walks
+every screen with real `Tab` keypresses and reports four numbers: stops with no visible focus ring,
+stops covered by the browser's default ring rather than the app's rule, stops that land on a control
+no part of which is exposed, and stops that focus something off the viewport. It is proven by
+`node tools/falsify-focus-trap.cjs` (3 breaks, 3 caught). Two rules follow from what it found.
+
+*A layer is modal to the keyboard, not just to the eye.* Everything outside the layer the user is in
+carries `inert`, which removes it from the tab order, the accessibility tree and the pointer at once
+— `aria-hidden` alone leaves every covered control focusable. The top layer is derived from state
+through the `data-layer` convention, because the app raises a layer three ways (`.modal-layer`,
+`.sheet-layer`, and the verification review's inline fixed overlay, which has no class at all) and a
+rule naming two of them leaves the third walkable; the gate check that every full-screen layer root
+carries the marker is what stops a fourth surface being added without it. The inerting walks up from
+the layer marking each ancestor's siblings, because on the profile hubs the modal is painted
+*inside* `#screen`.
+
+*An instrument must not share its assumption with the code it checks.* The detector first asked
+"is a `[data-layer]` open and is this element outside it", so deleting the marker blinded both at
+once and a mutant survived. It now hit-tests: a control is unreachable only when none of five probe
+points on it resolves to it or to one of its own ancestors — an ancestor's clip is a scroll
+container, which is reachable, while a foreign element at every point is a scrim.
+
+*Ask with the mechanism, not an approximation of it.* `el.focus()` never matches `:focus-visible` in
+Chrome, so the first version of this walk reported zero focus rings on all 63 screens and read as an
+app defect. And `#screen` scrolls smoothly by contract, so a rect read in the breath after a Tab is
+the element's old position — the walk suppresses the glide for its own duration, which is the second
+place in this file where that trap has bitten.
 
 ---
 

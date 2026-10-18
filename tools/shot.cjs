@@ -68,6 +68,13 @@ const REDUCED = has('reduced-motion');
    desktop session ever shows. */
 const DARK = has('dark');
 const PROBE = flag('probe', '');
+/* --focus walks each screen with real Tab keypresses. The distinction is the whole instrument:
+   Chrome matches :focus-visible only for a keyboard-modality focus, so a script that calls
+   el.focus() sees no ring on anything — which is exactly what the first attempt at this did, and
+   it read as an app with no focus states at all rather than as a tool asking the wrong way.
+   --focus-steps caps the walk (default 26 stops, which is more than any screen here has). */
+const FOCUS = has('focus');
+const FOCUS_STEPS = parseInt(flag('focus-steps', '26'), 10);
 /* Runs the whole walk in another calendar frame without touching this machine's
    clock or zone. A record's date is a fact about the world; if the words that
    print it move when the timezone does, something is reading a calendar day
@@ -590,6 +597,95 @@ const AUDIT_JS = `(function(){
     }
   }
   return out;
+})()`;
+
+/* One stop of the Tab walk, evaluated in the page after a real keypress. It answers three things
+   about whatever the browser just focused:
+
+     changed  — does anything the user could see differ while focused? The comparison is against a
+                clone of the element appended to the same parent: the clone inherits every selector
+                that matches (class, attribute, ancestry) and cannot match a focus pseudo-class, so
+                it is the element's own unfocused style without a second round trip. Comparing
+                against a fixed guess would call a control's permanent shadow a focus ring.
+     uaRing   — the ring that appeared is the browser's default (outline-style: auto), which means
+                the app's own rule did not reach this control. Visible, so not a failure of 2.4.7,
+                and it is exactly the drift a hand-written selector list causes silently.
+     behind   — something else is painted over the element the browser just focused, i.e. Tab walked
+                past the scrim into the screen behind it. Hit-tested at the element's own centre
+                rather than matched against a class or an attribute, because a check that reads the
+                same marker as the code under test cannot see that marker go missing — which is
+                exactly how one mutant survived its first run here.
+
+   No backticks in this file's page scripts: they are template literals. */
+const FOCUS_STOP_JS = `(function(){
+  var el = document.activeElement;
+  if (!el || el === document.body || el === document.documentElement) return null;
+  var r = el.getBoundingClientRect();
+  if (!r.width || !r.height) return null;
+  var a = getComputedStyle(el);
+  var clone = el.cloneNode(false);
+  var b = a;
+  if (el.parentElement) {
+    el.parentElement.appendChild(clone);
+    b = getComputedStyle(clone);
+    clone.remove();
+  }
+  var ring = a.outlineStyle !== 'none' && parseFloat(a.outlineWidth) >= 1;
+  var glow = a.boxShadow !== 'none' && a.boxShadow !== b.boxShadow;
+  var edge = a.borderTopColor !== b.borderTopColor || a.borderTopWidth !== b.borderTopWidth;
+  /* Is any part of the focused element actually exposed to a tap? Probed at the centre and at four
+     inset corners, because the first version asked only the centre and reported the sheet's own
+     scrim as unreachable — its centre is under the panel by design, while the whole rest of it is
+     the thing a user taps to dismiss. An element with no exposed point at all is the real defect:
+     focus landed somewhere a finger cannot go.
+
+     Hit-tested rather than matched against a class or an attribute, because a check that reads the
+     same marker as the code under test cannot see that marker go missing — which is exactly how one
+     mutant survived its first run here. */
+  var exposed = false, foreign = false;
+  var probe = function(){
+    exposed = false; foreign = false;
+    var q = el.getBoundingClientRect();
+    var xs = [q.left + 2, q.right - 2, q.left + 2, q.right - 2, (q.left + q.right) / 2];
+    var ys = [q.top + 2, q.top + 2, q.bottom - 2, q.bottom - 2, (q.top + q.bottom) / 2];
+    for (var k = 0; k < 5; k++) {
+      if (xs[k] < 0 || ys[k] < 0 || xs[k] >= innerWidth || ys[k] >= innerHeight) continue;
+      var hit = document.elementFromPoint(xs[k], ys[k]);
+      if (!hit) continue;
+      if (hit === el || el.contains(hit)) return true;
+      /* A point that lands on one of the element's own ancestors is the element being clipped by a
+         scroll container — reachable by scrolling, which is what the reach tally already judges.
+         Only a hit on something foreign counts as being covered. Without this distinction the date
+         chip in the booking sheet's horizontal rail — clipped by design, one swipe from view — was
+         reported as unreachable. */
+      if (!hit.contains(el)) foreign = true;
+    }
+    return false;
+  };
+  exposed = probe();
+  /* And if it is covered, ask once more with the element brought to the middle of the window. A
+     control sitting under a sticky bar at this scroll offset is not the defect — every ordinary
+     list row is under the bar until you scroll, and the walk would otherwise cry wolf on all of
+     them. What survives the scroll is the case that matters: focus landed somewhere no amount of
+     scrolling can show. */
+  if (!exposed && foreign) {
+    el.scrollIntoView({ block: 'center', inline: 'center' });
+    exposed = probe();
+  }
+  var covered = !exposed && foreign;
+  var name = (el.getAttribute('aria-label') || el.textContent || el.placeholder || el.type || '')
+    .replace(/\\s+/g, ' ').trim().slice(0, 22);
+  return {
+    key: el.tagName.toLowerCase() + '|' + Math.round(r.top) + '|' + Math.round(r.left) + '|' + Math.round(r.width),
+    tag: el.tagName.toLowerCase(), what: name,
+    cls: (el.className || '').toString().slice(0, 26),
+    fv: el.matches(':focus-visible'),
+    changed: (ring && a.outline !== b.outline) || glow || edge,
+    uaRing: ring && a.outlineStyle === 'auto',
+    ring: a.outlineStyle + ' ' + a.outlineWidth,
+    behind: covered,
+    offscreen: r.bottom < 1 || r.top > innerHeight - 1 || r.right < 1 || r.left > innerWidth - 1
+  };
 })()`;
 
 const CHROME_CANDIDATES = [
@@ -1217,7 +1313,42 @@ async function main() {
       if (MEASURE) {
         try { audit = await session.evaluate(AUDIT_JS); } catch (e) { audit = { error: e.message }; }
       }
-      manifest.push({ name, shows: seen.title, sheet: seen.sheet, where: seen.where, file: path.relative(ROOT, file), overflow: seen.overflow, viewport: WIDTH + 'x' + HEIGHT, audit });
+      /* The Tab walk runs after the screenshot on purpose: focusing a control paints a ring, and
+         the picture should be of the screen as a customer left it, not as the tool found it. */
+      let focus = null;
+      if (FOCUS) {
+        focus = [];
+        /* Stop the glide before walking. #screen scrolls smoothly by contract, so a Tab that lands
+           below the fold starts an animation, and a rect read in the next breath is the element's
+           *old* position — which this tool would then report as "focus went somewhere off the
+           viewport". 19 of those, every one a profile-hub row, before the cause was the camera
+           rather than the page. The same trap is already named once in this file for the under-nav
+           check; the walk is the second place it bites, because focusing an element scrolls it and
+           scrolling an element takes 250ms here. Restored after the walk so the pixels shot are the
+           app's own. */
+        await session.evaluate(`(function(){
+           const s = document.createElement('style');
+           s.id = 'suki-no-glide';
+           s.textContent = '*{ scroll-behavior:auto !important; }';
+           document.head.appendChild(s);
+           if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+           return true;
+        })()`);
+        for (let i = 0; i < FOCUS_STEPS; i++) {
+          await session.send('Input.dispatchKeyEvent',
+            { type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9, nativeVirtualKeyCode: 9 });
+          await session.send('Input.dispatchKeyEvent',
+            { type: 'keyUp', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9, nativeVirtualKeyCode: 9 });
+          const stop = await session.evaluate(FOCUS_STOP_JS);
+          if (!stop) continue;
+          /* The browser wraps to the address bar and back; seeing a stop twice means the walk has
+             come round, and continuing would only pad the count. */
+          if (focus.some(s => s.key === stop.key && s.what === stop.what)) break;
+          focus.push(stop);
+        }
+        await session.evaluate(`(function(){ const s=document.getElementById('suki-no-glide'); if (s) s.remove(); return true; })()`);
+      }
+      manifest.push({ name, shows: seen.title, sheet: seen.sheet, where: seen.where, file: path.relative(ROOT, file), overflow: seen.overflow, viewport: WIDTH + 'x' + HEIGHT, audit, focus });
       console.log('  shot ' + name.padEnd(20) + 'shows "' + seen.title + '" [' + seen.where +
                   (seen.sheet !== '-' ? ' sheet:' + seen.sheet : '') + ']' +
                   (seen.overflow > 4 ? ('  scrolls ' + seen.overflow + 'px past the fold') : ''));
@@ -1266,6 +1397,22 @@ async function main() {
     tally(flat('navEscape'), 'bottom-nav items pushed off the panel', r => r.screen + '  "' + r.text + '" hangs ' + r.over + 'px past a ' + r.box + 'px row (the row needs ' + r.scroll + 'px)');
     tally(flat('squashedCircle'), 'round markers painted as a sliver (a flex row took their width)', r => r.screen + '  .' + r.cls + ' ' + r.w + 'x' + r.h + 'px "' + r.text + '"');
     tally(flat('unreachable'), 'controls no tap can reach (off the viewport or clipped, with nothing that scrolls)', r => r.screen + '  <' + r.tag + '> "' + r.what + '" is ' + r.px + 'px ' + r.how + ' past ' + r.by);
+    /* Only printed when the walk ran. A tally that reports 0 because its sensor never fired is
+       the exact failure this repository keeps documenting, so silence here is not a pass — the
+       absence of the line is the honest answer for a run without --focus. */
+    if (FOCUS) {
+      const stops = manifest.flatMap(m => (m.focus || []).map(x => ({ screen: m.name, ...x })));
+      console.log('\nkeyboard stops walked: ' + stops.length + ' across ' +
+        manifest.filter(m => m.focus).length + ' screens');
+      tally(stops.filter(s => !s.changed), 'keyboard stops with no visible focus ring',
+        r => r.screen + '  <' + r.tag + '> "' + r.what + '" .' + r.cls + ' outline ' + r.ring);
+      tally(stops.filter(s => s.uaRing), 'keyboard stops covered by the browser default ring rather than the app rule',
+        r => r.screen + '  <' + r.tag + '> "' + r.what + '" .' + r.cls);
+      tally(stops.filter(s => s.behind), 'keyboard stops behind an open layer (Tab walked past the scrim)',
+        r => r.screen + '  <' + r.tag + '> "' + r.what + '" .' + r.cls);
+      tally(stops.filter(s => s.offscreen), 'keyboard stops that focus something off the viewport',
+        r => r.screen + '  <' + r.tag + '> "' + r.what + '" .' + r.cls);
+    }
     const vend = flat('vendor');
     console.log('\nvendor-owned controls excluded (Leaflet attribution + markers, not ours to resize): ' +
       vend.length + (vend.length ? '  e.g. ' + [...new Set(vend.map(r => r.what || 'unlabelled <img>'))].slice(0, 4).join(' | ') : ''));

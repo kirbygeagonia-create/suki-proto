@@ -814,3 +814,25 @@ have behaviours an emulator does not:
    look at Resident Home, Notifications, and the resident's profile and confirm the bar reads as a
    design rather than as a broken layout. If it does not, the alternative is truncating the title,
    which this pass tried and took back out for costing the screen its name.
+
+### What the keyboard pass (§62) owes a handset — recorded 2026-10-17
+
+The Tab walk runs in Chrome on this machine. Three of its answers are Chrome's, not the WebView's,
+and only the phone can settle them:
+
+1. **`inert` on the WebView's actual build.** The background stops being focusable because Chromium
+   honours `inert`, which shipped in WebView 102. Open a booking sheet, attach a keyboard (or use
+   TalkBack's explore-by-touch), and confirm Tab cannot reach the screen behind the scrim. If the
+   device's WebView is older, the fix silently does nothing and the 91 stops come back.
+2. **TalkBack with a layer open.** `inert` should also take the background out of the accessibility
+   tree the screen reader reads. `adb shell uiautomator dump` with the booking sheet open, then
+   again with the resident's payment picker raised over it — the same pair of dumps that found the
+   sheet-modality defect. Expect no nodes from `#screen` while the sheet is up.
+3. **The focus ring on a real panel.** The walk asserts that something visible changes for every
+   keyboard stop; it cannot say whether a 3px brand-blue outline at `outline-offset:2px` reads on a
+   phone at arm's length, or on the dark gradient top bar where the ring is the same hue as the
+   surface. Tab through Resident Home, the provider dashboard and the admin console and look.
+
+None of this needs a new build to answer 1 and 2 — the installed `preview.22` predates the `inert`
+work, so it needs one. Item 3 can be read off any build that has the ring, which is the one already
+installed.

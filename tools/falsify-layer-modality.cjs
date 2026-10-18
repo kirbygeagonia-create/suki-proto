@@ -32,6 +32,9 @@ const MUTANTS = [
     needle: '  return layerKeys().some(k => !!state[k]);',
     to: '  return true;',
     label: 'a sheet alone is the topmost layer, so it owns the modality' },
+  { name: 'a layer root loses the convention, so a fourth surface could be added the same way',
+    needle: '<div class="sheet-layer" data-layer="sheet">', to: '<div class="sheet-layer">',
+    label: 'every full-screen layer root carries the convention the keyboard walk reads' },
 ];
 
 function gateOutput() {

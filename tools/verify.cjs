@@ -4077,6 +4077,19 @@ suite('back', async () => {
   c.check('a modal above the sheet takes the modality from it', o.modalAboveSheet(),
     'modalAboveSheet=false while the picker is open');
 
+  c.check('every full-screen layer root carries the convention the keyboard walk reads', (() => {
+    /* The app raises a layer three ways — .modal-layer, .sheet-layer, and an inline fixed overlay
+       with no class at all — and the inert sync can only find the one on top if all of them say
+       so. This is the failure mode this file already documents twice for hand-written lists: a
+       fourth surface added tomorrow would be silently walkable by Tab while every existing screen
+       reported clean. So the check counts the roots and requires the marker on each, rather than
+       trusting that the three known ones still carry it. */
+    const tags = (app._source.match(/<div [^>]*(?:modal-layer|sheet-layer|position:fixed; inset:0)[^>]*>/g) || [])
+      /* The CSS rule and a comment are not markup; every match here must be a real root. */
+      .filter(t => /^<div /.test(t));
+    return tags.length >= 5 && tags.every(t => /data-layer=/.test(t));
+  })(), 'a layer root exists without data-layer, so Tab can walk past its scrim');
+
   return c;
 });
 

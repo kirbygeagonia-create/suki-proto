@@ -3287,3 +3287,102 @@ What it costs, visibly: on a short phone a bottom sheet may now fill the screen 
 at 80%, and a top bar may take two lines instead of one. Both are the alternative to a control being
 off the device, and neither has been looked at on hardware — `DEVICE-PASS.md` carries the three
 questions, and the second of them is a judgement about the app's look rather than a defect.
+
+---
+
+## 62. Nobody had ever pressed a key: the keyboard surface, and focus behind the scrim
+
+§72 asks for focus states and keyboard interaction. Nothing in `tools/` had ever produced a key
+event. The camera drives the app by calling its handlers and `el.click()`, the harness has no layout
+at all, and the 29 probes read painted boxes — so the claim that the app has a focus ring for
+"every element the keyboard can actually reach" was a comment in the stylesheet that no instrument
+had ever tested.
+
+### The instrument, and the wrong way it was built first
+
+`node tools/shot.cjs --focus` walks each screen with real `Tab` keypresses over CDP and inspects
+whatever the browser lands on. The first attempt did not use key events: it called
+`el.focus({ focusVisible: true })` for every focusable element and compared computed styles. That
+option does not exist in Chrome, so every element was focused with mouse modality, `:focus-visible`
+never matched, and the walk reported **zero focus rings on all 63 screens** — a result that reads
+as "the app has no focus styles at all" and would have been filed as a defect of the app rather
+than of the tool. Chrome matches `:focus-visible` on keyboard modality, so the only honest way to
+ask the question is to press the key.
+
+What the walk then measured, across **666 stops on 63 screens**: no control is reachable by Tab
+without something visible changing, and nothing falls back to the browser's default ring — the
+`:where()` list is doing its job, and that sentence is now a measurement rather than a claim.
+
+### The defect: 91 of 192 stops were behind the scrim
+
+On the eight screens that open a sheet or a dialog, nearly half the Tab stops landed on controls
+**underneath the open layer** — covered, untappable (the scrim takes the tap and closes the layer),
+and still focusable, so a keyboard user moved through a screen they could not see and could still
+submit fields on it.
+
+The fix is `inert` on everything outside the layer the user is in, which takes a subtree out of the
+tab order, the accessibility tree and the pointer in one move — `aria-hidden` alone would have left
+every control focusable, which is the defect. Two decisions inside it are the reason it will not
+rot:
+
+- **The top layer is derived from state, not from a class.** The app raises a layer three ways:
+  `.modal-layer`, `.sheet-layer`, and the verification review's inline fixed overlay, which has no
+  class at all. A rule naming two of them leaves the third walkable, and that is already written
+  down once in this file for the Back machinery — so all three roots now carry `data-layer`, and
+  `topLayerEl()` reads the convention.
+- **The inerting walks up from the layer and marks each ancestor's siblings**, rather than inenting
+  a list of background ids. On the profile hubs the modal is painted *inside* `#screen`, so
+  inenting `#screen` would have taken the dialog with it; and a list would miss the next surface
+  added.
+
+`node tools/falsify-focus-trap.cjs` puts it back three ways — remove the call, remove the marker
+from one root, and swap the lookup for the old class names. The third only fires on the
+verification screens, which is the proof that the convention is what covers that surface: 46 stops
+behind the scrim there, on a screen the class-based check could never have reported.
+
+### Four instrument mistakes in the same afternoon, each caught by a number that made no sense
+
+1. **The detector read the same marker as the code under test.** Its first version asked "is a
+   `[data-layer]` open, and is this element outside it" — so removing `data-layer` from a layer
+   root blinded the check and the implementation together, and the mutant survived. A check that
+   shares its assumption with the thing it checks is a mirror.
+2. **Hit-testing at the centre called the scrim unreachable.** Switched to
+   `elementFromPoint`, and the baseline reported two controls behind a layer on the unmutated
+   file: the sheet's own scrim, which *is* a button (`aria-label="Close"`, so tapping the dim
+   dismisses it) and is covered at its centre by the panel it dims — by design. The rule became
+   five probe points: a control is unreachable only if **no** part of it is exposed.
+3. **An ancestor's clip is not someone else's overlay.** With five points, one stop remained: the
+   booking sheet's "Tomorrow · Sun, Oct 18" chip, sitting at x 343..523 inside a `.hscroll` rail
+   that is 354 wide. It is clipped by a container that scrolls — one swipe from view, which the
+   reach tally from §61 already judges correctly — so a hit that lands on one of the element's own
+   ancestors no longer counts as covered. Only a foreign element does.
+
+4. **A sticky bar is not a scrim.** With five points the walk still reported one stop app-wide: the
+   verification review's "Open document" button, covered at that moment by the fixed
+   Reject/Request/Approve bar. Scrolling the row to the middle exposed it completely — which is what
+   any list row does when you scroll, so the rule now asks twice, once where focus landed and once
+   with the element brought to the centre, and keeps only the control that stays hidden *after* the
+   scroll. Without that second look the tally would report every ordinary row under every sticky
+   chrome in the app, and would be switched off within a week.
+
+And a fifth that belonged to the previous pass: 19 stops initially reported focus landing off the
+viewport, all of them `.job-row`s below the fold, because `#screen` scrolls *smoothly* and the rect
+was read mid-glide. The walk now installs `scroll-behavior:auto` for its own duration and removes
+it afterwards. This file already names that trap once for the under-nav check; a focus walk is the
+second place it bites, because focusing an element scrolls it and scrolling takes 250ms here.
+
+### Numbers, and what the walk still cannot see
+
+Gate **522** (was 521, for the convention check). New family `falsify-focus-trap` **3 of 3** — the
+three breaks leak 24, 23 and 36 stops respectively. `falsify-layer-modality` **5 of 5** after its new
+mutant. `node tools/falsify-all.cjs`: **25 families, 151 mutants applied, 151 caught, 0 not
+applied**. `node tools/shot.cjs --measure --focus`: **666 stops across 63 screens, all four tallies
+zero**. The six-corner sweep is clean, 29 probes answer, no console errors. The file is 11,316 lines.
+
+What the walk does not see, so nobody reads the zeros as more than they are: it measures Chrome on a
+desktop, and `inert` is only as good as the WebView that ships it (Chromium 102+), so
+`DEVICE-PASS.md` carries the question for the handset; it asserts that *something* visible changes
+for every stop, not that the change has contrast against the surface it paints on, which the
+contrast tally does for text but not for a ring; and it walks the tab order Chrome computes, which
+on a phone is reached by a Bluetooth keyboard or a d-pad, not by anything the app's own touch
+gestures do.
