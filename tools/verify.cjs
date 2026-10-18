@@ -4115,6 +4115,22 @@ suite('back', async () => {
     return tags.length >= 5 && tags.every(t => /data-layer=/.test(t));
   })(), 'a layer root exists without data-layer, so Tab can walk past its scrim');
 
+  c.check('hardware Back and browser Back run the same step, and the shell is told the depth', (() => {
+    /* Measured on the OPPO at preview.23: one system Back press from a drill-in quit the app to
+       the launcher. The shell asked WebView.canGoBack(), which does not count the entries
+       history.pushState() creates — the page itself reported history.length 2 and its own
+       history.back() landed on the previous screen — so the shell fell through to finishing the
+       activity, and every step of the machinery this suite tests was unreachable on a phone.
+       The page now publishes its depth over a one-method bridge and the shell calls systemBack().
+       Both halves are asserted here because the browser cannot show the bug: only the shell asks,
+       and only the page can answer. */
+    const src = app._source;
+    const pop = (src.match(/addEventListener\('popstate'[\s\S]{0,240}?\}\);/) || [''])[0];
+    return /function systemBack\(\)\s*\{/.test(src)
+      && pop.length > 0 && /systemBack\(\)/.test(pop)
+      && /SukiShell\.setBackDepth\(want\)/.test(src);
+  })(), 'system Back has no page-side entry point, so the shell cannot undo a step');
+
   return c;
 });
 

@@ -836,3 +836,50 @@ and only the phone can settle them:
 None of this needs a new build to answer 1 and 2 — the installed `preview.22` predates the `inert`
 work, so it needs one. Item 3 can be read off any build that has the ring, which is the one already
 installed.
+
+### Handset walk, 2026-10-17/18 — OPPO CPH2179, `1.2-preview.23` then `.24`
+
+The three "owes a handset" lists above were written on 2026-10-17 and answered the same evening and
+the next morning. Device: OPPO CPH2179, Android 10, WebView 155, `font_scale 1.35`, laid out at
+360 CSS px on a 720px panel. Two builds: `.23` to reproduce, `.24` to verify the fix.
+
+**Settled — the nav labels keep their whole words in the platform tree.** Largest text the phone
+offers, Resident Home, `adb shell uiautomator dump` (`.scratch/nav-dump.xml`): the four nav nodes
+carry `text="Home"`, `text="Bookings"`, `text="Messages"`, `text="Profile"`. The *photograph* of the
+same screen reads `Booki…` and `Mess…`. That is the §68 rule working exactly as designed — the word
+gives up its tail so the destination keeps its tap area, and the DOM text, which is what the
+accessibility tree is built from, is untouched — and it is the answer the camera could not give,
+because the camera reads the DOM and would have reported the same thing either way. No `aria-label`
+is needed. This was item 1 of the text-scale list.
+
+**Settled — the root font is uncapped on Android, and the bench models it correctly.** Through
+`tools/device-probe.cjs` on the phone at 1.35: computed root `21.6px` = 16 × 1.35, so the
+`min(1em, 20px)` cap in `:root` does nothing on a handset, as §68 now says. The new sweep corner
+(`--width=360 --font-scale=1.35`) prints `root set to 21.6px -> computed 21.6px`, which is the same
+number from the other side. Item 2 of the text-scale list.
+
+**Found and fixed — the phone's Back button quit the app from any drill-in.** This is `CHANGES.md`
+§65: the shell asked `WebView.canGoBack()`, which does not count `history.pushState` entries, so the
+whole Back machinery was unreachable on hardware while eight gate checks passed it. Verified on `.24`
+by three presses: sheet → closes, drill-in → root tab with the app running, root tab → exits.
+
+**Found, not fixed — a layout can be clean and still be unreadable.** `.scratch/back-fixed.png` is
+Resident Home after a successful Back, and every hard tally is zero on it. It is also nine lines of
+one-word-each for the active booking ("Kitchen / faucet / keeps / leaking" then "Ramil / Odiada · /
+Sat, Oct / 17, 2:30 / PM"), because the card is a flex row and the 44px avatar is not negotiable
+while the text column is. The bench now reproduces the phone's corner and quantifies it: the
+ellipsized-string review line goes **5 → 163** at 360px @ 1.35, and the first examples are the nav
+labels. Nothing here is a failure; it is the open owner decision about nav labels at large text, with
+a number and a photograph attached instead of a description.
+
+**Still open on a handset:**
+
+1. The provider dashboard's two charts at maximum text — whether two week labels still say what the
+   period is, or the subtitle should name it. Item 3 of the text-scale list; needs eyes, not a build.
+2. Real split-screen (`adb shell wm size 720x700`) rather than the bench's emulated 480px-tall
+   viewport, and the same with the on-screen keyboard up. The short-viewport list's items 1 and 2.
+3. Whether the 3px brand-blue focus ring reads on the dark gradient top bar at arm's length. Item 3
+   of the keyboard list. Any build answers it.
+4. The five §3f items, unchanged, and `inert` on the WebView's own build — answered here in part:
+   the dump with a sheet open (`.scratch/sheet-dump.xml`) shows no nodes from `#screen` behind it,
+   on WebView 155, which is well past the 102 that shipped `inert`. TalkBack itself was not run.

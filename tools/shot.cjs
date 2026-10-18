@@ -1418,7 +1418,10 @@ async function main() {
       const byScreen = {};
       rows.forEach(r => { byScreen[r.screen] = (byScreen[r.screen] || 0) + 1; });
       Object.entries(byScreen).sort((a, b) => b[1] - a[1]).slice(0, 8)
-        .forEach(([s, n]) => console.log('  ' + s.padEnd(22) + n));
+        /* The same reason the shot column stopped padding to a literal: a name exactly as wide as
+           the pad prints `fruit-provider-profile18`, and a line that reads as one token is read as
+           one fact — here a screen and its count, which is the pair someone compares by eye. */
+        .forEach(([s, n]) => console.log('  ' + s.padEnd(NAME_W) + n));
       const uniq = new Map();
       rows.forEach(r => { const k = fmt(r); if (!uniq.has(k)) uniq.set(k, r); });
       [...uniq.values()].slice(0, 14).forEach(r => console.log('    · ' + fmt(r)));

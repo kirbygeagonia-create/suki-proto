@@ -7237,6 +7237,11 @@ function syncBackHandles(isRootTab){
     }
   } catch (err) { ownedEntries = want; }
 
+  /* Tell the shell how much there is to undo, every render. It cannot ask the WebView — see
+     systemBack() below for what that costs. Guarded because the same page runs in a browser,
+     where no such object exists, and in the test harness, where nothing does. */
+  try { if (typeof SukiShell !== 'undefined' && SukiShell.setBackDepth) SukiShell.setBackDepth(want); } catch (err) {}
+
   /* Modality follows the layer actually on top. A sheet that keeps declaring aria-modal
      makes Chromium mark everything outside it inert, and an inert subtree leaves the
      platform accessibility tree: a modal raised from the sheet painted above it, took
@@ -7297,10 +7302,20 @@ function stepBack(){
   state.tab = lastRootTab[state.role] || ROOT_TABS[state.role][0];
   render();
 }
-window.addEventListener('popstate', function(){
-  if (ignoreNextPop > 0) { ignoreNextPop--; return; }   /* our own cleanup, not the user */
+/* The one step the system Back button performs, in the page's own words. The Android shell used
+   to ask the WebView whether it could go back and, told it could not, finish the activity — which
+   quit the app from any drill-in (measured on the OPPO: history.length 2, the page's own
+   history.back() lands on the previous screen, canGoBack() answers false). The page is the only
+   thing that knows whether there is something on screen to undo, so the shell asks it. The
+   popstate handler below calls this same function, which is what keeps browser Back and hardware
+   Back from drifting apart. */
+function systemBack(){
   ownedEntries = Math.max(0, ownedEntries - 1);
   stepBack();
+}
+window.addEventListener('popstate', function(){
+  if (ignoreNextPop > 0) { ignoreNextPop--; return; }   /* our own cleanup, not the user */
+  systemBack();
 });
 
 /* Painted from state.storageNotice, which storageNotice() sets when a write is

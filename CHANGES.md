@@ -3500,3 +3500,187 @@ nine dialog screens now named by their own headings — `resident-edit-form → 
 `provider-service-form → "NEW SERVICE"`, `admin-security-modal → "Change security PIN"`. The splash
 still reads `(untitled)`, which it did before this change too: it is a logo screen with no heading,
 and the gate's `<h1>` rule covers app screens, not the launch.
+
+## 65. The phone's Back button quit the app, because the shell asked the WebView a question the page owns
+
+§60 through §64 were bench work. The handset came back for this pass, and the first press of its
+physical Back button ended the session: from a drill-in — a provider detail, a booking, a half-filled
+"Edit profile" sheet — one press took Sukinnect to the launcher. `.scratch/after-back.png` is that
+picture: a bamboo roof, a pool table, three app icons, and no Sukinnect.
+
+### The question the shell had been asking
+
+`MainActivity.onBackPressed()` asked `web.canGoBack()`, and told it could not, called
+`super.onBackPressed()` — which finishes the activity. `canGoBack()` reads the WebView's *navigation*
+stack: document loads. The page has been a single document since the splash, and every step the Back
+machinery records after that is a `history.pushState` entry — which **`canGoBack()` does not count**.
+Measured on the device (OPPO CPH2179, Android 10, WebView 155, `1.2-preview.23`): `history.length` 2
+with one drill-in on screen, and the page's own `history.back()` returned to the previous screen. The
+WebView answered that there was no way back. There was.
+
+The uncomfortable half is what the bench had been saying all along. The page's Back machinery — one
+entry per undoable thing, `ignoreNextPop` so a close-by-tap is not mistaken for a press, `layerKeys()`
+so a fourth modal is counted the moment it exists — is the subject of eight checks in the `back`
+suite, and every one of them calls `stepBack()` directly. All eight passed on a phone where no thumb
+could reach any of them. §"a screen the camera has never painted is a screen nobody has checked" is
+the same sentence as this one: **a step only the browser can invoke is a step the user does not
+have.** The camera reaches screens by calling the app's own handlers, which is exactly why it could
+never notice that the one handler a phone calls was missing.
+
+### The fix goes the direction that holds the answer
+
+The shell cannot ask the WebView what only the page knows, so the page tells the shell, on every
+render:
+
+```js
+try { if (typeof SukiShell !== 'undefined' && SukiShell.setBackDepth) SukiShell.setBackDepth(want); } catch (err) {}
+```
+
+inside `syncBackHandles()`, where `want` is the same number the page is already balancing its
+`pushState` entries against — one for an open layer, one for being off a root tab. Guarded three ways
+because the same file runs in a browser, where no such object exists, and in the Node harness, where
+nothing does.
+
+And the step itself became a named function so that both callers run one implementation:
+
+```js
+function systemBack(){
+  ownedEntries = Math.max(0, ownedEntries - 1);
+  stepBack();
+}
+window.addEventListener('popstate', function(){
+  if (ignoreNextPop > 0) { ignoreNextPop--; return; }   /* our own cleanup, not the user */
+  systemBack();
+});
+```
+
+Before this, the body of that step lived *inside* the `popstate` listener, so the only way to spend a
+back entry was for something to fire `popstate` — which the shell cannot do without `canGoBack()`
+agreeing first, the very check that lies. Hardware Back and browser Back are now the same function
+called from two places, which is the only arrangement in which they cannot drift.
+
+### The shell half, written down because it is not in any diff
+
+`Sukinnect-Android/` stays out of git by the owner's standing decision, so nothing a reviewer clones
+shows what the Java does. It is quoted here for that reason — a fix that exists only on one machine is
+a fix the next rebuild re-breaks:
+
+```java
+/* The page reports how much of its own back stack there is to undo, on every render.
+   onBackPressed() reads that integer instead of asking the WebView, because
+   WebView.canGoBack() does not count the entries history.pushState() creates — measured on
+   an OPPO CPH2179 (Android 10, WebView 155): the page reported history.length 2 and its own
+   history.back() returned to the previous screen, while canGoBack() answered false and the
+   activity finished, so a single Back press quit the app from any drill-in or open sheet.
+   The bridge is one setter that stores a non-negative int; it exposes no file, intent or
+   preference to page script, which is the only reason addJavascriptInterface is safe here. */
+web.addJavascriptInterface(new SukiBridge(), "SukiShell");
+
+/* How much the page says it has to undo. Volatile because setBackDepth() arrives on the
+   WebView's JavaBridge thread while onBackPressed() reads it on the UI thread; static so the
+   bridge cannot pin an Activity instance past its lifetime. */
+private static volatile int backDepth = 0;
+
+public static class SukiBridge {
+    @android.webkit.JavascriptInterface
+    public void setBackDepth(int n) { backDepth = Math.max(0, n); }
+}
+
+@Override
+public void onBackPressed() {
+    /* Ask the page first. It knows whether a sheet, a picker or a drill-in is on screen; the
+       WebView's own history does not see those steps, so the previous order of checks —
+       canGoBack(), then give up — quit the app from anywhere that was not the root tab. */
+    if (web != null && backDepth > 0) {
+        web.evaluateJavascript("try{systemBack()}catch(e){};null;", null);
+        return;
+    }
+    if (web != null && web.canGoBack()) {
+        web.goBack();
+    } else {
+        super.onBackPressed();
+    }
+}
+```
+
+`addJavascriptInterface` is the one Android API with a legitimate reputation for danger, so the
+surface is worth stating exactly: one method, takes an `int`, clamps it at zero, stores it, returns
+nothing. It reads no file, no preference, no intent, and hands page script nothing back. The depth is
+also a *count*, not a capability — a page that lies about it can only make the shell do nothing, or
+call a function that already runs on every browser Back press. `canGoBack()` is kept as the fallback
+rather than deleted because a real document load — a tile error page, a link that leaves — is still
+something the WebView knows about and the page does not.
+
+### Verified on the handset, at `1.2-preview.24`
+
+Three presses, three different screens, each photographed:
+
+- **A sheet open** (`.scratch/back-sheet.png`, 9:10): the sheet closed and the app stayed on Resident
+  Home. It did not exit.
+- **A drill-in** (`.scratch/back-fixed.png`, 9:01): back on Resident Home with the app running, nav on
+  Home. One step, not a quit.
+- **A root tab, nothing open** (`.scratch/back-root.png`, 9:15): the launcher. Correct — that is what
+  Back means at the root, and the fact that it still exits is the positive control that the depth is a
+  real number and not a permanent "stay inside".
+
+The first two pictures are of the same screen, because both presses *ended* on Resident Home; what
+distinguishes them is what was on screen before the press, which the pixels cannot show. Say so here
+rather than let three filenames imply three visually different results: the finding in both is the
+absence of the launcher, and the launcher picture is the third one.
+
+### Two things the picture showed that no tally measures
+
+`back-fixed.png` is a pass by every instrument in `tools/` — nothing clipped, nothing off the device,
+contrast fine, every control ≥44px — and it is still hard to read at the phone's own text setting. The
+active-booking card puts its title on five lines ("Kitchen / faucet / keeps / leaking" with each word
+its own) and its provider line on four, because the card is a flex row and the avatar's 44px is not
+negotiable while the text column is. The nav labels read `Booki…` and `Mess…`. Both are the §68
+ellipsis rule doing its job — the word gives up its tail so the destination keeps its tap area — and
+both are the open owner decision about nav labels at large text, now with a picture of the trade-off
+instead of a description. A layout can be legal and still be unreadable, and no geometry tally can see
+that, because geometry is what it asserts.
+
+### And an instrument incident, recorded because it produced fake findings
+
+While this pass was being written, a second `node tools/falsify-all.cjs` was started while the first
+was still running — its output looked finished because the command was piped to `tail`, and a pipeline
+that has printed nothing is not a run that has finished. The contaminated pass reported:
+
+```
+26 families, 156 mutants applied, 136 caught, 10 not applied — 3 family needs attention
+```
+
+with `history`, `identity-fallbacks` and `layer-modality` flagged as surviving mutants. None of that
+was a verdict about the application. Each pass was reading a file the other had mid-mutation, so
+"not applied" meant *the needle is currently rewritten by somebody else* and "survived" meant the same.
+And `git diff` in the middle of the overlap showed `.sheet-layer` at `z-index:80` over the modal's 70 —
+the exact stacking defect §"A MODAL OPENED FROM A SHEET HAS TO OUTRANK THE SHEET" fixed, put there by
+no edit of mine — so a commit made in that moment would have reinstated a regression the gate cannot
+see, because the gate calls handlers and stacking is paint. It was gone once the passes settled, and
+which pass's restore removed it is not something the evidence supports saying; the third pass, the one
+this section's numbers come from, reported "completed, exit 0" to its wrapper while its log was still
+growing two minutes later. **During an overlap the working tree is not yours to read, and a
+"completed" notification is not evidence that a run ended.**
+
+Three rules, none of which is about Back: one mutant pass at a time, because the target file is a
+mutex and not a repository; redirect to a log (`> .scratch/x.log 2>&1`) rather than piping, because the
+pipe is what hid a live process; and after any interrupted or "finished" run, `git diff` the target
+file before trusting either the numbers or the working tree.
+
+### Numbers
+
+Gate **525** (was 524, for the check that the page publishes its depth and that both Back paths call
+one function). `falsify-layer-modality` **7 of 7** (was 5 of 5; the two added are the handset defect
+itself — the page stops telling the shell its depth — and the two Back paths splitting).
+`node tools/falsify-all.cjs`, run once and uncontested after the tree settled: **26 families, 156
+mutants applied, 156 caught, 0 not applied.** The pass quoted above that reported 136 of 156 with
+three families flagged is retracted; it was two passes reading each other's mutations.
+
+`node tools/shot.cjs --measure` across 69 screens at the default width: every failure tally zero, no
+console errors, 1,092 requests left the device for map tiles. The phone's own corner — 360 CSS px at
+1.35 text, which no sweep had measured because the only real panel width in the list was the vivo's
+450 — is a permanent seventh case now, and it agrees with the handset both ways: `root set to 21.6px
+-> computed 21.6px`, every failure tally zero, and the ellipsized-string review line at **163**
+against the anchor's **5**, its first examples being `"Bookings" loses 4px` and `"Messages" loses
+10px`. `node tools/sweep-text-scale.cjs` with the seventh case added: **7 of 7 phone corners measured
+clean, 20 tallies each.**

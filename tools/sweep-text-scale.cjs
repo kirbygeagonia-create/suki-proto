@@ -45,6 +45,14 @@ const DEFAULT_CASES = [
   { why: 'narrowest phone, largest text (the worst corner the platform allows)', scale: '2', width: '320' },
   { why: 'default panel width, largest text', scale: '2', width: '' },
   { why: 'vivo 1906 at 450 CSS px, the OPPO setting that started this (1.35)', scale: '1.35', width: '450' },
+  /* The corner the six above all missed, found by looking at a photograph rather than a tally: the
+     OPPO CPH2179 lays out at 360 CSS px and ships its text at 1.35, which is neither the vivo's 450
+     nor the 320 the worst-case corner assumes. Its Back-button screenshot showed the nav reading
+     "Booki…" and "Mess…" and the active-booking card putting one word on each of nine lines — a
+     layout every hard rule calls clean. Measured here it agrees with the phone exactly (root 21.6px)
+     and reports 163 ellipsized strings against the anchor's 5, which is the number the review line
+     exists to produce. */
+  { why: 'OPPO CPH2179: 360 CSS px at its own 1.35 text setting', scale: '1.35', width: '360' },
   /* Height is the other half of "any phone" and was never swept until §61: every figure in this
      repository, including the three above, was measured at the camera's default 844px. At 480px —
      an Android Go handset, or any phone in split-screen — a booking sheet put its own "Send

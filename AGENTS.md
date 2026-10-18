@@ -1678,6 +1678,29 @@ repaired by hand: `layerKeys()` derives the fields from `state` by name, and the
 field the state object actually has, so a future modal added under that convention is counted by
 the machinery and by the check at the same moment. Gate 502 → 507.
 
+THE SHELL CANNOT ASK THE WEBVIEW WHAT ONLY THE PAGE KNOWS. Measured on an OPPO CPH2179 (Android 10,
+WebView 155) running `1.2-preview.23`: one press of the phone's Back button from any drill-in quit
+Sukinnect to the launcher. The shell had been asking `WebView.canGoBack()`, which reports the
+*navigation* stack — document loads — and the page has been a single document since the splash.
+Everything the Back machinery records is `history.pushState`, and **`canGoBack()` does not count
+those entries**: the page reported `history.length 2` and its own `history.back()` landed on the
+previous screen while the WebView answered "no way back", so the shell fell through to finishing the
+activity. Every check in the `back` suite calls `stepBack()` directly and every one of them passed
+while a thumb could not use any of it — a destination only the browser can reach is a destination the
+user does not have. The fix crosses the boundary in the direction that holds the answer: the page
+publishes its depth (`SukiShell.setBackDepth(want)` on every render, over a one-method
+`@JavascriptInterface` bridge that takes an int and reads nothing back) and the shell, while that
+depth is above zero, evaluates `systemBack()` — the same function the `popstate` handler calls, which
+is what keeps hardware Back and browser Back from drifting apart. At depth 0 the shell keeps
+`canGoBack()` and then exits, which is the correct answer at a root tab. Proved by
+`tools/falsify-layer-modality.cjs`, now 7 mutants (the two added are the handset defect itself — the
+page stops telling the shell its depth — and the two Back paths splitting). Gate 524 → 525. Verified
+on the handset at `.24`: Back closed the sheet and left the screen under it, a drill-in returned to
+the root tab with the app still running, and Back at a root tab exited. **The shell half of this is
+not in any diff**: `Sukinnect-Android/` is untracked by the owner's standing decision, so the Java
+lives on this machine and in the installed APK. It is written out in full in `CHANGES.md` §65 for
+exactly that reason — a fix recorded only on one machine is a fix the next rebuild re-breaks.
+
 READ AN ACCESSIBILITY DUMP TWICE BEFORE CALLING IT A DEFECT. Two nodes in this walk looked like
 findings and were neither: the sign-in screen dumped **completely empty**, which is Chromium
 building its tree lazily and one tap on a field fixed, and a password node printed
@@ -1903,6 +1926,25 @@ its pattern matched `failed to apply 0` and not `not applied 0`. That is a tool 
 acceptable way — a family it could not parse was reported as unproven rather than counted as zero,
 so the total came out visibly wrong instead of quietly right. Read the flagged rows and the
 not-applied column, never the headline count.
+
+TWO MUTANT PASSES MUST NOT OVERLAP, BECAUSE THE TARGET FILE IS THE MUTEX. A second
+`falsify-all` was started while the first was still running — its output looked empty because the
+command was `node tools/falsify-all.cjs | tail -45`, and a pipeline that has printed nothing is not
+a run that has finished. The second pass reported 26 families, 156 applied, **136 caught, 10 not
+applied, three families with surviving mutants**; the first, which finished later, reported a
+*different* set of survivors. Neither was a verdict about the application. Each pass was reading a
+file the other had mid-mutation, so "not applied" meant "the needle is currently rewritten by
+somebody else" and "survived" meant the same. Worse, `git diff` in the middle of the overlap showed
+`.sheet-layer` at `z-index:80` over the modal's 70 — the exact stacking defect §"A MODAL OPENED FROM
+A SHEET HAS TO OUTRANK THE SHEET" fixed, put there by no edit of mine — and a commit made in that
+moment would have reinstated a regression the gate cannot see, because the gate calls handlers and
+stacking is paint. It was gone once the passes settled, and which pass's restore removed it is not
+something the evidence supports saying: **during an overlap the working tree is not yours to read.**
+Three rules follow: one pass at a time; redirect to a log (`> .scratch/x.log 2>&1`) rather than
+piping, because the pipe is what hid a live process; and after any interrupted or "finished" run,
+`git diff` the target file and confirm it has stopped changing before trusting either the numbers or
+the tree. A background run that reports "completed, exit 0" is not proof that it ended — the pass
+after that one announced itself over while its log was still growing.
 
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by
@@ -2936,14 +2978,17 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate 524; whole suite **26 families, 154 mutants, 154 caught, 0 not applied**
+Gate 525; whole suite **26 families, 156 mutants, 156 caught, 0 not applied**
 (`node tools/falsify-all.cjs`), of which `falsify-flex-crush`, `falsify-control-reach` and
 `falsify-focus-trap` are the three that drive the camera rather than the gate — a geometry rule or a
 real keypress has no Node assertion available to it — and `falsify-camera-surfaces` is the one that
 reads the instrument instead of the application.
 
-Measure it with `node tools/sweep-text-scale.cjs` — six phone corners, the camera each time: 320px
-@ 200% text, default width @ 200%, 450px @ 135% (a vivo panel at the OPPO's setting), 320x480 @ 200%
+Measure it with `node tools/sweep-text-scale.cjs` — seven phone corners, the camera each time: 320px
+@ 200% text, default width @ 200%, 450px @ 135% (a vivo panel at the OPPO's setting), 360px @ 135%
+(the OPPO CPH2179's own combination — added on 2026-10-18 because a photograph of that handset showed
+nav labels reading `Booki…` and `Mess…` and no corner reproduced it: the sweep had the OPPO's text
+setting at the vivo's width, and the OPPO's width at no text setting at all), 320x480 @ 200%
 (a short handset or split-screen), 320x300 @ 100% (what a keyboard leaves on a small phone, since
 nothing here emulates a keyboard), and the 100% anchor — which fails if any tally is nonzero and
 treats a tally it does not recognise as must-be-zero, so a sensor added tomorrow cannot be silently
@@ -2954,6 +2999,13 @@ does **not** substitute into the app's `min()` expression, which was the first v
 modelled a mechanism Android does not use and reported a cap holding on four phone configurations
 while the real phone ignored it. An instrument that models a mechanism wrongly certifies a fix that
 cannot work.
+
+**A CORNER CAN BE CLEAN AND THE SCREEN STILL BE WRONG.** 360 @ 135 reports every failure tally zero
+and an ellipsized-string review line of 163, against the anchor's 5. The hard rules are geometry and
+contrast; they cannot see that the active-booking card has put one word on each of nine lines because
+its 44px avatar will not shrink and its text column will. That is not a defect the suite can fail on,
+and it is not a reason to trust the zero: it is the reason the review lines are printed at all, and
+the reason a screenshot of a real handset still outranks a sweep of emulated ones.
 
 Use:
 - strong display type for major page titles

@@ -35,6 +35,14 @@ const MUTANTS = [
   { name: 'a layer root loses the convention, so a fourth surface could be added the same way',
     needle: '<div class="sheet-layer" data-layer="sheet">', to: '<div class="sheet-layer">',
     label: 'every full-screen layer root carries the convention the keyboard walk reads' },
+  { name: 'the page stops telling the shell its back depth, which is the handset defect itself',
+    needle: 'try { if (typeof SukiShell !== \'undefined\' && SukiShell.setBackDepth) SukiShell.setBackDepth(want); } catch (err) {}',
+    to: '/* the shell is not told */',
+    label: 'hardware Back and browser Back run the same step, and the shell is told the depth' },
+  { name: 'browser Back stops sharing the page step with hardware Back',
+    needle: '  systemBack();',
+    to: '  ownedEntries = Math.max(0, ownedEntries - 1); stepBack();',
+    label: 'hardware Back and browser Back run the same step, and the shell is told the depth' },
 ];
 
 function gateOutput() {
