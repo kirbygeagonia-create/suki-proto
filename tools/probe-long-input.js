@@ -65,6 +65,28 @@
   const cls = el => (typeof el.className === 'string' ? el.className : (el.getAttribute('class') || ''))
     .split(' ')[0];
   const tag = el => el.tagName.toLowerCase() + (cls(el) ? '.' + cls(el) : '');
+  /* The rect of a BOX cannot find text that overflows the box it is painted in, and that is the one
+     residual this probe leaves: a bar whose child rects all fit, with 30px of ink past its edge. So
+     ask the text itself — a Range over each text node answers with where the glyphs actually ended
+     up, which is the only measurement that can name the offender. */
+  const offender = (el, limit) => {
+    let worst = null;
+    const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let n = w.nextNode(); n; n = w.nextNode()) {
+      const t = (n.nodeValue || '').trim();
+      if (!t || !n.parentElement) continue;
+      const rg = document.createRange();
+      rg.selectNodeContents(n);
+      const r = rg.getBoundingClientRect();
+      if (r.right > limit + 1 && (!worst || r.right > worst.right)) {
+        const s = getComputedStyle(n.parentElement);
+        worst = { right: Math.round(r.right), text: t.slice(0, 20),
+          in: tag(n.parentElement), ws: s.whiteSpace, ow: s.overflowWrap,
+          tok: fields.map(f => f.label).filter(L => t.indexOf(L) > -1).join('+') };
+      }
+    }
+    return worst;
+  };
   const scrolls = el => {
     for (let a = el.parentElement; a; a = a.parentElement) {
       const s = getComputedStyle(a);
@@ -99,12 +121,40 @@
           culprit = next; node = next;
         }
         const ccs = getComputedStyle(culprit);
+        const bad = offender(el, limit);
+        /* When neither a box nor a text run reaches past the edge but scrollWidth still says
+           something does, only two things are left, and neither is an element the walk can see:
+           a generated ::before/::after box, and a descendant that overflows its OWN padding box
+           and pushes its parent's content width. Print both. */
+        const gen = [], selfOver = [];
+        [el].concat([...el.querySelectorAll('*')]).forEach(node => {
+          ['::before', '::after'].forEach(pseudo => {
+            const p = getComputedStyle(node, pseudo);
+            if (!p.content || p.content === 'none' || p.content === 'normal') return;
+            const w = parseFloat(p.width) || 0;
+            if (w < 1) return;
+            const nr = node.getBoundingClientRect();
+            gen.push(tag(node) + pseudo + ' w=' + Math.round(w) + ' pos=' + p.position +
+              ' right=' + p.right + ' left=' + p.left + ' at=' + Math.round(nr.right));
+          });
+          if (node !== el && node.clientWidth > 0 && node.scrollWidth > node.clientWidth + 2) {
+            const s = getComputedStyle(node);
+            if (!/hidden|clip|auto|scroll/.test(s.overflowX) && s.textOverflow !== 'ellipsis') {
+              selfOver.push(tag(node) + ' ' + node.scrollWidth + '>' + node.clientWidth +
+                ' ws=' + s.whiteSpace);
+            }
+          }
+        });
         report.push('CLIPPED NO ELLIPSIS ' + who + ' <' + tag(el) + '> hides ' +
           (el.scrollWidth - el.clientWidth) + 'px (client=' + el.clientWidth +
           ' scroll=' + el.scrollWidth + ' ow=' + cs.overflowWrap + ' wrap=' + cs.flexWrap +
           ' childWidths=[' + kids + '] culprit=<' + tag(culprit) + '> w=' +
           Math.round(culprit.getBoundingClientRect().width) + ' ow=' + ccs.overflowWrap +
-          ' ws=' + ccs.whiteSpace + ' txt=' + (culprit.textContent || '').trim().slice(0, 14) + ')');
+          ' ws=' + ccs.whiteSpace + ' txt=' + (culprit.textContent || '').trim().slice(0, 14) +
+          (bad ? ' INK=<' + bad.in + '> right=' + bad.right + ' ws=' + bad.ws + ' ow=' + bad.ow +
+            ' token=' + (bad.tok || 'none') + ' text="' + bad.text + '"' : ' INK=none') +
+          ' GEN=[' + (gen.slice(0, 4).join(' | ') || 'none') + '] SELFOVER=[' +
+          (selfOver.slice(0, 3).join(' | ') || 'none') + '])');
       }
       if (r.width > pr.width + 2 && el !== panel && !scrolls(el)) {
         report.push('WIDER THAN PHONE ' + who + ' <' + tag(el) + '> ' + Math.round(r.width) + 'px vs ' + Math.round(pr.width));

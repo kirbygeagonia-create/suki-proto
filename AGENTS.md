@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 11,343 lines, ONE :root block, 1,748 var() usages, 95 tokens declared with 92
+Sukinnect-next.html— 11,359 lines, ONE :root block, 1,748 var() usages, 95 tokens declared with 92
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1788,13 +1788,40 @@ The keyword is measured, not argued: across all 69 screens `anywhere` leaves one
 what is recorded now is the observation and the reason is left out — nothing here measured one.
 Measured with `node tools/shot.cjs --probe=@tools/probe-long-input.js`, proved by
 `node tools/falsify-long-input.cjs` (2 breaks, 2 caught; the keyword mutant is gate-only because a
-two-screen subset reads clean under either value). The one residual finding — 30px of a long admin
-name clipped inside a bar that already hides overflow — **appears only mid-walk**: three subset runs
-read clean, which is §63's "a subset's line is unproven in both directions" arriving from the other
-side. Two instrument defects surfaced on the way and are the general lesson: the probe leaked its own
+two-screen subset reads clean under either value). Two instrument defects surfaced on the way and
+are the general lesson: the probe leaked its own
 chat row because it filtered `MESSAGES` on `threadKey` when the records' field is `thread` (it now
 holds the object `appendMessage()` returned and splices by identity, and prints the row count it saw),
-and `className.split(' ')` throws on an SVG node, where `className` is an `SVGAnimatedString`.
+and `className.split(' ')` throws on an SVG node, where `className` is an `SVGAnimatedString`. The
+one residual that pass left — 30px clipped inside the admin top bar, visible only mid-walk — was
+never a defect: it is `.topbar::after`, the 160px brand accent glow parked at `right:-30px` on a bar
+that hides its own overflow so the halo bleeds and stops. The sensor attributed it to the admin's
+name because it reports whichever typed token appears in an element's `textContent`, and on a header
+that is a correlation, not a cause. See §67 of `CHANGES.md`, and note that a subset run could not
+reproduce it either — which is the §63 caveat about a subset's line being unproven in both directions,
+arriving from the side nobody had seen.
+
+A FLAG THAT IS NOT A RECORD STILL STEERS THE APP. `state.isChatOpen` survived a tap on the bottom
+navigation, whose own comment promises that "an overlay left flagged by the previous screen must not
+be waiting there" — `clearModals()` cleared the modals and the sheet and not the room. Home still
+painted Home, because the chat gate sits inside the `tab==='messages'` branch, but `onRootTab()`
+answered false, so `data-root` was not applied (the root-tab header treatment was replaced by the
+compact one and the brand glow returned on a root screen), `lastRootTab` stopped updating, and
+`syncBackHandles()` recorded a back entry for a step that no longer existed — a phone's Back button
+that appears to do nothing. Measured: the flag was true on **35 of the camera's 69 screens**. The
+same sweep found a second one, `state.providerDeclineConfirm`, because `clearModals()` hand-listed
+four `*Modal` fields while `layerKeys()` had derived every `*Modal` *and* `*Confirm` field for weeks
+and only the Back machinery had been converted. Both are fixed, and the split that fixes them is
+`render()`'s destination key: `isChatOpen` IS part of a destination, so clearing it inside
+`clearModals()` — the obvious move — closes a chat room the instant it opens, because render() calls
+that on every destination change. A flag in the destination key is cleared where leaving it is the
+point; everything else derives from the convention, so a field added tomorrow is cleared the moment
+it exists. `node tools/shot.cjs --probe=@tools/probe-stale-overlay.js` asks the state object what
+overlays it has and taps a real nav button; `node tools/falsify-stale-overlay.cjs` proves it, 3 of 3,
+the third break being that wrong fix — and it is caught by two existing checks as well as the new
+one, which is the evidence that the suite knows what a painted chat room looks like. Found only
+because a probe grew a field it did not need for its own question: the instrument that found this was
+written to chase a 30px clip.
 
 REPUTATION IS DERIVED, AND THE SEEDS ARE HELD OUTSIDE THE RECORDS. The deck promises providers "a
 reputation built from completed work" (slides 3, 7); `provider.rating` and `provider.jobs` were
@@ -3000,11 +3027,11 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate 526; whole suite **27 families, 158 mutants, 158 caught, 0 not applied**
+Gate 527; whole suite **28 families, 161 mutants, 161 caught, 0 not applied**
 (`node tools/falsify-all.cjs`), of which `falsify-flex-crush`, `falsify-control-reach`,
-`falsify-focus-trap` and `falsify-long-input` are the four that drive the camera rather than the gate
-— a geometry rule or a real keypress has no Node assertion available to it — and
-`falsify-camera-surfaces` is the one that reads the instrument instead of the application.
+`falsify-focus-trap`, `falsify-long-input` and `falsify-stale-overlay` are the five that drive the
+camera rather than the gate — a geometry rule or a real tap has no Node assertion available to it —
+and `falsify-camera-surfaces` is the one that reads the instrument instead of the application.
 
 Measure it with `node tools/sweep-text-scale.cjs` — seven phone corners, the camera each time: 320px
 @ 200% text, default width @ 200%, 450px @ 135% (a vivo panel at the OPPO's setting), 360px @ 135%

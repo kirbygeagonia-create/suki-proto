@@ -4148,6 +4148,34 @@ suite('back', async () => {
       && /SukiShell\.setBackDepth\(want\)/.test(src);
   })(), 'system Back has no page-side entry point, so the shell cannot undo a step');
 
+  /* Two flags went stale in one pass, and they broke for opposite reasons.
+     state.isChatOpen survived a tap on the bottom nav, so Home painted Home while onRootTab()
+     answered false — the root-tab header treatment was replaced by the drill-in one, and
+     syncBackHandles() recorded a back step that no longer existed, which reads on a phone as a Back
+     button that does nothing. state.providerDeclineConfirm survived for the other reason:
+     clearModals() named four fields by hand while layerKeys() had long since learned to derive them
+     all. The fix splits along render()'s own destination key — a field that IS part of a destination
+     has to be cleared where leaving it is the point, because clearing isChatOpen inside
+     clearModals() would close a chat room the instant it opens — and everything else is derived, so
+     a field added tomorrow cannot be forgotten the way this one was.
+
+     The patterns use [\r\n] and generous bounds because the app file is CRLF and both blocks now
+     carry a long comment; a pattern anchored on a bare newline matches nothing, and "the rule is
+     absent" must not be the message printed for "the question was malformed". Hence the reasons. */
+  const overlaySrc = app._source;
+  const navBlock = (overlaySrc.match(/\[data-nav\]'\)\.forEach[\s\S]{0,2400}?[\r\n] {2}\}\);/) || [''])[0];
+  const clearBlock = (overlaySrc.match(/function clearModals\(\)\s*\{[\s\S]{0,2400}?[\r\n]\}/) || [''])[0];
+  const overlayFields = (overlaySrc.match(/^\s*\w+(?:Modal|Confirm):/gm) || []).length;
+  const staleWhy = [];
+  if (navBlock.length === 0) staleWhy.push('the nav handler was not found at all');
+  else if (!/state\.isChatOpen = false/.test(navBlock)) staleWhy.push('the nav does not close an open room');
+  if (clearBlock.length === 0) staleWhy.push('clearModals() was not found at all');
+  else if (!/layerKeys\(\)\.forEach/.test(clearBlock)) staleWhy.push('clearModals() is a hand-written list again');
+  else if (/state\.\w+Modal = null/.test(clearBlock)) staleWhy.push('clearModals() still names a modal field by hand');
+  if (overlayFields < 4) staleWhy.push('state names only ' + overlayFields + ' overlay fields');
+  c.check('a nav tap clears every overlay the state can name, by the rule each one needs',
+    staleWhy.length === 0, staleWhy.join('; ') || 'an overlay flag survives a navigation');
+
   return c;
 });
 

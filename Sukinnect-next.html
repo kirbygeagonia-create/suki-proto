@@ -8807,10 +8807,17 @@ function residentBookings(){
 // again on the next visit to the profile tab. Clear them on every session
 // transition.
 function clearModals(){
-  state.residentProfileModal = null;
-  state.providerProfileModal = null;
-  state.adminAccountModal = null;
-  state.verificationModal = null;
+  /* Derived from the same convention the Back machinery reads, rather than listed. The list below
+     named four fields while the state carries more, and `providerDeclineConfirm` was one of them:
+     a confirm dialog flagged on the provider's booking detail survived a tap on the bottom nav, so
+     the next screen painted a root tab while `openLayers()` still counted a layer nobody could see
+     and `syncBackHandles()` recorded a back step that did not exist. Any field added tomorrow under
+     the *Modal / *Confirm convention is cleared by this and seen by Back at the same moment.
+
+     `isChatOpen` is deliberately NOT cleared here. It is part of render()'s destination key, and
+     render() calls this function whenever the destination changes — so clearing the room here would
+     close it the instant it opens. The bottom nav clears it, where leaving the room is the point. */
+  layerKeys().forEach(k => { state[k] = null; });
   state.profileSheet = null;
   state.sheet = null;
 }
@@ -11165,6 +11172,15 @@ function bindTabHandlers(){
       // Entering a tab from the navigation always starts clean: an overlay left
       // flagged by the previous screen must not be waiting there for the user.
       clearModals();
+      // An open chat room is that same kind of overlay, and it has to go with the
+      // tab too. It cannot be cleared inside clearModals(), because render() calls
+      // that on every destination change and opening a room IS a destination change
+      // — clearing there closes the room the instant it opens. Leaving it set was
+      // measurable: Home after a chat painted Home but answered onRootTab() false,
+      // so the root-tab header treatment was replaced by the drill-in one (the brand
+      // glow came back on a root screen) and syncBackHandles() recorded a step that
+      // no longer existed, which made the phone's Back button appear to do nothing.
+      state.isChatOpen = false;
       state.tab=el.dataset.nav;
       render();
     };

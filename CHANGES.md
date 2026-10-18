@@ -3760,6 +3760,11 @@ What is *not* in doubt is the size of the residual: 30px clipped inside a `.topb
 carries `overflow:hidden`, on a screen whose owner has typed a 60-character name with no spaces. The
 instrument now prints enough geometry to chase it, and it is on the list rather than closed.
 
+**Closed in §67, and it was never a defect.** The 30px is the brand accent glow — `.topbar::after`,
+160px of radial cyan parked at `right:-30px` on a bar that hides its own overflow so the halo bleeds
+and stops. No text was truncated; the sensor named the admin's because a header's `textContent`
+contains whatever the bar holds, and that is a correlation.
+
 ### Two defects in the instrument, both found before it was trusted
 
 **The probe leaked its own chat message.** It appended a line through the app's `appendMessage()` and
@@ -3796,3 +3801,112 @@ The device tree was re-synced and cut as `1.2-preview.25` (`versionCode 27`) so 
 carries both this rule and §65's Back entry point; the bundled page was proved identical to this file
 from *inside the APK*, and the whole thing is written up in `DEVICE-PASS.md` because git will never
 show any of it. No handset was attached, so nothing about that build is verified on hardware.
+
+## 67. The bottom nav left a chat room open — and a decorative glow explained §66's last finding
+
+§66 closed with one finding it could not explain: 30px clipped inside the admin top bar, appearing
+only mid-walk. Chasing it produced two things — the explanation, and a defect that matters more.
+
+### The 30px was the brand glow, and my sensor called it a name
+
+The probe grew a text-ink measurement (a `Range` over each text node, because a box rect cannot see
+where glyphs actually land) and a generated-box check. Both ran over all 69 screens, and the answer
+was:
+
+```
+CLIPPED NO ELLIPSIS Aname <div.topbar> hides 30px
+  INK=none  GEN=[div.topbar::after w=160 pos=absolute right=-30px left=260px at=390]
+```
+
+`.topbar::after` is the accent glow §33 asks for — `content:""`, a 160px radial cyan halo, parked at
+`right:-30px` on a bar that has `overflow:hidden` precisely so it bleeds and stops. Nothing was
+truncated. The name was never the cause: **the sensor attributes a finding to whichever typed token
+appears in the element's `textContent`, and on a header that is a correlation, not a cause.** The
+line now prints the generated box and the ink measurement so the next reader can see it is
+decoration, and §66's "residual" is withdrawn rather than left standing.
+
+### What the same field exposed while I was looking for that
+
+To see which screen produced the clip, the probe started printing which layers were open when it
+measured. The tally across the sweep:
+
+```
+35 layers": "|chat"        11 layers": ""         6  "sheet|chat"
+ 5  "verificationModal|chat"   3  "sheet|providerProfileModal|chat"   …
+```
+
+`state.isChatOpen` was **true on 35 of 69 screens**. That is not the walk being clever — the walk
+reaches each screen through the app's own entry points, and one of them leaves the flag set. Reproduced
+through the path a thumb takes:
+
+```
+start on Home              tab=home  isChatOpen=false  onRootTab=true  data-root=1  backDepth=0
+after nav to Messages      tab=messages isChatOpen=false onRootTab=true data-root=1  backDepth=0
+after opening a thread     tab=messages isChatOpen=true  onRootTab=false data-root=0 backDepth=1
+after nav back to Home     tab=home     isChatOpen=true  onRootTab=false data-root=0 backDepth=1
+```
+
+Home paints Home — the chat gate is inside the `tab==='messages'` branch — but the application
+*believes* it is in a drill-in. Three consequences, all visible: `data-root` is not applied, so the
+root-tab header treatment is replaced by the compact one and the brand glow comes back on a root
+screen; `syncBackHandles()` records a back entry for a step that no longer exists, so the phone's
+Back button spends it and appears to do nothing; and `lastRootTab` stops being updated, so the tab
+Back returns to can be the one from before the last navigation.
+
+The cause is one line of intent the nav did not keep. Its own comment says entering a tab "always
+starts clean: an overlay left flagged by the previous screen must not be waiting there for the user"
+— and `clearModals()` clears the modals and the sheet, not the room.
+
+### The second stale flag came from the instrument, not from me
+
+Rather than fix the one flag, the check became a probe: `tools/probe-stale-overlay.js` asks the
+state object which overlays it has — the same derivation the Back machinery uses, plus the room —
+sets each one, taps a real nav button, and reports which survived. On its first run it named a
+second one I had not thought to look for:
+
+```
+STALE AFTER NAV  resident  state.providerDeclineConfirm survived the tap
+```
+
+`clearModals()` hand-listed four `*Modal` fields. `layerKeys()` has derived every `*Modal` *and*
+`*Confirm` field from `state` for weeks, and the Back machinery used it — the list was only ever
+half-converted. This is the same defect §62's modality work names ("`openLayers()` named four of the
+five modal fields and missed the resident's"), surviving in the function nobody had pointed at the
+convention.
+
+### The split is render()'s destination key, and that is what makes the obvious fix wrong
+
+`isChatOpen` cannot be cleared inside `clearModals()`, because `render()` calls that whenever the
+destination changes — and `isChatOpen` **is** part of the destination key, so clearing it there closes
+a chat room the instant it opens. Every `*Modal` / `*Confirm` field is absent from that key, so those
+can be derived and cleared together. The rule is therefore: a flag that *is* a destination gets cleared
+where leaving it is the point; everything else comes from the convention, so a field added tomorrow
+is cleared the moment it exists.
+
+`node tools/falsify-stale-overlay.cjs` makes that split the thing under test, and its third break is
+the tempting wrong fix — move the clear into `clearModals()` and delete it from the nav:
+
+```
+CAUGHT  the nav stops closing an open room, which is the defect as found
+          — named check failed; probe reports state.isChatOpen
+CAUGHT  clearModals() goes back to a hand-written list and forgets a confirm flag
+          — named check failed; probe reports state.providerDeclineConfirm
+CAUGHT  the tempting wrong fix: clear the room inside clearModals(), where render() also calls it
+          — named check failed; 2 other check(s) failed: a chat room with one side missing keeps both
+```
+
+The third line is the one worth keeping: the wrong fix is caught not only by the new check but by two
+existing ones, which is the evidence that the suite already knows what a chat room looks like when it
+paints. Had it failed only the named check, the suite would have been blind to the room opening at
+all, and that would have been a finding about the instruments rather than the app.
+
+### Numbers
+
+Gate **527** (was 526). `falsify-stale-overlay` **3 of 3**, and `falsify-long-input` re-run at
+**2 of 2**. `node tools/shot.cjs --measure` over all 69 screens with the nav and `clearModals()`
+fixed: every failure tally zero, no console errors, no horizontal overflow. The one line that moved
+is the informational one — requests that left the device went 1,092 → 731 — because 35 screens are
+now measured as the root tabs they are instead of as drill-ins, and fewer of them mount a map. That
+is the count doing its job, not a regression, and it is the reason the figure is quoted with the
+command rather than kept in prose. `node tools/falsify-all.cjs`, one uncontested pass with the new
+family in it: **28 families, 161 mutants applied, 161 caught, 0 not applied.**

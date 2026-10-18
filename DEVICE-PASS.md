@@ -911,3 +911,17 @@ This tree is untracked, so everything about it has to be written down here or it
   is a CSS change the camera measured on 69 screens, so it needs no new handset claim — but if a
   handset ever shows a long name clipped where the bench does not, that is WebView text measurement
   disagreeing with Chrome, and `tools/probe-long-input.js` is the instrument to point at it.
+
+## `1.2-preview.26` — built 2026-10-18, supersedes `.25` the same day
+
+§67 landed after `.25` was cut, so the staged page changed twice in one session. `.26`
+(`versionCode 28`) carries both: the nav now closes an open chat room, and `clearModals()` derives
+its fields from `layerKeys()` instead of naming four of them. Verified the same way —
+`aapt dump badging` on the built file reads `versionCode='28' versionName='1.2-preview.26'`, and
+`unzip -p <apk> assets/Sukinnect.html | cmp - Sukinnect-next.html` passes, so the bytes a handset
+would run are the bytes the bench measured. Artifact:
+`app/build/outputs/apk/debug/Sukinnect-1.2-preview.26-debug.apk`, 2,140,306 bytes.
+
+`--no-daemon` was used again for the same reason recorded above; the daemon has not started on this
+machine since. `.25` is now dead — if a handset is loaded with it, it is one build behind and the
+Back-button behaviour on a root tab after a chat will not match the source.
