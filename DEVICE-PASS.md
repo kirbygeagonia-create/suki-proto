@@ -988,3 +988,29 @@ still say what the period is); real split-screen via `adb shell wm size` rather 
 480px-tall viewport; the keyboard-open viewport, which nothing here emulates; whether the 3px
 brand-blue focus ring reads on the dark gradient top bar at arm's length; TalkBack itself; and the
 five §3f items.
+
+### Two device facts that cost a false result each, so they are written down
+
+**A `screencap` taken while the phone is asleep returns a blank image, not an error.** After the
+Back-button test exited the app to the launcher the handset dozed, and `exec-out screencap -p`
+produced first a 4,590-byte all-white 720×1600 PNG and then a 0-byte file. Neither failed loudly.
+`dumpsys power | grep mWakefulness` answering `Asleep` with `isStatusBarKeyguard=true` is the check
+that tells a blank surface apart from a blank screen. **Never read a device screenshot without
+confirming the display was awake** — a white PNG is exactly what a "the page rendered nothing" finding
+would look like.
+
+**`adb shell wm size` is refused on this handset.** Both the set and the reset came back
+`SecurityException: Must hold permission android.permission.WRITE_SECURE_SETTINGS` (ColorOS), and the
+probe's `innerWidth/innerHeight` were identical before and after — so the "short viewport" reading
+that run appeared to produce was the same 320×638 viewport measured twice. The real split-screen and
+keyboard-height questions therefore cannot be answered by `wm size` on this device; they need the
+physical gesture, or the permission granted over a rooted/wireless-debugging shell. The emulated
+`320x480` and `320x300` corners in `tools/sweep-text-scale.cjs` remain the only measurements of that
+shape, and they are emulations.
+
+**What the device did answer numerically, with the screen off and the WebView still laying out**
+(`document.hidden` was true, which does not stop layout): on the provider dashboard at the phone's own
+320×638 and 21.6px root, a walk of every button and link in the screen, the bottom nav and any open
+layer found **0 controls unreachable** — none off the viewport, none clipped by a non-scrolling
+ancestor. That is the §61 reachability rule confirmed on real hardware rather than emulated, on one
+screen; the remaining 71 have the bench number only.
