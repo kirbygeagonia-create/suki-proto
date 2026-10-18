@@ -118,6 +118,17 @@ const AUDIT_JS = `(function(){
      means fighting vendor CSS, so they are reported, not fixed. */
   const vendor = (el) => !!(el.closest && el.closest('.leaflet-container'));
 
+  /* Every surface the app can paint content into, named once. Six walks each carried their own
+     hand-written list and they had drifted: the clipped-text, 14px-floor, contrast and
+     form-control-scale walks all skipped .modal-layer, so no sensor had ever looked at the profile
+     hubs' edit forms — the densest form surface in the app, where a name, phone, address, PIN and
+     payout account are typed — and the round-marker walk missed .bottomnav until a defect there
+     made it interesting. Two walks had it right by accident, because they query the whole
+     document: tap targets, and the screen-reader-name check. */
+  const SURFACES = ['#screen', '.sheet', '.auth-sheet', '.bottomnav', '.modal-layer', '#navbar'];
+  const WALK = SURFACES.map(s => s + ' *').join(', ');
+  const isField = el => el.matches('input:not([type=hidden]), select, textarea');
+
   document.querySelectorAll('button, a, input:not([type=hidden]), select, textarea, [role=button], [data-open-chat-id], .navitem, .chip[onclick], .pick, .filter-option').forEach(el => {
     const r = painted(el); if (!r) return;
     if (vendor(el)) { out.vendor.push({ what: text(el).slice(0, 30) || el.tagName.toLowerCase() }); return; }
@@ -146,7 +157,13 @@ const AUDIT_JS = `(function(){
     if (reachH < TAP - 0.6 || reachW < 28)
       out.small.push({ what: text(el).slice(0, 30) || el.tagName.toLowerCase(), h: Math.round(r.height), w: Math.round(r.width),
                        boxH: Math.round(reachH), inline, via, cls: (el.className||'').toString().split(' ')[0] });
-    if (!text(el)) out.unlabelled.push({ unlabelled: el.tagName.toLowerCase() + '.' + ((el.className||'').toString().split(' ')[0] || '-') });
+    /* A form control is not named by its text content — an <input> has none, by definition — and
+       this scan cannot see the wrapping <label> that does name it. The dedicated walk below asks
+       the browser instead, through el.labels, and answers 0 for the very fields this line flagged:
+       the read-only email row on all three edit-profile dialogs. Two tallies disagreeing about the
+       same element is a defect in one of them, and it is this one, so a control the field-name
+       walk already covers is skipped here rather than reported as nameless. */
+    if (!text(el) && !isField(el)) out.unlabelled.push({ unlabelled: el.tagName.toLowerCase() + '.' + ((el.className||'').toString().split(' ')[0] || '-') });
   });
 
   /* A form control a screen reader cannot name. This is asked of the live DOM rather than
@@ -245,7 +262,7 @@ const AUDIT_JS = `(function(){
      wide by 8px tall — a clipped mark, not a status indicator. Nothing else sees it: it is not
      overflow, not clipped text, not off the type scale, and its contrast is fine because it
      paints no text at all. */
-  document.querySelectorAll('#screen *, .sheet *, .auth-sheet *, .bottomnav *').forEach(el => {
+  document.querySelectorAll(WALK).forEach(el => {
     const cs = getComputedStyle(el);
     if (cs.borderTopLeftRadius !== '50%' || cs.borderTopRightRadius !== '50%') return;
     const r = el.getBoundingClientRect();
@@ -281,7 +298,7 @@ const AUDIT_JS = `(function(){
      file's page-script comments carry no backticks at all — the scripts are template literals, so
      one ends the string early. That hazard is written three comments above this one, and was hit
      again while writing this one, which is the best argument for the note being here. */
-  document.querySelectorAll('#screen *, .sheet *, .auth-sheet *, .bottomnav *, .modal-layer *').forEach(el => {
+  document.querySelectorAll(WALK).forEach(el => {
     if (!el.matches || !el.matches('button, a[href], input, select, textarea, summary, [onclick], [role="button"], .navitem, .chip')) return;
     if (el.closest('[hidden]') || el.disabled) return;
     /* Leaflet's panes clip on purpose and its map moves by drag, not scroll. The camera already
@@ -345,7 +362,7 @@ const AUDIT_JS = `(function(){
   }
 
   /* clipped or ellipsised text */
-  document.querySelectorAll('#screen *, .sheet *, .auth-sheet *').forEach(el => {
+  document.querySelectorAll(WALK).forEach(el => {
     if (el.children.length) return;
     const t = (el.textContent || '').trim(); if (!t) return;
     const s = getComputedStyle(el);
@@ -386,7 +403,7 @@ const AUDIT_JS = `(function(){
     return { size: f, tag: el.tagName.toLowerCase(),
       text: (el.textContent || el.value || '').trim().slice(0, 24) };
   };
-  document.querySelectorAll('#screen *, .sheet *, .auth-sheet *').forEach(el => {
+  document.querySelectorAll(WALK).forEach(el => {
     if (el.children.length) return;
     if (!(el.textContent || '').trim()) return;
     /* Leaflet's controls are excluded from the scale test for the same reason they are
@@ -410,7 +427,8 @@ const AUDIT_JS = `(function(){
      six dropdowns paint at the user-agent default of 13.3px — under the floor 68 sets —
      while the type-scale tally reported clean. Controls that paint no words are skipped
      on purpose: a checkbox has no text to be too small. */
-  document.querySelectorAll('#screen select, #screen textarea, #screen input, .sheet select, .sheet textarea, .sheet input, .auth-sheet select, .auth-sheet textarea, .auth-sheet input').forEach(el => {
+  document.querySelectorAll(WALK).forEach(el => {
+    if (!isField(el)) return;
     if (/^(checkbox|radio|range|color|file|hidden)$/.test(el.type || '')) return;
     if (el.disabled && el.tagName === 'INPUT') return;
     const f = Math.round(parseFloat(getComputedStyle(el).fontSize) * 10) / 10;
@@ -506,7 +524,7 @@ const AUDIT_JS = `(function(){
       acc = over(L.solid || Object.assign(gradAt(L.node, L.grad, cx, cy), { 3: 1 }), acc);
     return acc;
   }
-  document.querySelectorAll('#screen *, .sheet *, .auth-sheet *').forEach(el => {
+  document.querySelectorAll(WALK).forEach(el => {
     if (el.children.length) return;
     const t = (el.textContent || '').trim(); if (t.length < 2) return;
     const r = painted(el); if (!r) return;
@@ -878,6 +896,27 @@ const SCREENS = [
   ['admin-security-modal', `state.view='app'; state.role='admin'; state.tab='profile'; render();
                           openProfileSection('admin','security','Security & Sign-in','What this device keeps');
                           clickPainted(/AccountAction\\(.pin.\\)/, 'the security-PIN button');`],
+  /* The six forms where a person types the app's most sensitive facts — a name, a phone, a home
+     address, a household item, a service price, a portfolio entry. Three dialog screens already
+     sat in this table (a payment picker, a payout field, a PIN note), and these had never been
+     painted at all. It mattered twice over: a destination behind a button is a destination, and
+     until this pass every text measurement in the camera skipped .modal-layer, so the fields
+     themselves had been checked by nothing. */
+  ['resident-edit-form', `state.view='app'; state.role='resident'; state.tab='profile'; render();
+                          clickPainted(/residentProfileAction\\('edit'\\)/, 'the Edit Profile button');`],
+  ['resident-household-form', `state.view='app'; state.role='resident'; state.tab='profile'; render();
+                          openProfileSection('resident','home','Home & Maintenance Profile','Items you add on this device');
+                          clickPainted(/residentProfileAction\\('add_item'\\)/, 'the add-household-item button');`],
+  ['provider-edit-form', `state.view='app'; state.role='provider'; state.tab='profile'; render();
+                          clickPainted(/providerProfileAction\\('edit'\\)/, 'the Edit Professional Profile button');`],
+  ['provider-service-form', `state.view='app'; state.role='provider'; state.tab='profile'; render();
+                          openProfileSection('provider','services','Services Offered','What this account takes on');
+                          clickPainted(/providerProfileAction\\('add_service'\\)/, 'the add-service button');`],
+  ['provider-portfolio-form', `state.view='app'; state.role='provider'; state.tab='profile'; render();
+                          openProfileSection('provider','portfolio','Work Portfolio','Service photos and examples');
+                          clickPainted(/providerProfileAction\\('portfolio_add'\\)/, 'the add-work button');`],
+  ['admin-edit-form', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+                          clickPainted(/adminAccountAction\\('edit'\\)/, 'the Edit Profile button');`],
   ['admin-dash',       `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='overview'; render();`],
   /* The audit log is the record §29 exists to keep, and the camera had never painted it:
      it sits one tap off the dashboard, and no table entry reached it. An action is logged

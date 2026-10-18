@@ -1256,13 +1256,17 @@ official mark is a PNG, not an icon, and it is still the only brand image on the
 The rebuild also added a real verification surface, because reading the file cannot
 see a layout: `node tools/shot.cjs` drives the machine's own Chrome headless over the
 DevTools Protocol with no npm packages, and `--measure` runs an in-page instrument
-across all 63 screens for tap targets, WCAG contrast (sampling gradients at the text's
+across all 69 screens for tap targets, WCAG contrast (sampling gradients at the text's
 own position), clipped text, off-scale fonts, content trapped under the nav, unnamed
 controls, form fields a screen reader cannot name, images that asked for a file and got no
 pixels, escaping map panes, chart labels escaping their own chart box, anything painting
-over an open modal, and whether any
+over an open modal, round markers crushed to a sliver by a growing sibling, controls no tap
+can reach at all, and whether any
 category artwork is moving in the painted page — which is the one thing a source grep
 cannot prove, because a class with no rule and a rule with a typo both read fine as text.
+`--focus` adds a fifth pass that walks each screen with real `Tab` presses, and it is the
+only one that produces a key event; everything else in the tool reaches screens by calling
+the app's own handlers.
 A screenshot
 tool that navigates by assigning `state.*` measures a screen nobody can reach — the
 SCREENS table walks the app's real entry points for that reason. The same trap has a
@@ -1303,6 +1307,21 @@ outcome dialogs — the approve, reject, flag and request sheets an admin reache
 moment of deciding (60 screens). The rule after any pass: a destination behind a button
 counts as a destination, and a screen the camera has never painted is a screen nobody has
 checked.
+
+And a fifth form of the same trap, found while widening the walk: **a sensor can be blind to a whole
+surface.** The camera's element walks each carried their own hand-written list of containers, and the
+lists had drifted — the clipped-text, 14px-floor, contrast and form-control-scale walks all skipped
+`.modal-layer`, and the round-marker walk skipped `.bottomnav`. So the dialogs where a person types a
+name, a phone, a home address, a service price and a portfolio entry had never been measured by a
+single text sensor, and the six form screens added with that discovery produced a 13.3px field on the
+first run — the user-agent default, under §68's floor, on the only two inputs in the app that
+hand-roll their geometry instead of taking `.form-input`. The lists are one `SURFACES` constant now
+and every walk derives its selector from it, because the drift was the defect rather than any one
+omission. Two walks had it right by accident, because they query the whole document — and that is
+how the disagreement between them was caught: the tap-target walk's text scan called the read-only
+email field nameless on all three edit dialogs while the browser's own `el.labels` answered with its
+label. **Two tallies disagreeing about the same element is a defect in one of them**, and here it was
+the scan, which cannot name an `<input>` because an input has no text content by definition.
 
 TYPED TEXT NEVER BECOMES MARKUP, and the gate enforces it rather than remembering it.
 `esc()` covers `& < > " '`; `jsStr()` exists for the one context `esc()` cannot serve —
@@ -2908,10 +2927,11 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate 522; whole suite **25 families, 151 mutants, 151 caught, 0 not applied**
+Gate 523; whole suite **26 families, 153 mutants, 153 caught, 0 not applied**
 (`node tools/falsify-all.cjs`), of which `falsify-flex-crush`, `falsify-control-reach` and
 `falsify-focus-trap` are the three that drive the camera rather than the gate — a geometry rule or a
-real keypress has no Node assertion available to it.
+real keypress has no Node assertion available to it — and `falsify-camera-surfaces` is the one that
+reads the instrument instead of the application.
 
 Measure it with `node tools/sweep-text-scale.cjs` — six phone corners, the camera each time: 320px
 @ 200% text, default width @ 200%, 450px @ 135% (a vivo panel at the OPPO's setting), 320x480 @ 200%

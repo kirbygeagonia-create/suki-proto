@@ -3386,3 +3386,70 @@ for every stop, not that the change has contrast against the surface it paints o
 contrast tally does for text but not for a ring; and it walks the tab order Chrome computes, which
 on a phone is reached by a Bluetooth keyboard or a d-pad, not by anything the app's own touch
 gestures do.
+
+---
+
+## 63. A sensor blind to a whole surface: the dialogs nobody had ever measured
+
+The camera's element walks each carried their own hand-written list of containers to look at. Six
+lists, and they had drifted:
+
+| walk | surfaces it looked at |
+| --- | --- |
+| clipped text, 14px floor, contrast, form-control scale | `#screen`, `.sheet`, `.auth-sheet` |
+| round markers | those three + `.bottomnav` |
+| unreachable controls | those four + `.modal-layer` |
+| tap targets, screen-reader field names | the whole document |
+
+So four text-and-colour sensors had **never looked inside a modal dialog** — and the dialogs are
+where the app's most sensitive typing happens: a name, a phone number, a home address, an emergency
+contact, a service price, a payout account. The one walk that *did* cover them was the newest one
+(the unreachable-control tally from §61), which is how the gap stayed invisible: the file looked
+thorough, and six lists that agree with each other's omissions read as one coverage.
+
+### Fixing the coverage, then what it found on the first run
+
+The lists are one `SURFACES` constant now, and every walk derives its selector from it — the drift
+was the defect, not any single missing `.modal-layer`. Then the other half of the problem: no entry
+in the `SCREENS` table reached the edit forms. Three dialog screens existed (a payment picker, a
+payout field, a PIN note); the six *form* dialogs did not. They are in the table now, reached by
+`clickPainted()` the way every other one-tap destination is, and the walk went 63 screens → 69.
+
+Two findings, both immediate:
+
+- **The portfolio form's two fields painted 13.3px** — the user-agent default, under §68's 14px
+  floor. They were the only two inputs in the app that hand-roll their geometry inline
+  (`width:100%; padding:9px; min-height:var(--tap)`) and declared no font at all. Every other field
+  takes `.form-input`, which has carried `font-family:inherit; font-size:var(--t-input)` since the
+  pass that noticed fields drawing as grey browser boxes. The fix is to use the class and drop the
+  duplicated inline geometry, not to add a font size to the two exceptions.
+- **The camera contradicted itself about the read-only email field.** The unnamed-control tally
+  reported it nameless on all three edit dialogs; the dedicated field-name walk reported zero
+  nameless fields on the same screens. Asked the browser directly, `el.labels.length` is 1 — the
+  wrapping `<label>` names it, correctly. Two tallies disagreeing about one element is a defect in
+  one of them, and it was the text scan: `text()` falls back through `textContent`, `aria-label`,
+  `placeholder`, `title` and `id`, and an `<input>` has no text content by definition, so a field
+  named by its label is invisible to that scan no matter how well it is labelled. Fields are skipped
+  there now; the walk that asks `el.labels` owns that question.
+
+### What this says about the rest of the file
+
+Every "measured across all N screens" claim in this repository means "across all N screens that the
+walks look at". A surface can be in the app and out of the instrument at the same time, and the
+output looks identical to a clean bill of health — which is the sentence this file has written about
+missing screens four times now, and about sensors this is the first time.
+
+### Numbers
+
+Gate **523** (was 522, for the instrument's own surface check). `node tools/shot.cjs --measure`
+across **69 screens**: every failure tally zero, no console errors. `node
+tools/sweep-text-scale.cjs`: **6 of 6 phone corners clean**. `node tools/falsify-all.cjs`:
+**26 families, 153 mutants applied, 153 caught, 0 not applied** — the new family
+`falsify-camera-surfaces` proves the gate check can fail (2 of 2), which is the point of writing a
+check about a tool at all. `node tools/probe-all.cjs`: 29 probes, none needing attention.
+
+One thing this pass did *not* fix, tracked separately: the manifest labels a dialog screen by the
+hub behind it, so `resident-edit-form` reports "Resident Profile" over a picture of the edit form.
+All six new screens carry the wrong label, and so do the three dialogs that predate them. It is the
+same rule as the walks — say what was actually painted — and it misled this pass twice, which is
+why it is a task rather than a footnote.

@@ -1517,6 +1517,22 @@ suite('hygiene', async () => {
   const literalFontSizes = (css.match(/font-size:\s*[0-9.]+px/g) || []);
   c.check('no rule sets a literal px font size — the scale is the only source',
     literalFontSizes.length === 0, literalFontSizes.slice(0, 5).join(' | '));
+
+  /* The instrument polices itself. §63 found four of the camera's element walks skipping
+     .modal-layer because each carried its own hand-written list of containers and the lists had
+     drifted — so every text sensor in the tool had never once looked inside the dialogs where a
+     person types a phone number and a home address. The lists are one constant now; this is what
+     stops a new walk quietly reintroducing one, because the failure mode is invisible in the
+     output: a surface nobody measures reports the same zero as a surface with nothing wrong.
+     The positive control counts the walks that use the shared selector, so a pattern that matches
+     nothing cannot pass as tidiness. */
+  const cameraPath = require('path').join(appDir, 'tools', 'shot.cjs');
+  const camera = fsx.existsSync(cameraPath) ? fsx.readFileSync(cameraPath, 'utf8') : '';
+  const driftedLists = (camera.match(/\.sheet \*, \.auth-sheet \*/g) || []).length;
+  const sharedWalks = (camera.match(/querySelectorAll\(WALK\)/g) || []).length;
+  c.check('no walk in the camera carries its own list of surfaces',
+    camera.length > 0 && /const SURFACES = /.test(camera) && driftedLists === 0 && sharedWalks >= 5,
+    driftedLists + ' hand-written surface lists, ' + sharedWalks + ' walks on the shared one');
   return c;
 });
 
