@@ -3453,3 +3453,50 @@ hub behind it, so `resident-edit-form` reports "Resident Profile" over a picture
 All six new screens carry the wrong label, and so do the three dialogs that predate them. It is the
 same rule as the walks — say what was actually painted — and it misled this pass twice, which is
 why it is a task rather than a footnote.
+
+---
+
+## 64. The instrument mislabels its own pictures
+
+Writing §63's numbers meant reading the walk's output, and the output said:
+
+```
+shot resident-edit-form  shows "Resident Profile"
+```
+
+over a picture of the edit form. All nine dialog screens were labelled by something other than the
+dialog — the six new ones by the hub behind them, the three older ones by the sheet the dialog was
+raised from.
+
+The rule that names each shot is already written down in `tools/shot.cjs`: *a filename is a claim
+about the pixels in it*, and because `querySelector` answers in document order rather than selector
+order, the layers have to be asked one at a time. The list of layers asked was `.sheet .sheet-title`,
+then the chat head, then the auth wordmark, then the screen's own title. **The dialog was simply not
+in it.** The rule had been implemented for two of the three surfaces the app paints over.
+
+This was the second time the same blind spot cost this session time: §62's focus probe reported the
+admin's PIN dialog as `"Admin account"` for the same reason, and during §63 a line reading
+`resident-profile → "Resident Profile"` was taken as evidence that the modal screens were clean when
+it said nothing about them at all. A tool that mislabels its output does not just fail to inform the
+reading — it makes the wrong reading look supported.
+
+The fix is the layer order, which is the paint order: ask the dialog, then the sheet, then the
+screen. It is pinned by a gate check about the *order* of the two lookups rather than their presence
+— a check that only asks whether `.modal-layer b` appears somewhere in the file would pass on a
+lookup that asks it last — and `falsify-camera-surfaces` now carries a mutant that swaps the two and
+requires the named check to fail.
+
+Found in the same line of output: the shot column padded names to a fixed 20 characters, and six of
+the screens added in §63 are longer than that, so the walk printed
+`resident-payment-modalshows "Change payment method"`. The width is derived from the table now,
+because the reason a column stops being worth reading is that someone stopped reading it.
+
+### Numbers
+
+Gate **524** (was 523, for the lookup-order check). `falsify-camera-surfaces` **3 of 3**. `node
+tools/falsify-all.cjs`: **26 families, 154 mutants applied, 154 caught, 0 not applied**. `node
+tools/shot.cjs --measure` across 69 screens: every failure tally zero, no console errors, and the
+nine dialog screens now named by their own headings — `resident-edit-form → "Edit profile"`,
+`provider-service-form → "NEW SERVICE"`, `admin-security-modal → "Change security PIN"`. The splash
+still reads `(untitled)`, which it did before this change too: it is a logo screen with no heading,
+and the gate's `<h1>` rule covers app screens, not the launch.

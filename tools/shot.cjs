@@ -1256,6 +1256,11 @@ async function main() {
   }
 
   const manifest = [];
+  /* Wide enough for the longest screen name in the table, so the column stays readable as the
+     table grows — six of the names added in §63 are longer than the fixed 20 this printed at,
+     and the output started running "resident-payment-modalshows" together, which is the same
+     failure as a mislabelled row: the column stops being worth reading. */
+  const NAME_W = wanted.reduce((n, s) => Math.max(n, s[0].length), 20) + 1;
   for (const [name, nav] of wanted) {
     try {
       /* Stand the app back up the way its own bottom navigation does before each screen.
@@ -1311,14 +1316,20 @@ async function main() {
       /* Say what was actually photographed. A filename is a claim about the pixels
          in it, and without this the tool can silently shoot the wrong screen.
          querySelector returns the first match in DOCUMENT order, not in the order of
-         the selector list, so the layers are asked one at a time: a sheet on top
-         outranks the screen behind it. The last two fallbacks exist because the root
-         tabs carry a bare <h1> with no class on it — the resident's name, not a page
-         heading — so the tool printed "(untitled)" over a screen that does have a
-         title, and a column of lies teaches you to stop reading the column.
+         the selector list, so the layers are asked one at a time — and asked in the
+         order they paint: a dialog outranks the sheet it was raised from, a sheet
+         outranks the screen behind it. The dialog used to be missing from this list
+         entirely, which labelled all six form screens by the hub underneath them
+         ("Resident Profile" over a picture of the edit form) and the same for the
+         three dialogs that predated them; the walk's own output misled this pass
+         twice, which is how it was noticed. The last two fallbacks exist because the
+         root tabs carry a bare <h1> with no class on it — the resident's name, not a
+         page heading — so the tool printed "(untitled)" over a screen that does have
+         a title, and a column of lies teaches you to stop reading the column.
          "(untitled)" now means genuinely no heading was found. */
       const seen = await session.evaluate(`(function(){
-         const t = document.querySelector('.sheet .sheet-title') || document.querySelector('.chat-head-name') ||
+         const t = document.querySelector('.modal-layer b') || document.querySelector('.sheet .sheet-title') ||
+                   document.querySelector('.chat-head-name') ||
                    document.querySelector('.auth-sheet .auth-wordmark') || document.querySelector('#screen .topbar .title') ||
                    document.querySelector('#screen .card-title') || document.querySelector('#screen h1') ||
                    document.querySelector('#screen h2');
@@ -1388,7 +1399,7 @@ async function main() {
         await session.evaluate(`(function(){ const s=document.getElementById('suki-no-glide'); if (s) s.remove(); return true; })()`);
       }
       manifest.push({ name, shows: seen.title, sheet: seen.sheet, where: seen.where, file: path.relative(ROOT, file), overflow: seen.overflow, viewport: WIDTH + 'x' + HEIGHT, audit, focus });
-      console.log('  shot ' + name.padEnd(20) + 'shows "' + seen.title + '" [' + seen.where +
+      console.log('  shot ' + name.padEnd(NAME_W) + 'shows "' + seen.title + '" [' + seen.where +
                   (seen.sheet !== '-' ? ' sheet:' + seen.sheet : '') + ']' +
                   (seen.overflow > 4 ? ('  scrolls ' + seen.overflow + 'px past the fold') : ''));
     } catch (e) {

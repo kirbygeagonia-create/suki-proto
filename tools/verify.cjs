@@ -1533,6 +1533,15 @@ suite('hygiene', async () => {
   c.check('no walk in the camera carries its own list of surfaces',
     camera.length > 0 && /const SURFACES = /.test(camera) && driftedLists === 0 && sharedWalks >= 5,
     driftedLists + ' hand-written surface lists, ' + sharedWalks + ' walks on the shared one');
+  /* The same instrument also labels each shot, and a label is a claim about the pixels: the
+     lookup asked the sheet and the screen but never the dialog, so all six form screens were
+     reported by the hub underneath them. Order is the whole rule here — a dialog outranks the
+     sheet it was raised from — so the check is about the order, not the presence, of the lookups. */
+  const modalAsked = camera.indexOf("querySelector('.modal-layer b')");
+  const sheetAsked = camera.indexOf("querySelector('.sheet .sheet-title')");
+  c.check('the camera names a shot by the topmost layer, so a dialog outranks its sheet',
+    modalAsked > -1 && sheetAsked > -1 && modalAsked < sheetAsked,
+    'dialog lookup at ' + modalAsked + ', sheet lookup at ' + sheetAsked);
   return c;
 });
 

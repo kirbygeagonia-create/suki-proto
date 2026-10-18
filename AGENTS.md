@@ -1323,6 +1323,15 @@ email field nameless on all three edit dialogs while the browser's own `el.label
 label. **Two tallies disagreeing about the same element is a defect in one of them**, and here it was
 the scan, which cannot name an `<input>` because an input has no text content by definition.
 
+The same drift lives in what the tool *prints about* a screen: the lookup that names each shot asked
+the sheet and the screen but never the dialog, so all nine dialog screens were labelled by whatever
+was behind them — `resident-edit-form` reported "Resident Profile" over a picture of the edit form.
+That cost this session time twice, once per pass, because a line that reads like a clean result about
+one screen is read as a clean result about the screen you are looking at. The lookup now follows the
+paint order (dialog, then sheet, then screen) and a gate check asserts the **order** of the two
+queries, not their presence: a check that only asks whether the dialog is looked up at all passes on
+a lookup that asks it last.
+
 TYPED TEXT NEVER BECOMES MARKUP, and the gate enforces it rather than remembering it.
 `esc()` covers `& < > " '`; `jsStr()` exists for the one context `esc()` cannot serve —
 text carried into an inline `onclick`, where the attribute is HTML and what the browser
@@ -2927,7 +2936,7 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate 523; whole suite **26 families, 153 mutants, 153 caught, 0 not applied**
+Gate 524; whole suite **26 families, 154 mutants, 154 caught, 0 not applied**
 (`node tools/falsify-all.cjs`), of which `falsify-flex-crush`, `falsify-control-reach` and
 `falsify-focus-trap` are the three that drive the camera rather than the gate — a geometry rule or a
 real keypress has no Node assertion available to it — and `falsify-camera-surfaces` is the one that
