@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 11,316 lines, ONE :root block, 1,749 var() usages, 95 tokens declared with 92
+Sukinnect-next.html— 11,343 lines, ONE :root block, 1,748 var() usages, 95 tokens declared with 92
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1773,6 +1773,28 @@ a fiction.** Two of the three probes used here were deleted afterwards so the ne
 inherit the misleading one. Related: a `min` attribute does not block typing a negative — it changes
 what the platform *reports* (`rangeUnderflow`), which the app's own handler never consults. The
 guard is the fix; the attribute is the signal.
+
+EVERY FIELD IS WRITABLE AND NOTHING LIMITS LENGTH. `maxlength` appears zero times in this file, so a
+name, a barangay, a payout account, a working-hours string or a chat line can be one 60-character
+token with no space in it — and a word with no break opportunity defeats the two rules this document
+trusts most: `flex-wrap` has nothing to wrap at, and a flex item with `min-width:0` has nothing to
+shrink to. Nine elements on three screens ran past the phone: the profile hub's
+`Home Address: <b>…</b>` rows by up to 115px, and the admin top bar's `<h1>` by 172px **inside the bar
+§61 had already taught to wrap**. The guard is one inherited declaration,
+`body{ overflow-wrap:anywhere; }`, because the defect was never about any one of the nine elements.
+The keyword is measured, not argued: across all 69 screens `anywhere` leaves one finding and
+`break-word` leaves five, with the title off the device. The first version of this paragraph asserted
+*a mechanism* for that difference and the sweep contradicted it while agreeing with the choice, so
+what is recorded now is the observation and the reason is left out — nothing here measured one.
+Measured with `node tools/shot.cjs --probe=@tools/probe-long-input.js`, proved by
+`node tools/falsify-long-input.cjs` (2 breaks, 2 caught; the keyword mutant is gate-only because a
+two-screen subset reads clean under either value). The one residual finding — 30px of a long admin
+name clipped inside a bar that already hides overflow — **appears only mid-walk**: three subset runs
+read clean, which is §63's "a subset's line is unproven in both directions" arriving from the other
+side. Two instrument defects surfaced on the way and are the general lesson: the probe leaked its own
+chat row because it filtered `MESSAGES` on `threadKey` when the records' field is `thread` (it now
+holds the object `appendMessage()` returned and splices by identity, and prints the row count it saw),
+and `className.split(' ')` throws on an SVG node, where `className` is an `SVGAnimatedString`.
 
 REPUTATION IS DERIVED, AND THE SEEDS ARE HELD OUTSIDE THE RECORDS. The deck promises providers "a
 reputation built from completed work" (slides 3, 7); `provider.rating` and `provider.jobs` were
@@ -2978,11 +3000,11 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate 525; whole suite **26 families, 156 mutants, 156 caught, 0 not applied**
-(`node tools/falsify-all.cjs`), of which `falsify-flex-crush`, `falsify-control-reach` and
-`falsify-focus-trap` are the three that drive the camera rather than the gate — a geometry rule or a
-real keypress has no Node assertion available to it — and `falsify-camera-surfaces` is the one that
-reads the instrument instead of the application.
+Gate 526; whole suite **27 families, 158 mutants, 158 caught, 0 not applied**
+(`node tools/falsify-all.cjs`), of which `falsify-flex-crush`, `falsify-control-reach`,
+`falsify-focus-trap` and `falsify-long-input` are the four that drive the camera rather than the gate
+— a geometry rule or a real keypress has no Node assertion available to it — and
+`falsify-camera-surfaces` is the one that reads the instrument instead of the application.
 
 Measure it with `node tools/sweep-text-scale.cjs` — seven phone corners, the camera each time: 320px
 @ 200% text, default width @ 200%, 450px @ 135% (a vivo panel at the OPPO's setting), 360px @ 135%

@@ -208,6 +208,18 @@
   /* The screen title is an <h1> so a 30-screen app has an outline a screen reader
      can navigate; the reset is what lets a heading sit in a flex bar like text. */
   h1, h2{ margin:0; font-size:inherit; font-weight:inherit; }
+  /* One word with no space in it has no break opportunity, so nothing about a layout can save it:
+     `flex-wrap` has nothing to wrap at, a column has no width to shrink to, and the word simply
+     grows past the phone. Every field in this app is writable and `maxlength` appears nowhere in
+     the file, so a name, a barangay, a payout account or a chat line can be one 60-character
+     token, and the profile hub's `Home Address: <b>…</b>` rows and the top bar's <h1> both ran off
+     the device when they were (tools/probe-long-input.js). `anywhere` and not `break-word`, and that
+     choice is measured rather than reasoned: run over all 69 screens, `anywhere` leaves one finding
+     (the admin top bar clips 30px of a 60-character name inside a bar that already hides overflow)
+     while `break-word` leaves five on that same screen and puts the title 172px past the edge of the
+     phone. It is inert wherever a rule says `white-space:nowrap`, which is where the deliberate
+     ellipses live. */
+  body{ overflow-wrap:anywhere; }
   .topbar .title{font-family:var(--font-display); font-size:var(--t-title); font-weight:600;}
   .topbar .sub{font-size:var(--t-body); opacity:0.78; margin-top:2px;}
   /* Root tabs - the ones the bottom nav lands on - carry a large title, the way a

@@ -1518,6 +1518,23 @@ suite('hygiene', async () => {
   c.check('no rule sets a literal px font size — the scale is the only source',
     literalFontSizes.length === 0, literalFontSizes.slice(0, 5).join(' | '));
 
+  /* `maxlength` appears nowhere in this file, so every field can hold one 60-character word, and a
+     word with no space in it has no break opportunity: `flex-wrap` has nothing to wrap, a column has
+     nothing to shrink to, and the word grows past the phone. tools/probe-long-input.js found nine
+     elements on three screens doing exactly that. The guard is one inherited declaration on
+     `body`, and it must be `anywhere`, not `break-word` — decided by running the whole 69-screen
+     walk under each value: `anywhere` leaves one finding, `break-word` leaves five on that same
+     screen and puts the title 172px past the edge of the phone. The camera cannot pin the keyword,
+     because a two-screen subset reads clean under either value, so this is the static half. The
+     positive control counts the ellipses, because a "fix" that deleted the deliberate ones would
+     pass a presence check. */
+  const anywhere = /(^|\}|\n)\s*body\s*\{[^}]*overflow-wrap:\s*anywhere\s*;/.test(css);
+  const breakWordOnBody = /(^|\}|\n)\s*body\s*\{[^}]*overflow-wrap:\s*break-word/.test(css);
+  const ellipsisRules = (css.match(/text-overflow:\s*ellipsis/g) || []).length;
+  c.check('an unbreakable typed word breaks inside the phone instead of running past its edge',
+    anywhere && !breakWordOnBody && ellipsisRules >= 3,
+    'body has no overflow-wrap:anywhere (found ' + ellipsisRules + ' ellipsis rules to preserve)');
+
   /* The instrument polices itself. §63 found four of the camera's element walks skipping
      .modal-layer because each carried its own hand-written list of containers and the lists had
      drifted — so every text sensor in the tool had never once looked inside the dialogs where a

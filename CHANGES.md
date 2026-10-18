@@ -3684,3 +3684,110 @@ console errors, 1,092 requests left the device for map tiles. The phone's own co
 against the anchor's **5**, its first examples being `"Bookings" loses 4px` and `"Messages" loses
 10px`. `node tools/sweep-text-scale.cjs` with the seventh case added: **7 of 7 phone corners measured
 clean, 20 tallies each.**
+
+## 66. A word with no space in it: every field in the app is writable and `maxlength` appears nowhere
+
+The camera measures the screens as the seed data paints them. It has never once measured them as a
+person types, and `grep -c maxlength Sukinnect-next.html` answers **0** — so every name, barangay,
+payout account, working-hours string and chat line in this application can hold one 60-character
+token with no space in it. A word like that has no break opportunity, which means the two things the
+§61 and §68 passes built are both powerless against it: `flex-wrap` has nothing to wrap at, and a
+column with `min-width:0` has nothing to shrink to. The word simply grows.
+
+`node tools/probe-long-input.js` is the instrument for that, run through the camera
+(`--probe=@tools/probe-long-input.js`) so each screen is still reached through the app's own entry
+points rather than by assigning `state.*`. It writes a **distinct** unbreakable token into each
+writable field — `Raddr`, `Remerg`, `Pbank`, `Aname`, `Cmsg` and the rest — re-renders once, and
+reports which box broke and which field's token is inside it. Then it puts everything back.
+
+### What it found, before anything was fixed
+
+Eighteen findings, on nine elements across three screens, at the camera's default 390px:
+
+```
+resident-profile / resident-edit-form
+  barangay <span>       65px past the panel   (427px box)
+  address <b>          111px past the panel   (473px box)
+  barangay <b>         114px past the panel   (476px box)
+  emergency contact <b>115px past the panel   (477px box)
+provider-profile
+  phone <b>            114px                  (476px)
+  working hours <b>    110px                  (472px)
+  payout account <b>   114px                  (476px)
+admin-dash
+  the title <h1> and its wrapper <div>  172px past the panel, 494px wide
+```
+
+The profile hub's `Home Address: <b>…</b>` rows are the plain form of it: an inline `<b>` in a block
+whose only width is the card's. The admin dashboard is the interesting one — the name goes into the
+top bar's `<h1>`, and §61 had fixed that bar with `flex-wrap:wrap`. **A wrap can only wrap
+somewhere.** With one 60-character word in the bar there is no soft break opportunity at all, so the
+rule that had saved the bar from growing at 200% text did nothing here.
+
+### The fix is one inherited declaration
+
+```css
+body{ overflow-wrap:anywhere; }
+```
+
+`overflow-wrap` inherits, so one line on `body` reaches every `<b>`, `<span>`, `<h1>` and card in the
+file — which is the right shape for a defect that was never about any one of the nine elements. It is
+`anywhere` and not `break-word`, and that part is measured rather than reasoned, because the first
+version of this comment had it backwards:
+
+| keyword on `body` | findings across all 69 screens | worst case |
+| --- | --- | --- |
+| *(none)* | 18 | title 172px past the phone |
+| `break-word` | 5 | title 172px past the phone, 494px wide |
+| `anywhere` | **1** | 30px clipped *inside* a bar that already hides overflow |
+
+The claim I wrote first — that `break-word` "still widens the flex item" while `anywhere` cannot — was
+an untested mechanism, and running the whole sweep under each value contradicted it while agreeing
+with the choice. So the sentence in the stylesheet and in the gate now says what was observed, and
+the reason is left out, because nothing in this pass measured a reason.
+
+### The one finding left, and why it is recorded rather than fixed
+
+`CLIPPED NO ELLIPSIS Aname <div.topbar> hides 30px (client=390 scroll=420 … culprit=<div.topbar>)`.
+Three attempts to reproduce it on a subset — `--only=admin-dash`, then `admin-edit-form,admin-account,admin-dash`,
+then the same with the modal screens — all read clean. It only appears mid-walk, which is the §63
+caveat about the contrast sampler arriving from the other direction: **a subset's line is unproven in
+both directions, and here the full sweep knows something the subset does not.** The culprit walk
+inside the probe stops at the bar itself, which means the 30px is text ink inside a descendant whose
+own box fits — the one thing a rect comparison cannot see.
+
+What is *not* in doubt is the size of the residual: 30px clipped inside a `.topbar` that already
+carries `overflow:hidden`, on a screen whose owner has typed a 60-character name with no spaces. The
+instrument now prints enough geometry to chase it, and it is on the list rather than closed.
+
+### Two defects in the instrument, both found before it was trusted
+
+**The probe leaked its own chat message.** It appended a line through the app's `appendMessage()` and
+cleaned up by filtering `MESSAGES` on `m.threadKey` — a field the records do not have; the key is
+`thread`. So the filter matched nothing, the row stayed, and every later screen in the walk was
+measured with a 60-character message in somebody's conversation, while the probe reported
+"nothing broke". The fix holds the object `appendMessage()` returns and splices by identity, and the
+answer now prints the row count it saw, because an instrument that cannot see reports a clean result.
+
+**`className.split(' ')` throws on an SVG node**, where `className` is an `SVGAnimatedString`. The
+first version died on the first circle it met and the camera printed `threw:`, which is a probe
+failure and not an app finding — the distinction the tool's own error line exists to make.
+
+### Why not `maxlength`
+
+Because it silently discards what a person typed. A field that stops accepting characters at 40 is
+the same class of defect as a toast that says "saved" on a device that cannot write: the interface
+says one thing and the record holds another, and nobody is told. §49 asks for recoverable errors and
+§63 for not claiming what is not true, so the layout absorbs the text instead of the input pretending
+the text is shorter.
+
+### Numbers
+
+`node tools/falsify-long-input.cjs`: **2 of 2 breaks caught, 0 not applied** — removing the
+declaration brings back 14 damage findings on the two profile screens, and the keyword mutant is
+caught by the gate, with the reason written next to it in the file. Gate **526** (was 525).
+`node tools/falsify-all.cjs`: **27 families, 158 mutants applied, 158 caught, 0 not applied.**
+`node tools/shot.cjs --measure` over all 69 screens after the change: every failure tally zero, no
+console errors, and both review lines unchanged from the run before it — 5 intended ellipses, 0
+fields named only by a placeholder — so the inherited break cost nothing on the text the app ships
+with. The one thing it changed is what happens to text the app does *not* ship with.
