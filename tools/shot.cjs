@@ -100,7 +100,7 @@ const FONT_SCALE = flag('font-scale', '');
    what a real browser actually laid out.
    -------------------------------------------------------------------------------- */
 const AUDIT_JS = `(function(){
-  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], belowFloor: [], chartEscape: [], chartOver: [], textCollide: [], navEscape: [], squashedCircle: [], unreachable: [], contrast: [], overlaps: [], stretched: [], broken: [], remote: [], svgSmall: [], vendor: [], mapEscape: [], occluded: [], modalInert: [], nameless: [], placeholderOnly: [], catMotion: [], hOverflow: 0 };
+  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], belowFloor: [], chartEscape: [], chartOver: [], navCut: [], textCollide: [], navEscape: [], squashedCircle: [], unreachable: [], contrast: [], overlaps: [], stretched: [], broken: [], remote: [], svgSmall: [], vendor: [], mapEscape: [], occluded: [], modalInert: [], nameless: [], placeholderOnly: [], catMotion: [], hOverflow: 0 };
   const vw = document.documentElement.clientWidth;
   out.hOverflow = document.documentElement.scrollWidth - vw;
   const TAP = 44;
@@ -272,6 +272,22 @@ const AUDIT_JS = `(function(){
       if (over > 1) out.chartOver.push({ over: over, top: Math.round((topGrid - y) * unitPx),
         box: Math.round(b.width), h: Math.round(b.height) });
     });
+  });
+
+  /* A bottom-nav label that is cut even though the 14px floor would have fitted the whole word.
+     fitNavLabels() shrinks the labels to whatever the slot can hold and stops at 14px; where a word
+     needs less than that it stays ellipsized on purpose — the provider has five destinations in a
+     320px panel and Bookings/Messages want 12.8-13.9px. This fails only on an AVOIDABLE cut, which
+     is what makes the floor a decision rather than an accident. The scale factor is arithmetic on
+     two measured widths, so nothing is re-derived from the app. */
+  document.querySelectorAll('.bottomnav .nav-label').forEach(l => {
+    const item = l.closest('.navitem'); if (!item) return;
+    const slot = item.clientWidth, wants = l.scrollWidth;
+    if (!slot || wants <= slot) return;
+    const px = parseFloat(getComputedStyle(l).fontSize) || 16;
+    const atFloor = wants * (14 / px);
+    if (atFloor <= slot - 1) out.navCut.push({ text: (l.textContent || '').trim().slice(0, 16),
+      px: Math.round(px * 10) / 10, slot: Math.round(slot), wants: Math.round(wants), atFloor: Math.round(atFloor) });
   });
 
   /* Text painted on top of other text. Every other sensor here asks a containment question — is this
@@ -518,6 +534,13 @@ const AUDIT_JS = `(function(){
        zoom control — noise that would have sent the next reader to fix a font size the
        application does not own. */
     if (vendor(el)) return;
+    /* The bottom nav's labels are sized by measurement, not by the type scale: fitNavLabels() picks
+       the largest size that keeps every word whole in a slot of viewport divided by destinations, so
+       the answer is a number like 15.9px that no token owns. The scale exists to keep AUTHORED type
+       consistent, not to forbid a measured fit — and the floor is still enforced, because this walk
+       skips these labels while the below-14px walk does not. That asymmetry is the rule: off-scale by
+       design, never below the floor. */
+    if (el.closest && el.closest('.bottomnav') && el.classList.contains('nav-label')) return;
     const f = Math.round(parseFloat(getComputedStyle(el).fontSize) * 10) / 10;
     if (!f) return;
     seenSizes[f] = (seenSizes[f] || 0) + 1;
@@ -1565,6 +1588,7 @@ async function main() {
     tally(flat('remote'), 'requests that left the device for a network', r => r.screen + '  ' + r.kind + '  ' + r.url);
     tally(flat('svgSmall'), 'chart text that paints below the 14px floor', r => r.screen + '  "' + r.text + '" declares ' + r.declared + 'px, paints ' + r.rendered + 'px');
     tally(flat('chartEscape'), 'chart labels painted outside their own chart box', r => r.screen + '  "' + r.text + '" (' + r.cls + ') hangs ' + r.over + 'px ' + r.dir + ' of a ' + r.box + 'px box');
+    tally(flat('navCut'), 'bottom-nav labels cut although the 14px floor would have fitted them', r => r.screen + '  "" + r.text + "" is cut at " + r.px + "px in a " + r.slot + "px slot, needing only " + r.atFloor + "px');
     tally(flat('chartOver'), 'bars painted above their own top gridline (a scale smaller than its data)', r => r.screen + '  a bar rises ' + r.over + 'px above the line that names its maximum in a ' + r.box + 'x' + r.h + 'px drawing');
     tally(flat('textCollide'), 'text painted on top of other text in the same card', r => r.screen + '  "' + r.a + '" x "' + r.b + '" in ' + r.card + ' overlap ' + r.ox + 'x' + r.oy + 'px');
     tally(flat('navEscape'), 'bottom-nav items pushed off the panel', r => r.screen + '  "' + r.text + '" hangs ' + r.over + 'px past a ' + r.box + 'px row (the row needs ' + r.scroll + 'px)');

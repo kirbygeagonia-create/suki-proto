@@ -1042,7 +1042,7 @@
        is what lets the item fit; the label loses its tail rather than its control. */
     min-width:0;
     background:none; border:none; font-family:inherit;
-    font-size:var(--t-caption); font-weight:600;
+    font-size:var(--nav-label-size, var(--t-caption)); font-weight:600;
     color:var(--mist); cursor:pointer;
   }
   .nav-label{display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
@@ -7891,6 +7891,41 @@ function settingsRow(sectionKey, id, title, detail, toggle){
     + `</button>`;
 }
 
+/* How small the nav labels may go: the 14px floor §68 sets for essential interface text. Below it
+   the word would be whole and unreadable, which is not a trade this app makes. */
+const NAV_LABEL_FLOOR_PX = 14;
+function fitNavLabels(){
+  const nav = document.querySelector('.bottomnav');
+  if (!nav) return;
+  const labels = [].slice.call(nav.querySelectorAll('.nav-label'));
+  if (!labels.length) return;
+  /* No cache. The first version keyed on role + width + root size and skipped re-measuring,
+     which was wrong: the provider nav grows a badge on some screens and not others, and a badge
+     changes the slot every label has to fit. The sweep counted 92 avoidable cuts at 320x638 @ 1.35
+     and 162 at 320x480 @ 200% from exactly that staleness — a cached answer for a row that had
+     changed shape. Measuring five labels per render is not a cost worth a cache. */
+  nav.style.removeProperty('--nav-label-size');
+  const token = parseFloat(getComputedStyle(labels[0]).fontSize) || NAV_LABEL_FLOOR_PX;
+  let cur = token;
+  for (let pass = 0; pass < 3; pass++) {
+    let worst = 1;
+    labels.forEach(l => {
+      const item = l.closest('.navitem');
+      if (!item) return;
+      const slot = item.clientWidth;
+      const wants = l.scrollWidth;
+      if (slot > 0 && wants > slot) worst = Math.min(worst, slot / wants);
+    });
+    if (worst >= 1) break;
+    /* The 0.985 is not decoration: the ratio is computed from a width measured at the PREVIOUS
+       size, and letter-spacing does not shrink perfectly linearly, so the exact ratio lands a
+       pixel over the slot on words like Messages and Dashboard. */
+    const size = Math.max(NAV_LABEL_FLOOR_PX, Math.floor(cur * worst * 0.985 * 10) / 10);
+    if (size >= cur) break;
+    cur = size;
+    nav.style.setProperty('--nav-label-size', size + 'px');
+  }
+}
 function navItem(id,icon,label,count){
   const active = state.tab===id;
   // Active is filled + bolder + pill + aria-current, never one hue alone (71,72).
@@ -11358,6 +11393,21 @@ function bindTabHandlers(){
   const confirmDeclineBtn = document.getElementById('confirm-decline-btn');
   if(confirmDeclineBtn) confirmDeclineBtn.onclick = () => answerRequest(state.selectedProviderBookingId, 'decline');
 
+  /* The bottom navigation's labels are shrunk to fit rather than ellipsized, down to a floor of
+     14px — the type floor §68 sets — and no further. Measured, not guessed: the row is laid out
+     first, then each label's own content width is compared with the item that holds it, and the
+     size that makes the worst of them fit is written back as --nav-label-size on the nav. Two
+     passes, because letter-spacing does not shrink perfectly linearly with the font size.
+
+     Why this exists: at the phone's 200% text a slot is 58-74 CSS px and "Messages" wants 128px,
+     so the word cannot be kept whole by wrapping (a single word has no break opportunity) or by
+     reclaiming padding (8px of a 58px slot). The alternatives were measured and rejected by the
+     owner: shorter copy, a two-row nav that takes ~70px from a short screen, or icon-only labels
+     for exactly the people who asked for large text. The residual this fix cannot reach is the
+     provider's five-item nav on a 320px panel, where "Bookings" needs 13.7px and "Messages" 12.8
+     — under the floor — so those two still give up their tails, and the camera counts them as a
+     review line rather than a failure. */
+  fitNavLabels();
   document.querySelectorAll('[data-provider-detail]').forEach(el => {
     el.onclick = () => openProviderDetail(el.dataset.providerDetail, 'results');
   });
