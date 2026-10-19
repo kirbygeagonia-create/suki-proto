@@ -1064,3 +1064,35 @@ scale. Two things the screenshots show that no tally reports, and one the tally 
 
 **Device state restored.** `settings put system font_scale 1.0`, read back as `1.0`; the app was left
 at its sign-in screen, which is where it starts.
+
+## Handset walk 2 — `1.2-preview.28` at 200% text and in real split-screen, 2026-10-18
+
+**200% text on the device itself.** `settings put system font_scale 2.0`, force-stop, relaunch, sign in
+as Service Pro through the painted controls. The WebView answers **root 32px at 450 CSS px**:
+
+- the earnings chart paints **0 bar numbers** and only **2 axis labels — `Aug 24` and `Sep 21`** — while
+  its single non-zero bar is the last row. That is §72's finding reproduced on hardware rather than
+  emulated: the tallest bar in the chart has no week named under it.
+- the bottom navigation loses **`Bookings` 43px, `Messages` 52px, `Profile` 9px**; `Dash` and `FSM` are
+  whole. Every item keeps its tap area and the word gives up its tail, which is what §68's rule
+  intends — but at the phone's largest text three of five destinations are read from the icon alone.
+- **no horizontal overflow**: `document.documentElement.scrollWidth` is 450 against `innerWidth` 450.
+
+**Real split-screen, which the OPPO refused.** `adb shell wm size 720x700` is accepted on this vivo
+(`Override size: 720x700`), and the page lays out at **450×362 CSS px** — shorter than the bench's
+480px corner, so this is the harsher case. Provider dashboard and the bookings list were measured with
+the camera's own two-part reachability rule (outside the viewport *and* nothing in the ancestor chain
+scrolls): **0 unreachable controls** on both, the nav rendered whole at 289→362px, and the screenshot
+shows the list continuing under it as a scrolling column should. Note *why* the second half mattered
+here: `document.scrollHeight` equals the viewport because `#screen` is the scroller, so a
+viewport-only check would have called everything below the fold unreachable on a screen that is
+fine.
+
+**Device restored.** `wm size reset` (read back: `Physical size: 720x1544`, no override),
+`font_scale 1.0` (read back), app relaunched and answering 450×889 at root 16px.
+
+**One instrument lesson.** Mid-walk the handset went `offline` and then `unauthorized` (the RSA dialog
+needs a thumb), and every `adb` command issued while it was offline failed *silently in effect*: the
+first `settings put system font_scale 2.0` never applied, so the phone stayed at 1.0 while the script
+carried on as if it had. A device that is not answering is not a device that has agreed — read the
+setting back, as the restore step does.
