@@ -3207,6 +3207,58 @@ suite('honesty', async () => {
         : 'coverage does not drive discovery' };
   })());
 
+  /* A field holding only spaces is truthy to JavaScript and empty to a person, and the phone's
+     keyboard can put one there with a single tap of the space bar. Measured first by
+     `node tools/shot.cjs --probe=@tools/probe-blank-query.js --only=resident-results`: a query of
+     one or three spaces paints all eight providers, exactly as no query does, while a query that
+     genuinely matches nothing prints its own empty state. This pins that, because the app is one
+     `.trim()` away from the other answer — and the screen's words come from `state.searchQuery`
+     raw, so a matcher that stopped trimming would print `No provider matches “ ”` at a person who
+     typed nothing. The last clause is the control that proves the words assertion can fail: a real
+     miss must print the empty state, or "no empty state for the blank" would pass forever. */
+  verdict('a search of nothing but spaces shows everyone, exactly as no search does', (() => {
+    app.state.view = 'app'; app.state.role = 'resident'; app.state.tab = 'results';
+    app.state.providerFilters = {};
+    const was = app.state.searchQuery;
+    app.state.searchQuery = '';
+    const none = app.providerMatches().length;
+    app.state.searchQuery = '    ';
+    const spaces = app.providerMatches().length;
+    app.render();
+    const blankWords = app._document.getElementById('screen').innerHTML;
+    app.state.searchQuery = 'plumbing';
+    const real = app.providerMatches().length;
+    app.render();
+    const realWords = app._document.getElementById('screen').innerHTML;
+    app.state.searchQuery = 'zzqqxx';
+    app.render();
+    const missWords = app._document.getElementById('screen').innerHTML;
+    app.state.searchQuery = was;
+    app.render();
+    const quotedBlank = /No provider matches/.test(blankWords);
+    const quotedMiss = /No provider matches/.test(missWords);
+    /* The count line is the second half of the same question, and it is the screen's OWN decision
+       from a second copy of the trimmed query: `narrowing` prints "N of 8 providers" when
+       something is narrowing the list and "8 smart matches" when nothing is. A blank query that
+       failed to trim would print "8 of 8 providers" over the whole unfiltered list — a screen
+       telling the person their space bar applied a constraint. "plumbing" must produce the counted
+       form, or this assertion has no way to fail. */
+    const blankCounted = /\d+ of \d+ providers/.test(blankWords);
+    const blankUnfiltered = /smart matches/.test(blankWords);
+    const realCounted = /\d+ of \d+ providers/.test(realWords);
+    return { ok: none > 0 && spaces === none && !quotedBlank && blankUnfiltered && !blankCounted &&
+        real > 0 && real < none && realCounted && quotedMiss,
+      why: !(none > 0) ? 'the unfiltered list is empty, so nothing here can be compared'
+        : spaces !== none ? 'a query of spaces found ' + spaces + ' providers where none found ' + none
+        : quotedBlank ? 'the screen quoted a query nobody typed: No provider matches a blank'
+        : blankCounted ? 'a blank query is printed as a constraint on the count line'
+        : !blankUnfiltered ? 'the unfiltered list does not call itself smart matches, so the screen cannot say "nothing is narrowing"'
+        : !(real < none) ? 'searching "plumbing" did not narrow the list, so the matcher is not live'
+        : !realCounted ? 'a real query does not print its count line, so the blank case cannot be told apart'
+        : !quotedMiss ? 'a query matching nothing printed no empty state, so the words cannot be tested'
+        : 'a space is being treated as a search term' };
+  })());
+
   verdict('marking yourself busy changes what a resident is shown', (() => {
     app.state.view = 'app'; app.state.role = 'provider'; app.state.tab = 'dashboard';
     app.state.providerFilters = {}; app.state.searchQuery = '';

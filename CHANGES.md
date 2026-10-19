@@ -4263,3 +4263,82 @@ like a rule that does nothing, and that is how this declaration nearly got delet
 reads **5 of 5, 0 not applied**. `falsify-responsive-type` holds at **6 of 6, 0 not applied**. Gate
 **529**; seven corners, 22 tallies each, **all clean**; whole suite **30 families, 169 mutants, 169 caught, 0 not applied**.
 
+
+## 70. A field holding only spaces is truthy to JavaScript, and the app was already right about it
+
+The whitespace class opened as the follow-up to §69's double-tap work: every field in the app is
+writable, so a keyboard can put a single space into a name, a search, a payout account, a chat line,
+a dispute note or an offer. `node tools/shot.cjs --probe=@tools/probe-whitespace.js` types one space,
+three spaces and a tab into every field on the 29 screens that expose one, clicks each layer's primary
+control through `.btn-block` (wording match only as the fallback), then diffs `state` before and
+after, flags any value that became whitespace-only, flags any record set that grew, and restores. What
+it found is a negative: every guarded write refuses with an error the screen paints — the request
+sheet, the fruit listing, the portfolio, the payout account, the verification note and the reject and
+flag notes — and the three profile dialogs fall back to the value they already held, after which the
+unchanged-save guard says "No change to save". No whitespace value was stored anywhere a person can
+see.
+
+Two residuals are recorded rather than patched, because neither paints a lie. The sign-in form writes
+`state.auth.email = " "` while refusing with "Enter your email to continue." — and nothing in the
+application reads `auth.email`, so the blank value is stored and never shown. A space sent in chat
+appends no record and produces no feedback, leaving the field exactly as typed, which is its own
+answer.
+
+### The search box, which needed asking separately
+
+`startDiscovery()` writes `state.searchQuery` straight from the field, and the matcher trims before
+comparing, so a space can sit in the model while the filter behaves as though the model were empty.
+That is a §48 question — what does the screen *say* — and answering it took three versions of a probe,
+each of which died on its own instrument:
+
+1. it read the screen in the breath after the tap, while the simulated discovery was still printing
+   "Finding nearby providers…", so a query matching plumbers and a query matching nothing both
+   reported zero cards;
+2. it held one `search-input` element across the loop, but the results screen paints its own field,
+   so from the second case on it typed into a detached node and reported "plumbing" five times;
+3. it bounced Home → Results → Home to type each query, which is a step up as well as a step down, so
+   the app paid its Back debt with real `history.back()` calls — a navigation on a `file://` page, and
+   Chrome took the inspected target down mid-run ("Not attached to an active page").
+
+The version that works never leaves the destination. The results screen carries its own search field
+and its own magnifier, which is the path a thumb uses after arriving anyway, and changing only the
+query is an in-place update with nothing for the Back machinery to undo. It waits for the loading words
+to clear before reading anything, and its control case — a query that must find a provider — runs
+first and aborts the whole run if it finds none. Providers are counted by `data-provider-detail`, which
+is how the app binds its own cards; the first guess at a class name found nothing and read as an empty
+result.
+
+```
+typed="plumbing"  cards=1   "…96% Match Verified Ramil Odiada 0.8 km…"
+typed="xyzzy"     cards=0   "No provider matches “xyzzy” Try a barangay such as Poblacion… Clear search & filters"
+typed=" "         cards=8   "…Smart Matched Providers…"          (same list as no query)
+typed="   "       cards=8   (same)
+typed=""          cards=8   (same)
+```
+
+So the screen does not quote an empty query at anybody, and the list behaves as unfiltered. The rule
+was then pinned rather than remembered, on both of its halves: the matcher's count, and the count line
+under the heading, which is computed from a *second* copy of the trimmed query — `8 of 8 providers`
+when something narrows, `8 smart matches` when nothing does. A blank query must produce the second
+form; a real one must still produce the first, which is the control that lets either assertion fail.
+
+`node tools/falsify-blank-query.cjs` — **2 of 2, 0 not applied**:
+
+```
+CAUGHT  the matcher stops trimming, so a space becomes a search term
+        → a query of spaces found 0 providers where none found 8
+CAUGHT  the results screen stops trimming what it calls a narrowing search
+        → a blank query is printed as a constraint on the count line
+```
+
+The second break was MISSED on the family's first run, when the check only counted providers. The
+check was widened rather than the mutant deleted: an unobservable mutant is a gap in this instrument's
+coverage, not evidence that the code does not matter. Both breaks are anchored on the function that
+owns the line, because that line is written twice in the file and a needle matching two places
+silently mutates neither.
+
+### Numbers
+
+Gate **530**. `falsify-blank-query` **2 of 2**. Whole suite after this pass: **31 families, 171 mutants, 171 caught, 0 not applied** — the new
+family is gate-driven, so no camera run and no sweep corner changed; the application file itself is
+untouched by §70, which is why the seven-corner sweep from §69 still describes the build.

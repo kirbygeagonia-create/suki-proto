@@ -1822,6 +1822,33 @@ node: measured by asking all 72 screens how many `.live-dot` they hold, because 
 condition rather than a screen and the two booking-detail screens that look like obvious hosts both
 answer 0. **A rule proven on the wrong screen reads exactly like a rule that does nothing.**
 
+A FIELD HOLDING ONLY SPACES IS TRUTHY TO JAVASCRIPT AND EMPTY TO A PERSON — and this time the app was
+already right, which is why the pass shipped a check instead of a fix. `node tools/shot.cjs
+--probe=@tools/probe-blank-query.js --only=resident-results` drives the results screen's own search
+field and its own magnifier, waits for the simulated discovery to settle, and reads what the screen
+says: one space and three spaces each show all eight providers, exactly as no query does, while
+"xyzzy" shows none and prints `No provider matches “xyzzy”` with a way out. The gate pins it on both
+halves of the rule: the matcher's count, and the **count line**, which is built from a second copy of
+the trimmed query and reads `8 of 8 providers` only when something narrows the list and
+`8 smart matches` when nothing does. `node tools/falsify-blank-query.cjs` — **2 of 2, 0 not applied**.
+The second break was MISSED on the family's first run, when the check only counted providers; the
+check was widened rather than the mutant deleted, because an unobservable mutant is a gap in coverage
+and not a verdict about the code.
+
+THREE VERSIONS OF THAT PROBE DIED BEFORE IT WORKED, AND EVERY DEATH WAS THE INSTRUMENT. It read the
+screen in the breath after the tap, while the page still printed "Finding nearby providers…", so a
+query matching plumbers and a query matching nothing both reported zero cards. It held one
+`search-input` element across the whole loop — but the results screen paints its own field, so from
+the second case on it typed into a detached node and reported "plumbing" five times. And it bounced
+Home → Results → Home to type each query, which is a step up as well as a step down, so the app paid
+its Back debt with a real `history.back()`; on a `file://` page that is a navigation, and Chrome took
+the inspected target down mid-run. The version that works never leaves the destination: the results
+screen has a field and a magnifier of its own, which is the path a thumb uses after arriving anyway,
+and changing only the query is an in-place update with nothing for the Back machinery to undo. Its
+control case runs first and aborts the run if it finds no provider, because a probe whose positive
+control prints zero has measured nothing — the lesson this repository has now written down three
+times, once for screens, once for data, and here for a wait.
+
 READ AN ACCESSIBILITY DUMP TWICE BEFORE CALLING IT A DEFECT. Two nodes in this walk looked like
 findings and were neither: the sign-in screen dumped **completely empty**, which is Chromium
 building its tree lazily and one tap on a field fixed, and a password node printed
@@ -3148,7 +3175,7 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate **529**; whole suite **30 families, 169 mutants, 169 caught, 0 not applied**
+Gate **530**; whole suite **31 families, 171 mutants, 171 caught, 0 not applied**
 (`node tools/falsify-all.cjs`), of which `falsify-flex-crush`, `falsify-control-reach`,
 `falsify-focus-trap`, `falsify-long-input`, `falsify-stale-overlay`, `falsify-double-tap` and
 `falsify-chart-collide` are the seven that drive the camera rather than the gate — a geometry rule, a
