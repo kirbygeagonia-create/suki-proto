@@ -70,6 +70,11 @@ function said(r) { return Object.keys(TALLIES).map(k => k + '=' + r[k]).join(', 
 
 const WIDE_TEXT = ['--width=320', '--font-scale=2'];
 const OPPO = ['--width=320', '--height=638', '--font-scale=1.35'];
+/* The same panel one step larger. The headroom refusal is a *shortfall* — needed reserve minus the
+   38% cap — and at 1.35 that shortfall is about 1.8 viewBox units, which renders as roughly one
+   pixel of escape. Measured at 1.5 the same rule is refused by ~9 units, so the break proves the
+   defect with several pixels of margin instead of one. */
+const OPPO_LARGER = ['--width=320', '--height=638', '--font-scale=1.5'];
 
 /* Each break names the screens and the corner it is expected to dirty, and the pairs are not
    interchangeable: a family that measured one chart or one corner would leave the other unguarded. */
@@ -99,7 +104,7 @@ const BREAKS = [
     corner: WIDE_TEXT,
     edits: [[VALROOM, '  const valRoom = true;']] },
   { name: 'the headroom refusal no longer drops the numbers, so the tallest one leaves the chart',
-    screens: 'admin-dash', corner: OPPO,
+    screens: 'admin-dash', corner: OPPO_LARGER,
     edits: [[REFUSE, '']] },
 ];
 
