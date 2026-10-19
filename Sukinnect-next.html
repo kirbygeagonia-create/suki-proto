@@ -1203,7 +1203,7 @@
   h3::before{ content:""; width:4px; height:15px; border-radius:99px; background:var(--grad-accent); flex-shrink:0; }
 
   /* Live status pulse dot */
-  .live-dot{ display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--verified); vertical-align:-1px; box-shadow:0 0 0 0 rgba(31,138,95,.45); animation:livePulse 1.6s ease-out infinite; }
+  .live-dot{ display:inline-block; flex-shrink:0; width:8px; height:8px; border-radius:50%; background:var(--verified); vertical-align:-1px; box-shadow:0 0 0 0 rgba(31,138,95,.45); animation:livePulse 1.6s ease-out infinite; }
   @keyframes livePulse{ 0%{ box-shadow:0 0 0 0 rgba(31,138,95,.45); } 70%{ box-shadow:0 0 0 7px rgba(31,138,95,0); } 100%{ box-shadow:0 0 0 0 rgba(31,138,95,0); } }
   /* Awaiting another person is not success, so it does not borrow the green live
      dot: brand blue pulses slowly to read as "in motion, nothing to do yet". */
@@ -4495,26 +4495,155 @@ function chartColumns(rows, opts) {
   const live = rows.filter(r => r.value > 0).length;
   if (!rows.length || !live) return chartEmpty(o.empty || 'Not enough sample data yet.');
   const h = o.height || 132;
-  const inner = h - CHART_PAD.t - CHART_PAD.b;
+  /* padTop starts at the stylesheet's value and grows below, once the plot has been measured, to
+     make room for the tallest bar's value label — which is translated up by its own height and so
+     otherwise paints above the chart box, onto the header row of the card. */
+  let padTop = CHART_PAD.t, inner = h - padTop - CHART_PAD.b;
   const w = CHART_W - CHART_PAD.l - CHART_PAD.r;
-  const sc = chartScale(Math.max(...rows.map(r => r.value)));
+  /* The scale has to cover every value the drawing will paint, and a paired row paints two:
+     `topVal` below is max(value, value2), so a scale built from `value` alone lets a taller second
+     series push its bar past the top of the plot and its value label clean out of the box — the
+     admin's "Weekly bookings · Completed vs open" chart did exactly that, with the "7" for open
+     bookings landing 23px above the chart and 8x8px inside the card's own sub-line. That is what the
+     collision tally caught; the headroom reserved below was treating the symptom. */
+  const peak = rows.reduce((m, r) => Math.max(m, r.value, r.value2 === undefined ? 0 : r.value2), 0);
+  const sc = chartScale(peak);
   const slot = w / rows.length;
   const bw = Math.min(o.barWidth || 30, slot * 0.62);
   /* At eight columns the week labels touched each other, so a dense series thins
      its own axis rather than rotating or truncating it — a rotated label is unreadable
      at this size and a truncated one is a lie about the period. */
-  /* The thinning budget is in the label’s own units. A category label needs about the same
-     pixels per character whether the type is 15px or 30px, so a budget fixed at 62 units thins
-     identically whatever the phone’s text-size setting is — and at 200% on a narrow panel that
-     left an axis label hanging 4px past a 264px chart box, which the camera counted and no
-     reading of the source could have. Dividing the budget by the measured root size keeps this
-     exactly the old rule at the default (floor(304/62)=4 slots, and ceil(n/4) is what the old
-     line computed for every n), and thins progressively as the setting grows: 12 columns draw
-     4 labels at 100%, 3 at 150%, 2 at 200%. Measured clean at all four, at 320px and at the
-     vivo’s 450 — node tools/sweep-text-scale.cjs. */
+  /* The thinning budget has to be in the units the labels are actually painted in, and since §60
+     moved the words out of the scaled SVG and into HTML, that unit is the CSS pixel — not the
+     viewBox unit this divided by. The old rule kept its own scaling (62 units × root/16) and looked
+     type-aware, but it was comparing a budget in a coordinate space that no longer contained the
+     text against a plot that does, so it stopped thinning early enough: measured on an OPPO at its
+     own 135% text and 320 CSS px, the plot is 188px wide, a week label is 63px, and three labels
+     were drawn 70px apart — "Aug 24" and "Sep 14" landing 27px inside each other, which is what
+     `node tools/shot.cjs --measure --width=320 --height=638 --font-scale=1.35` now counts.
+
+     So the plot is measured, not estimated: a hidden probe reproduces the real CSS chain
+     (.pad > .card > .chart-cols > .chart-plot) and answers the width the chart is about to get, and
+     the widest label is measured in its own class. The y-axis gets the same treatment from the plot
+     height, which the SVG's own aspect ratio fixes. When there is no layout to measure — the Node
+     harness — the previous rule is kept verbatim, so a check that never sees a box still sees the
+     behaviour it was written against. */
   const rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-  const fit = Math.max(1, Math.floor(w / (62 * (rootPx / 16))));
-  const stride = Math.max(1, Math.ceil(rows.length / fit));
+  let slotPx = 0, tickGapPx = 0, labelPx = 0, tickPx = 0, valuePx = 0;
+  /* Declared outside the measure block, and true by default, because the path with no layout to
+     measure — the Node harness — has to keep painting every label the markup checks read. */
+  let topClear = true;
+  try {
+    const host = document.getElementById('screen') || document.body;
+    const probe = host && host.appendChild ? host : null;
+    if (probe) {
+      const box = document.createElement('div');
+      box.className = 'pad';
+      box.style.visibility = 'hidden';
+      box.innerHTML = '<div class="card"><div class="chart-cols"><div class="chart-plot">' +
+        '<svg viewBox="0 0 ' + CHART_W + ' ' + h + '"></svg></div></div></div>';
+      probe.appendChild(box);
+      const plot = box.querySelector('.chart-plot');
+      const pw = plot ? plot.getBoundingClientRect().width : 0;
+      if (pw > 0) {
+        const unitPx = pw / CHART_W;   /* one viewBox unit, in the pixels the plot will use */
+        slotPx = pw / rows.length;
+        const widest = rows.reduce((a, r) =>
+          String(r.label).length > String(a).length ? String(r.label) : a, String(rows[0].label));
+        const cat = document.createElement('span');
+        cat.className = 'chart-cat'; cat.textContent = widest;
+        plot.appendChild(cat); labelPx = cat.getBoundingClientRect().width; cat.remove();
+        const tk = document.createElement('span');
+        tk.className = 'chart-val';
+        tk.textContent = fmt(sc.ticks[sc.ticks.length - 1]);
+        /* Measure the LINE box, because that is what the camera compares. These labels are
+           line-height:1, so the element rect is 20px tall while the glyphs it paints sit in a
+           ~26px line box — the difference is exactly the overlap the sensor sees and this rule has
+           to clear. The class is chart-val rather than chart-tick because the number this headroom
+           is for is a bar's value label, which is bold and a hair taller than an axis tick. */
+        plot.appendChild(tk);
+        const rg = document.createRange();
+        rg.selectNodeContents(tk);
+        const lr = rg.getClientRects()[0];
+        tickPx = lr ? lr.height : tk.getBoundingClientRect().height;
+        tk.remove();
+        if (!(tickPx > 0)) tickPx = rootPx * 1.25;
+        /* Reserve the headroom INSIDE the drawing. A margin on the container does not work:
+           adjacent vertical margins collapse with the header row's own bottom margin, so the value
+           label still reached the chip — measured at 8x11px of overlap after a 1.25-line margin was
+           tried. The bar area shrinks by one label line instead, which is a cost the chart can pay
+           and the card cannot. */
+        /* The anchor for a value label is `topY - 5` — five units above the bar's own top — and the
+           label is then translated up by its full line box, so the ink starts at
+           (padTop - 5)·unitPx - tickPx. For that to clear the box, padTop has to cover the 5-unit
+           offset AS WELL AS the label height; the first version of this line reserved the label plus
+           a small margin and left the number grazing the card's sub-line by 8x4px. */
+        /* Headroom is only worth reserving if it does not eat the chart. At the phone's largest text
+           on the narrowest panel the reserve exceeds a third of the drawing and leaves stub bars
+           piled under their own labels, so past that point the plot keeps its height instead. */
+        const needTop = 5 + (tickPx + 2) / unitPx;
+        if (needTop > padTop && needTop <= h * 0.38) { padTop = needTop; inner = h - padTop - CHART_PAD.b; }
+        /* And if the cap refuses the reserve, the number has nowhere to go — which is not the same as
+           having no room to paint it. A bar that reaches the top of the plot anchors its label five
+           units above that top, and the label is then translated up by its whole line box, so without
+           the reserve the ink lands outside the chart, on the card row above. Measured on the admin's
+           Weekly chart at 320 CSS px with the phone's own text at 135%: it needed 52 of 132 units
+           against a cap of 50.2, and the "8" painted 15px above the box, 13x8px into "Bookings
+           created…". The cap stays, because short bars piled under tall labels is the trade this
+           function already refused, so the labels go instead — by the same rule that drops them when
+           they cannot fit side by side. The top axis tick is kept for exactly this moment: it names
+           the maximum, so the tallest bar is still legible against the scale with its own number gone. */
+        if ((padTop - 5) * unitPx < tickPx + 1) topClear = false;
+        /* A bar's value label is a second set of words competing for the same plot, and on the
+           narrowest panel at the largest text it cannot fit: the admin's 14-week "Completed vs open"
+           series paints numbers ~40px wide into slots 19px apart, and they landed on each other
+           ("2" over "8" by 7x37px) and on the axis row ("2" over "Sat" by 17x23px) at 320 CSS px @
+           200%. Room is asked on both axes: side by side here, and above the tallest bar in the block
+           over, where the same refusal means the number leaves the top of the chart. So a chart
+           labels its bars only when every bar has room for its own number; when it does not, the
+           axis, the bars and the gridlines stay, and the values live in the summary list under the
+           svg — which already carries all of them and is what a screen reader reads.
+           This rule was deleted once during this pass, on the evidence of a mutant that showed
+           nothing: the break was run against the provider's earnings chart, where a week with no
+           settled job paints no label, so the series has exactly one label and removing the guard
+           changed nothing. The family's baseline on the ADMIN dashboard reported 2 collisions the
+           moment it went, which is what a baseline is for. */
+        const vv = document.createElement('span');
+        vv.className = 'chart-val';
+        vv.textContent = fmt(peak);
+        plot.appendChild(vv); valuePx = vv.getBoundingClientRect().width; vv.remove();
+        /* The ticks live between padTop and padTop + inner, so their pitch is a fraction of the
+           INNER box, not of the whole plot: using h here gave 33px of room to ticks that are
+           actually 21.9px apart, which is why the axis still collided at 450px after the first
+           version of this rule "fixed" it. Computed last, because the line above can move inner. */
+        tickGapPx = (inner * unitPx) / Math.max(1, sc.ticks.length - 1);
+      }
+      box.remove();
+    }
+  } catch (noLayout) { slotPx = 0; }
+  /* Whether every bar has room for its own number. valuePx stays 0 when there is no layout to
+     measure — the Node harness — and that path keeps painting, because the render checks read the
+     values off the markup. */
+  const valRoom = topClear && !(valuePx > 0 && slotPx > 0 && valuePx + 6 > slotPx);
+  let stride;
+  if (slotPx > 0 && labelPx > 0) {
+    /* A label is centred on its bar, so two neighbours need one label width plus a gutter between
+       their centres — except the FIRST one, which is anchored to its own left edge so it does not
+       hang off the plot (the `l` class above). That turns its clearance into a label-and-a-half:
+       measured after the first version of this rule, "Aug 24" occupied 15..78 and "Sep 21" 74..134,
+       four pixels inside each other, because the formula budgeted one width for a label that was
+       painted entirely to the right of its anchor. */
+    stride = Math.max(1, Math.ceil((labelPx * 1.5 + 8) / slotPx));
+  } else {
+    const fit = Math.max(1, Math.floor(w / (62 * (rootPx / 16))));
+    stride = Math.max(1, Math.ceil(rows.length / fit));
+  }
+  /* The tick labels are positioned by percentage of a plot whose height the viewBox aspect fixes,
+     so five of them in 78px is a 19.5px gap under a 20px line — they stack into one grey band. The
+     gridlines stay (they cost nothing and they are what makes a bar readable); only the numbers
+     thin, keeping zero and the top. */
+  let tickStride = 1;
+  if (tickGapPx > 0 && tickPx > 0) tickStride = Math.max(1, Math.ceil((tickPx + 2) / tickGapPx));
   /* Every position below is written twice: in viewBox units for the shape, and as a
      percentage of the box for the word that belongs to it. The percentage is what
      keeps the label on its anchor when the box is narrower than 320. */
@@ -4523,9 +4652,12 @@ function chartColumns(rows, opts) {
   const shapes = [];
   const labels = [];
   const ticks = [];
-  sc.ticks.forEach(t => {
-    const y = CHART_PAD.t + inner - (t / sc.top) * inner;
+  sc.ticks.forEach((t, ti) => {
+    const y = padTop + inner - (t / sc.top) * inner;
     shapes.push(`<line x1="${CHART_PAD.l}" y1="${y.toFixed(1)}" x2="${CHART_W - CHART_PAD.r}" y2="${y.toFixed(1)}" stroke="var(--line)" stroke-width="1" ${t === 0 ? '' : 'stroke-dasharray="2 4"'}></line>`);
+    /* Counted back from the top so the highest value is always named — a scale that does not say
+       where it ends is not a scale. The gridlines stay at every tick either way. */
+    if ((sc.ticks.length - 1 - ti) % tickStride !== 0) return;
     /* Centred on the line, not offset by the 3.5 units an SVG text baseline needed: an
        HTML label is positioned by its own box, so carrying the fudge over left every
        tick 3.5px below the gridline it names — 2.4px at 320, because the offset was a
@@ -4543,11 +4675,11 @@ function chartColumns(rows, opts) {
     const hOf = v => Math.max(v > 0 ? 3 : 0, (v / sc.top) * inner);
     const piece = (v, offset, tone) => {
       const bh = hOf(v);
-      const y = CHART_PAD.t + inner - bh;
+      const y = padTop + inner - bh;
       return `<rect x="${(x + offset).toFixed(1)}" y="${y.toFixed(1)}" width="${one.toFixed(1)}" height="${bh.toFixed(1)}" rx="3" fill="${v > 0 ? tone : 'var(--line)'}"></rect>`;
     };
     const topVal = pair ? Math.max(r.value, r.value2) : r.value;
-    const topY = CHART_PAD.t + inner - hOf(topVal);
+    const topY = padTop + inner - hOf(topVal);
     shapes.push(pair ? piece(r.value, 0, o.tone || 'var(--brand-primary)') + piece(r.value2, one + 3, o.tone2 || 'var(--brand-secondary)')
                      : piece(r.value, 0, o.tone || 'var(--brand-primary)'));
     /* A value label is centred on its bar, so the last bar's label hangs past the plot once the
@@ -4568,7 +4700,7 @@ function chartColumns(rows, opts) {
        the kind of edit this file keeps getting wrong. */
     const cxPct = (x + bw / 2) / CHART_W * 100;
     const anchor = cxPct > 80 ? ' r' : (cxPct < 20 ? ' l' : '');
-    if (topVal > 0) labels.push(`<span class="chart-val${anchor}" style="left:${pctX(x + bw / 2)}; top:${pctY(topY - 5)};">${esc(fmt(topVal))}</span>`);
+    if (topVal > 0 && valRoom) labels.push(`<span class="chart-val${anchor}" style="left:${pctX(x + bw / 2)}; top:${pctY(topY - 5)};">${esc(fmt(topVal))}</span>`);
     if (i % stride === 0) labels.push(`<span class="chart-cat${anchor}" style="left:${pctX(x + bw / 2)}; top:${pctY(h - 8)};">${esc(r.label)}</span>`);
   });
   return `<div class="chart-cols"><div class="chart-plot"><svg viewBox="0 0 ${CHART_W} ${h}" role="img" aria-label="${esc(o.aria || chartSummary(rows, fmt))}">${shapes.join('')}</svg>${labels.join('')}</div>${ticks.join('')}</div>`

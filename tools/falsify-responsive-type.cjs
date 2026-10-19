@@ -22,8 +22,13 @@ const original = fs.readFileSync(TARGET, 'utf8');
 
 const CAP = 'font-size: min(1em, 20px);';
 const VAL_RULE = '.chart-val{transform:translate(-50%,-100%); color:var(--ink); font-weight:700;}';
+/* The axis budget now has two paths: a measured one in CSS pixels (§69) and this fallback for when
+   there is no layout to measure — which is exactly the state the Node harness runs in, and so the
+   only one these two mutants can reach from a check that never opens a browser. The needles were
+   re-pointed when §69 moved both lines inside the `else`; until then this family reported
+   "1 not applied" for a mutant that had silently stopped testing anything. */
 const FIT = 'const fit = Math.max(1, Math.floor(w / (62 * (rootPx / 16))));';
-const STRIDE = 'const stride = Math.max(1, Math.ceil(rows.length / fit));';
+const STRIDE = 'stride = Math.max(1, Math.ceil(rows.length / fit));';
 
 /* Single-line needles: the file is CRLF, so a needle carrying \n never matches and the mutant
    reports itself as SKIP while looking like a pass. */
@@ -44,7 +49,7 @@ const MUTANTS = [
     needle: FIT, to: 'const fit = Math.max(1, Math.floor(w / 62));',
     label: 'and it thins harder as the phone’s own text gets bigger' },
   { name: 'the axis thins so hard a sparse series loses its second label',
-    needle: STRIDE, to: 'const stride = Math.max(1, Math.ceil((rows.length + fit) / fit));',
+    needle: STRIDE, to: 'stride = Math.max(1, Math.ceil((rows.length + fit) / fit));',
     label: 'and it thins harder as the phone’s own text gets bigger' },
 ];
 

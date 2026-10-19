@@ -1559,6 +1559,28 @@ suite('hygiene', async () => {
   c.check('the camera names a shot by the topmost layer, so a dialog outranks its sheet',
     modalAsked > -1 && sheetAsked > -1 && modalAsked < sheetAsked,
     'dialog lookup at ' + modalAsked + ', sheet lookup at ' + sheetAsked);
+
+  /* The collision tally is new, and every one of its three guards exists because the first version
+     produced a false finding without it: text inside a CLOSED <details> still has a layout box in
+     Chrome (seven findings on four screens, all of them collapsed content), a clipped sr-only data
+     table still answers getClientRects with its full text width (six more on the provider
+     dashboard), and an element rect for a wrapped inline covers every line it touches, so two spans
+     on consecutive lines "overlap" by the height of the wrap. A sensor that cries wolf here is worse
+     than no sensor, because the whole point of it is that nothing else in the tool asks whether two
+     labels land on each other. */
+  const collideWalk = (camera.match(/[Tt]ext painted on top of other text[\s\S]{0,6000}?out\.textCollide\.push/) || [''])[0];
+  const collideWhy = [];
+  if (collideWalk.length === 0) collideWhy.push('the collision walk is gone');
+  else {
+    if (!/closest\('details'\)/.test(collideWalk) || !/hasAttribute\('open'\)/.test(collideWalk))
+      collideWhy.push('no guard against text inside a closed details');
+    if (!/sr-only/.test(collideWalk) || !/visibility/.test(collideWalk))
+      collideWhy.push('no guard against visually hidden text');
+    if (!/createRange\(\)/.test(collideWalk) || !/getClientRects\(\)/.test(collideWalk))
+      collideWhy.push('comparing element boxes instead of line boxes');
+  }
+  c.check('the collision tally only reports text that is actually painted on painted text',
+    collideWhy.length === 0, collideWhy.join('; ') || 'ok');
   return c;
 });
 

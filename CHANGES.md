@@ -4039,3 +4039,227 @@ mutants applied, 163 caught, 0 not applied.**
 `node tools/shot.cjs --measure` over the new **72 screens**: every failure tally zero, no console
 errors. The corrected device corner run alone (`--width=320 --height=638 --font-scale=1.35`) reports
 the same: zero on every hard tally, and 213 on the ellipsized-string review line.
+
+## 69. Two labels can both be inside the box and still be printed on top of each other
+
+The handset pass asked for a photograph of the provider's two charts at maximum text — item 3 of the
+list `DEVICE-PASS.md` has carried for two days. On the OPPO at 320 CSS px with its own text at 135%,
+the Weekly earnings chart is a mess that every instrument in `tools/` calls clean:
+
+```
+"Aug 24" x "Sep 14"   overlap 27x26px      five y ticks: 20px tall, 21px apart
+"0" x "₱100"           overlap 13x14px      "₱100" x "₱200"     49x14px
+"₱200" x "₱300"        52x14px              "₱300" x "₱400"     53x14px
+```
+
+`chart labels painted outside their own chart box: 0`. That is correct, and it is the blind spot: both
+labels were inside the box. They were simply inside it **on top of each other**. Every tally in the
+camera asks a containment question — is this clipped, is it outside its parent, is it under the nav,
+is it off the scale, is it reachable — and not one of them asks whether two pieces of painted text
+land on the same pixels.
+
+### The new sensor, and the three false findings it took to build it
+
+`text painted on top of other text in the same card` compares leaf text elements pairwise. Its first
+version reported **7 collisions on 4 screens at the default width**, and every one of them was wrong:
+
+1. **Text inside a closed `<details>` still has a layout box in Chrome.** Six of the seven were the
+   dispute evidence timeline on `admin-desk` — rows at real coordinates, painted nowhere. The tell was
+   `document.elementFromPoint` at each row's centre answering the *button* on top, and
+   `details { open=false }` in the ancestor chain. The guard is the disclosure, not the hit-test: an
+   `elementFromPoint` filter would also silence the chart labels, which are `pointer-events:none` by
+   design.
+2. **A clipped `sr-only` data table still answers `getClientRects()` with its full text width.** After
+   the first guard, the provider dashboard reported 11 collisions, six of them the screen-reader list
+   (`<li>Aug 24: 0`, 1px wide) sitting on the caption below it. Anything an ancestor hides — the clip
+   pattern, `visibility`, `opacity: 0` — is now out.
+3. **An element rect covers every line a wrapped inline touches.** "Customer Ratings" and "(41 jobs
+   completed)" on the fruit sheet are two spans on consecutive lines; their element boxes overlap by
+   the height of the wrap and nothing on screen touches anything. The comparison is now line-box to
+   line-box, via a `Range`, and both axes must overlap on the *same* pair of lines.
+
+Each of those was a finding I would have filed. The gate pins all three guards, because a sensor that
+cries wolf in the one place nothing else looks is worse than the blind spot it replaced.
+
+### The real defect, and why a "type-aware" budget was not
+
+§60 moved a chart's words out of the scaled SVG and into HTML positioned by percentage of the plot.
+The thinning rule that decides how many of them to draw kept dividing **viewBox units**:
+
+```js
+const fit = Math.max(1, Math.floor(w / (62 * (rootPx / 16))));   // w is in viewBox units
+```
+
+It scales with the root size, so it reads as type-aware, and at the default it is identical to the old
+rule. But the text it now budgets is painted in CSS pixels against a box capped at 320px, so the two
+sides of the division stopped being the same unit the day the labels left the SVG. Measured on the
+device: plot 188px, label 63px, three labels drawn 70px apart.
+
+The fix measures instead of estimating. A hidden probe reproduces the real CSS chain
+(`.pad > .card > .chart-cols > .chart-plot`), answers the width the chart is about to get, and the
+widest label is measured in its own class:
+
+```js
+stride = Math.max(1, Math.ceil((labelPx * 1.5 + 8) / slotPx));
+```
+
+The **1.5** is the first label's edge anchor: `.chart-cat` is centred on its bar except at the plot
+edges, where it starts *at* the bar centre so it does not hang off the device. Budgeting one width for
+it left "Aug 24" occupying 15..78 and "Sep 21" 74..134 — four pixels inside each other, which the
+sensor caught and a reading of the source would not have.
+
+The y-axis gets the same treatment, and it needed two more corrections first:
+
+- **The tick pitch is a fraction of the inner box, not the whole plot.** Ticks are placed between
+  `CHART_PAD.t` and `CHART_PAD.t + inner`, so using `h` handed 33px of room to ticks that are actually
+  21.9px apart, and the axis still collided at 450px after the first version "fixed" it.
+- **Measure the line box, because that is what the sensor compares.** `.chart-tick` is `line-height:1`,
+  so its element rect is 20px tall while the glyphs sit in a ~26px line box — the difference is
+  exactly the overlap the rule has to clear.
+
+### Two ways the fix lied to itself before it worked
+
+A `getBoundingClientRect()` on a **detached** element is four zeros. The first version measured the
+tick label that way, silently fell through to `rootPx * 1.25`, and thinned the axis by a constant it
+described as a measurement — which is how "₱100" and "₱400" ended up 9px into each other at 200% text
+*after* the fix. The span has to be in the document to be measured, and the fallback has to be
+labelled as the estimate it is.
+
+And the check I wrote to pin the new sensor failed with "the collision walk is gone" on its first run,
+for two reasons that are each worth remembering: the pattern was case-sensitive against a capitalised
+comment, and the span limit was shorter than the comments it had to cross. A check whose anchor does
+not match reports the *code* as missing. This file has now said that out loud three times.
+
+### The corner sweep then failed all seven, and was right to
+
+With the new tally registered, `tools/sweep-text-scale.cjs` — which treats any count it does not
+recognise as must-be-zero, so a sensor added tomorrow cannot be silently informational — went from
+7 of 7 clean to **0 of 7**, and the run also surfaced a second finding that had nothing to do with
+charts:
+
+```
+text painted on top of other text in the same card: 1   admin-dash
+round markers painted as a sliver (a flex row took its width): 1   fruit-weighed-record  .live-dot 4.1x8px
+```
+
+The first took three attempts, and the record of why is the point. It is a bar's **value label
+escaping the plot** onto the header row of the card — "Bookings created" x "7", 16x8px. Three fixes in
+a row made the overlap smaller and none of them removed it:
+
+| attempt | what was changed | resulting overlap |
+| --- | --- | --- |
+| 1 | margin above the chart, sized in type units | 8x11px |
+| 2 | headroom reserved inside the drawing, from the measured label height | 8x4px |
+| 3 | the same, corrected for the 5-unit offset the anchor uses | 8x8px |
+
+Each number got my attention because it did not go to zero, and each time I adjusted the arithmetic
+instead of asking where the two boxes actually were. The fourth look measured them:
+
+```
+.chart-cols top = 2229        the "7" label: top 2191, bottom 2206   ← 23px ABOVE the chart box
+.chart-sub  ("Bookings created…") top 2200, bottom 2221
+```
+
+A label 23px above a box it is positioned inside cannot be a padding problem. `topY` had gone
+**negative**, and it did that because the scale is computed from one series while the chart paints
+two:
+
+```js
+const sc = chartScale(Math.max(...rows.map(r => r.value)));   // ignores r.value2
+…
+const topVal = pair ? Math.max(r.value, r.value2) : r.value;  // paints the larger one
+```
+
+The admin's Weekly bookings chart is a *paired* chart — "Completed vs open" — and on the week where
+open bookings (7) exceeded completed (3), the bar was drawn taller than the plot and its label was
+anchored above the box. So the fix is one line: the scale must cover every value the drawing will
+paint. The headroom reserved in attempts 2 and 3 stays, because the tallest bar's label genuinely
+does need one line of room above the plot — but it is not what the collision was, and saying so is
+the lesson: **three shrinking numbers in a row are a signal that the model is wrong, not that the fix
+is almost right.** The escape tally could not see any of it either, for a reason worth stating:
+`chartEscape` measures **left and right only**
+(`Math.max(cb.left - r.left, r.right - cb.right, 0)`), so a label that leaves the box vertically is
+invisible to it at every width. That gap is now task #33.
+
+The second is §68's flex-crush rule with one member missed: `.live-dot` is an 8px circle with no
+content, so as a flex item its `min-width:auto` protects nothing and a growing sibling took it to
+4.1px. It now declares `flex-shrink:0`, exactly as `.wait-dot` and `.notif-btn` did.
+
+### And a mutant that had quietly stopped testing anything
+
+The same chain reported **1 not applied** in `falsify-responsive-type`: §69 moved the axis budget
+inside an `else` branch, and one of that family's needles still looked for `const stride = …`, which
+no longer exists. Five of its six mutants were still being applied and caught, so the family printed
+as healthy while its coverage had dropped by one. This is the failure the README already names — a
+needle pinned to a line that legitimately moves stops guarding the moment it moves — and the reason
+`not applied` is a column to read rather than a footnote. Both needles are re-pointed at the fallback
+branch (which is the only one the Node harness can reach, since it has no layout to measure), and the
+family now reads **6 of 6, 0 not applied**.
+
+### Numbers
+
+### Numbers — and the first version of this paragraph was a false claim
+
+The five widths this section first quoted were five widths of **one screen**. The seven-corner sweep,
+which walks all 72 screens with every tally it knows, came back with **one colliding pair at the
+default width with the text at 200%, and the same pair at 320x638 with the device's own 135%**. A
+clean subset is not a clean application, and the sweep is the instrument that says so.
+
+The pair was the admin's *Weekly bookings · Completed vs open* chart: a bar's value label **"8"
+painted 15px above its own chart box and 13x8px into the card's sub-line**, "Bookings created and
+carried over". `chart labels painted outside their own chart box` printed 0 for it at every width,
+because that tally measured **left and right only** — a label leaving the box vertically was invisible
+to the one sensor built to catch a label leaving its box. Task #33 is closed: the walk takes the
+larger of the two axes and names the edge, so the line now reads
+`hangs 15px above the top edge of a 264px box`. The ticks are excluded from the vertical half on
+purpose, not for tidiness: a `.chart-tick` is centred on the gridline it names, so half its box sits
+above a top-of-plot line on every chart — 2px at the default text size, which would keep the anchor
+corner permanently dirty. The anchor and all 72 screens were measured first, and read 0, before the
+failing corner was allowed to be believed.
+
+The cause was the headroom cap refusing, and then quietly spending, the room. `chartColumns` reserves
+one label line above the plot so a tall bar's number stays inside the box, and refuses that reserve
+when it would take more than 38% of the drawing — because stub bars under tall labels is the trade this
+function already declined. At 1.35 text on a 320px panel the reserve needs **52 of 132 units against a
+cap of 50.2**, so it was refused, the bars kept their height, and the number went where a number goes
+when nothing holds it: out of the chart. The rule now finishes its own thought — **when the reserve is
+refused, the values are not painted** — by the same fallback that already drops them when they cannot
+fit side by side. The top axis tick is kept precisely because of this moment: it names the maximum, so
+the tallest bar is still legible against the scale with its own number gone.
+
+And that suppression hid a second defect, which is the part worth keeping. Re-running
+`falsify-chart-collide` against the fixed file printed **MISSED** for its third break — the
+paired-series bug, `chartScale` built from `r.value` while the chart paints `max(r.value, r.value2)`.
+The mutant still draws the too-tall bar. The label that used to be the evidence is now correctly
+suppressed, and an SVG clips at its own viewport, so the bar simply cuts off at the top and reads as a
+week that reached its maximum. **A fix had made a sensor blind to the bug it was written around.** The
+walk now asks the question off the painted shapes alone —
+`bars painted above their own top gridline (a scale smaller than its data)`, where the top gridline is
+the smallest `y1` among the lines and one viewBox unit is the svg's own width divided by its own
+viewBox width, with no arithmetic re-derived from the app. With that in place the break reports
+`over=1` while `collide=0, escape=0`, which is exactly the finding the label tallies can no longer
+make.
+
+`falsify-chart-collide` reads **5 of 5, 0 not applied** across three tallies and two corners:
+un-thinning the x-axis produces 27 colliding pairs, un-thinning the y-axis 9, the first-series-only
+scale 1 bar above its gridline, removing the whole value-room guard 2 pairs plus 1 escape, and
+removing the headroom refusal alone 1 pair plus 1 escape at the device's corner. Two halves of one
+guard turned out to be **redundant at 320 @ 200%** — both refuse the numbers there — so a break that
+removes only one reads 0, and the attempt to isolate the side-by-side half on the default panel
+printed MISSED too. Recorded rather than papered over: no corner this seed paints makes that half fail
+by itself, so it is proven jointly with the headroom rule, and a mutant that cannot fire anywhere is
+not coverage.
+
+The same chain then printed **1 not applied** in `falsify-flex-crush`. §69's own
+`.live-dot{ flex-shrink:0; }` gave the waiting dot's needle a second match, so that mutant had quietly
+stopped being applied while the family still printed every mutant it did apply as caught. Re-pointed
+through the file's shape-scoped cut — `.wait-dot{` and `.live-dot{` named separately — it also turned
+out that the live dot is crushed on **`fruit-weighed-record`** and not on `booking-tracking`, the only
+other screen that paints one. Found by asking all 72 screens how many `.live-dot` nodes they hold,
+because the two booking-detail screens that look like the obvious hosts both answer 0 and the dot is a
+status condition, not a screen. Measured first: with the guard removed the sliver tally stays 0 on
+`booking-tracking` and fires on `fruit-weighed-record`. A rule proven on the wrong screen reads exactly
+like a rule that does nothing, and that is how this declaration nearly got deleted. The family now
+reads **5 of 5, 0 not applied**. `falsify-responsive-type` holds at **6 of 6, 0 not applied**. Gate
+**529**; seven corners, 22 tallies each, **all clean**; whole suite **30 families, 169 mutants, 169 caught, 0 not applied**.
+

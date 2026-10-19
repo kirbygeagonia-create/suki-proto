@@ -1730,6 +1730,98 @@ because saving an unchanged form writes no record either way, so no count can se
 three screens for the new dialogs (72 now), because a fix that has never been painted has never been
 measured.
 
+TWO LABELS CAN BOTH BE INSIDE THE BOX AND STILL BE PRINTED ON TOP OF EACH OTHER. Every tally in the
+camera asks a containment question — clipped, outside its parent, under the nav, off the scale,
+reachable — and none of them asked whether two pieces of painted text share pixels, so the provider's
+Weekly earnings chart passed the whole suite on a real handset at its own text size with "Aug 24" 27px
+inside "Sep 14" and five y-axis ticks stacked into a grey band. `chart labels painted outside their
+own chart box` read 0 on that screen, correctly: both labels were inside it. The tally
+`text painted on top of other text in the same card` now asks the missing question, and its first
+version reported 7 findings on 4 screens at the default width, ALL of them false, which is why the
+gate pins three guards rather than trusting the count: text inside a **closed `<details>`** still has
+a layout box in Chrome; a clipped `sr-only` table still answers `getClientRects()` with its full text
+width; and an element rect covers every line a wrapped inline touches, so consecutive lines "overlap"
+by the height of the wrap. Compare **line boxes** via a `Range`, require both axes on the same pair,
+and skip collapsed disclosures and visually hidden text. An `elementFromPoint` filter is the wrong
+cure — it also silences the chart labels, which are `pointer-events:none` by design. The defect that
+survived the guards was a unit error with no failing check behind it: §60 moved a chart's words out of
+the scaled SVG into CSS pixels and left the thinning budget dividing **viewBox** units, so the rule
+scaled with the root size and read as type-aware while comparing two different spaces. The fix
+measures: a hidden probe reproduces `.pad > .card > .chart-cols > .chart-plot` to get the width the
+chart is about to have, measures the widest label in its own class, and budgets
+`stride = ceil((labelPx * 1.5 + 8) / slotPx)` — the 1.5 because the first label is edge-anchored, so
+it paints entirely to one side of its own centre. Two more unit errors had to be found first: the tick
+pitch is a fraction of the **inner** box, not the whole plot (33px of room computed for ticks 21.9px
+apart), and a `.chart-tick` is `line-height:1`, so its element rect is 20px while the glyphs sit in a
+~26px line box — the exact overlap the rule must clear. And a `getBoundingClientRect()` on a
+**detached** element is four zeros: the first version measured the tick that way, fell through to a
+constant, and thinned the axis by a number it described as a measurement. `node
+tools/falsify-chart-collide.cjs` proves the tally fires (27 pairs without x-thinning, 9 without
+y-thinning). Registering the tally then made `sweep-text-scale.cjs` fail **all seven corners**, which
+is that tool doing its job — it treats any count it does not recognise as must-be-zero — and two of
+those failures were not the chart at all: a bar's **value label escaping the plot upward** onto the
+card's own sub-line, and `.live-dot`, an 8px circle with no content, crushed to 4.1px as a flex item —
+§68's rule with one member missed. The escape took **three fixes that each made the overlap smaller
+without removing it** (16x8 → 8x11 → 8x4 → 8x8) before the boxes were measured and the cause found:
+`chartScale` is built from `r.value` while a paired row paints `max(r.value, r.value2)`, so on the
+admin's "Completed vs open" chart the taller second series drew above the plot and anchored its label
+23px outside the box, negative in the viewBox. **Three shrinking numbers in a row mean the model is
+wrong, not that the fix is nearly right.** The headroom stays — a tall bar's label does need one line
+above the plot — but it was not the defect. The chain also reported **1 not applied** in
+`falsify-responsive-type`: moving the axis budget into an `else` orphaned a needle still looking for
+`const stride = …`, so five of six mutants were caught and the family printed healthy while its
+coverage had dropped by one. **Read the `not applied` column after any change to a file a family
+needles**; a passing family is not the same as an intact one.
+
+FIVE WIDTHS OF ONE SCREEN IS NOT THE APP — and the sentence this section printed about them was the
+false one. "Five widths now read 0" was measured on the provider dashboard, while the seven-corner
+sweep walks all 72 screens and came back with one colliding pair at the default width @ 200% text and
+the same pair at 320x638 @ 135%, the device's own combination. It was the admin's Weekly chart keeping
+a value label **15px above its own chart box** and 13x8px inside the card's sub-line, and
+`chart labels painted outside their own chart box` printed 0 for it because that tally measured left
+and right only: a vertical escape is invisible to a sensor that asks about widths. The tally now takes
+the larger of the two axes and names the edge, with `.chart-tick` excluded from the vertical half on
+purpose — a tick is centred on its own gridline, so half its box sits above a top-of-plot line on
+every chart, 2px at the default size, and counting it would keep the anchor corner permanently dirty.
+**Measure the anchor before believing a failing corner.**
+
+THE CAP THAT REFUSES THE HEADROOM IS THE SAME DECISION AS NOT PAINTING THE NUMBERS, and the rule only
+became true once it said so. `chartColumns` reserves one label line above the plot and refuses the
+reserve when it would eat more than 38% of the drawing, because stub bars under tall labels is the
+trade this file already declined. At the phone's 135% on a 320px panel the reserve needs 52 of 132
+units against a cap of 50.2 — refused — and the number then painted outside the chart. Now: when the
+reserve is refused, the values are dropped, by the same fallback that drops them when they will not fit
+side by side, and the top axis tick survives precisely so the tallest bar stays readable against the
+scale with its own number gone.
+
+A FIX THAT SUPPRESSES EVIDENCE CAN BLINDEN THE SENSOR THAT FOUND THE BUG IT SUPPRESSES. Once the
+numbers were dropped, `falsify-chart-collide`'s paired-series break — `chartScale` built from `r.value`
+while the chart paints `max(r.value, r.value2)` — printed MISSED. The mutant still draws the too-tall
+bar; the escaping label that used to prove it is correctly gone, and an SVG clips at its own viewport,
+so the bar cuts off at the top and reads as a week that reached its maximum. The tally
+`bars painted above their own top gridline (a scale smaller than its data)` now asks the question off
+the painted shapes alone: the top gridline is the smallest `y1` among the lines, one viewBox unit is
+the svg's own width over its own viewBox width, and nothing is re-derived from the app's arithmetic.
+The break reports `over=1` with `collide=0, escape=0`.
+
+TWO HALVES OF ONE GUARD CAN BE REDUNDANT, AND THAT IS A FACT TO RECORD RATHER THAN SMOOTH OVER. At
+320px with the text at 200% both the side-by-side budget and the headroom refusal drop the numbers, so
+a break that removes only one reads 0 — two attempts to isolate a single half printed MISSED, one here
+and one on the default panel. The family proves the guard whole and says plainly that no corner this
+seed paints makes the horizontal half fail alone. Proving halves separately needs a corner where only
+one decides; inventing that corner is the same as not testing.
+
+A FIX THAT SHARES A SUBSTRING WITH ITS NEIGHBOUR ORPHANS A NEEDLE IN ANOTHER FAMILY. `.live-dot` and
+`.wait-dot` are both 8px circles opening with the identical
+`display:inline-block; flex-shrink:0; width:8px;`, so giving the live dot the declaration the waiting
+dot already had made that needle match twice and its mutant stop applying — reported as **1 not
+applied** by `node tools/falsify-all.cjs`, not by a run of the family itself, which printed every
+mutant it did apply as caught. Both cuts are now located inside their own selector. And the live dot's
+crush lives on `fruit-weighed-record`, not on `booking-tracking`, the only other screen that paints the
+node: measured by asking all 72 screens how many `.live-dot` they hold, because the dot is a status
+condition rather than a screen and the two booking-detail screens that look like obvious hosts both
+answer 0. **A rule proven on the wrong screen reads exactly like a rule that does nothing.**
+
 READ AN ACCESSIBILITY DUMP TWICE BEFORE CALLING IT A DEFECT. Two nodes in this walk looked like
 findings and were neither: the sign-in screen dumped **completely empty**, which is Chromium
 building its tree lazily and one tap on a field fixed, and a password node printed
@@ -3056,12 +3148,12 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate 528; whole suite **29 families, 163 mutants, 163 caught, 0 not applied**
+Gate **529**; whole suite **30 families, 169 mutants, 169 caught, 0 not applied**
 (`node tools/falsify-all.cjs`), of which `falsify-flex-crush`, `falsify-control-reach`,
-`falsify-focus-trap`, `falsify-long-input`, `falsify-stale-overlay` and `falsify-double-tap` are the
-six that drive the camera rather than the gate — a geometry rule, a real tap, or a second tap has no
-Node assertion available to it — and `falsify-camera-surfaces` is the one that reads the instrument
-instead of the application.
+`falsify-focus-trap`, `falsify-long-input`, `falsify-stale-overlay`, `falsify-double-tap` and
+`falsify-chart-collide` are the seven that drive the camera rather than the gate — a geometry rule, a
+real tap, or a second tap has no Node assertion available to it — and `falsify-camera-surfaces` is the
+one that reads the instrument instead of the application.
 
 Measure it with `node tools/sweep-text-scale.cjs` — seven phone corners, the camera each time: 320px
 @ 200% text, default width @ 200%, 450px @ 135% (a vivo panel at the OPPO's setting), **320x638 @

@@ -100,7 +100,7 @@ const FONT_SCALE = flag('font-scale', '');
    what a real browser actually laid out.
    -------------------------------------------------------------------------------- */
 const AUDIT_JS = `(function(){
-  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], belowFloor: [], chartEscape: [], navEscape: [], squashedCircle: [], unreachable: [], contrast: [], overlaps: [], stretched: [], broken: [], remote: [], svgSmall: [], vendor: [], mapEscape: [], occluded: [], modalInert: [], nameless: [], placeholderOnly: [], catMotion: [], hOverflow: 0 };
+  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], belowFloor: [], chartEscape: [], chartOver: [], textCollide: [], navEscape: [], squashedCircle: [], unreachable: [], contrast: [], overlaps: [], stretched: [], broken: [], remote: [], svgSmall: [], vendor: [], mapEscape: [], occluded: [], modalInert: [], nameless: [], placeholderOnly: [], catMotion: [], hOverflow: 0 };
   const vw = document.documentElement.clientWidth;
   out.hOverflow = document.documentElement.scrollWidth - vw;
   const TAP = 44;
@@ -220,16 +220,122 @@ const AUDIT_JS = `(function(){
      positioned against the chart box, so an axis gutter narrower than the widest tick
      paints the numbers over the card's padding — and nothing else sees it: the text is
      not clipped because nothing clips it, its contrast is fine, and it is not off the
-     type scale. This is the check that would have caught the first version. */
+     type scale. This is the check that would have caught the first version.
+       The first version measured LEFT AND RIGHT ONLY, and stayed that way for every pass
+     that quoted its clean result, so a label that leaves the box upward was invisible at
+     every width: the admin's Weekly chart painted its "8" 15px above the chart box and
+     13x8px into the card's own sub-line at 320 CSS px with the phone's text at 135%, and
+     this tally said 0. */
   document.querySelectorAll('.chart-cols').forEach(chart => {
     const cb = chart.getBoundingClientRect();
     if (!cb.width) return;
     chart.querySelectorAll('.chart-tick,.chart-val,.chart-cat').forEach(l => {
       const r = l.getBoundingClientRect();
       const over = Math.max(cb.left - r.left, r.right - cb.right, 0);
-      if (over > 1) out.chartEscape.push({ text: (l.textContent || '').trim().slice(0, 16),
-        cls: l.className, over: Math.round(over), box: Math.round(cb.width) });
+      /* The vertical half excludes the ticks, and not for tidiness: a .chart-tick is centred on the
+         gridline it names, so half its box sits above a top-of-plot line on EVERY chart — 2px at the
+         default text size, which would make the anchor corner permanently dirty. A .chart-val is
+         translated up by its whole line box, so it is the one that can leave the top of the box and
+         land on the row above; a .chart-cat is anchored from the bottom of the plot upward and is
+         the one that can wrap to a second line and leave the bottom. */
+      const isTick = String(l.className).indexOf('chart-tick') > -1;
+      const rise = isTick ? 0 : Math.max(cb.top - r.top, r.bottom - cb.bottom, 0);
+      if (over > 1 || rise > 1) out.chartEscape.push({ text: (l.textContent || '').trim().slice(0, 16),
+        cls: l.className, over: Math.round(Math.max(over, rise)),
+        dir: over > 1 ? 'sideways' : (r.top < cb.top ? 'above the top edge' : 'below the bottom edge'),
+        box: Math.round(cb.width) });
     });
+  });
+
+  /* A bar that rises above its own top gridline. This one exists because a fix silenced a sensor.
+     The paired-series bug — the scale built from one series while the chart paints the larger of two
+     — was visible through the escaping value label it produced, and once the numbers are dropped at
+     that text size the bar keeps painting above the maximum while every label tally reads 0. An SVG
+     clips at its own viewport, so the overage is not even outside the box: it is a bar cut off at the
+     top, which reads as "this week reached the scale" and is the one thing a chart must not say.
+     Everything here is read off the painted shapes: the top gridline is the smallest y1 among the
+     lines, one viewBox unit is the svg's own width over its own viewBox width, and no arithmetic is
+     re-derived from the app. */
+  document.querySelectorAll('.chart-cols svg').forEach(svg => {
+    const vb = (svg.getAttribute('viewBox') || '').split(/[ ,]+/).map(Number);
+    const b = svg.getBoundingClientRect();
+    if (vb.length < 3 || !vb[2] || !b.width) return;
+    const unitPx = b.width / vb[2];
+    const lines = [].slice.call(svg.querySelectorAll('line'));
+    if (!lines.length) return;
+    const topGrid = Math.min.apply(null, lines.map(l => parseFloat(l.getAttribute('y1'))));
+    if (!isFinite(topGrid)) return;
+    [].slice.call(svg.querySelectorAll('rect')).forEach(rc => {
+      const y = parseFloat(rc.getAttribute('y'));
+      if (!isFinite(y)) return;
+      const over = Math.round((topGrid - y) * unitPx);
+      if (over > 1) out.chartOver.push({ over: over, top: Math.round((topGrid - y) * unitPx),
+        box: Math.round(b.width), h: Math.round(b.height) });
+    });
+  });
+
+  /* Text painted on top of other text. Every other sensor here asks a containment question — is this
+     clipped, is it outside its box, is it under the nav — and none of them asks whether two labels
+     land on each other. A real handset at 320 CSS px with its own text at 135% put "Aug 24" and
+     "Sep 14" 27px into one another and stacked five y-axis ticks 12px apart in a 20px line, while
+     the chart-escape tally read zero — both labels were inside the box.
+     They were simply inside it on top of each other. (No backticks in this file's page scripts:
+     they are template literals, and the comment that says so must not contain one either.) */
+  document.querySelectorAll('.card').forEach(card => {
+    const leaves = [].slice.call(card.querySelectorAll('*')).filter(el => {
+      if (el.children.length) return false;
+      const t = (el.textContent || '').trim();
+      if (!t) return false;
+      /* A closed <details> still gives its children real layout boxes in Chrome, so a rect-only
+         sensor "sees" text that is not painted. Seven of these collisions were reported on four
+         screens at the default width — the dispute evidence timeline, the provider's rating line —
+         and every one of them was collapsed content, confirmed by elementFromPoint answering the
+         button on top instead of the row. The chart labels this tally exists for are painted, so
+         the guard is the disclosure, not the hit-test: an elementFromPoint filter would also
+         silence the chart labels, which are pointer-events:none by design. */
+      const d = el.closest('details');
+      if (d && !d.hasAttribute('open') && el.tagName !== 'SUMMARY') return false;
+      /* Visually hidden text is not painted, and a Range still reports its line box: the chart's
+         sr-only data table is clipped to 1px and its rows answered getClientRects with the full
+         text width, so six of the eleven findings on the provider dashboard were the
+         screen-reader table sitting on the caption below it. Anything an ancestor hides — by the
+         clip pattern, by visibility, or by opacity — is out. */
+      for (let a = el; a && a !== document.body; a = a.parentElement) {
+        if (a.classList && a.classList.contains('sr-only')) return false;
+        const s = getComputedStyle(a);
+        if (s.visibility === 'hidden' || s.visibility === 'collapse') return false;
+        if (parseFloat(s.opacity) === 0) return false;
+        if (s.clip && s.clip !== 'auto' && s.position === 'absolute') return false;
+        if (s.clipPath && s.clipPath !== 'none') return false;
+      }
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && r.height > 0;
+    });
+    for (let i = 0; i < leaves.length; i++) for (let j = i + 1; j < leaves.length; j++) {
+      /* Compare the LINE boxes, not the element box. An inline span that wraps reports one rect
+         covering every line it touches, so two spans on consecutive lines "overlap" by the height
+         of the wrap while nothing on the screen touches anything — that is what the fruit sheet's
+         "Customer Ratings" / "(41 jobs completed)" pair looked like to the first version of this
+         tally, and it was a false positive. A Range answers one rect per line, which is the box the
+         glyphs are actually painted in. Both axes must overlap on the SAME pair of lines, or the
+         widest-x line and the tallest-y line would invent a collision between them. */
+      const linesOf = el => {
+        const rg = document.createRange();
+        rg.selectNodeContents(el);
+        return [...rg.getClientRects()].filter(r => r.width > 1 && r.height > 1);
+      };
+      let ox = 0, oy = 0;
+      linesOf(leaves[i]).forEach(a => linesOf(leaves[j]).forEach(b => {
+        const x = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+        const y = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+        if (x > 3 && y > 3) { if (x > ox) ox = x; if (y > oy) oy = y; }
+      }));
+      if (ox > 3 && oy > 3) out.textCollide.push({
+        card: (card.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 26),
+        a: (leaves[i].textContent || '').trim().slice(0, 14),
+        b: (leaves[j].textContent || '').trim().slice(0, 14),
+        ox: Math.round(ox), oy: Math.round(oy) });
+    }
   });
 
   /* A bottom-navigation item pushed off the panel. The row is a flex container whose items are
@@ -1458,7 +1564,9 @@ async function main() {
     tally(flat('broken'), 'images that asked for a file and got no pixels', r => r.screen + '  ' + r.src + ' — ' + r.why);
     tally(flat('remote'), 'requests that left the device for a network', r => r.screen + '  ' + r.kind + '  ' + r.url);
     tally(flat('svgSmall'), 'chart text that paints below the 14px floor', r => r.screen + '  "' + r.text + '" declares ' + r.declared + 'px, paints ' + r.rendered + 'px');
-    tally(flat('chartEscape'), 'chart labels painted outside their own chart box', r => r.screen + '  "' + r.text + '" (' + r.cls + ') hangs ' + r.over + 'px past a ' + r.box + 'px box');
+    tally(flat('chartEscape'), 'chart labels painted outside their own chart box', r => r.screen + '  "' + r.text + '" (' + r.cls + ') hangs ' + r.over + 'px ' + r.dir + ' of a ' + r.box + 'px box');
+    tally(flat('chartOver'), 'bars painted above their own top gridline (a scale smaller than its data)', r => r.screen + '  a bar rises ' + r.over + 'px above the line that names its maximum in a ' + r.box + 'x' + r.h + 'px drawing');
+    tally(flat('textCollide'), 'text painted on top of other text in the same card', r => r.screen + '  "' + r.a + '" x "' + r.b + '" in ' + r.card + ' overlap ' + r.ox + 'x' + r.oy + 'px');
     tally(flat('navEscape'), 'bottom-nav items pushed off the panel', r => r.screen + '  "' + r.text + '" hangs ' + r.over + 'px past a ' + r.box + 'px row (the row needs ' + r.scroll + 'px)');
     tally(flat('squashedCircle'), 'round markers painted as a sliver (a flex row took their width)', r => r.screen + '  .' + r.cls + ' ' + r.w + 'x' + r.h + 'px "' + r.text + '"');
     tally(flat('unreachable'), 'controls no tap can reach (off the viewport or clipped, with nothing that scrolls)', r => r.screen + '  <' + r.tag + '> "' + r.what + '" is ' + r.px + 'px ' + r.how + ' past ' + r.by);

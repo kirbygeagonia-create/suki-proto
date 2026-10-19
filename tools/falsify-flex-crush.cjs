@@ -20,7 +20,15 @@
    survivor was still worth having: it is the measurement that says the wrap fixed more than the
    clipped button label that break was written for.
 
-     node tools/falsify-flex-crush.cjs    ~3 minutes, needs the machine's Chrome                */
+   The two dot mutants are named separately, and had to be. Both 8px circles open with the identical
+   `display:inline-block; flex-shrink:0; width:8px;`, so when §69 gave the live dot the declaration
+   the waiting dot had always carried, that needle stopped matching once and the mutant reported
+   SKIP. The family then printed 3 applied, 3 caught, 1 not applied and looked healthy while its
+   coverage had fallen by one — and `node tools/falsify-all.cjs` is what caught it, not a run of this
+   file alone. A shared substring is not a shared rule: each cut is located inside its own selector
+   now, and the live dot gets its own mutant on the one screen that paints it.
+
+     node tools/falsify-flex-crush.cjs    ~4 minutes, needs the machine's Chrome                */
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -34,10 +42,16 @@ const TALLIES = {
   nav: 'bottom-nav items pushed off the panel: ',
   circle: 'round markers painted as a sliver (a flex row took their width): ',
 };
-/* Three screens, one per role, at the corner where both defects painted. The subset is enough
-   because every finding this family breaks is a row-level geometry, not a data-dependent one. */
+/* One screen per rule, at the corner where both defects painted. `booking-tracking` and
+   `fruit-weighed-record` were added for the live dot, found by asking every screen how many
+   `.live-dot` nodes it holds rather than by reading the markup — the two booking-detail screens that
+   look like the obvious hosts both answer 0, because the dot is a status condition. And the dot is
+   crushed on only ONE of those two screens: with the guard removed the sliver tally stays 0 on
+   `booking-tracking` and fires on `fruit-weighed-record`, where the status label beside it is the
+   one long enough to take the row. A rule proven on the wrong screen reads as a rule that does
+   nothing, which is how this declaration nearly got deleted. */
 const ARGS = [path.join(ROOT, 'tools', 'shot.cjs'), '--measure', '--width=320', '--font-scale=2',
-  '--only=resident-home,provider-dash,admin-dash'];
+  '--only=resident-home,provider-dash,admin-dash,booking-tracking,fruit-weighed-record'];
 
 /* Each mutant is a list of steps. A step is either a single-line needle/to pair — the file is CRLF,
    so a needle carrying a bare \n never matches and the mutant reports itself as SKIP while looking
@@ -59,8 +73,10 @@ const MUTANTS = [
     ] },
   { name: 'the waiting dot is crushed to a sliver by the heading it sits beside',
     tally: 'circle',
-    steps: [{ needle: 'display:inline-block; flex-shrink:0; width:8px;',
-      to: 'display:inline-block; width:8px;' }] },
+    steps: [{ apply: src => cutInside(src, '.wait-dot{', 'flex-shrink:0;') }] },
+  { name: 'the live dot is crushed to a sliver by the status label it sits beside',
+    tally: 'circle',
+    steps: [{ apply: src => cutInside(src, '.live-dot{', 'flex-shrink:0;') }] },
 ];
 
 /* Remove `what` from the one rule that starts at `start` and actually declares it, or null when
