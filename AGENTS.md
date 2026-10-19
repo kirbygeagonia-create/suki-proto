@@ -1876,6 +1876,21 @@ nowhere", because `notificationRoute()` resolves the record before it answers. T
 still worth running — it is the only thing proving the check reads the route rather than the field —
 but the file says plainly that the two messages are the same branch.
 
+A LEGIBILITY FIX THAT CREATES A COLLISION IS NOT A FIX — revert it and leave the measurement behind.
+§72 asked whether a chart's x-axis names the row holding the maximum, and it does not: the tallest bar
+sits 42px from the nearest axis label at the vivo's own 450 CSS px and 79px at 320 with the text at
+200%, on both dashboards, at every corner. The one-clause fix — keep the peak's label, drop the
+stride-kept neighbour it would crowd — did name it, and also put `Aug 24` and `Oct 12` **51x39px on
+top of each other** at the worst corner, which is the class §69 exists to prevent and is worse than an
+unnamed bar. The cause is the clearance model underneath: the thinning budget sizes labels from a
+hidden probe, and the painted labels exceed that measurement, so nothing can be added on top of it.
+The clause was reverted, and so was the tally written for it — `sweep-text-scale.cjs` treats any count
+it does not recognise as must-be-zero, and a sensor that is red on every corner with no passing fix
+blocks a build instead of guarding one. The probe stays. Note the instrument bug that nearly hid the
+whole finding: the first version divided the plot width by the number of **non-zero** bars, which on an
+eight-week series with one settled job makes a slot a third of the chart and every peak look named. A
+slot is a row's width, not a bar's.
+
 READ AN ACCESSIBILITY DUMP TWICE BEFORE CALLING IT A DEFECT. Two nodes in this walk looked like
 findings and were neither: the sign-in screen dumped **completely empty**, which is Chromium
 building its tree lazily and one tap on a field fixed, and a password node printed

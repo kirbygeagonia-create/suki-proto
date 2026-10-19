@@ -4402,3 +4402,54 @@ file says plainly that it is not evidence of two distinct guards.
 Gate **531**. `falsify-notification-routes` **2 of 2, 0 not applied**. Whole suite after this pass:
 **32 families, 173 mutants, 173 caught, 0 not applied**. No application code changed in §71; the shipped `Sukinnect.html` remains identical to
 `origin/main` (`git diff --quiet origin/main -- Sukinnect.html`).
+
+## 72. Does the axis name the week that actually holds the maximum? No — and the fix was reverted
+
+The vivo screenshots raised it: the provider's earnings chart has one non-zero week, it is the last
+row, and the axis thinning keeps rows 0, 2, 4, 6 — so the only bar with money in it stands over
+nothing. The y-axis already refuses that behaviour ("counted back from the top so the highest value is
+always named"); the x-axis had no equivalent rule.
+
+`node tools/probe-chart-axis-coverage.js` answers it from painted geometry — the tallest non-zero
+`rect` in the svg, the centre of each `.chart-cat`, a slot width taken from the rows the drawing laid
+out — and it is honest about its own first version, which divided the plot by the count of **non-zero**
+bars. On an eight-week series with one non-zero week that made a slot a third of the chart, so every
+peak looked named. Filtering zero-height rects out of the *row count* but not out of the *tallest-bar
+search* is what turned the answer from `true` to `false`.
+
+```
+provider-dash  450 @ 1.0     8 rows, 1 non-zero, 4 axis labels, tallest 42px from the nearest (slot 40px)  → unnamed
+provider-dash  450 @ 1.35    8 rows, 1 non-zero, 3 axis labels, tallest 42px from the nearest              → unnamed
+provider-dash  320 @ 2.0     8 rows, 1 non-zero, 1 axis label,  tallest 79px from the nearest (slot 19px)  → unnamed
+admin-dash     every corner  14 rows, 3 non-zero, tallest 29px from the nearest in an 11px slot            → unnamed
+```
+
+So this is not a phone artifact: at the bench's own emulation of the device's width, and at the
+narrowest corner, the tallest bar has no week under it.
+
+### The fix, and why it is not in the file
+
+The rule is one clause long — keep the peak row's label, drop any stride-kept label the peak would
+crowd — and it did put a week under the bar. It also put **two weeks on top of each other**: at 320
+CSS px with the text at 200%, provider-dash's axis then painted `Aug 24` and `Oct 12` overlapping by
+**51x39px**, a finding the collision tally had reported 0 for all of §69b's life. The reason is the
+clearance model, not the new clause: the thinning budget sizes labels from a measurement taken in a
+hidden probe (`labelPx`, ~63px there), and the painted labels are wide enough that two of them
+collide at a separation the budget considers clear. Naming the peak therefore cannot be added on top
+of a budget that is already wrong by that much — it trades an unnamed bar for text printed on text,
+which is the worse of the two and the exact class §69 exists to prevent.
+
+It was reverted rather than left half-right: the application file and the camera are byte-for-byte
+back at the §71 state, the three chart tallies read **0** again at 320 @ 200%, and the gate is at
+**531**. A tally was written for this too and removed with it, because `sweep-text-scale.cjs` treats
+every count it does not recognise as must-be-zero and a sensor that is red on every corner with no
+passing fix is not a guard, it is a blocked build.
+
+### What is being asked, precisely
+
+Fix the label-clearance model so the budget is measured in the units the browser paints in, then
+name the peak row's week the way the y-axis names its maximum. Until then the decision recorded here
+is the honest one: **the chart's shape is legible, its axis under-describes it, and the figures live
+in an sr-only list a sighted person never reaches.** The probe stays in `tools/` so the next attempt
+starts from a measurement rather than from this paragraph.
+
