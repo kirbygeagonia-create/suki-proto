@@ -7894,6 +7894,20 @@ function settingsRow(sectionKey, id, title, detail, toggle){
 /* How small the nav labels may go: the 14px floor §68 sets for essential interface text. Below it
    the word would be whole and unreadable, which is not a trade this app makes. */
 const NAV_LABEL_FLOOR_PX = 14;
+/* How many rendered pixels the platform paints per specified pixel, measured with a throwaway span
+   at a known size. 1 on a desktop browser and on the bench; 1.35, 2, on a phone that has been told
+   to show larger text. */
+function navFontScale(){
+  const host = document.getElementById('screen') || document.body;
+  if (!host || !host.appendChild) return 1;
+  const probe = document.createElement('span');
+  probe.style.cssText = 'position:absolute;visibility:hidden;font-size:100px;line-height:1';
+  probe.textContent = 'x';
+  host.appendChild(probe);
+  const used = parseFloat(getComputedStyle(probe).fontSize) || 100;
+  probe.remove();
+  return used > 0 ? used / 100 : 1;
+}
 function fitNavLabels(){
   const nav = document.querySelector('.bottomnav');
   if (!nav) return;
@@ -7906,6 +7920,15 @@ function fitNavLabels(){
      changed shape. Measuring five labels per render is not a cost worth a cache. */
   nav.style.removeProperty('--nav-label-size');
   const token = parseFloat(getComputedStyle(labels[0]).fontSize) || NAV_LABEL_FLOOR_PX;
+  /* Everything above and below is in RENDERED px — what the browser actually paints — and the
+     value written into the custom property is converted back to SPECIFIED px at the end. The two
+     are not the same on Android: the platform multiplies the used font size after CSS resolves
+     (§68 measured 21.6px on a 1.35 handset with a 16px root), so a specified 14px renders as
+     18.9px and the floor silently cancels the user's text scale. That is why this fit shrank every
+     label on the bench and none on the phone: the var said 14px, the phone painted 18.9px, and the
+     bench — where --font-scale changes the root size instead of multiplying used sizes — could not
+     see the difference. The factor is measured, never assumed. */
+  const scale = navFontScale();
   let cur = token;
   for (let pass = 0; pass < 3; pass++) {
     let worst = 1;
@@ -7923,7 +7946,7 @@ function fitNavLabels(){
     const size = Math.max(NAV_LABEL_FLOOR_PX, Math.floor(cur * worst * 0.985 * 10) / 10);
     if (size >= cur) break;
     cur = size;
-    nav.style.setProperty('--nav-label-size', size + 'px');
+    nav.style.setProperty('--nav-label-size', (Math.round((size / scale) * 100) / 100) + 'px');
   }
 }
 function navItem(id,icon,label,count){

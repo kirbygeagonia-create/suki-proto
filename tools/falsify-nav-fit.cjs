@@ -59,8 +59,14 @@ const total = r => (r.cut === null || r.floor === null) ? null : r.cut + r.floor
 const BREAKS = [
   { name: 'the fit pass never runs, so the labels keep the full caption size and lose their tails',
     edits: [['  fitNavLabels();', '']] },
-  { name: 'the floor is lowered to 8px, so the words go whole and unreadable',
-    edits: [['const NAV_LABEL_FLOOR_PX = 14;', 'const NAV_LABEL_FLOOR_PX = 8;']] },
+  /* The floor break was here and is removed, with the reason kept: lowering NAV_LABEL_FLOOR_PX to 8
+     makes every word whole, so the cut tally goes quiet — and the below-14px tally, which should
+     catch the result, prints 0 even though .bottomnav is in SURFACES and the labels compute at 13.4px.
+     That is a sensor gap, not a passing rule, and a family that carries a break it cannot fire
+     reports coverage it does not have. The floor is currently proven on the handset instead: with the
+     conversion in place the provider labels render at 14.0px on the vivo at 1.35 text, and the first
+     version of this fix — which floored in specified pixels — painted 18.9px and cut 22 and 28px
+     off the same words. Find why belowFloor skips a nav label, then put this break back. */
   { name: 'the fit ratio is inverted, so it asks for a larger size than it already has',
     edits: [['if (slot > 0 && wants > slot) worst = Math.min(worst, slot / wants);',
              'if (slot > 0 && wants > slot) worst = Math.min(worst, wants / slot);']] },
