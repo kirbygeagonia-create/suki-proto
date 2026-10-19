@@ -1893,6 +1893,53 @@ whole finding: the first version divided the plot width by the number of **non-z
 eight-week series with one settled job makes a slot a third of the chart and every peak look named. A
 slot is a row's width, not a bar's.
 
+THE BOTTOM NAVIGATION KEEPS ITS WORDS NOW, AND THE FLOOR IS WHAT DECIDES HOW FAR THAT GOES. §68 traded
+an ellipsized label for a destination that stays tappable; at 200% text that trade was costing
+`Bookings` 46px and `Messages` 55 on a 320px panel. A single word has no break opportunity, so neither
+wrapping nor reclaiming 8px of padding can help — the four real options were measured (slot 58-84px vs
+`Messages` wanting 128px, which fits at 12.8-18.5px) and the owner chose **shrink to fit, floored at the
+14px type floor** over shorter copy, a two-row nav that takes ~70px from a short screen, or icon-only
+labels for exactly the people who asked for large text. `fitNavLabels()` measures the painted row,
+writes `--nav-label-size`, and stops at 14px: resident fits at 15.9px and admin at 14.5px with nothing
+cut; the provider's five-item nav at 320px keeps `Bookings`/`Messages` ellipsized because they need
+13.9 and 12.8px, and a whole word below the floor is not a word anyone can read.
+
+A PIXEL THE APP WRITES IS NOT THE PIXEL A PHONE PAINTS, and the first version of that rule was only
+correct on the bench. On the vivo the custom property read `14px` while the labels computed **18.9px**:
+Android multiplies the used font size after CSS resolves — §68 already knew that about `rem` and
+`min()` — and it applies just the same to a px value JavaScript writes, so a specified 14px at
+`font_scale 1.35` renders 18.9px and **the floor exactly cancelled the user's text scale**. The loop now
+works in rendered pixels end to end and converts back through a factor measured with a throwaway span
+(`navFontScale()`), never assumed; on the bench that factor is 1, which is precisely why the bench could
+not see the bug. `--font-scale` emulates the platform by moving the root size, while the platform
+multiplies used sizes, so **any px the app writes at runtime behaves differently in the two places** —
+that is a standing limit on every future measured size, not a note about this one.
+
+THE FIRST VERSION PASSED THREE SCREENS AND FAILED THE SWEEP, which is what the sweep is for. Checked at
+320 @ 200% on the three nav-bearing screens, every tally read 0; run across all 72 screens and seven
+corners the same code reported **162 avoidable cuts** and **100 off-scale font sizes**. Two causes.
+A cache keyed on role + width + root size skipped re-measuring, but the provider nav grows a badge on
+some screens and not others and a badge changes the slot every label has to fit — deleting the cache
+took the count to 0, because measuring five labels per render was never worth a cache. And the
+type-scale sensor flags 15.9px, which no token owns: the off-scale walk now skips `.nav-label` inside
+`.bottomnav` while the **below-14px walk does not**, and that asymmetry is the rule — off-scale by
+design, never below the floor.
+
+THE SENSOR HAS TO TELL AN AVOIDABLE CUT FROM A DELIBERATE ONE, or the residual makes the rule
+unfalsifiable. `bottom-nav labels cut although the 14px floor would have fitted them` fires only when a
+label is cut *and* would have fitted at 14px. `node tools/falsify-nav-fit.cjs` — **2 of 2** — with its
+fit-never-runs and inverted-ratio breaks both reading `cut=10`. A third break, lowering the floor to
+8px, was removed rather than left unfired: every word goes whole so the cut tally is quiet, and the
+below-14px tally prints 0 against labels computing 13.4px even though `.bottomnav` is in `SURFACES`.
+That is a sensor gap, not a passing rule, and a family carrying a break it cannot fire reports coverage
+it does not have — the reason is written in the file, the gap is tracked, and the floor is proven on the
+handset meanwhile: 14.0px rendered on the vivo at 1.35 text, where the unit-broken version painted
+18.9px and cut 22px and 28px off the same words. Two more traps from the same loop, both found by
+measuring rather than reasoning: the second pass recomputed from the token instead of from the size it
+had just written, which raised the provider nav back to 25.3px while every tally still read clean; and
+the exact fit ratio lands ~1px over the slot because letter-spacing does not shrink linearly, hence the
+0.985 in the loop with a comment saying what it buys.
+
 READ AN ACCESSIBILITY DUMP TWICE BEFORE CALLING IT A DEFECT. Two nodes in this walk looked like
 findings and were neither: the sign-in screen dumped **completely empty**, which is Chromium
 building its tree lazily and one tap on a field fixed, and a password node printed
@@ -3219,10 +3266,10 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate **531**; whole suite **32 families, 173 mutants, 173 caught, 0 not applied**
+Gate **531**; whole suite **33 families, 175 mutants, 175 caught, 0 not applied**
 (`node tools/falsify-all.cjs`), of which `falsify-flex-crush`, `falsify-control-reach`,
-`falsify-focus-trap`, `falsify-long-input`, `falsify-stale-overlay`, `falsify-double-tap` and
-`falsify-chart-collide` are the seven that drive the camera rather than the gate — a geometry rule, a
+`falsify-focus-trap`, `falsify-long-input`, `falsify-stale-overlay`, `falsify-double-tap`, `falsify-chart-collide`
+and `falsify-nav-fit` are the eight that drive the camera rather than the gate — a geometry rule, a
 real tap, or a second tap has no Node assertion available to it — and `falsify-camera-surfaces` is the
 one that reads the instrument instead of the application.
 

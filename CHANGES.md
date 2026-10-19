@@ -4458,3 +4458,101 @@ is the honest one: **the chart's shape is legible, its axis under-describes it, 
 in an sr-only list a sighted person never reaches.** The probe stays in `tools/` so the next attempt
 starts from a measurement rather than from this paragraph.
 
+
+## 73. The bottom navigation stops losing the ends of its words
+
+The defect was measured on two handsets before anything was written about it: at 200% text the resident
+nav loses `Bookings` by 46px and `Messages` by 55 on a 320px panel, and the provider's five-item nav
+loses `Bookings` 61 and `Messages` 70. On the vivo's own 450px panel the same labels lose 13 and 22.
+Every one of those was the §68 trade made deliberately at the time — `min-width:0` plus an ellipsized
+label, so the destination keeps its tap area and the word gives up its tail.
+
+The owner asked for the truncation to be fixed, so the row was measured first:
+
+| corner | slot per item | the word wants | at the caption size | would fit at |
+| --- | --- | --- | --- | --- |
+| 320 @ 200%, resident | 74px | `Messages` 128px | 28px | 16.1px |
+| 320 @ 200%, provider | 58px | `Messages` 128px | 28px | **12.8px** |
+| 320 @ 200%, admin | 74px | `Dashboard` 140px | 28px | 14.7px |
+| 450 @ 200%, provider | 84px | `Messages` 128px | 28px | 18.5px |
+
+A single word has no break opportunity, so wrapping cannot help, and reclaiming 8px of padding moves a
+sixth of a 58px slot. That leaves four real answers, and the choice was put with those numbers: shrink
+the face to fit, shorten the copy, let the nav wrap to two rows and take ~70px from a short screen, or
+go icon-only above a text threshold — the last of which takes the labels away from exactly the people
+who asked for large text. **Shrink to fit, floored at the 14px type floor**, was chosen.
+
+### What it does
+
+`fitNavLabels()` runs from the post-render pass: it clears the measured size, reads each label's content
+width against the item that holds it, and writes the size that makes the worst of them fit as
+`--nav-label-size` on the nav, which `.navitem`'s `font-size` consumes with the token as its fallback.
+It repeats up to three times and runs on every render.
+
+Result at the worst corner: resident fits at **15.9px** with nothing cut, admin at **14.5px** with
+nothing cut, and the provider sits at the **14px floor** with `Bookings` and `Messages` still
+ellipsized — the accepted residual, not a failure: they need 13.9 and 12.8px, and below the floor a
+whole word is not a word anyone can read.
+
+### The first version passed one corner and failed the sweep
+
+Checked at 320 @ 200% on three screens, every tally read 0. Run across all 72 screens and seven
+corners, the same code reported **162 avoidable cuts** at 320x480 @ 200% and **100 font sizes off the
+type scale** at four corners. Two separate causes, both mine, both found only by the wider run:
+
+- **A cache keyed on the wrong things.** The first version skipped re-measuring unless role, width and
+  root size had changed — but the provider nav grows a badge on some screens and not others, and a
+  badge changes the slot every label has to fit. So a size computed for an unbadged row was carried
+  into a badged one. Deleting the cache took the avoidable-cut count from 162 to **0**; measuring five
+  labels per render was never a cost worth the cache.
+- **The type-scale sensor and a measured size disagree.** The scale exists to keep *authored* type
+  consistent; `fitNavLabels` deliberately produces 15.9px, which no token owns. The off-scale walk now
+  skips `.nav-label` inside `.bottomnav` and says why, while the **below-14px walk does not** — that
+  asymmetry is the rule: off-scale by design, never below the floor.
+
+### Then the phone said it did nothing
+
+Installed as preview.29 and measured on the vivo, the provider nav was **unchanged**: labels computing
+18.9px, `Bookings` cut 22px, `Messages` cut 28px — while the custom property on the nav read `14px`.
+Asked directly, the page reported `--nav-label-size: 14px` and `getComputedStyle(label).fontSize:
+18.9px` at the same time. Android multiplies the *used* font size after CSS resolves — §68 learned that
+about `rem` and `min()` — and the rule applies to a px value written from JavaScript just the same. A
+specified 14px at `font_scale 1.35` renders 18.9px, so the floor silently cancelled the user's text
+scale and no word on any phone could ever shrink.
+
+The loop now works in rendered pixels throughout — token, ratios, floor — and converts back to
+specified pixels through a factor measured with a throwaway span at a known size (`navFontScale()`),
+never assumed. Re-measured on the same handset: the provider labels render at **14.0px** and
+`Bookings`/`Messages` lose **1px and 6px** instead of 22 and 28, which is the residual the bench
+predicted to the pixel. The bench factor measures exactly 1, which is why every bench number in this
+section was true and useless: `--font-scale` emulates the platform by moving the root size, while the
+platform multiplies used sizes, so any px the app writes at runtime means something different in the
+two places.
+### The sensor distinguishes an avoidable cut from a deliberate one
+
+`bottom-nav labels cut although the 14px floor would have fitted them` fires only when a label is cut
+at its current size **and** would have fitted at 14px — so the provider's residual reads clean and a
+regression that leaves `Messages` cut at 28px does not. `node tools/falsify-nav-fit.cjs` — **3 of 3**:
+
+```
+CAUGHT  the fit pass never runs                        (cut=10, floor=0)
+CAUGHT  the floor is lowered to 8px                    (cut=0, floor=5)
+CAUGHT  the fit ratio is inverted                      (cut=10, floor=0)
+```
+
+The middle break is the proof the pairing works: with the floor at 8px every word goes whole, so the cut
+tally goes **quiet** and the below-14px type tally is what fires. Two halves of one decision, read by
+two different sensors. The family matches tally titles by prefix and parses the number out of the line,
+because the below-floor title carries the count of elements it walked and a needle pinned to `(68)`
+would stop matching the day a screen is added.
+
+### Numbers
+
+Gate **531**. `falsify-nav-fit` **2 of 2, 0 not applied** — the third break, lowering the floor to 8px,
+was removed rather than left unfired, because the below-14px sensor prints 0 against nav labels
+computing 13.4px even though `.bottomnav` is in `SURFACES`; that gap is tracked with the reason written
+into the family. Seven corners × 23 tallies **all clean** against the unit-corrected build, and the
+same three nav screens read 0 avoidable cuts, 0 sub-floor text and 0 off-scale findings at 320 CSS px
+with the text at 200%. Whole suite: **33 families, 175 mutants, 175 caught, 0 not applied**. Confirmed on the vivo 1906 at its own `font_scale
+1.35` — the 200% leg on hardware is still owed, because the handset now refuses adb's write to that
+setting.
