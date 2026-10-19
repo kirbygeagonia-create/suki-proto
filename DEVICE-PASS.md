@@ -1128,3 +1128,42 @@ field, never with `BACK` — and the cheaper route is to not summon it.
 **Still un-walked from §3f:** the concierge refusing to guess (needs a real file picker, which `adb`
 cannot drive without pushing through the system UI), the sheet's marked payment row against the booking
 record, booking with no address, and the provider reload check.
+
+## Keyboard-open viewport on the vivo, `1.2-preview.28` — and a correction to the 2026-10-17 note
+
+The bench emulates a keyboard by setting the viewport to 320x300. This is the real thing: the same
+handset, its own IME, and the three surfaces §73 names — a search field, a multi-field dialog, and the
+chat room's pinned input.
+
+**The keyboard takes 324 CSS px.** Focusing the resident's search field opened the IME and the WebView
+resized: `innerHeight` 889 → **565**, `visualViewport.height` 566, and the bottom nav rode up to
+492–566 rather than being left under the keys. With the keyboard up, resident Home reports
+**0 unreachable controls of 16** under the camera's two-part rule (outside the viewport *and* nothing
+in the ancestor chain scrolls).
+
+**The five-field edit dialog: the action starts off-screen and the dialog is a real scroller.** With
+the last field (Emergency Contact) focused, that field sits at 505–553 — visible — while **Save Changes
+is at 565–609, below the keyboard line**. That is not a §61 unreachable control: the chain above it is
+`card modal-card` with `overflow-y:auto` and `scrollHeight 608 > clientHeight 532`, and
+`scrollIntoView` brings the button to **490–534, fully visible**. So the app is usable and the browser's
+own focus handling keeps the field you are typing in on screen; what is not done is any attempt to keep
+the *action* in view while you type. Whether it should is a product call, recorded here rather than
+changed.
+
+**The chat room behaves.** Focusing the message input leaves it at 436–480 with **Send visible**, the
+nav at 492, and the message list scrolling at `569 > 492` — the pinned-input case §73 asks about.
+
+### The correction
+
+The 2026-10-17 note says to dismiss the keyboard with `KEYCODE_ESCAPE` or by tapping outside the field,
+**never with `BACK`**. Measured on this device just now, ESCAPE does nothing: `innerHeight` stayed 565
+with the IME up. `KEYCODE_BACK` is what closed it — and while the IME is up, BACK is consumed by the
+IME, because the app survived the press exactly where it was (`tab: messages`, `isChatOpen: true`,
+`mCurrentFocus` still `MainActivity`).
+
+So the rule is not "ESCAPE instead of BACK". It is: **BACK closes the keyboard only while the keyboard
+is there to close.** The 2026-10-17 failure was a BACK that arrived after the IME had already gone, and
+the app correctly read it as navigating backwards out of the activity. A harness must not press BACK
+blind — read `innerHeight` first: if it is still shrunk, BACK dismisses the IME; if it has already
+returned, BACK will be given to the app. That is the same discipline this repository applies everywhere
+— check what the surface actually is before sending the key that assumes it.
