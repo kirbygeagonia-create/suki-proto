@@ -3207,6 +3207,32 @@ suite('honesty', async () => {
         : 'coverage does not drive discovery' };
   })());
 
+  /* §27: "tapping a notification should open the object responsible for it". Measured in a real
+     page first — `node tools/shot.cjs --probe=@tools/probe-notification-targets.js` walks every
+     screen, finds the one that paints notification rows, calls the same openNotification() the row
+     is bound to, and reads whether the landed screen names the provider and the job. All four
+     resident notifications pass. What the camera cannot guard against is the seed drifting: a
+     notification left pointing at a booking or provider that no longer exists would still open
+     *a* page — the honest "Unknown provider" stand-in §69b built — and look fine in a screenshot.
+     So the reference itself is asserted here, for every record, with a positive control that the
+     set is not empty. */
+  verdict('every notification points at a record that exists', (() => {
+    const list = app.NOTIFICATIONS || [];
+    const bad = [];
+    for (const n of list) {
+      const route = app.notificationRoute(n);
+      if (!route) { bad.push(n.id + ' routes nowhere'); continue; }
+      const pool = route.kind === 'booking' ? app.BOOKINGS
+        : route.kind === 'provider' ? app.PROVIDERS : null;
+      if (!pool || !pool.some(x => String(x.id) === String(route.id)))
+        bad.push(n.id + ' -> ' + route.kind + '/' + route.id);
+    }
+    return { ok: list.length > 0 && bad.length === 0,
+      why: !list.length ? 'there are no notifications to check, so this proves nothing'
+        : bad.length ? 'unreachable target: ' + bad.join(', ')
+        : 'a notification names a record the app does not hold' };
+  })());
+
   /* A field holding only spaces is truthy to JavaScript and empty to a person, and the phone's
      keyboard can put one there with a single tap of the space bar. Measured first by
      `node tools/shot.cjs --probe=@tools/probe-blank-query.js --only=resident-results`: a query of

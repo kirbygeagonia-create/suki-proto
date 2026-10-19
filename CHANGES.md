@@ -4342,3 +4342,63 @@ silently mutates neither.
 Gate **530**. `falsify-blank-query` **2 of 2**. Whole suite after this pass: **31 families, 171 mutants, 171 caught, 0 not applied** — the new
 family is gate-driven, so no camera run and no sweep corner changed; the application file itself is
 untouched by §70, which is why the seven-corner sweep from §69 still describes the build.
+
+## 71. Does every notification open the thing it is about?
+
+§27 asks for that and §28 makes it concrete — "Booking Confirmed" should open *that booking*. Nothing
+in `tools/` had ever asked. The question got asked two ways, because the two fail differently.
+
+**In a real page.** `node tools/shot.cjs --probe=@tools/probe-notification-targets.js` walks every
+screen, keeps the ones that paint `[data-notif]` rows, calls the same `openNotification()` those rows
+are bound to, and reads where the app landed and whether that screen names the object:
+
+```
+n1 booking/b1  -> booking_detail   names=true  by=[Ramil Odiada / Kitchen faucet leak]   (Booking Confirmed)
+n2 provider/p3 -> provider_detail  names=true  by=[Cristy Fernandez / Cleaning]          (Verified Pro Nearby)
+n3 booking/b3  -> booking_detail   names=true  by=[Cristy Fernandez / Full house deep clean] (Payment Processed)
+n4 booking/b6  -> booking_detail   names=true  by=[Jerico Salamat / Rewire flooded junction box] (Service Completed)
+```
+
+Four rows, four correct destinations, and one coverage fact that had never been written down: the
+resident is the **only** role with a notification surface in this build, so for provider and admin the
+rule is untestable rather than satisfied.
+
+The probe stubs `history.back()` and `history.go()` for the duration of the walk and prints how many
+calls it swallowed. That is not a shortcut around a hard case, it *is* the hard case: returning from a
+drill-in to the list makes a destination go shallow, `syncBackHandles` pays that debt with real
+`history.back()` calls, and on a `file://` page a back() is a navigation — the mechanism that has now
+killed the inspected target three times in this repository's history. Nothing in this measurement is
+about the Back machinery, so the machinery is parked, and the answer says so.
+
+### The instrument was wrong before the application was
+
+The first run reported **4 misses out of 4** — every notification allegedly landing on a screen that
+named nothing. The cause was in the probe: it resolved a booking's provider with
+`providerOf(b.providerId)`, and `providerOf()` takes the **booking**, not the id
+(`p.id === booking.providerId`). Every lookup therefore hit the "Unknown provider" stand-in §69b
+built, and the probe dutifully reported the application as broken. The fix is not just the argument:
+the probe now returns each record's own key list beside its verdict, so the next time an expectation
+is wrong the output says so instead of looking like a defect.
+
+### Pinned in the gate, with one failure shape rather than two
+
+A camera walk cannot catch the seed drifting, because a notification pointing at a deleted booking
+still opens *a* page — the honest stand-in — and a screenshot of a stand-in looks like a screen. So
+the reference itself is asserted: `every notification points at a record that exists`, with a positive
+control that the set is non-empty. `node tools/falsify-notification-routes.cjs` proves it, **2 of 2**:
+
+```
+CAUGHT  a notification is left pointing at a booking that no longer exists → unreachable target: n1 routes nowhere
+CAUGHT  a notification loses its target and routes nowhere                 → unreachable target: n3 routes nowhere
+```
+
+Both messages are the same branch: `notificationRoute()` resolves the record before it answers, so a
+dangling id and a missing field are one state to the app. The second break is still worth keeping —
+it is the only thing showing the check reads the *route* rather than the presence of a field — but the
+file says plainly that it is not evidence of two distinct guards.
+
+### Numbers
+
+Gate **531**. `falsify-notification-routes` **2 of 2, 0 not applied**. Whole suite after this pass:
+**32 families, 173 mutants, 173 caught, 0 not applied**. No application code changed in §71; the shipped `Sukinnect.html` remains identical to
+`origin/main` (`git diff --quiet origin/main -- Sukinnect.html`).

@@ -1849,6 +1849,33 @@ control case runs first and aborts the run if it finds no provider, because a pr
 control prints zero has measured nothing — the lesson this repository has now written down three
 times, once for screens, once for data, and here for a wait.
 
+EVERY NOTIFICATION HAS TO OPEN THE OBJECT IT IS ABOUT, and that is now measured rather than assumed.
+`node tools/shot.cjs --probe=@tools/probe-notification-targets.js` walks all 72 screens, finds the one
+that paints notification rows, calls the same `openNotification()` the row's own binding calls, and
+reads whether the landed screen names the provider and the job: all four resident notifications
+deliver — `n1 → booking_detail "Ramil Odiada / Kitchen faucet leak"`, `n2 → provider_detail "Cristy
+Fernandez"`, `n3` and `n4` likewise. It also answers a coverage question nobody had written down: the
+resident is the only role with a notification surface in this build, so §27 is untestable for the
+other two rather than satisfied by them.
+
+The probe stubs `history.back()` and `go()` while it walks, and says so in its own header: returning
+from a drill-in to a list is a destination going shallow, `syncBackHandles` pays that with real
+`history.back()` calls, and on a `file://` page that is a navigation — the same mechanism that took
+the target down twice before. The run reports how many calls it swallowed (0 on this screen, because
+the camera reaches screens by calling handlers rather than by pushing entries).
+
+Two lessons in the same pass, both about instruments. The probe's first version passed a provider
+**id** to `providerOf()`, which takes a **booking** (`p.id === booking.providerId`), so every lookup
+answered "Unknown provider" and the probe reported four application defects where the application had
+done all four correctly; the fix was to print the record's own keys beside every verdict, which is how
+the mistake was caught rather than argued. And the gate check that followed
+(`every notification points at a record that exists`, proved by `node
+tools/falsify-notification-routes.cjs`, 2 of 2) turned out to have **one** failure shape, not two: a
+notification pointing at a deleted booking and one with no `bookingId` at all both surface as "routes
+nowhere", because `notificationRoute()` resolves the record before it answers. The second break is
+still worth running — it is the only thing proving the check reads the route rather than the field —
+but the file says plainly that the two messages are the same branch.
+
 READ AN ACCESSIBILITY DUMP TWICE BEFORE CALLING IT A DEFECT. Two nodes in this walk looked like
 findings and were neither: the sign-in screen dumped **completely empty**, which is Chromium
 building its tree lazily and one tap on a field fixed, and a password node printed
@@ -3175,7 +3202,7 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate **530**; whole suite **31 families, 171 mutants, 171 caught, 0 not applied**
+Gate **531**; whole suite **32 families, 173 mutants, 173 caught, 0 not applied**
 (`node tools/falsify-all.cjs`), of which `falsify-flex-crush`, `falsify-control-reach`,
 `falsify-focus-trap`, `falsify-long-input`, `falsify-stale-overlay`, `falsify-double-tap` and
 `falsify-chart-collide` are the seven that drive the camera rather than the gate — a geometry rule, a
