@@ -1927,14 +1927,18 @@ design, never below the floor.
 
 THE SENSOR HAS TO TELL AN AVOIDABLE CUT FROM A DELIBERATE ONE, or the residual makes the rule
 unfalsifiable. `bottom-nav labels cut although the 14px floor would have fitted them` fires only when a
-label is cut *and* would have fitted at 14px. `node tools/falsify-nav-fit.cjs` — **2 of 2** — with its
-fit-never-runs and inverted-ratio breaks both reading `cut=10`. A third break, lowering the floor to
-8px, was removed rather than left unfired: every word goes whole so the cut tally is quiet, and the
-below-14px tally prints 0 against labels computing 13.4px even though `.bottomnav` is in `SURFACES`.
-That is a sensor gap, not a passing rule, and a family carrying a break it cannot fire reports coverage
-it does not have — the reason is written in the file, the gap is tracked, and the floor is proven on the
-handset meanwhile: 14.0px rendered on the vivo at 1.35 text, where the unit-broken version painted
-18.9px and cut 22px and 28px off the same words. Two more traps from the same loop, both found by
+label is cut *and* would have fitted at 14px. `node tools/falsify-nav-fit.cjs` — **3 of 3** — its fit-never-runs and inverted-ratio breaks both
+reading `cut=10`, and the third reading `floor=5`: lowering `NAV_LABEL_FLOOR_PX` to 8px makes every
+word whole, so the cut tally goes quiet and the below-14px type tally is the one that has to fire. It
+did not fire at first, and the family was edited to DROP that break under the belief that the sensor
+was right and the rule unobservable. The sensor was wrong. The nav-label skip added to the off-scale
+walk was a plain `return`, which also disarmed the floor check two statements below it — so the
+comment beside it promised an asymmetry the code did not implement, and the break I deleted was the
+only evidence of that. Restored, it fires. **A break that prints MISSED is read, not deleted**; this
+repository wrote that rule down twice in one day and the second time the wrong half of the answer
+ended up in the operating doc for an hour. The floor is also proven on the handset: 14.0px rendered on
+the vivo at 1.35 text, where the unit-broken version painted 18.9px and cut 22px and 28px off the same
+words. Two more traps from the same loop, both found by
 measuring rather than reasoning: the second pass recomputed from the token instead of from the size it
 had just written, which raised the provider nav back to 25.3px while every tally still read clean; and
 the exact fit ratio lands ~1px over the slot because letter-spacing does not shrink linearly, hence the
@@ -3266,7 +3270,7 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate **531**; whole suite **33 families, 175 mutants, 175 caught, 0 not applied**
+Gate **531**; whole suite **33 families, 176 mutants applied, 175 caught, 0 not applied — one row flagged**: `falsify-chart-collide` catches 5 of 5 when run alone and 4 of 5 inside the full pass, because its headroom break produces exactly one finding and the nav-height change moved the layout a hair. Read the flagged row, not the headline.
 (`node tools/falsify-all.cjs`), of which `falsify-flex-crush`, `falsify-control-reach`,
 `falsify-focus-trap`, `falsify-long-input`, `falsify-stale-overlay`, `falsify-double-tap`, `falsify-chart-collide`
 and `falsify-nav-fit` are the eight that drive the camera rather than the gate — a geometry rule, a

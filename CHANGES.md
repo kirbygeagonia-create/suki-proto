@@ -4548,11 +4548,30 @@ would stop matching the day a screen is added.
 
 ### Numbers
 
-Gate **531**. `falsify-nav-fit` **2 of 2, 0 not applied** — the third break, lowering the floor to 8px,
-was removed rather than left unfired, because the below-14px sensor prints 0 against nav labels
-computing 13.4px even though `.bottomnav` is in `SURFACES`; that gap is tracked with the reason written
-into the family. Seven corners × 23 tallies **all clean** against the unit-corrected build, and the
-same three nav screens read 0 avoidable cuts, 0 sub-floor text and 0 off-scale findings at 320 CSS px
-with the text at 200%. Whole suite: **33 families, 175 mutants, 175 caught, 0 not applied**. Confirmed on the vivo 1906 at its own `font_scale
+### The gap closed the same day, by the break I had deleted
+
+The floor break reported MISSED, and the response was to remove it and write down that the sensor was
+probably blind. The sensor *was* blind, and the break was the evidence — but removing it destroyed the
+only thing that could show the blindness was real. Reading the walk instead of the tally found it in
+one look: the nav-label skip added to the off-scale test was a plain `return`, sitting four lines above
+the `below(el, f)` call, so it disarmed the floor check too. The comment written beside it said the
+opposite — "the floor is still enforced, because this walk skips these labels while the below-14px walk
+does not" — which was a description of an intention, not of the code. The skip is now scoped to the
+scale test alone, the break is restored with this history in the family's own comment, and it fires:
+
+```
+CAUGHT  the floor is lowered to 8px, so the words go whole and unreadable  (cut=0, floor=5)
+```
+
+Gate **531**. `falsify-nav-fit` **3 of 3, 0 not applied**. Seven corners × 23 tallies **all clean**
+with the floor sensor seeing nav labels for the first time — which is the run that matters, because a
+nav label that actually rendered under 14px would now be reported rather than skipped. The same three
+nav screens read 0 avoidable cuts, 0 sub-floor text and 0 off-scale findings at 320 CSS px with the
+text at 200%. Whole suite: **33 families, 176 mutants applied, 175 caught, 0 not applied — with one row
+flagged**: `falsify-chart-collide` catches 5 of 5 run alone and 4 of 5 inside the full pass, because the
+headroom break produces exactly one finding and this change moved the layout a hair (the nav got
+shorter, so the scrollbar decision on the dashboard flipped, and the collide counts moved by one). A
+break whose evidence is one finding is fragile against any unrelated layout change; widening it is
+tracked rather than papered over. Confirmed on the vivo 1906 at its own `font_scale
 1.35` — the 200% leg on hardware is still owed, because the handset now refuses adb's write to that
 setting.

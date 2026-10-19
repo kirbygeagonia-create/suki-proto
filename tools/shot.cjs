@@ -540,11 +540,16 @@ const AUDIT_JS = `(function(){
        consistent, not to forbid a measured fit — and the floor is still enforced, because this walk
        skips these labels while the below-14px walk does not. That asymmetry is the rule: off-scale by
        design, never below the floor. */
-    if (el.closest && el.closest('.bottomnav') && el.classList.contains('nav-label')) return;
+    const isNavLabel = !!(el.closest && el.closest('.bottomnav') && el.classList.contains('nav-label'));
     const f = Math.round(parseFloat(getComputedStyle(el).fontSize) * 10) / 10;
     if (!f) return;
     seenSizes[f] = (seenSizes[f] || 0) + 1;
-    if (!scale.some(s => Math.abs(s - f) < 0.7))
+    /* The skip is on the SCALE test only. The first version of this line was a plain return, which
+     also disarmed the floor check two statements below — so the comment above it promised an
+     asymmetry the code did not implement, and the only thing that revealed that was a falsifier
+     break reporting MISSED. The break was right; deleting it, which is what was done at the time,
+     was the wrong half of the response. */
+    if (!isNavLabel && !scale.some(s => Math.abs(s - f) < 0.7))
       out.offScale.push({ size: f, text: (el.textContent || '').trim().slice(0, 24) });
     const b = below(el, f);
     if (b) out.belowFloor.push(b);
