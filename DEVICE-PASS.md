@@ -1014,3 +1014,53 @@ shape, and they are emulations.
 layer found **0 controls unreachable** — none off the viewport, none clipped by a non-scrolling
 ancestor. That is the §61 reachability rule confirmed on real hardware rather than emulated, on one
 screen; the remaining 71 have the bench number only.
+
+## Handset walk, `1.2-preview.28` on the vivo 1906 — 2026-10-18, installed and measured
+
+**What was cut.** `Sukinnect-next.html` copied into `Sukinnect-Android/app/src/main/assets/Sukinnect.html`
+byte-for-byte (832,270 both sides), `versionCode 29 → 30`, `versionName 1.2-preview.27 → .28`, built with
+`./gradlew --offline --no-daemon :app:assembleDebug` → `BUILD SUCCESSFUL in 48s`, installed with
+`adb install -r -t` → `Success`, and read back from the package rather than trusted from the installer:
+`versionCode=30  versionName=1.2-preview.28`. This build is the first on a handset that carries §69 and
+§69b — the chart labels, the headroom refusal, and the double-tap guards.
+
+**What the device is, asked of the device.** vivo 1906, Android 11, WebView `154.0.8037.106`,
+`font_scale 1.0`, physical `720x1544` with `Override density: 256` → **450 CSS px**, and the page itself
+answers `innerWidth 450, innerHeight 889`. The height is the part the bench does not model: the sweep's
+450 corner runs at 844. Root font measured **16px at 1.0** and **21.6px at 1.35**, which is §68's
+"Android multiplies after CSS resolves" mechanism confirmed on a second handset, and `schema v16` in the
+running app.
+
+**§69b verified where it counts.** Signed out through the profile hub's own Log Out and its modal
+confirm, signed back in as Service Pro via `#rt-provider` + Log in, opened Dash, and asked the §69
+questions inside the phone's WebView (`device-chart-check.js`, line boxes from a `Range`, the top
+gridline read off the smallest `y1`, nothing re-derived from the app's arithmetic):
+
+| text | charts | bar numbers painted | colliding pairs | labels outside the box | bars above their gridline |
+| --- | --- | --- | --- | --- | --- |
+| 1.0 (16px) | 1 | 0 | 0 | 0 | 0 |
+| 1.35 (21.6px) | 1 | 0 | 0 | **2** | 0 |
+
+So the collision the OPPO photographed is gone on hardware at both text sizes, and no bar escapes its
+scale. Two things the screenshots show that no tally reports, and one the tally caught:
+
+- **The 2px is the gutter, not the font.** `₱200` and `₱400` hang 2px and 3px past the left edge of
+  their own chart box at 1.35 on this WebView, while the bench at the same width, same root font and
+  same screen reports **0**. `document.fonts` answers `status: loaded`, 16 faces, and
+  `check('16px "Atkinson Hyperlegible Next"', '₱') → true`, so the face is not the difference — the
+  y-axis gutter is `calc(3.75 * var(--t-body-sm))`, sized against the bench's own text metrics, and the
+  device's rendering is a couple of pixels wider. The screenshot shows the ticks flush against the
+  card's padding rather than clipped, which is why this is recorded as an owner decision and not
+  patched on the strength of a 2px number.
+- **The only bar with money in it has no week under it.** The earnings series is eight weeks with one
+  non-zero row — the last — and the axis thinning keeps rows 0, 2, 4, 6 at 1.0 and 0, 3, 6 at 1.35.
+  Row 7 never survives, so the chart's single fact is the one thing its x-axis does not name. The
+  y-axis is deliberately thinned the other way ("counted back from the top so the highest value is
+  always named"); the x-axis has no equivalent rule for the peak.
+- **At the phone's own default text the chart prints no per-bar numbers at all** — the side-by-side
+  budget refuses them at 450 CSS px. The bars, the gridlines and three named ticks remain, so the
+  shape is readable, but the sr-only summary is the only place the figures appear, and a sighted
+  person never reaches it.
+
+**Device state restored.** `settings put system font_scale 1.0`, read back as `1.0`; the app was left
+at its sign-in screen, which is where it starts.
