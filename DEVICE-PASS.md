@@ -1096,3 +1096,35 @@ needs a thumb), and every `adb` command issued while it was offline failed *sile
 first `settings put system font_scale 2.0` never applied, so the phone stayed at 1.0 while the script
 carried on as if it had. A device that is not answering is not a device that has agreed — read the
 setting back, as the restore step does.
+
+## §3f item 2 settled — a chat thread across a kill and reopen, `1.2-preview.28` on the vivo
+
+Of the five §3f items the 2026-10-17 walk could not reach, **thread pairing across a kill/reopen** is
+the one only a handset can answer, and it passes:
+
+```
+signed in as Service Pro → Messages → the Ana Dela Cruz thread (c1 / booking b1)
+typed "handset kill check 42" through the page's own input path, clicked Send
+    MESSAGES 43 -> 44, last row { thread: "t-c1-p1", from: "provider" }
+am force-stop → relaunch → sign in as Service Pro again → Messages → same thread
+    MESSAGES.length 44          the marked row survived the kill
+    thread "t-c1-p1"            still paired to this counterpart and this booking
+    screenShowsIt true          the message paints in the room, not just in the array
+    namesAna true               the room is headed by the right person
+    list preview: "Ana Dela Cruz 4 minutes ago Client · Brgy…", "Nena Corpuz…", "Boy Ramos…"
+```
+
+The message was then removed and `persist()` called, so the handset's storage is back to 43 rows and
+`testRowsLeft: 0`.
+
+**Why this walk did not hit the wall that stopped the last one.** The 2026-10-17 attempt lost the page
+because it drove the phone's own keyboard and then pressed `KEYCODE_BACK` to dismiss the IME — which
+the app correctly reads as Back, and the activity finished. This run never touched the IME: the text
+went in through `document.execCommand('insertText')` on the focused field and the Send control was
+clicked inside the page, so the keyboard never opened and there was nothing to dismiss. The lesson
+stands as written on 2026-10-17 — dismiss an IME with `KEYCODE_ESCAPE` or by tapping outside the
+field, never with `BACK` — and the cheaper route is to not summon it.
+
+**Still un-walked from §3f:** the concierge refusing to guess (needs a real file picker, which `adb`
+cannot drive without pushing through the system UI), the sheet's marked payment row against the booking
+record, booking with no address, and the provider reload check.
