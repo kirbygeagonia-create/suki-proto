@@ -1882,8 +1882,10 @@ sits 42px from the nearest axis label at the vivo's own 450 CSS px and 79px at 3
 200%, on both dashboards, at every corner. The one-clause fix — keep the peak's label, drop the
 stride-kept neighbour it would crowd — did name it, and also put `Aug 24` and `Oct 12` **51x39px on
 top of each other** at the worst corner, which is the class §69 exists to prevent and is worse than an
-unnamed bar. The cause is the clearance model underneath: the thinning budget sizes labels from a
-hidden probe, and the painted labels exceed that measurement, so nothing can be added on top of it.
+unnamed bar. The cause is not the label measurement — a fresh run says the hidden probe is exact
+(93.6px measured, 93.6px painted) — it is the **anchor direction**: the first row is left-anchored
+and the last is right-anchored, so those two labels point at each other and need about 1.6× the
+clearance the stride rule budgets for centred ones. Nothing can be added on top of that model.
 The clause was reverted, and so was the tally written for it — `sweep-text-scale.cjs` treats any count
 it does not recognise as must-be-zero, and a sensor that is red on every corner with no passing fix
 blocks a build instead of guarding one. The probe stays. Note the instrument bug that nearly hid the

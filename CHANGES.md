@@ -4432,12 +4432,16 @@ narrowest corner, the tallest bar has no week under it.
 The rule is one clause long — keep the peak row's label, drop any stride-kept label the peak would
 crowd — and it did put a week under the bar. It also put **two weeks on top of each other**: at 320
 CSS px with the text at 200%, provider-dash's axis then painted `Aug 24` and `Oct 12` overlapping by
-**51x39px**, a finding the collision tally had reported 0 for all of §69b's life. The reason is the
-clearance model, not the new clause: the thinning budget sizes labels from a measurement taken in a
-hidden probe (`labelPx`, ~63px there), and the painted labels are wide enough that two of them
-collide at a separation the budget considers clear. Naming the peak therefore cannot be added on top
-of a budget that is already wrong by that much — it trades an unnamed bar for text printed on text,
-which is the worse of the two and the exact class §69 exists to prevent.
+**51x39px**, a finding the collision tally had reported 0 for all of §69b's life. The reason turned out not to be the one
+this section first wrote down. A fresh measurement says the hidden probe is exact: at 320 CSS px with
+the text at 200% it measures `Aug 24` at **93.6px** and the painted label is **93.6px**. What the
+budget does not model is the **anchor direction**. The first row is left-anchored so its box runs
+rightward from its bar, and the last row is right-anchored so its box runs leftward — the two labels
+point at each other, and their boxes need about 1.6× the clearance the stride rule assumes for
+centred labels. Row 0 and row 7 sit 133px apart centre to centre, which the budget calls clear and
+the boxes fill with 55px of overlap. Naming the peak therefore cannot be added on top of the current
+budget: it trades an unnamed bar for text printed on text, which is the worse of the two and the exact
+class §69 exists to prevent.
 
 It was reverted rather than left half-right: the application file and the camera are byte-for-byte
 back at the §71 state, the three chart tallies read **0** again at 320 @ 200%, and the gate is at
@@ -4447,8 +4451,9 @@ passing fix is not a guard, it is a blocked build.
 
 ### What is being asked, precisely
 
-Fix the label-clearance model so the budget is measured in the units the browser paints in, then
-name the peak row's week the way the y-axis names its maximum. Until then the decision recorded here
+Make the thinning budget account for the anchor each label will actually get (left on the first
+row, right on the last, centred in between) rather than assuming every label is centred, then name
+the peak row's week the way the y-axis names its maximum. Until then the decision recorded here
 is the honest one: **the chart's shape is legible, its axis under-describes it, and the figures live
 in an sr-only list a sighted person never reaches.** The probe stays in `tools/` so the next attempt
 starts from a measurement rather than from this paragraph.
