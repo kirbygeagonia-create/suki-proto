@@ -1167,3 +1167,43 @@ the app correctly read it as navigating backwards out of the activity. A harness
 blind — read `innerHeight` first: if it is still shrunk, BACK dismisses the IME; if it has already
 returned, BACK will be given to the app. That is the same discipline this repository applies everywhere
 — check what the surface actually is before sending the key that assumes it.
+
+## Focus rings and the accessibility tree on the vivo, `1.2-preview.28`
+
+The last two obligations from the text-scale and layer passes, both answered on the handset rather
+than the bench — the tree because no Node or CDP check can see it, the rings because `el.focus()` never
+matches `:focus-visible` and these presses are real `KEYCODE_TAB` events.
+
+**The path, replayed the way a thumb takes it:** profile tab → the Payments row → **Change method**, so
+the picker modal sits on top of the payment sheet.
+
+### The tree is the third surface, and it agrees
+
+| state | what `uiautomator dump` contains |
+| --- | --- |
+| modal over sheet | `Change payment method`, `Preferred payment method`, `Cash on Arrival`, the "no account is linked" line, `Save method` — **5 nodes**. The sheet's own `Payment Methods` heading is **absent**, as is the screen behind (`Home Address`, `Edit Profile`). |
+| sheet alone | `Payment Methods`, `Preferred method: Cash on Arrival`, `Change method`, `Close Payment Methods` — **7 nodes**, and the modal's `Save method`/`Change payment method` are **absent**. |
+
+So `modalAboveSheet()` + `inert` does what §64 says it must on a second handset: whichever layer is on
+top is the only layer a screen reader can reach, and the positive control runs both ways — the sheet's
+nodes *are* there when the sheet is the top layer, so their absence under the modal is a judgement about
+the app rather than about a dump that captured nothing.
+
+**One instrument note.** The first dump came back 0 bytes and every probe string read "ABSENT", because
+Git Bash rewrote the device path `/sdcard/tree.xml` into `C:/Users/…/Git/sdcard/tree.xml`. The
+"everything is missing" verdict measured the shell. `MSYS_NO_PATHCONV=1` with `//sdcard/` is the fix, and
+the byte count is printed before any conclusion — an empty dump is the instrument, not the app.
+
+### The keyboard walk stays inside the layer
+
+Six real Tab presses with the sheet open (no modal): every stop was **inside `.sheet-layer`** —
+`Close`, `Close Payment Methods`, `Change method`, then round again — and every one reported
+`:focus-visible → true` with a computed `outline: 2.5px solid`. Nothing was ever focusable behind the
+sheet, which is the platform-tree claim confirmed by the tab order rather than by reading the attribute.
+
+One wrinkle, recorded rather than fixed: the fourth press landed on `document.body` — the sequential
+walk cycling past the last item in the only live layer before returning to the first. No control is
+lost to it and the ring is absent because there is no control; on a phone with no keyboard attached this
+is a path a thumb never takes.
+
+**Device left clean:** app force-stopped, no override display size, `font_scale 1.0`.
