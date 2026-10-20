@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 11,382 lines, ONE :root block, 1,748 var() usages, 95 tokens declared with 92
+Sukinnect-next.html— 11,587 lines, ONE :root block, 1,752 var() usages, 95 tokens declared with 92
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1208,19 +1208,26 @@ Sukinnect-next.html— 11,382 lines, ONE :root block, 1,748 var() usages, 95 tok
                     quoted with its command: **`node tools/measure.cjs`**, which takes a file
                     argument and measures either one the same way. A number that has to be
                     re-derived by hand in prose drifts; this passage was three out when the tool
-                    was written, three out again a week later while saying exactly that, and the
-                    next reader should cite the tool rather than trust it.
+                    was written, three out again a week later while saying exactly that, and out
+                    a third time on 2026-10-19 — line count, var() count, font-size counts and
+                    heading count, all of them moved by the nav-label work — which is why the
+                    figures above were re-run rather than re-read. The next reader should cite the
+                    tool rather than trust it.
                     Everything that was a real violation is now a token: #fff became
                     --surface and --on-brand, the modal dim became --scrim, and the phone
                     mockup's bezel and signal bars became --device-bezel and
-                    --device-signal. Type is fully on the scale: of the 120 `font-size`
+                    --device-signal. Type is fully on the scale: of the 121 `font-size`
                     declarations in the stylesheet, 119 take a var(), none is a literal px,
-                    and the 120th is `inherit` — the reset that lets an <h1> sit in a flex bar
-                    as the div it replaced. The 402 `font-size` declarations inside markup's
-                    inline styles all take a var() too. Every screen in the app now opens with
-                    an <h1> and every sheet with an <h2> — 23 and 6, the sixth being the weighing
-                    sheet — because a 62-screen app with no headings has no outline for a screen
-                    reader to navigate. This sentence was false when it was first written, and
+                    and the two that are neither are the `h1, h2` reset set to `inherit` — which is
+                    what lets an <h1> sit in a flex bar as the div it replaced — and the `:root`
+                    line §68 explains at length, `min(1em, 20px)`, which a phone ignores and the
+                    sweep exists to absorb. The 403 `font-size` declarations inside
+                    markup's inline styles all take a var() too, except one: the throwaway span
+                    `navFontScale()` measures the phone's text inflation with, which has to be a
+                    literal 100px or it is measuring nothing. Every screen in the app now opens with
+                    an <h1> and every sheet with an <h2> — 24 and 6, the sixth being the weighing
+                    sheet — because an app of seventy-odd screens with no headings has no outline for
+                    a screen reader to navigate. This sentence was false when it was first written, and
                     stayed false for two screens (the resident's booking detail hand-rolled a bare
                     <div> where the provider's used the shared header, and the chat room titled
                     itself with a name in a div): the screens pass in tools/verify.cjs now fails
