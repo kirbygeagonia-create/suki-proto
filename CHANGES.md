@@ -4672,20 +4672,39 @@ the unmutated runner first, then breaks each rule and requires that pair to flip
 into `tools/` because that is the directory the runner globs, and the family fails itself if the
 restore or the deletion did not happen.
 
-**The finding underneath the finding.** Pinning the axis probe is what exposed the second half of this
-section. Its answer now says the provider dashboard *names* its tallest bar (0px gap) where CHANGES
-§72 recorded 42px with the label count unchanged — and `node tools/shot.cjs
---probe=@.scratch/probe-window-age.js --only=provider-dash` explains why: three bookings carry money
-in this build (₱465 p3 Sep 16, ₱69 p6 Aug 31, ₱315 p1 Oct 19) and `providerWeeklyEarnings()` walks
-back from `weekStart(0)`, so the row holding the money moves every Monday. §72's measurement was right
-on the day it was taken. **Whether the peak is named is a date; whether the axis thins is a rule.**
+**The finding underneath the finding — and the retraction on top of it.** Pinning the axis probe is
+what exposed the second half of this section, and that half was written wrong. Its answer says the
+provider dashboard *names* its tallest bar (0px gap) where §72 recorded 42px with the label count
+unchanged. The explanation first offered was that the earnings window slides past fixed seed dates:
+"three bookings carry money, `providerWeeklyEarnings()` walks back from `weekStart(0)`, so the row
+holding the money moves every Monday", and from that a whole product risk — the demo rotting by
+December, a remedy to choose, three options put to the owner. **All of it was wrong, and the code is one
+`grep` away from saying so.** The seed's temporal fields are relative constructors: bookings carry
+`date:dayLabel(n)` and `createdAt:isoMinutesAgo(60*24*50)`, and `completedAt` is never seeded at all —
+it is back-filled from `createdAt` through the accept → arrive → start → complete chain. So a probe
+printing `at 2026-08-31` prints a **computed** day, and every bucket and label moves with the load
+date; nothing ages out of a window that ages with it. The rule this buys: *before asserting a stored
+value is fixed, open the line that stores it* — a date that renders as `Aug 31` is not evidence that
+`Aug 31` is written anywhere.
 
-Same probe, same screen, the fruit provider's chart: **zero** non-zero rows of eight, so
-`fruit-provider-dash` paints the empty line while the demo is meant to be showing earnings, and the
-Aug 31 row leaves the window around 2026-10-26. Not a rendering bug — §48's empty state is behaving —
-but it means every screenshot-derived figure in this repository has an expiry, and it puts a product
-question to the owner: re-anchor the seed dates to first run, add settled jobs inside the current
-window, or accept the rot and say so where the deck is shown. Nothing is built here for it.
+What the two measurements actually disagree about is the calendar frame, and the smaller claim
+survives: `weekStart(back)` aligns to Mondays while `isoMinutesAgo(days)` counts plain days, so a
+50-day-old job lands in a different one of the eight buckets depending on which weekday the page was
+opened. §72's measurement was right on the day it was taken. **Whether the peak is named is a date;
+whether the axis thins is a rule** — decided 2026-10-20, keep the thinning, because no fix was found
+that does not print one label on top of another, which is the class §69b exists to prevent.
+
+The fixed dates are real, just not in the charts, and naming them needs the same care: **three**
+`PENDING_APPLICANTS.submittedAt` literals (2026-10-08/-09/-10) behind the queue's "waiting N days",
+which grows by one every day forever; **nine** `APPLICATION_DOCS.submittedAt` literals — three of that
+set are deliberately `null`, because a null *is* what outstanding means — which freeze the "3 of 4
+documents" line against a queue that keeps ageing; and twelve `CREDENTIALS.expiresAt` literals from
+2026-09-30 (already past) to 2028-03-14, one of them **today**, against `credentialWarnDays: 30`, so a
+document goes Valid → Expiring → Expired with no record changing. Seven `verifiedAt` literals only age
+a caption. The remedy is the convention the bookings already use — build these from the relative
+helpers instead of typing a day into them — which needs no schema bump and no install stamping, because
+there is no state to re-anchor. That is the question worth putting to the owner, and it is a different
+question from the one asked above.
 
 Gate **531**; whole suite **34 families, 179 mutants applied, 179 caught, 0 not applied** with the new family included, and
 `node tools/probe-all.cjs` re-run in full: **36 probes, 0 needing attention**, with the runner now

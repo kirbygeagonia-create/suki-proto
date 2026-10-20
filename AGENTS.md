@@ -1890,11 +1890,13 @@ sat 42px from the nearest axis label at the vivo's own 450 CSS px and 79px at 32
 --probe=@tools/probe-chart-axis-coverage.js --only=provider-dash,admin-dash --width=450
 --font-scale=1` — the provider dashboard names its peak at 0px and the admin's is 20px away; at 320
 with the text at 200% they are 63px and 24px away, and the provider's axis keeps ONE label for eight
-rows. Neither reading is wrong, and the difference is the finding: `providerWeeklyEarnings()` walks
-back from `weekStart(0)` — this week — while the seed's `completedAt` is a fixed day, so the row
-holding the money changes every Monday and the axis answer follows it. **Whether the peak is named is
-a date; whether the axis thins is a rule.** Ask the first question again whenever the calendar has
-moved, and never settle it once. The one-clause fix — keep the peak's label, drop the
+rows. Neither reading is wrong, and the difference is the finding: `providerWeeklyEarnings()` buckets
+by `weekStart(back)` — Mondays — while the job's `completedAt` is back-filled from a plain day count
+(`isoMinutesAgo(60*24*50)`), so which Monday a 50-day-old job falls into depends on the weekday the
+page was opened. **Whether the peak is named is a date; whether the axis thins is a rule.** Ask the
+first question again whenever the calendar has moved, and never settle it once. (The first version of
+this passage said the seed date was fixed and the window slid; reading the seed proved the opposite,
+and the sentence above is what the code says.) The one-clause fix — keep the peak's label, drop the
 stride-kept neighbour it would crowd — did name it, and also put `Aug 24` and `Oct 12` **51x39px on
 top of each other** at the worst corner, which is the class §69 exists to prevent and is worse than an
 unnamed bar. The cause is not the label measurement — a fresh run says the hidden probe is exact
@@ -2274,21 +2276,38 @@ restores the first-answer reader; each flip is the catch. The probes name their 
 **two** of them paint a `.chart-cols` — which is also the whole population, since the stylesheet holds
 two of that class. Record a probe's population in its header or the runner cannot point at it.
 
-THE PROTOTYPE'S DEMO DATA AGES ON THE CALENDAR, AND TWO SENSORS READ IT AS A CODE CHANGE. Three
-completed bookings carry money in this build — ₱465 (p3, Sep 16), ₱69 (p6, Aug 31), ₱315 (p1, Oct 19)
-— and every time-relative view walks back from *now*: `providerWeeklyEarnings()` starts at
-`weekStart(0)`. Measured on 2026-10-20 with `node tools/shot.cjs --probe=@.scratch/probe-window-age.js
---only=provider-dash`: p1's eight-week chart has **one** non-zero row, and the fruit provider's has
-**none**, so `fruit-provider-dash` paints the chart's own honest empty line while the demo is meant to
-be showing earnings. The Aug 31 row leaves the eight-week window about 2026-10-26. Nothing here is a
-rendering bug — §48's empty state is doing its job, and the numbers printed are the records — but any
-claim of the form "the chart shows N weeks of activity" is a **date**, not a property of the file, and
-it will be quoted as if it were permanent. Consequence for instruments: a screenshot, a probe count or
-a sweep figure taken from these views is only reproducible on the day it was taken, so the date goes in
-the sentence with the number. Consequence for the product: a reviewer who opens the published `dist/`
-in December sees empty earnings and an admin chart that has lost most of its rows. The remedies —
-re-anchor the seed dates to first run, add settled jobs inside the current window, or accept the rot
-and say so in the deck — are the owner's, and none is built here.
+THE DEMO'S MONEY DOES NOT AGE, AND A WRITTEN-LOOKALIKE DATE IS NOT A STORED ONE. A claim sat in this
+file for a whole pass — "the earnings charts empty themselves as the calendar passes the seed dates" —
+and it was wrong, so the rule that killed it goes first: **before asserting that a stored value is
+fixed, open the line that stores it.** The seed's temporal fields are built by relative constructors at
+definition time: bookings carry `date:dayLabel(n)` and `createdAt:isoMinutesAgo(60*24*34)`, and
+`completedAt` is not seeded at all — it is back-filled from `createdAt` through the accept → arrive →
+start → complete chain, so every completed job sits a constant *number of days* before whatever today
+the page loads on. A probe that prints `at 2026-09-16` is printing a **computed** value, and a computed
+value dressed as a calendar date reads like a literal to whoever writes the sentence. Nothing about
+those rows leaves the eight-week window, because the window and the data move together.
+
+What IS fixed is the other date fields in the file, and they are the ones a reviewer actually sees
+change: **three** `PENDING_APPLICANTS.submittedAt` literals (2026-10-08, -09, -10) feed
+`applicantWaitDays()`, so the verification queue's "waiting 12 days" grows by one every day forever;
+**nine** `APPLICATION_DOCS.submittedAt` literals (three of that set are deliberately `null`, and a null
+*is* what outstanding means) fix the "3 of 4 documents" line to a day that no longer moves with the
+queue; twelve `CREDENTIALS.expiresAt` literals run from 2026-09-30 (already past) through 2028-03-14,
+and one of them is **today**, against `credentialWarnDays: 30`, so a document flips Valid → Expiring →
+Expired under an untouched record; seven `verifiedAt` literals only age a caption. The remedy is the
+convention the file already uses for the bookings — build these from the same relative helpers rather
+than typing a calendar day into them — which needs no schema bump and no install stamping, because
+there is no state to re-anchor.
+
+For the instruments the consequence is narrower than it first looked, and it still holds: **whether an
+axis names the row holding the maximum is a date, not a property of the file.** `weekStart(back)`
+aligns to Mondays while `isoMinutesAgo(days)` counts plain days, so a job that is 50 days old sits in a
+different one of the eight buckets depending on which weekday the page was opened — which is exactly
+why §72 measured the peak 42px from any label and 2026-10-19 measured it 0px away with the label count
+unchanged. The stable finding is the thinning rule, not the peak: at 320 CSS px with the text at 200%
+an eight-row axis keeps ONE label and a fourteen-row keeps TWO, because the stride rule is protecting
+§69b's collision budget. Decided 2026-10-20: the thinning stays as it is — the peak question is a
+side-effect of the calendar, and no fix that does not reprint a label on top of another was found.
 
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by
