@@ -1884,9 +1884,17 @@ still worth running — it is the only thing proving the check reads the route r
 but the file says plainly that the two messages are the same branch.
 
 A LEGIBILITY FIX THAT CREATES A COLLISION IS NOT A FIX — revert it and leave the measurement behind.
-§72 asked whether a chart's x-axis names the row holding the maximum, and it does not: the tallest bar
-sits 42px from the nearest axis label at the vivo's own 450 CSS px and 79px at 320 with the text at
-200%, on both dashboards, at every corner. The one-clause fix — keep the peak's label, drop the
+§72 asked whether a chart's x-axis names the row holding the maximum, and it did not: the tallest bar
+sat 42px from the nearest axis label at the vivo's own 450 CSS px and 79px at 320 with the text at
+200%, on both dashboards. Re-measured on 2026-10-20 — `node tools/shot.cjs
+--probe=@tools/probe-chart-axis-coverage.js --only=provider-dash,admin-dash --width=450
+--font-scale=1` — the provider dashboard names its peak at 0px and the admin's is 20px away; at 320
+with the text at 200% they are 63px and 24px away, and the provider's axis keeps ONE label for eight
+rows. Neither reading is wrong, and the difference is the finding: `providerWeeklyEarnings()` walks
+back from `weekStart(0)` — this week — while the seed's `completedAt` is a fixed day, so the row
+holding the money changes every Monday and the axis answer follows it. **Whether the peak is named is
+a date; whether the axis thins is a rule.** Ask the first question again whenever the calendar has
+moved, and never settle it once. The one-clause fix — keep the peak's label, drop the
 stride-kept neighbour it would crowd — did name it, and also put `Aug 24` and `Oct 12` **51x39px on
 top of each other** at the worst corner, which is the class §69 exists to prevent and is worse than an
 unnamed bar. The cause is not the label measurement — a fresh run says the hidden probe is exact
@@ -2244,6 +2252,43 @@ piping, because the pipe is what hid a live process; and after any interrupted o
 `git diff` the target file and confirm it has stopped changing before trusting either the numbers or
 the tree. A background run that reports "completed, exit 0" is not proof that it ended — the pass
 after that one announced itself over while its log was still growing.
+
+A RUNNER THAT READS THE FIRST ANSWER IS JUDGING THE SIGN-IN SCREEN. `shot.cjs` evaluates a `--probe=@`
+expression **once per screen of the walk**, and `probe-all.cjs` took `run.out.match(/probe → …/)` —
+the first line — as the probe's verdict. So an instrument whose subject does not exist on screen one
+printed a true thing about the wrong screen and was counted clean: `probe-nav-fit.js` answered "no
+bottom nav painted" there, while the same run answers on all 72 screens and 69 of them hold a nav; and
+`probe-chart-axis-coverage.js` answered `charts:[]`, so the question it exists to ask — does an axis
+name its tallest bar — went unasked for every pass that quoted it as answered. `probe-money-typing.js`
+was the third shape of the same hole and the one that was *not* the runner's fault: its own header
+documented `--only=fruit-sheet`, the resident's request sheet, while the field it types into,
+`offer-unit`, is painted by `makeOfferSheet()` on `offer-sheet`. It printed `offer-unit ABSENT` and
+`ok`. The runner now reads every answer, prints `N answers, M refused`, and refuses on the sentinel
+`NO CONCLUSION` **only when every answer refused** — one refusal among 72 screens is the subject
+genuinely not existing on one screen, and condemning that would teach the next author to stop
+declaring refusals at all. Proven both ways by `node tools/falsify-probe-population.cjs` — 3 breaks, 3
+caught — which plants an always-refusing probe (must be flagged) and a probe that refuses on one screen
+and measures on the next (must not be), then breaks the sentinel rule, inverts its quantifier, and
+restores the first-answer reader; each flip is the catch. The probes name their own population now:
+`--only=provider-dash,admin-dash` for the axis file, because measured across all 72 screens exactly
+**two** of them paint a `.chart-cols` — which is also the whole population, since the stylesheet holds
+two of that class. Record a probe's population in its header or the runner cannot point at it.
+
+THE PROTOTYPE'S DEMO DATA AGES ON THE CALENDAR, AND TWO SENSORS READ IT AS A CODE CHANGE. Three
+completed bookings carry money in this build — ₱465 (p3, Sep 16), ₱69 (p6, Aug 31), ₱315 (p1, Oct 19)
+— and every time-relative view walks back from *now*: `providerWeeklyEarnings()` starts at
+`weekStart(0)`. Measured on 2026-10-20 with `node tools/shot.cjs --probe=@.scratch/probe-window-age.js
+--only=provider-dash`: p1's eight-week chart has **one** non-zero row, and the fruit provider's has
+**none**, so `fruit-provider-dash` paints the chart's own honest empty line while the demo is meant to
+be showing earnings. The Aug 31 row leaves the eight-week window about 2026-10-26. Nothing here is a
+rendering bug — §48's empty state is doing its job, and the numbers printed are the records — but any
+claim of the form "the chart shows N weeks of activity" is a **date**, not a property of the file, and
+it will be quoted as if it were permanent. Consequence for instruments: a screenshot, a probe count or
+a sweep figure taken from these views is only reproducible on the day it was taken, so the date goes in
+the sentence with the number. Consequence for the product: a reviewer who opens the published `dist/`
+in December sees empty earnings and an admin chart that has lost most of its rows. The remedies —
+re-anchor the seed dates to first run, add settled jobs inside the current window, or accept the rot
+and say so in the deck — are the owner's, and none is built here.
 
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by
@@ -3277,18 +3322,19 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate **531**; whole suite **33 families, 176 mutants applied, 176 caught, 0 not applied** (`node tools/falsify-all.cjs`) — the row the last two
-passes flagged is cleared. `falsify-chart-collide` caught 4 of 5 inside a run while its headroom
-break was worth exactly one finding, one pixel over its threshold, and catches 5 of 5 now that the
-break is measured where the refusal is short by nine viewBox units and the criterion demands a 3px
-escape rather than a count. Quote a total from a pass that printed one: the run that first showed
-5 of 5 died when the machine slept and left a `falsify-typography` mutant in the application file,
-which `git diff` caught and `git checkout` undid.
+Gate **531**; whole suite **34 families, 179 mutants applied, 179 caught, 0 not applied**
+(`node tools/falsify-all.cjs`) — re-run on 2026-10-20 with `falsify-probe-population` added. The two
+rows flagged earlier stay cleared: `falsify-chart-collide` catches 5 of 5 inside the run now that its
+headroom break is measured where the refusal is short by nine viewBox units and the criterion demands
+a 3px escape rather than a count, and `falsify-nav-fit` catches 3 of 3 with the floor sensor seeing
+nav labels. Quote a total from a pass that printed one.
 Of these, `falsify-flex-crush`, `falsify-control-reach`,
 `falsify-focus-trap`, `falsify-long-input`, `falsify-stale-overlay`, `falsify-double-tap`, `falsify-chart-collide`
-and `falsify-nav-fit` are the eight that drive the camera rather than the gate — a geometry rule, a
-real tap, or a second tap has no Node assertion available to it — and `falsify-camera-surfaces` is the
-one that reads the instrument instead of the application.
+and `falsify-nav-fit` are the nine that drive the camera rather than the gate — a geometry rule, a
+real tap, or a second tap has no Node assertion available to it — and `falsify-camera-surfaces` and
+`falsify-probe-population` are the two that read an instrument instead of the application — the first the
+camera's own surface lists, the second the probe runner's aggregation, proved by planting probes that
+measure nothing. `falsify-probe-population` belongs to both lists: it drives Chrome through the runner.
 
 Measure it with `node tools/sweep-text-scale.cjs` — seven phone corners, the camera each time: 320px
 @ 200% text, default width @ 200%, 450px @ 135% (a vivo panel at the OPPO's setting), **320x638 @

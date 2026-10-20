@@ -4620,8 +4620,76 @@ already written twice in this repository is the one that caught it: after any in
 Two consequences stated rather than glossed, and then the second one closed. The suite total
 quoted in AGENTS was left as the last **complete** pass, because the pass that first cleared the
 flag never printed a summary and a headline from a run that died halfway is not a measurement. The
-pass after it printed one: **33 families, 176 mutants applied, 176 caught, 0 not applied**, with `chart-collide` at 5 of 5 and
-`nav-fit` at 3 of 3 inside the full run rather than only alone, which is the re-confirmation the
-flag needed. `.scratch/clear-flag.cjs` wrote those numbers into both documents and would have
-written nothing at all unless the log showed zero survivors, zero unapplied needles, no silent
-family, and no "needs attention" on the summary line.
+pass after it printed one: **33 families, 176 mutants applied, 176 caught, 0 not applied**, with
+`chart-collide` at 5 of 5 and `nav-fit` at 3 of 3 inside the full run rather than only alone, which
+is the re-confirmation the flag needed. The command that prints that line is
+`node tools/falsify-all.cjs`, and the figures copied into these two documents were read out of the
+pass's own log by a script that refused to write unless the log showed zero survivors, zero
+unapplied needles, no silent family and no "needs attention" — no number here was typed. The script
+lived in `.scratch/`, which is gitignored: a one-off doc patcher does not belong in `tools/`, so it
+is named as provenance rather than as a command to run, and the guard itself is the sentence above,
+not a file the next reader can open.
+
+## 75. A runner that read one screen and called it the verdict, and the demo data that ages weekly
+
+Three instruments reported clean while measuring nothing, and all three failures were the same shape
+seen from three places.
+
+`tools/probe-all.cjs` took the **first** `probe →` line as a page probe's verdict. The camera
+evaluates a probe once per screen of the walk, so that line belongs to whatever the walk starts on —
+the sign-in page:
+
+- `probe-nav-fit.js` printed `no bottom nav painted`. Run across the walk it answers on **72**
+  screens, **69** of which hold a nav. The verdict was true of the one screen that cannot have a nav.
+- `probe-chart-axis-coverage.js` printed `charts:[]` and was counted clean, so the question it was
+  written to ask — does an axis name its tallest bar — had never been asked in any pass that quoted
+  it as answered.
+- `probe-money-typing.js` printed `offer-unit ABSENT` and, this one, its own header was at fault: it
+  documented `--only=fruit-sheet`, the resident's request sheet, while `offer-unit` is painted by
+  `makeOfferSheet()` on `offer-sheet`.
+
+The runner now collects every answer, prints `N answers, M refused`, and refuses on the sentinel
+`NO CONCLUSION` only when **every** answer refused. The quantifier is the part worth defending: one
+refusal among 72 screens means the subject genuinely does not exist on one of them, and flagging that
+would teach the next author to stop declaring refusals — which is the only way a probe can say it
+measured nothing. Both probes now name their own population in their headers; the axis file pins
+`--only=provider-dash,admin-dash`, measured as exactly two of the 72 screens, and the stylesheet holds
+exactly two `.chart-cols`, so that is the whole set rather than a sample.
+
+```
+control  the probe that never measures   flagged  XX probe-plant-refuse.js  1 answers, none measure…
+control  the probe that measures once    clean    ok  probe-plant-mixed.js  2 answers, 1 refused…
+CAUGHT   the refusal rule is deleted, so an empty population reads clean
+CAUGHT   any refusal condemns, so an honest one-screen gap is a finding
+CAUGHT   only the first answer is read, which is the screen the walk started on
+3 breaks applied, 3 caught, 0 missed, 0 not applied
+cleanup  runner restored: true · planted probes removed: yes
+```
+
+`node tools/falsify-probe-population.cjs` — 3 breaks, 3 caught — plants an always-refusing probe and a
+probe that refuses on one screen and measures on the next, requires the pair to read flagged/clean in
+the unmutated runner first, then breaks each rule and requires that pair to flip. The planted files go
+into `tools/` because that is the directory the runner globs, and the family fails itself if the
+restore or the deletion did not happen.
+
+**The finding underneath the finding.** Pinning the axis probe is what exposed the second half of this
+section. Its answer now says the provider dashboard *names* its tallest bar (0px gap) where CHANGES
+§72 recorded 42px with the label count unchanged — and `node tools/shot.cjs
+--probe=@.scratch/probe-window-age.js --only=provider-dash` explains why: three bookings carry money
+in this build (₱465 p3 Sep 16, ₱69 p6 Aug 31, ₱315 p1 Oct 19) and `providerWeeklyEarnings()` walks
+back from `weekStart(0)`, so the row holding the money moves every Monday. §72's measurement was right
+on the day it was taken. **Whether the peak is named is a date; whether the axis thins is a rule.**
+
+Same probe, same screen, the fruit provider's chart: **zero** non-zero rows of eight, so
+`fruit-provider-dash` paints the empty line while the demo is meant to be showing earnings, and the
+Aug 31 row leaves the window around 2026-10-26. Not a rendering bug — §48's empty state is behaving —
+but it means every screenshot-derived figure in this repository has an expiry, and it puts a product
+question to the owner: re-anchor the seed dates to first run, add settled jobs inside the current
+window, or accept the rot and say so where the deck is shown. Nothing is built here for it.
+
+Gate **531**; whole suite **34 families, 179 mutants applied, 179 caught, 0 not applied** with the new family included, and
+`node tools/probe-all.cjs` re-run in full: **36 probes, 0 needing attention**, with the runner now
+printing each page probe's coverage — sixteen of them report it explicitly, ten saying `72 answers`
+and six naming the screens they were pointed at — where before the runner printed one line and
+called it the verdict. The application file was not touched by this pass, so the seven-corner sweep
+was not re-run; the last clean sweep (`7 of 7`, 23 tallies each) still describes the committed file.
