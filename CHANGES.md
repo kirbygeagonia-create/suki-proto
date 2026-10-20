@@ -4567,12 +4567,11 @@ Gate **531**. `falsify-nav-fit` **3 of 3, 0 not applied**. Seven corners × 23 t
 with the floor sensor seeing nav labels for the first time — which is the run that matters, because a
 nav label that actually rendered under 14px would now be reported rather than skipped. The same three
 nav screens read 0 avoidable cuts, 0 sub-floor text and 0 off-scale findings at 320 CSS px with the
-text at 200%. Whole suite: **33 families, 176 mutants applied, 175 caught, 0 not applied — with one row
-flagged**: `falsify-chart-collide` catches 5 of 5 run alone and 4 of 5 inside the full pass, because the
-headroom break produces exactly one finding and this change moved the layout a hair (the nav got
-shorter, so the scrollbar decision on the dashboard flipped, and the collide counts moved by one). A
-break whose evidence is one finding is fragile against any unrelated layout change; widening it is
-tracked rather than papered over. Confirmed on the vivo 1906 at its own `font_scale
+text at 200%. Whole suite: **33 families, 176 mutants applied, 176 caught, 0 not applied**, and nothing flagged. The row the previous
+pass carried (`falsify-chart-collide`, 5 of 5 run alone against 4 of 5 inside the full pass) is
+cleared: §74 moved its headroom break to a corner where the refusal is short by nine units and made
+the criterion demand a 3px escape instead of one finding, and this pass re-confirmed it inside the
+run rather than only alone. Confirmed on the vivo 1906 at its own `font_scale
 1.35` — the 200% leg on hardware is still owed, because the handset now refuses adb's write to that
 setting.
 
@@ -4618,8 +4617,11 @@ already written twice in this repository is the one that caught it: after any in
 "finished" run, `git diff` the target before trusting either the numbers or the tree. Restored with
 `git checkout -- Sukinnect-next.html`, `--font-display:var(--font-ui)` back at line 127, gate **531**.
 
-Two consequences stated rather than glossed. The suite total quoted in AGENTS is still the last
-**complete** pass — 33 families, 176 applied, 175 caught, 0 not applied, with the `chart-collide` row
-flagged — because the pass that cleared the flag never printed a summary, and a headline from a run
-that died halfway is not a measurement. And the flag itself is now in the state this file has been in
-often: fixed, and not yet re-confirmed by the run that would prove it.
+Two consequences stated rather than glossed, and then the second one closed. The suite total
+quoted in AGENTS was left as the last **complete** pass, because the pass that first cleared the
+flag never printed a summary and a headline from a run that died halfway is not a measurement. The
+pass after it printed one: **33 families, 176 mutants applied, 176 caught, 0 not applied**, with `chart-collide` at 5 of 5 and
+`nav-fit` at 3 of 3 inside the full run rather than only alone, which is the re-confirmation the
+flag needed. `.scratch/clear-flag.cjs` wrote those numbers into both documents and would have
+written nothing at all unless the log showed zero survivors, zero unapplied needles, no silent
+family, and no "needs attention" on the summary line.
