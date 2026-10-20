@@ -4706,9 +4706,73 @@ helpers instead of typing a day into them — which needs no schema bump and no 
 there is no state to re-anchor. That is the question worth putting to the owner, and it is a different
 question from the one asked above.
 
-Gate **531**; whole suite **34 families, 179 mutants applied, 179 caught, 0 not applied** with the new family included, and
+Gate **534**; whole suite **35 families, 183 mutants applied, 183 caught, 0 not applied** with `falsify-seed-dates` added (`node tools/falsify-seed-dates.cjs`: 4 breaks, 4 caught, 0 not applied), and
+`node tools/sweep-text-scale.cjs` re-run because the conversion touched the application file:
+**7 of 7 corners clean, 23 tallies each** — the painted layout did not move when the dates did.
 `node tools/probe-all.cjs` re-run in full: **36 probes, 0 needing attention**, with the runner now
 printing each page probe's coverage — sixteen of them report it explicitly, ten saying `72 answers`
 and six naming the screens they were pointed at — where before the runner printed one line and
 called it the verdict. The application file was not touched by this pass, so the seven-corner sweep
 was not re-run; the last clean sweep (`7 of 7`, 23 tallies each) still describes the committed file.
+
+## 76. Twenty-four seed dates that were countdowns, converted to the convention the bookings already used
+
+The owner's ruling on §75's real residue: make the fixed dates relative, using the helpers the file
+already has rather than a new state to stamp.
+
+What was there: three `PENDING_APPLICANTS.submittedAt` literals (2026-10-08/-09/-10) feeding
+`applicantWaitDays()`, so the verification queue aged one day per day forever; nine
+`APPLICATION_DOCS.submittedAt` literals — three rows deliberately `null`, because a null *is* what
+outstanding means — freezing the "3 of 4 documents" line against a queue that kept moving; and twelve
+`expiresAt` literals (eleven in `CREDENTIALS`, one on a document row) running from 2026-09-30, already
+past, to 2028-03-14, one of them landing on **today**, which against `credentialWarnDays: 30` makes a
+document go Valid → Expiring → Expired with no record changing.
+
+What replaced it: one builder and two named wrappers beside the existing `isoMinutesAgo` —
+
+```
+function isoDay(offsetDays){                       /* local frame, never toISOString().slice() */
+  const n = new Date();
+  const d = new Date(n.getFullYear(), n.getMonth(), n.getDate() + offsetDays);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function isoDayAgo(days){ return isoDay(-Math.abs(days)); }
+function isoDayAhead(days){ return isoDay(Math.abs(days)); }
+```
+
+with each offset chosen to reproduce the day-count the build was measured with on 2026-10-20, so
+`submittedAt:isoDayAgo(10)` means "waiting 10 days" on any day the page is opened. Two things make this
+cheap rather than a migration: the three arrays are **not** in `snapshot()`, so they recompute on every
+load on every device — no install stamping, no stored state to correct — and `SCHEMA_VERSION` stays 16,
+because nothing on disk changed shape. The seven `PROVIDERS[].verification.verifiedAt` days were left
+literal on purpose: a day something happened is history, a day something expires is a countdown.
+
+**The proof is a diff, not a claim.** `.scratch/probe-seed-states.js` asks the app's own functions for
+every state a fixed date can produce — wait labels, per-applicant document counts, each credential's
+`code`/`days`, the per-provider worst state — and the same command run before and after the conversion
+printed an identical block: waits `joel 11 · liza 12 · maria 10`, docs `4/4 · 2/4 · 3/4`, and
+1 expired / 5 expiring / 5 valid out of eighteen documents. Nothing was retuned to make that happen;
+the offsets were derived from the states, which is why the diff came back empty.
+
+Three gate checks hold it (`suite('dates')`):
+
+- `a seed row declares an offset from today, never a typed calendar date` — the scan, plus a positive
+  control requiring at least twenty relative call sites, because `typedDays.length === 0` is equally
+  true of a clean file and of a broken scanner;
+- `the day helper answers the local calendar day, and its two wrappers agree with it` — the frame the
+  "Verified Mar 13" bug was made of, asserted against a locally built date rather than a UTC slice;
+- `the seeded day offsets still produce the states this build was measured with` — waits `10,11,12`
+  and 1/5/5, so changing an offset moves a number here instead of silently re-colouring a badge.
+
+`node tools/falsify-seed-dates.cjs` — **4 breaks, 4 caught, 0 not applied** — types a date back into a
+credential row, gives the day builder the month below the one it was handed, moves one applicant's
+offset by a day, and renames the check's own good pattern so its scan matches nothing. The last is the
+one worth keeping: it fails on the positive control alone, with the detail reading
+`0 typed date(s), 0 relative offsets`.
+
+Two notes on the work itself. The bulk edit was driven by a script that asserted a match count per
+swap and refused to write at all when one guard did not hold — its first run aborted on a `verifiedAt`
+pattern written without the quote between `:` and the date, so nothing was half-edited. And the write
+that did land inserted LF newlines into a CRLF file, which the hygiene suite caught with an unrelated
+sentence: *the file carries no doubled carriage return — CR 11586 against LF 11597*. The check whose
+subject is line endings is the one that noticed; normalise after any script that builds new text.

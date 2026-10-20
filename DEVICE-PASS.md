@@ -1207,3 +1207,34 @@ lost to it and the ring is absent because there is no control; on a phone with n
 is a path a thumb never takes.
 
 **Device left clean:** app force-stopped, no override display size, `font_scale 1.0`.
+
+## `1.2-preview.30` — built, **not handset-verified**, 2026-10-20
+
+§76's conversion (24 typed seed dates → day offsets) changed the application file, so the asset was
+re-synced and a new APK cut: `versionCode 32`, `versionName 1.2-preview.30`, built with
+`./gradlew --offline --no-daemon :app:assembleDebug`. The bundled `assets/Sukinnect.html` is
+byte-identical to `Sukinnect-next.html` — `md5sum` of both answers `3addb1d5d3af1c03768385a2d0cdf834`,
+which is the check that matters here because the shipped file is *named* differently from the source.
+The built archive was opened rather than assumed: `unzip -p Sukinnect-1.2-preview.30-debug.apk
+assets/Sukinnect.html | md5sum` answers that same hash, so the APK on disk contains the code the
+repository says it does.
+
+**Nothing in this section was measured on a phone.** No device was on adb when the build finished
+(`adb devices` lists nothing), so:
+
+- the four remaining §3f items are still owed (concierge refusing to guess through the real system
+  file picker, the sheet's marked payment row against the booking record, a booking with no address,
+  the provider reload check);
+- §76's date conversion is verified only by the camera diff — the wait labels, document counts and
+  credential states printed identical before and after — and the handset leg is what would show a
+  *rendered* difference the Node and Chrome frames cannot see, which is exactly the mistake §73 made
+  twice (the floor that cancelled the user's text scale, the px the bench wrote and the phone scaled);
+- the device's own text size is **unknown**, not known. This file's last line says `font_scale 1.0`,
+  but a later session set it to 1.35 on the vivo and Android then refused adb's write
+  (`com.android.shell was not granted WRITE_SETTINGS`), so the stored sentence and the later action
+  disagree and neither can be checked without the phone. Read it off the device when it is reattached
+  rather than quoting either claim.
+
+`1.2-preview.29` remains the last build actually verified on hardware, and the claims attached to it in
+§73/§74 (the nav labels rendering at 14.0px, the a11y tree, split-screen reachability) stand on that
+build only.

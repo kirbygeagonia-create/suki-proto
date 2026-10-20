@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 11,587 lines, ONE :root block, 1,752 var() usages, 95 tokens declared with 92
+Sukinnect-next.html— 11,598 lines, ONE :root block, 1,752 var() usages, 95 tokens declared with 92
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1211,8 +1211,9 @@ Sukinnect-next.html— 11,587 lines, ONE :root block, 1,752 var() usages, 95 tok
                     was written, three out again a week later while saying exactly that, and out
                     a third time on 2026-10-19 — line count, var() count, font-size counts and
                     heading count, all of them moved by the nav-label work — which is why the
-                    figures above were re-run rather than re-read. The next reader should cite the
-                    tool rather than trust it.
+                    figures above were re-run rather than re-read. They moved a fourth time the
+                    next day (§76's eleven line of day helpers), and were re-run again. The next
+                    reader should cite the tool rather than trust it.
                     Everything that was a real violation is now a token: #fff became
                     --surface and --on-brand, the modal dim became --scrim, and the phone
                     mockup's bezel and signal bars became --device-bezel and
@@ -2309,6 +2310,38 @@ an eight-row axis keeps ONE label and a fourteen-row keeps TWO, because the stri
 §69b's collision budget. Decided 2026-10-20: the thinning stays as it is — the peak question is a
 side-effect of the calendar, and no fix that does not reprint a label on top of another was found.
 
+A SEED DATE IS A COUNTDOWN NOBODY MAINTAINS, AND THE FIX WAS THE FILE'S OWN CONVENTION. Twenty-four
+typed calendar dates sat in three seed arrays: twelve `submittedAt` (three applicants, nine documents)
+and twelve `expiresAt` (eleven credentials and one document row). The applicant literals feed
+`applicantWaitDays()`, so the queue's "waiting 10 days" grew by one every day with nothing in the
+record moving, and one credential carried **today's** date, so against `credentialWarnDays: 30` it
+read Expiring the day it was written and Expired the day after. The bookings had answered this long
+ago — `date:dayLabel(n)`, `createdAt:isoMinutesAgo(m)`, and `completedAt` not seeded at all but
+back-filled through the accept → arrive → start → complete chain — so the remedy took the same shape:
+`isoDayAgo(n)` / `isoDayAhead(n)` over one `isoDay(offset)` builder, 24 swaps, and **no schema bump**,
+because there is no stored state to re-anchor: `CREDENTIALS`, `APPLICATION_DOCS` and
+`PENDING_APPLICANTS` are not in `snapshot()`, so they recompute on every load on every device. The
+field deliberately left literal is `PROVIDERS[].verification.verifiedAt` — seven of them. A day
+something *happened* is history; a day something *expires* is a countdown, and only the second needs
+to move.
+
+Behaviour-preservation was measured, not asserted: `.scratch/probe-seed-states.js` reads the wait
+labels, the document counts and every credential's state through the app's own functions, and its
+output diffed **identical** across the conversion — waits 10/11/12, one expired document, five
+expiring, five valid. Three gate checks hold it from here: no seed row may carry a typed date (with a
+positive control counting the relative call sites, because a scan whose "good pattern" matches nothing
+reads exactly like cleanliness), the day builder must answer the **local** calendar frame — the same
+UTC-day bug that once rendered "Verified Mar 13" for a record reading 2026-03-14 — and the offsets must
+still produce the states this build was measured with. `node tools/falsify-seed-dates.cjs` — 4 breaks,
+4 caught, 0 not applied — and its fourth break renames the check's own good pattern so the scan is
+vacuous; the positive control alone is what condemns it, which is the point of writing it.
+
+One instrument lesson from the same minute: the conversion script wrote LF newlines into a CRLF file,
+and what caught it was the *hygiene* suite's "the file carries no doubled carriage return", reporting
+`CR 11586 against LF 11597`. A guard whose job is line endings fired on a change about dates. When a
+check fails for a reason unrelated to what you changed, read what it actually counts before touching
+the rule — and normalise the file after any script that builds new text in memory.
+
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by
 the 479-byte `ATKINSON-AUTHORS.txt` that sits beside it, a `--font-ui` opening with a family
@@ -3341,7 +3374,7 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate **531**; whole suite **34 families, 179 mutants applied, 179 caught, 0 not applied**
+Gate **534**; whole suite **35 families, 183 mutants applied, 183 caught, 0 not applied** (`node tools/falsify-all.cjs`) — re-run on 2026-10-20 with `falsify-seed-dates` and `falsify-probe-population` added. The two rows flagged earlier stay cleared: `falsify-chart-collide` catches 5 of 5 inside the run now that its headroom break is measured where the refusal is short by nine viewBox units and the criterion demands a 3px escape rather than a count, and `falsify-nav-fit` catches 3 of 3 with the floor sensor seeing nav labels. Quote a total from a pass that printed one.
 (`node tools/falsify-all.cjs`) — re-run on 2026-10-20 with `falsify-probe-population` added. The two
 rows flagged earlier stay cleared: `falsify-chart-collide` catches 5 of 5 inside the run now that its
 headroom break is measured where the refusal is short by nine viewBox units and the criterion demands
