@@ -4590,16 +4590,18 @@ The fix is a corner, not a threshold: the break now runs at **150%** on the same
 refusal is short by ~9 units, so the escape is several pixels. `692d6f9`. Inside the next full pass
 `chart-collide` read 5 of 5 and `falsify-nav-fit` 3 of 3 — before that pass died (below).
 
-### What was tried and taken back out
+### The magnitude criterion, which failed once for the wrong reason
 
-The better fix is to stop counting findings and start requiring a magnitude: fail the break unless the
-worst escape is at least 3px, read off the tally's own detail lines. It was written, run, and reverted.
-The extractor returned 0px at a corner where the same run reported one escaping label, which is a bug
-in the extraction and not a fact about the sensor — and shipping a size gate that silently reads zero
-would have made the break pass for the wrong reason, which is the one failure mode this repository
-documents most and repeats anyway. The count is still the criterion; #41 stays open with that ordering
-written down: fix the extraction, then add the magnitude.
-
+The better fix is to stop counting findings and require a magnitude: fail the break unless the worst
+escape is at least 3px, read off the tally's own detail lines. The first attempt at that printed
+`worst escape is 0px` at a corner where the same run reported one escaping label — and the cause was
+not the sensor and not the rule. The patch that wrote it was a `node -e` script inside a single-quoted
+bash string, and the regex literal survived the round trip mangled. Rewritten through the editor
+rather than through a shell string, the same extraction works: the headroom break now reports a
+**6px** escape at 150% text, against 10px and 16px for the two label-collision breaks, and the family
+is 5 of 5 with the magnitude enforced. Worth recording as its own class of instrument failure: a
+metaprogrammed edit can be syntactically valid, parse clean, run without error, and still be the
+wrong file — so the check is not 'did the patch tool exit 0' but 'does the written code do the thing'.
 ### The interrupted pass, which is the part worth keeping
 
 The machine slept mid-run. Twelve hours later the log was still reading `trust … 6 6 0 0` with no
