@@ -1,5 +1,9 @@
 /* One expression the camera evaluates inside a real page:
-     node tools/shot.cjs --probe=@tools/probe-money-typing.js --only=fruit-sheet
+     node tools/shot.cjs --probe=@tools/probe-money-typing.js --only=offer-sheet
+   The screen matters: `offer-unit` is painted by `makeOfferSheet()`, which the camera reaches as
+   `offer-sheet`. This header used to name `fruit-sheet` — the resident's request sheet, which has no
+   such field — so every run through `node tools/probe-all.cjs` answered `offer-unit ABSENT` and was
+   still counted as an answer. That is now a refusal the runner flags, not a clean line.
    Setting .value programmatically is NOT what a person does, and Chrome treats the two
    differently: a programmatic write of unparseable text clears the value quietly, while typed
    text leaves the characters on screen and raises validity.badInput. This inserts text the way
@@ -7,7 +11,7 @@
    read?" is answered with the same flag a real keystroke sets. */
 (() => {
   const el = document.getElementById('offer-unit');
-  if (!el) return 'offer-unit ABSENT';
+  if (!el) return 'NO CONCLUSION — offer-unit is not painted on this screen; is --only= still right?';
   const results = [];
   const attempt = (text) => {
     el.focus();

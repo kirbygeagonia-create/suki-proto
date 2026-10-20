@@ -1,5 +1,12 @@
 /* One expression the camera evaluates inside a real page:
-     node tools/shot.cjs --probe=@tools/probe-chart-axis-coverage.js --width=450 --font-scale=1
+     node tools/shot.cjs --probe=@tools/probe-chart-axis-coverage.js --only=provider-dash,admin-dash --width=450 --font-scale=1
+   Pin the screens. Measured on 2026-10-19 by walking all 72: exactly TWO screens paint a
+   `.chart-cols` bar chart — `provider-dash` (8 rows) and `admin-dash` (14 rows) — and the file holds
+   only two of that class, so this is the whole population, not a sample. Run with no `--only=`, the
+   camera evaluates it 72 times and 70 answers are `charts:[]`, which is why the header used to print
+   one empty answer and `probe-all` called it clean: the runner read the first screen, the sign-in
+   page, where no chart can exist.
+
    Two things the vivo 1906 screenshots showed that no tally in shot.cjs can see, because both are
    questions about what a chart *names* rather than where its pixels land:
 
@@ -72,6 +79,10 @@
       plotPx: Math.round(pb.width) + 'x' + Math.round(pb.height),
     });
   });
+  /* An empty population is not a clean answer. On a screen the operator pointed at deliberately, no
+     `.chart-cols` means the walk no longer reaches a chart, and the naming question this file exists
+     to ask has not been asked. Say so in the sentinel `probe-all` refuses on. */
+  if (!charts.length) return 'NO CONCLUSION — this screen paints no .chart-cols bar chart';
   return JSON.stringify({
     screen: (document.querySelector('#screen h1') || document.querySelector('.topbar h1') || {}).textContent || '',
     root: getComputedStyle(document.documentElement).fontSize,
