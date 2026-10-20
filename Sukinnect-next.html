@@ -1964,22 +1964,22 @@ const VERIF_PHOTOS = { maria:'avatars/avatar-10.png', joel:'avatars/avatar-11.pn
    document does not expire — a TESDA certificate, unlike a barangay clearance. */
 const CREDENTIALS = [
   {id:'cr1', providerId:'p1', name:'TESDA NC II Plumbing', issuer:'TESDA', kind:'qualification', expiresAt:null},
-  {id:'cr2', providerId:'p1', name:'Barangay Clearance', issuer:'Brgy. Poblacion', kind:'clearance', expiresAt:'2026-11-02'},
+  {id:'cr2', providerId:'p1', name:'Barangay Clearance', issuer:'Brgy. Poblacion', kind:'clearance', expiresAt:isoDayAhead(13)},
   {id:'cr3', providerId:'p1', name:'Master Plumber Apprentice', issuer:'TDSA', kind:'qualification', expiresAt:null},
-  {id:'cr4', providerId:'p1', name:'Police Clearance', issuer:'PNP', kind:'clearance', expiresAt:'2026-10-25'},
+  {id:'cr4', providerId:'p1', name:'Police Clearance', issuer:'PNP', kind:'clearance', expiresAt:isoDayAhead(5)},
   {id:'cr5', providerId:'p2', name:'TESDA NC II Electrical Installation', issuer:'TESDA', kind:'qualification', expiresAt:null},
-  {id:'cr6', providerId:'p2', name:'Licensed Electrician', issuer:'PRC', kind:'licence', expiresAt:'2027-01-31'},
-  {id:'cr7', providerId:'p2', name:'Safety Certified', issuer:'BOSS', kind:'qualification', expiresAt:'2026-10-20'},
+  {id:'cr6', providerId:'p2', name:'Licensed Electrician', issuer:'PRC', kind:'licence', expiresAt:isoDayAhead(103)},
+  {id:'cr7', providerId:'p2', name:'Safety Certified', issuer:'BOSS', kind:'qualification', expiresAt:isoDayAhead(0)},
   {id:'cr8', providerId:'p3', name:'TESDA Housekeeping NC II', issuer:'TESDA', kind:'qualification', expiresAt:null},
-  {id:'cr9', providerId:'p3', name:'Sanitation Certified', issuer:'City Health Office', kind:'qualification', expiresAt:'2027-03-14'},
-  {id:'cr10', providerId:'p3', name:'NBI Clearance', issuer:'NBI', kind:'clearance', expiresAt:'2026-12-01'},
+  {id:'cr9', providerId:'p3', name:'Sanitation Certified', issuer:'City Health Office', kind:'qualification', expiresAt:isoDayAhead(145)},
+  {id:'cr10', providerId:'p3', name:'NBI Clearance', issuer:'NBI', kind:'clearance', expiresAt:isoDayAhead(42)},
   {id:'cr11', providerId:'p4', name:'Appliance Repair Certified', issuer:'TDSA', kind:'qualification', expiresAt:null},
-  {id:'cr12', providerId:'p4', name:'Police Clearance', issuer:'PNP', kind:'clearance', expiresAt:'2026-09-30'},
+  {id:'cr12', providerId:'p4', name:'Police Clearance', issuer:'PNP', kind:'clearance', expiresAt:isoDayAgo(20)},
   {id:'cr13', providerId:'p5', name:'Tutoring Credential', issuer:'DepEd', kind:'qualification', expiresAt:null},
-  {id:'cr14', providerId:'p6', name:'Driver’s License', issuer:'LTO', kind:'licence', expiresAt:'2027-06-08'},
-  {id:'cr15', providerId:'p6', name:'Police Clearance', issuer:'PNP', kind:'clearance', expiresAt:'2026-11-19'},
-  {id:'cr16', providerId:'p7', name:'Nursing License', issuer:'PRC', kind:'licence', expiresAt:'2027-02-20'},
-  {id:'cr17', providerId:'p8', name:'Barangay Clearance', issuer:'Brgy. Lun Magsaysay', kind:'clearance', expiresAt:'2026-10-28'},
+  {id:'cr14', providerId:'p6', name:'Driver’s License', issuer:'LTO', kind:'licence', expiresAt:isoDayAhead(231)},
+  {id:'cr15', providerId:'p6', name:'Police Clearance', issuer:'PNP', kind:'clearance', expiresAt:isoDayAhead(30)},
+  {id:'cr16', providerId:'p7', name:'Nursing License', issuer:'PRC', kind:'licence', expiresAt:isoDayAhead(123)},
+  {id:'cr17', providerId:'p8', name:'Barangay Clearance', issuer:'Brgy. Lun Magsaysay', kind:'clearance', expiresAt:isoDayAhead(8)},
   {id:'cr18', providerId:'p8', name:'Farm Workers Association Card', issuer:'FWA', kind:'qualification', expiresAt:null},
 ];
 
@@ -1989,9 +1989,9 @@ const CREDENTIALS = [
    disagreed about both the number and the identifier. Both are derived now: the count
    from APPLICATION_DOCS below, the wait from submittedAt. */
 const PENDING_APPLICANTS = [
-  {id:'maria', applicationId:'LS-PV-0024', initials:'MS', name:'Maria Santos', service:'Electrical Specialist', serviceId:'electrical', barangay:'Poblacion', submittedAt:'2026-10-10', email:'maria.santos@example.com', phone:'+63 917 321 8844', address:'Blk 8 Lot 4, Mabini St., Poblacion', priority:'High Priority', priorityColor:'var(--warning-100)', priorityText:'var(--warning-ink)'},
-  {id:'joel', applicationId:'LS-PV-0025', initials:'JA', name:'Joel Aquino', service:'Appliance Specialist', serviceId:'appliance', barangay:'San Isidro', submittedAt:'2026-10-09', email:'joel.aquino@example.com', phone:'+63 918 442 1102', address:'24 Sampaguita St., San Isidro', priority:'Normal Priority', priorityColor:'var(--warning-100)', priorityText:'var(--warning-ink)'},
-  {id:'liza', applicationId:'LS-PV-0026', initials:'LR', name:'Liza Ramos', service:'Cleaning Specialist', serviceId:'cleaning', barangay:'Sta. Cruz', submittedAt:'2026-10-08', email:'liza.ramos@example.com', phone:'+63 919 552 4471', address:'15 Orchid St., Sta. Cruz', priority:'For Initial Review', priorityColor:'var(--brand-tint-soft)', priorityText:'var(--brand-primary-dark)'},
+  {id:'maria', applicationId:'LS-PV-0024', initials:'MS', name:'Maria Santos', service:'Electrical Specialist', serviceId:'electrical', barangay:'Poblacion', submittedAt:isoDayAgo(10), email:'maria.santos@example.com', phone:'+63 917 321 8844', address:'Blk 8 Lot 4, Mabini St., Poblacion', priority:'High Priority', priorityColor:'var(--warning-100)', priorityText:'var(--warning-ink)'},
+  {id:'joel', applicationId:'LS-PV-0025', initials:'JA', name:'Joel Aquino', service:'Appliance Specialist', serviceId:'appliance', barangay:'San Isidro', submittedAt:isoDayAgo(11), email:'joel.aquino@example.com', phone:'+63 918 442 1102', address:'24 Sampaguita St., San Isidro', priority:'Normal Priority', priorityColor:'var(--warning-100)', priorityText:'var(--warning-ink)'},
+  {id:'liza', applicationId:'LS-PV-0026', initials:'LR', name:'Liza Ramos', service:'Cleaning Specialist', serviceId:'cleaning', barangay:'Sta. Cruz', submittedAt:isoDayAgo(12), email:'liza.ramos@example.com', phone:'+63 919 552 4471', address:'15 Orchid St., Sta. Cruz', priority:'For Initial Review', priorityColor:'var(--brand-tint-soft)', priorityText:'var(--brand-primary-dark)'},
 ];
 /* The four documents an applicant has to put up. The review screen itemised exactly
    these four while the roster counted out of five, and the same four rows were shown for
@@ -2005,18 +2005,18 @@ const APPLICATION_DOC_KINDS = [
   { kind:'qualification', label:'Service qualification' },
 ];
 const APPLICATION_DOCS = [
-  {appId:'maria', kind:'identity',      detail:'Philippine National ID', submittedAt:'2026-10-10'},
+  {appId:'maria', kind:'identity',      detail:'Philippine National ID', submittedAt:isoDayAgo(10)},
   {appId:'maria', kind:'nbi',           detail:'NBI clearance certificate', submittedAt:null},
-  {appId:'maria', kind:'barangay',      detail:'Poblacion business clearance', submittedAt:'2026-10-10'},
-  {appId:'maria', kind:'qualification', detail:'TESDA Electrical Installation and Maintenance NC II', submittedAt:'2026-10-10', expiresAt:'2028-03-14'},
-  {appId:'joel',  kind:'identity',      detail:'Philippine Identification System card', submittedAt:'2026-10-09'},
-  {appId:'joel',  kind:'nbi',           detail:'NBI clearance certificate', submittedAt:'2026-10-09'},
-  {appId:'joel',  kind:'barangay',      detail:'San Isidro business clearance', submittedAt:'2026-10-09'},
-  {appId:'joel',  kind:'qualification', detail:'Manufacturer authorisation — split-type air conditioning', submittedAt:'2026-10-09'},
-  {appId:'liza',  kind:'identity',      detail:'Unified Multi-Purpose ID', submittedAt:'2026-10-08'},
+  {appId:'maria', kind:'barangay',      detail:'Poblacion business clearance', submittedAt:isoDayAgo(10)},
+  {appId:'maria', kind:'qualification', detail:'TESDA Electrical Installation and Maintenance NC II', submittedAt:isoDayAgo(10), expiresAt:isoDayAhead(511)},
+  {appId:'joel',  kind:'identity',      detail:'Philippine Identification System card', submittedAt:isoDayAgo(11)},
+  {appId:'joel',  kind:'nbi',           detail:'NBI clearance certificate', submittedAt:isoDayAgo(11)},
+  {appId:'joel',  kind:'barangay',      detail:'San Isidro business clearance', submittedAt:isoDayAgo(11)},
+  {appId:'joel',  kind:'qualification', detail:'Manufacturer authorisation — split-type air conditioning', submittedAt:isoDayAgo(11)},
+  {appId:'liza',  kind:'identity',      detail:'Unified Multi-Purpose ID', submittedAt:isoDayAgo(12)},
   {appId:'liza',  kind:'nbi',           detail:'NBI clearance certificate', submittedAt:null},
   {appId:'liza',  kind:'barangay',      detail:'Sta. Cruz clearance', submittedAt:null},
-  {appId:'liza',  kind:'qualification', detail:'Household cleaning practice certificate', submittedAt:'2026-10-08'},
+  {appId:'liza',  kind:'qualification', detail:'Household cleaning practice certificate', submittedAt:isoDayAgo(12)},
 ];
 /* Read through the kind list, so an applicant with a missing row still shows the
    requirement rather than silently shortening the set. */
@@ -2217,6 +2217,17 @@ function dayLabel(offsetDays){
   return d.toLocaleDateString('en-PH', { weekday:'short', month:'short', day:'numeric' });
 }
 function isoMinutesAgo(minutes){ return new Date(Date.now() - minutes * 60000).toISOString(); }
+/* A day, in the local calendar frame, offset from the day the page was opened. The seeds used to carry
+   typed calendar dates; those made the verification queue's "waiting N days" grow by one every day and
+   a credential flip Valid -> Expiring -> Expired with no record changing. Positive-and-named reads
+   better at a call site than a signed number, which is why there are two wrappers and one builder. */
+function isoDay(offsetDays){
+  const n = new Date();
+  const d = new Date(n.getFullYear(), n.getMonth(), n.getDate() + offsetDays);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function isoDayAgo(days){ return isoDay(-Math.abs(days)); }
+function isoDayAhead(days){ return isoDay(Math.abs(days)); }
 function agoText(iso){
   if(!iso) return 'just now';
   const mins = Math.max(0, Math.round((Date.now() - new Date(iso)) / 60000));

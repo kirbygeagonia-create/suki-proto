@@ -4356,6 +4356,45 @@ suite('dates', async () => {
   c.check('no day count is taken by rounding an elapsed interval', elapsed.length === 0,
     elapsed.map(l => l.trim().slice(0, 70)).join(' | '));
 
+  /* A typed calendar date in a seed is a countdown nobody maintains. Twelve `submittedAt` literals
+     made the verification queue's "waiting 10 days" grow by one every day forever, and twelve
+     `CREDENTIALS.expiresAt` literals put one document on today's date — so it flipped Valid →
+     Expiring → Expired with no record changing, and a reviewer in January would have found eleven
+     expired. The bookings had already solved this with relative constructors (`dayLabel(n)`,
+     `isoMinutesAgo(m)`), so the fix is the file's own convention and not a new state to stamp; the
+     painted states were diffed through the camera before and after and came back identical. This
+     scan is the half a browser cannot see: only a source rule stops the next row being typed by
+     hand. The positive control counts the relative call sites, because a pattern that matches
+     nothing would otherwise pass as cleanliness — the lesson the `min="0"` check already encodes. */
+  const typedDays = (body.match(/(submittedAt|expiresAt):\s*'20[0-9]{2}-[0-9]{2}-[0-9]{2}'/g) || []);
+  const relativeDays = (body.match(/isoDay(?:Ago|Ahead)\(/g) || []).length;
+  c.check('a seed row declares an offset from today, never a typed calendar date',
+    typedDays.length === 0 && relativeDays >= 20,
+    typedDays.length + ' typed date(s), ' + relativeDays + ' relative offsets (needs at least 20)');
+
+  /* The day is built in the LOCAL frame. `toISOString().slice(0,10)` answers a UTC day, and this file
+     already rendered "Verified Mar 13" for a record reading 2026-03-14 because of it, so a helper
+     that produced the wrong frame would move every seeded state by a day on one side of the
+     meridian while still looking self-consistent. */
+  const localToday = localISO(today);
+  c.check('the day helper answers the local calendar day, and its two wrappers agree with it',
+    app.isoDay(0) === localToday && app.isoDayAhead(0) === localToday
+      && app.isoDayAgo(1) === app.isoDay(-1) && app.isoDayAgo(1) < app.isoDay(0)
+      && app.isoDayAhead(1) > app.isoDay(0),
+    'isoDay(0)=' + app.isoDay(0) + ' isoDayAgo(1)=' + app.isoDayAgo(1) + ' local today=' + localToday);
+
+  /* The offsets are now the definition of these states, so the states themselves are pinned: three
+     applicants waiting 10, 11 and 12 days, one expired document, five inside the 30-day warning
+     window, five further out. A change to any offset moves a number here rather than quietly
+     re-colouring a badge on a screen nobody is looking at. */
+  const waits = app.PENDING_APPLICANTS.map(a => app.applicantWaitDays(a)).join(',');
+  const states = app.CREDENTIALS.map(cr => cr.expiresAt ? app.credentialState(cr).code : 'none');
+  const byState = n => states.filter(s => s === n).length;
+  c.check('the seeded day offsets still produce the states this build was measured with',
+    waits === '10,11,12' && byState('expired') === 1 && byState('expiring') === 5 && byState('valid') === 5,
+    'waits ' + waits + ' · expired ' + byState('expired') + ' expiring ' + byState('expiring')
+      + ' valid ' + byState('valid') + ' of ' + states.length + ' documents');
+
   /* Found by emptying every record set the app renders from and reading what is left
      (tools/probe-empty-states.js). The verification queue was the one screen that lost its
      content and said nothing about it: approve all three applicants — which is what the

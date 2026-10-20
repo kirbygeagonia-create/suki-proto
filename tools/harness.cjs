@@ -10,7 +10,7 @@ const APP = path.join(__dirname, '..', 'Sukinnect-next.html');
 /* The kernel grows a few exports every step. Names are pulled through a local
    eval so a suite can ask for what it needs and gets undefined for what has not
    landed yet, instead of the whole harness failing to boot over one symbol. */
-const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATIONS', 'LEDGER',
+const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'CREDENTIALS', 'LISTINGS', 'NOTIFICATIONS', 'LEDGER',
   'PAYMENTS', 'STATUS_EVENTS', 'PAYOUTS', 'DISPUTES', 'CONFIG', 'state', 'Store', 'snapshot',
   'hydrate', 'persist', 'restoreSeed', 'bookingsForResident', 'bookingsForProvider',
   'pendingProviderRequests', 'bookingById', 'providerOf', 'customerOf', 'listingsOf',
@@ -55,6 +55,7 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   'openSheet', 'closeSheet', 'openChatThread', 'stepBack', 'openLayers', 'receiptCard',
   'layerKeys', 'modalAboveSheet', 'openProfileSection', 'residentProfileAction',
   'startOfDay', 'daysBetween', 'applicantWaitDays', 'applicantWaitLabel', 'credentialState',
+  'isoDay', 'isoDayAgo', 'isoDayAhead',
   'adminVerifications', 'emptyState',
   'requestChoices', 'requestAddressBook', 'requestPaymentOptions', 'requestDays',
   'residentChatRoom', 'draftListing',
