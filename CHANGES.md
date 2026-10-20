@@ -4575,3 +4575,49 @@ break whose evidence is one finding is fragile against any unrelated layout chan
 tracked rather than papered over. Confirmed on the vivo 1906 at its own `font_scale
 1.35` — the 200% leg on hardware is still owed, because the handset now refuses adb's write to that
 setting.
+
+## 74. A break whose whole evidence is one pixel, and the pass that died leaving a mutant in the file
+
+The full suite flagged a row: `falsify-chart-collide` caught 5 of 5 run alone and 4 of 5 inside the
+pass. The surviving break was the headroom refusal, and the cause was arithmetic rather than chance. At
+320x638 with the text at 135% the reserve needs 52 of 132 viewBox units against a cap of 50.2, so
+refusing it moves the label by **1.8 units — about one rendered pixel**. A break whose entire evidence
+is one finding one pixel over a threshold loses to any unrelated layout change, and the change that
+beat it was this session's own: shortening the nav flipped the dashboard's scrollbar decision and the
+count went to zero.
+
+The fix is a corner, not a threshold: the break now runs at **150%** on the same panel, where the same
+refusal is short by ~9 units, so the escape is several pixels. `692d6f9`. Inside the next full pass
+`chart-collide` read 5 of 5 and `falsify-nav-fit` 3 of 3 — before that pass died (below).
+
+### What was tried and taken back out
+
+The better fix is to stop counting findings and start requiring a magnitude: fail the break unless the
+worst escape is at least 3px, read off the tally's own detail lines. It was written, run, and reverted.
+The extractor returned 0px at a corner where the same run reported one escaping label, which is a bug
+in the extraction and not a fact about the sensor — and shipping a size gate that silently reads zero
+would have made the break pass for the wrong reason, which is the one failure mode this repository
+documents most and repeats anyway. The count is still the criterion; #41 stays open with that ordering
+written down: fix the extraction, then add the magnitude.
+
+### The interrupted pass, which is the part worth keeping
+
+The machine slept mid-run. Twelve hours later the log was still reading `trust … 6 6 0 0` with no
+summary line, and `git diff` showed the application file **still carrying a mutant**:
+
+```
+-    --font-display:var(--font-ui);
++    --font-display:"Fraunces", ui-serif, serif;
+```
+
+That is `falsify-typography`'s own break — the one that reverses §68's redesign — left in the working
+tree by a process that never reached its `finally`. Nothing was committed in that window, and the rule
+already written twice in this repository is the one that caught it: after any interrupted or
+"finished" run, `git diff` the target before trusting either the numbers or the tree. Restored with
+`git checkout -- Sukinnect-next.html`, `--font-display:var(--font-ui)` back at line 127, gate **531**.
+
+Two consequences stated rather than glossed. The suite total quoted in AGENTS is still the last
+**complete** pass — 33 families, 176 applied, 175 caught, 0 not applied, with the `chart-collide` row
+flagged — because the pass that cleared the flag never printed a summary, and a headline from a run
+that died halfway is not a measurement. And the flag itself is now in the state this file has been in
+often: fixed, and not yet re-confirmed by the run that would prove it.

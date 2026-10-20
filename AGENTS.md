@@ -3270,7 +3270,7 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate **531**; whole suite **33 families, 176 mutants applied, 175 caught, 0 not applied — one row flagged**: `falsify-chart-collide` catches 5 of 5 when run alone and 4 of 5 inside the full pass, because its headroom break produces exactly one finding and the nav-height change moved the layout a hair. Read the flagged row, not the headline.
+Gate **531**; whole suite **33 families, 176 mutants applied, 175 caught, 0 not applied** (`node tools/falsify-all.cjs`) — that is the last COMPLETE pass, and its flagged row (`falsify-chart-collide`, 4 of 5 inside the pass against 5 of 5 alone) has since been fixed by measuring the headroom break where the refusal is short by nine viewBox units rather than 1.8, but not yet re-confirmed by a finished run: the pass that showed 5 of 5 died when the machine slept, and it left a `falsify-typography` mutant in the application file, which `git diff` caught and `git checkout` undid. Quote a total from a pass that printed one.
 (`node tools/falsify-all.cjs`), of which `falsify-flex-crush`, `falsify-control-reach`,
 `falsify-focus-trap`, `falsify-long-input`, `falsify-stale-overlay`, `falsify-double-tap`, `falsify-chart-collide`
 and `falsify-nav-fit` are the eight that drive the camera rather than the gate — a geometry rule, a
