@@ -4776,3 +4776,123 @@ pattern written without the quote between `:` and the date, so nothing was half-
 that did land inserted LF newlines into a CRLF file, which the hygiene suite caught with an unrelated
 sentence: *the file carries no doubled carriage return — CR 11586 against LF 11597*. The check whose
 subject is line endings is the one that noticed; normalise after any script that builds new text.
+
+## 77. A dialog the platform is not told about is a change of pixels, and the caret that never arrived
+
+The instrument for this one already existed and had simply never been asked: `tools/probe-layer-focus.js`
+reads, off the painted DOM, every layer that has a box, the dialog semantics found anywhere inside it,
+where `document.activeElement` is, and whether that node sits inside the top layer. Run across the
+nine layer screens the camera can reach:
+
+```
+booking-sheet           focusInside=no   (no dialog node for the box)
+resident-edit-form      focusInside=no   role=- modal=- name=-
+resident-payment-modal  focusInside=no   role=- modal=- name=-
+case-sheet              focusInside=YES  sheet role=dialog modal=true name="Raise a case"
+```
+
+Sheets were already correct — `role="dialog"`, `aria-modal="true"`, and a name a sighted reader can
+see. **Modals were not**: the box around the form was a plain `<div class="card modal-card">` with a
+`<b>` title inside it, declaring nothing, and 8 of 9 screens left the caret on `<body>`. That is not a
+quiet accessibility gap, because the pass one line above makes everything outside the top layer inert:
+with the background removed from the tree and the new box undeclared and unfocused, a screen reader
+was left with no announcement of the thing a sighted person can plainly see.
+
+The fix is in the render pass that already computes the layer, not at the paint sites — three of them
+declare `class="modal-layer" data-layer="modal"`, one per role, and each is a place where a new dialog
+gets added without anyone thinking about semantics:
+
+```
+setInertOutside(topLayerEl());
+labelTopLayer(topLayerEl());
+```
+
+`labelTopLayer` assigns `role="dialog"` and `aria-modal="true"` when the box does not already carry
+them, points `aria-labelledby` at the title the dialog paints — giving that element an id rather than
+guessing one, so the announcement and the visible heading cannot drift apart — and then moves focus.
+`focusIntoLayer` fires only when the top layer *changes* (a signature of layer plus name), because
+taking the caret on every repaint closes the on-screen keyboard mid-word, which is the defect §73 says
+a phone never forgives; the focus call is asked not to scroll, and when the layer closes the caret goes
+back to the control that opened it if that control is still in the document.
+
+Re-measured with the same probe: **9 of 9** now report `role=dialog modal=true name="…"` and
+`focusInside=YES`, including the two screens where a modal is raised over a sheet — the modal is the
+named box now, "Change payment method" and "Change security PIN", not the sheet underneath it.
+
+Enforcement is a camera tally, `layers that opened without dialog semantics or the caret inside them`,
+which reports the reasons it found rather than a single number, because a fix that only moves the
+caret must not read as a fix that also names the dialog. It needed no registration to be enforced:
+`sweep-text-scale.cjs` treats any tally it does not recognise as must-be-zero, so a new sensor fails
+closed by default. It reads **0 on all 72 screens**, and the sweep is now **24 tallies per corner**.
+
+```
+control  unmutated app, unblinded tally: count=0 reasons=[]
+CAUGHT   the render pass stops labelling and focusing the top layer  -> count=8 reasons=[focus,modal,name,role]
+CAUGHT   the semantics are kept and only the caret is refused        -> count=8 reasons=[focus]
+CAUGHT   the dialog is named by nothing                              -> count=6 reasons=[name]
+CAUGHT   the tally cannot see any layer at all                       -> count=0  (defect present, sensor deaf)
+4 of 4 breaks caught, 0 not applied, 0 missed
+```
+
+`node tools/falsify-dialog-focus.cjs` — the fourth break is the one that keeps the other three honest:
+it blinds the tally's own selector with the application defect still in place and requires a 0, which
+is the difference between "the app is clean" and "nothing was looking".
+
+**Two instrument defects, found rather than assumed.** The probe's first version looked only at the
+outer `[data-layer]` wrapper and printed `role=-` on every screen — which reads as "this application
+has no dialog semantics at all", when the one declaration it does have sits on an inner `.sheet`. It
+also picked the top layer by DOM order, so on the two-layer screens it measured the sheet while the
+modal was what the user saw. Rank by `z-index`, then ask; the camera's tally ranks the same way.
+
+And a neighbour was found broken while reading the file for that edit: `navCut`'s detail line had been
+written as a single string literal, so it printed its own source — `"" + r.text + "" is cut at " + r.px
++ "px…` — on every finding, while its count stayed correct and its falsifier kept passing. The count
+was load-bearing; the sentence that would have told a reader *which* label was cut was decoration that
+silently became junk.
+
+Gate **534**; whole suite **36 families, 187 mutants applied, 187 caught, 0 not applied** (`node tools/falsify-all.cjs`), with the four
+families this session added or cleared each reading clean inside the full run rather than only
+alone. `node tools/sweep-text-scale.cjs` after the change: **7 of 7 corners clean, 24 tallies each**
+— the tally count went 23 to 24 with the new one, and every corner fails closed on a tally it does
+not recognise, so the count in that sentence is the sweep's own output rather than a description of
+it. `node tools/shot.cjs --measure` reads the new tally at **0 across all 72 screens** with no
+console errors, and `--focus` over the nine layer screens reports no stop without a ring and nothing
+reachable off the viewport, which is the check that the moved caret did not break the keyboard walk.
+printing nothing is by reading what it prints.
+
+### The caret question, answered by swapping the file rather than by reading the pass order
+
+Moving focus into a dialog invites the opposite defect: a repaint while a person is typing in that
+dialog dragging the caret out of the field, which on Android also closes the keyboard. Rather than
+reason about when `restoreTyping` runs relative to `labelTopLayer`, `.scratch/swap-caret-test.cjs`
+runs one probe twice — once on the file as it stands, once with the single line
+`labelTopLayer(topLayerEl());` removed — and compares the answers per screen. Restored from an
+in-memory copy, `restored exactly: true`.
+
+```
+screen                WITH fix                WITHOUT fix
+offer-sheet           loses to BODY           loses to BODY
+resident-edit-form    loses to resident-profile-name
+provider-edit-form    loses to INPUT
+admin-edit-form       loses to admin-profile-name
+case-sheet            loses to BODY
+
+screens whose answer depends on the change: 0 of 5
+```
+
+Read the middle three rows carefully, because the script's own wording is pessimistic: "loses to
+`resident-profile-name`" is `document.activeElement` after the render being **an element with the same
+id as the field that was typed into**, not the same node. The markup was replaced, and
+`captureTyping`/`restoreTyping` put the caret back by id — which is the caret surviving, not failing.
+The first version of the probe asked `act === layer`, a node-identity question, and reported those
+three as failures; a re-created input with the right id and the right value is what an in-place update
+is supposed to look like.
+
+So the layer pass owns nothing in this comparison: every row is the same with and without it. The two
+`body` rows are worth stating precisely rather than filing. Nothing inside those sheets calls
+`render()`: the offer fields go through `offerInput('qtyKg', this.value)` and update only their own
+totals, and `case-reason` has no input handler at all — it is read when the form is submitted. The
+only field in the app that types straight into a full render is the admin's verified-providers search,
+which lives in `#screen`, where the by-id restore applies. The probe produced `body` by calling
+`render()` itself, from outside the app's own paths. Measured, explained, and not a defect — recorded
+so the next reader does not mistake the row for one.

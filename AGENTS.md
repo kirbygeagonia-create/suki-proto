@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 11,598 lines, ONE :root block, 1,752 var() usages, 95 tokens declared with 92
+Sukinnect-next.html— 11,656 lines, ONE :root block, 1,752 var() usages, 95 tokens declared with 92
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1212,7 +1212,8 @@ Sukinnect-next.html— 11,598 lines, ONE :root block, 1,752 var() usages, 95 tok
                     a third time on 2026-10-19 — line count, var() count, font-size counts and
                     heading count, all of them moved by the nav-label work — which is why the
                     figures above were re-run rather than re-read. They moved a fourth time the
-                    next day (§76's eleven line of day helpers), and were re-run again. The next
+                    next day (§76's eleven lines of day helpers) and a fifth the same evening
+                    (§77's dialog labelling), and were re-run both times. The next
                     reader should cite the tool rather than trust it.
                     Everything that was a real violation is now a token: #fff became
                     --surface and --on-brand, the modal dim became --scrim, and the phone
@@ -2342,6 +2343,48 @@ and what caught it was the *hygiene* suite's "the file carries no doubled carria
 check fails for a reason unrelated to what you changed, read what it actually counts before touching
 the rule — and normalise the file after any script that builds new text in memory.
 
+A DIALOG THE PLATFORM IS NOT TOLD ABOUT IS A CHANGE OF PIXELS. §72's focus walk proves a keyboard can
+reach a control, and the layer work proves the screen behind cannot be touched; neither asks what an
+assistive tech is *told* when a layer opens. Measured on 2026-10-20 with `node tools/shot.cjs
+--probe=@tools/probe-layer-focus.js --only=booking-sheet,resident-payment-modal,resident-edit-form,
+provider-edit-form,admin-edit-form,admin-security-modal,case-sheet,offer-sheet,admin-review-approve`:
+every SHEET already declared `role="dialog"` with a name — "Book an appointment", "Make an offer",
+"Raise a case" — while every MODAL declared nothing, and **8 of the 9** held the caret on `<body>`.
+Because the same render pass marks everything outside the top layer inert, that combination is not
+merely quiet: there was nothing left to read and no announcement of what replaced it.
+
+The guarantee now sits in the one place that already computes the top layer — `labelTopLayer(topLayerEl())`
+beside `setInertOutside(...)` — which assigns `role`/`aria-modal` when absent, points `aria-labelledby`
+at the `<b>` the dialog already paints (an id is assigned, not guessed, so the announcement and the
+sighted title cannot drift apart), moves focus with `preventScroll`, and returns the caret to the
+control that opened the layer when it closes. Not at the paint sites — three of them declare
+`class="modal-layer" data-layer="modal"`, one per role, and each can gain a dialog in a sentence
+without anyone remembering the semantics: a guarantee placed at call sites is a guarantee someone
+forgets. The focus move fires only when the top layer *changes*,
+because stealing it on every repaint closes the keyboard mid-word — the §73 defect a phone never
+forgives. Result, same probe: **9 of 9** now report `role=dialog modal=true name="…"` with
+`focusInside=YES`, including the two screens where a modal sits over a sheet ("Change payment method",
+"Change security PIN").
+
+The tally `layers that opened without dialog semantics or the caret inside them` runs on every screen
+of every sweep corner — `sweep-text-scale.cjs` treats an unregistered tally as must-be-zero, so a new
+sensor cannot be silently informational — and `node tools/falsify-dialog-focus.cjs` proves the four
+reasons are separately observable: removing the call reads `count=8 reasons=[focus,modal,name,role]`,
+refusing only the caret reads `count=8 reasons=[focus]`, and never naming the dialog reads `count=6
+reasons=[name]`. Its fourth break blinds the tally's own selector with the application defect still in
+place and requires the tally to print 0, which is the evidence that a clean sweep is the sensor
+answering rather than the sensor deaf — 4 breaks, 4 caught, 0 not applied.
+
+Two instrument lessons from the same pass, both about the reader rather than the app. The probe first
+looked only at the outer `[data-layer]` wrapper and printed `role=-` everywhere, which would have been
+filed as "this app has no dialog semantics at all" — the one declaration sits on an inner `.sheet`; and
+it chose the top layer by DOM order, so on those two two-layer screens it read the sheet underneath
+rather than the modal on top. Rank by `z-index`, then ask. And a neighbour was found broken rather
+than assumed: `navCut`'s detail line had been written as one string, so it printed its own source —
+`"" + r.text + "" is cut at …` — on every finding while its count stayed correct. A checker whose
+numbers are right and whose sentences are junk teaches you to stop reading the sentences, which is
+exactly how it survived a session of that tally being quoted.
+
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by
 the 479-byte `ATKINSON-AUTHORS.txt` that sits beside it, a `--font-ui` opening with a family
@@ -3374,15 +3417,10 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate **534**; whole suite **35 families, 183 mutants applied, 183 caught, 0 not applied** (`node tools/falsify-all.cjs`) — re-run on 2026-10-20 with `falsify-seed-dates` and `falsify-probe-population` added. The two rows flagged earlier stay cleared: `falsify-chart-collide` catches 5 of 5 inside the run now that its headroom break is measured where the refusal is short by nine viewBox units and the criterion demands a 3px escape rather than a count, and `falsify-nav-fit` catches 3 of 3 with the floor sensor seeing nav labels. Quote a total from a pass that printed one.
-(`node tools/falsify-all.cjs`) — re-run on 2026-10-20 with `falsify-probe-population` added. The two
-rows flagged earlier stay cleared: `falsify-chart-collide` catches 5 of 5 inside the run now that its
-headroom break is measured where the refusal is short by nine viewBox units and the criterion demands
-a 3px escape rather than a count, and `falsify-nav-fit` catches 3 of 3 with the floor sensor seeing
-nav labels. Quote a total from a pass that printed one.
+Gate **534**; whole suite **36 families, 187 mutants applied, 187 caught, 0 not applied** (`node tools/falsify-all.cjs`) — re-run on 2026-10-20 with `falsify-dialog-focus` added, and the rows this session flagged stay cleared: `falsify-chart-collide` 5 of 5 inside the run, `falsify-nav-fit` 3 of 3 with the floor sensor seeing nav labels, `falsify-seed-dates` 4 of 4 and `falsify-probe-population` 3 of 3. Quote a total from a pass that printed one.
 Of these, `falsify-flex-crush`, `falsify-control-reach`,
 `falsify-focus-trap`, `falsify-long-input`, `falsify-stale-overlay`, `falsify-double-tap`, `falsify-chart-collide`
-and `falsify-nav-fit` are the nine that drive the camera rather than the gate — a geometry rule, a
+and `falsify-nav-fit` are the ten that drive the camera rather than the gate — a geometry rule, a
 real tap, or a second tap has no Node assertion available to it — and `falsify-camera-surfaces` and
 `falsify-probe-population` are the two that read an instrument instead of the application — the first the
 camera's own surface lists, the second the probe runner's aggregation, proved by planting probes that
