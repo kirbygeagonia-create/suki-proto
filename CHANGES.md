@@ -5063,3 +5063,42 @@ settles. And `node tools/probe-all.cjs nav-fit` re-run against the camera whose 
 
 The measured pair, on the device that found it: `11.85px → 16px rendered, cut Bookings,Messages`
 before; `10.52px → 14.2px rendered, cut none` after.
+
+## 80. A money-consistency sensor for every screen, and the three findings that were its own errors
+
+The device is off the wire again (it dropped adb the moment it slept), so the two remaining §3f legs
+wait for a reconnect. The next unmeasured class was one this repository has been circling: the admin
+tile that counted two questions under "Live bookings", the profile module that printed ₱2,500 where the
+records held ₱590 — both caught by checking a rendered module against its records, and **neither check
+generalised**. So `tools/probe-money-sums.js` asks of all 72 screens: where a card paints an
+aggregating label beside the figures it claims to add up, does it add up?
+
+It took three rounds to get an honest answer, and every round's finding was the probe's own mistake:
+
+1. **six findings** — it matched any label containing "fee" against `AGGREGATES`, so the receipt's own
+   "Booking fee" line became a total, and it summed the muted provider-side rows ("Ramil keeps",
+   "Sukinnect fee from their share") into what the *customer* pays. Both belong to the other side of the
+   transaction. Read the markup before believing a list: the receipt is `base + inclusions + booking
+   fee + VAT → Total`, then a separate muted block about the provider's share.
+2. **one finding** — "Next payout — needs ₱500 more". A shortfall written as a sentence, parsed as a
+   line item. A row counts only when its amount element *is* a figure.
+3. **zero findings, 7 cards inspected** — which is the first number in the sequence that means
+   anything, because `cardsWithTotals` is printed beside it: a zero where nothing was looked at and a
+   zero where everything agreed are now distinguishable, which is the standing rule about a checker
+   whose coverage is self-reported.
+
+Then the probe was broken on purpose, because a check that has never failed is decoration:
+
+```
+control  unmutated: cards inspected 2, mismatches 0
+planted  +₱10.00 onto the receipt total (mutation landed: true)
+         cards inspected 2, mismatches 2
+         -> card "Wed, Oct 21, 4:00 PM" label "Total" painted 425 sumOfParts 415 delta 10
+CAUGHT   the probe sees a total that does not equal its own rows
+cleanup  app restored: true
+```
+
+`node tools/probe-all.cjs money-sums` classifies it as a page probe and reports **72 answers**, so the
+runner's aggregation rule applies to it from its first check-in. No product defect came out of this
+pass — the receipts add up on every screen — and that is recorded as a measurement rather than a
+non-event, because the three false findings each documented a way a money sensor can lie.

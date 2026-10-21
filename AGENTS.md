@@ -2461,6 +2461,23 @@ landed on the gesture bar. The instrument failed, not the app — `controls no t
 that a real picker opens and that §75's promise about keeping only the file name holds against it is
 still unverified.
 
+A MONEY SENSOR HAS TO KNOW WHICH SIDE OF THE TRANSACTION A ROW IS ON. `tools/probe-money-sums.js` asks
+of every screen whether a card's aggregating label equals the figures beside it — the class this file
+already records twice (the tile counting two questions under "Live bookings", the profile module
+printing ₱2,500 where the records held ₱590), neither of which had generalised. Its first three rounds
+produced six findings, then one, then none, and **every finding was the instrument's own error**: it
+matched any label containing "fee" as a total, so the receipt's own "Booking fee" line became one; it
+summed the muted provider-side rows ("Ramil keeps", "Sukinnect fee from their share") into what the
+*customer* pays; and it read "Next payout — needs ₱500 more" as a line item, because the amount
+element held a figure inside a sentence. A receipt is `base + inclusions + booking fee + VAT → Total`,
+and the provider's share below it is a different party's arithmetic. Now an aggregate is only a label
+on a named list, a row counts only when its amount *is* a figure, and the probe prints
+`cardsWithTotals` beside its zero — because a sensor that inspected nothing and one that found nothing
+wrong must not answer with the same character. Proven by planting ₱10 onto the receipt total: the probe
+reports `painted 425 sumOfParts 415 delta 10` on exactly the cards that hold it, and the clean run is
+therefore a measurement rather than a silence. The verdict on this build: the money adds up on every
+screen that can be checked.
+
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by
 the 479-byte `ATKINSON-AUTHORS.txt` that sits beside it, a `--font-ui` opening with a family
