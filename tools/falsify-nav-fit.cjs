@@ -71,6 +71,14 @@ const BREAKS = [
   { name: 'the fit ratio is inverted, so it asks for a larger size than it already has',
     edits: [['if (slot > 0 && wants > slot) worst = Math.min(worst, slot / wants);',
              'if (slot > 0 && wants > slot) worst = Math.min(worst, wants / slot);']] },
+  /* The boundary break, which is the §79 case. The fit loop and the camera's tally both used to compare
+     each word against the ITEM's clientWidth, which still includes the item's 4px horizontal padding —
+     in a 74px slot the label can only use 66px. Restoring that comparison here has to make the FIXED
+     tally report a cut; if it reads clean, then the tally is still measuring the wrong box and this
+     family cannot see the defect it exists to guard. Found on the OPPO at its own 1.35 text, where the
+     loop wrote 11.85px (16px rendered) and clipped two words while both sensors said zero. */
+  { name: 'the fit measures the item\u2019s box again, so it stops while the label is still clipped',
+    edits: [['const slot = l.clientWidth || item.clientWidth;', 'const slot = item.clientWidth;']] },
 ];
 
 let caught = 0, applied = 0, unmatched = 0;

@@ -8025,7 +8025,14 @@ function fitNavLabels(){
     labels.forEach(l => {
       const item = l.closest('.navitem');
       if (!item) return;
-      const slot = item.clientWidth;
+      /* The boundary is the LABEL's box, not the item's. `clientWidth` on the item still includes its
+         own 4px of horizontal padding, so in a 74px slot the word has 66px — and the loop below, which
+         breaks as soon as `wants <= slot`, then believed every word fitted and wrote a size that left
+         "Bookings" and "Messages" clipped by about 2px each. Found on the OPPO CPH2179 at its own 1.35
+         text, not on the bench, because the camera's own tally asked the same wrong question and read
+         clean for the same reason. Same lesson as the tap-target check before it learned to ask whether
+         the wrapper can actually deliver the tap: measure the box that clips, not the box near it. */
+      const slot = l.clientWidth || item.clientWidth;
       const wants = l.scrollWidth;
       if (slot > 0 && wants > slot) worst = Math.min(worst, slot / wants);
     });

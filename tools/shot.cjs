@@ -282,7 +282,11 @@ const AUDIT_JS = `(function(){
      two measured widths, so nothing is re-derived from the app. */
   document.querySelectorAll('.bottomnav .nav-label').forEach(l => {
     const item = l.closest('.navitem'); if (!item) return;
-    const slot = item.clientWidth, wants = l.scrollWidth;
+    /* The label's own box, not the item's: clientWidth on the item includes its horizontal padding, so
+       measuring the fit against 74px while the word can only use 66px is how the app clipped two labels
+       on a real OPPO while this tally read clean. Both were fixed together, because a sensor that
+       shares its assumption with the code it checks cannot disagree with a bug. */
+    const slot = l.clientWidth || item.clientWidth, wants = l.scrollWidth;
     if (!slot || wants <= slot) return;
     const px = parseFloat(getComputedStyle(l).fontSize) || 16;
     const atFloor = wants * (14 / px);

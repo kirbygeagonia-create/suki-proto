@@ -138,7 +138,10 @@ function httpGet(port, path) {
 
   await new Promise(r => { if (sock.connecting) sock.once('connect', r); else r(); });
   await new Promise(r => setTimeout(r, 900));
-  const res = await send('Runtime.evaluate', { expression: `(function(){ try { return (${expr}); } catch(e){ return 'threw: ' + e.message; } })()`, returnByValue: true });
+  /* awaitPromise, like the camera: without it an async probe serialises to `{}`, which reads exactly
+     like a page that found nothing. The first device run of §77 hit that and looked like a failure of
+     the app rather than of this tool. */
+  const res = await send('Runtime.evaluate', { expression: `(function(){ try { return (${expr}); } catch(e){ return 'threw: ' + e.message; } })()`, returnByValue: true, awaitPromise: true });
   const inner = res.result && res.result.result;
   const value = inner && inner.value !== undefined ? inner.value
     : (inner && inner.description) || res;
