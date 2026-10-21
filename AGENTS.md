@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 11,656 lines, ONE :root block, 1,752 var() usages, 95 tokens declared with 92
+Sukinnect-next.html— 11,677 lines, ONE :root block, 1,752 var() usages, 95 tokens declared with 92
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1213,7 +1213,7 @@ Sukinnect-next.html— 11,656 lines, ONE :root block, 1,752 var() usages, 95 tok
                     heading count, all of them moved by the nav-label work — which is why the
                     figures above were re-run rather than re-read. They moved a fourth time the
                     next day (§76's eleven lines of day helpers) and a fifth the same evening
-                    (§77's dialog labelling), and were re-run both times. The next
+                    (§77's dialog labelling), a sixth time with §78's register branch — and each time the fix was to run the tool, not to re-read the sentence. The next
                     reader should cite the tool rather than trust it.
                     Everything that was a real violation is now a token: #fff became
                     --surface and --on-brand, the modal dim became --scrim, and the phone
@@ -2385,6 +2385,42 @@ than assumed: `navCut`'s detail line had been written as one string, so it print
 numbers are right and whose sentences are junk teaches you to stop reading the sentences, which is
 exactly how it survived a session of that tally being quoted.
 
+THE REGISTER FORM ASKED FOR A NAME AND A BARANGAY, THEN THREW BOTH AWAY. Three §3f items were owed to
+a handset that is not attached; two turned out not to need one, and were walked in Chrome
+(`tools/probe-request-payment.js`, `tools/probe-provider-reload.cjs`). Both passed: the rail marked
+"Cash on Arrival" is the rail reported pressed, the model code, the record's `payMethod`, and the words
+on the detail screen, and a provider's three edited fields survive a genuine re-boot because the store
+is the only thing that crosses between two `boot()` calls. The third item was not a checklist row but a
+defect: registration collects name, email, password and barangay, validates them with "Tell us who to
+greet" and "Your barangay decides who is nearby", and then discards the first and the last — a person
+who registered as Nueva in Buayan was greeted as Ana Dela Cruz, shown Poblacion's providers, and would
+send a request to the demo household's door. The app already disclosed "Prototype build - this account
+is not stored", so no persistence was being claimed; this was the identity-substitution class this file
+has closed at `providerOf()`, at the record lookups and at the id-carrying entries, arriving from the
+other direction — not a dangling id, a form whose answers were dropped.
+
+Decided 2026-10-20: **use what the form asks for**. `submitAuth` writes the typed name and barangay into
+whichever profile the screen greets from, keeps the demo address because the form never asked for one,
+and now says both: "Prototype build - this account is not stored, and bookings use the demo household
+address". Nothing is persisted, deliberately — the prototype has one resident slot, so storing the
+registered name would show it to whoever signs in as the demo next, and a reload returning the demo
+identity is precisely what the sentence promises. The alternatives (blank the address, which makes the
+app's existing no-address refusal the real outcome but blocks a first-run reviewer from booking at all;
+add a street field to registration, the production shape) were put and declined. Three gate checks in
+`suite('login')` hold the ruling — name and barangay land and differ from the seed, the address and its
+saved list survive, and the register writes no bytes, with a control that calls `persist()` explicitly
+so the storage check cannot pass by being blind. `node tools/falsify-register-identity.cjs` — 4 breaks,
+4 caught, 0 not applied — drops the name, drops the barangay (told apart by which field the failing
+detail names), blanks the address, and adds the persist.
+
+Two refusals found during the walkthrough are the app behaving correctly and are recorded so nobody
+re-files them: the sheet will not take a request with no description, and the fruit pilot will not take
+one until harvesting or buying is chosen — so a walkthrough that wants a booking should aim at a trade
+with no mode gate. And two instrument lessons in the same minute: reading `aria-pressed` off rails
+captured *before* the click answers what was painted before the tap, because the click re-renders and
+detaches them; and navigating by guessing at state fields instead of calling the entry the camera table
+uses (`openBookingDetail(id)`) makes a screen look wrong when the navigation was never real.
+
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by
 the 479-byte `ATKINSON-AUTHORS.txt` that sits beside it, a `--font-ui` opening with a family
@@ -3417,7 +3453,7 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate **534**; whole suite **36 families, 187 mutants applied, 187 caught, 0 not applied** (`node tools/falsify-all.cjs`) — re-run on 2026-10-20 with `falsify-dialog-focus` added, and the rows this session flagged stay cleared: `falsify-chart-collide` 5 of 5 inside the run, `falsify-nav-fit` 3 of 3 with the floor sensor seeing nav labels, `falsify-seed-dates` 4 of 4 and `falsify-probe-population` 3 of 3. Quote a total from a pass that printed one.
+Gate **537**; whole suite **37 families, 191 mutants applied, 191 caught, 0 not applied** (`node tools/falsify-all.cjs`) — re-run on 2026-10-20 with `falsify-register-identity` added, and the rows this session flagged stay cleared: `falsify-chart-collide` 5 of 5 inside the run, `falsify-nav-fit` 3 of 3 with the floor sensor seeing nav labels, `falsify-seed-dates` 4 of 4, `falsify-dialog-focus` 4 of 4 and `falsify-probe-population` 3 of 3. Quote a total from a pass that printed one.
 Of these, `falsify-flex-crush`, `falsify-control-reach`,
 `falsify-focus-trap`, `falsify-long-input`, `falsify-stale-overlay`, `falsify-double-tap`, `falsify-chart-collide`
 and `falsify-nav-fit` are the ten that drive the camera rather than the gate — a geometry rule, a

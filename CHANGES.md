@@ -4896,3 +4896,95 @@ only field in the app that types straight into a full render is the admin's veri
 which lives in `#screen`, where the by-id restore applies. The probe produced `body` by calling
 `render()` itself, from outside the app's own paths. Measured, explained, and not a defect — recorded
 so the next reader does not mistake the row for one.
+
+## 78. The register form asked for a name and a barangay, then threw both away
+
+Three §3f items were owed to a handset that is not attached. Two of them do not need one, so they were
+walked in Chrome, and one of them turned out to be a defect rather than a checklist row.
+
+**Payment row against the record — passes.** `node tools/shot.cjs --probe=@tools/probe-request-payment.js
+--only=booking-sheet` clicks the *last* painted payment rail (so a default-only pass cannot fake
+agreement), reads which rail now reports `aria-pressed`, reads the model, submits through the sheet's
+own Send button, waits past the app's 900 ms commit, and compares marked / stored / painted:
+
+```
+marked  "Cash on Arrival"   pressed "Cash on Arrival"   modelCode cash
+record  payMethod cash · payStatus pending_site · address "Blk 4 Lot 12, Rizal St. (Hom"
+bookings 16 -> 17           detail "Payment Status: Pending (Cash …)"
+```
+
+The first version reported the wrong rail as marked, because `pickRequest` renders and the nodes
+captured before the click were detached — asking a detached rail what it reports pressed answers
+"what was painted before the tap". It also navigated to the detail screen by guessing at state; the
+camera's own entry calls `openBookingDetail(id)`, so now it does too.
+
+**Provider reload — passes.** `node tools/probe-provider-reload.cjs` boots the application script twice
+against one shared store: a fresh function scope and a fresh fake document each time, so the only thing
+that crosses the boundary is bytes. Signed in as **p7** deliberately (a mutant that drops the identity
+cannot hide behind p1's seed). Three fields typed into the painted inputs, saved through
+`saveProviderProfessionalProfile`, and the reloaded profile holds all three — each differing from the
+seed, so the agreement is not an accident:
+
+```
+signed in as p7 · wrote yes (bytes changed) · identity after reload: p7
+phone  typed "0917 000 1234"   seed "+63 917 555 8102"                KEPT
+radius typed "7 km"            seed "Tupi west barangays, …"          KEPT
+hours  typed "Mon-Sat 07:00-18:00"  seed "6:00 AM – 4:00 PM (…)"      KEPT
+3/3 fields survived the reload, 3 of them as a real change
+```
+
+Reaching the handler needed `saveProviderProfessionalProfile` and `submitAuth` added to the harness's
+export list — the list is curated, so a missing name fails loudly rather than silently skipping a check.
+
+**Booking with no address — a defect, found by walking it.** The register form collects a name, an
+email, a password and a barangay. It does not collect a street address, and the profile hub offers no
+way to delete the last saved one (measured: zero delete affordances in the file). So what does a
+genuinely new account hold? Typing four fields into the painted inputs and clicking the wired submit
+answered it:
+
+```
+typed   reg-name "Nueva Residente"   reg-brgy "Buayan"
+after   name "Ana Dela Cruz"    brgy "Poblacion"    address "Blk 4 Lot 12, Rizal St."
+        savedAddresses 2 (identical to the demo's)   inheritedAddressFromDemo true
+```
+
+Both collected values were discarded. The app *does* disclose — the toast reads "Prototype build - this
+account is not stored" — so this was not a claim of persistence; it was an identity substitution, the
+same class already closed at `providerOf()`, at the id-carrying entries and at the record lookups,
+arriving from the other direction: not a dangling id but a form whose answers were dropped. A booking
+from that account goes to the demo household's door, which §43 and §56 do not permit silently.
+
+The owner chose **use what the form asks for** over blanking the address or adding a field. So
+`submitAuth` now writes the typed name and barangay into whichever profile the screen greets from,
+keeps the demo address because nothing was ever asked for one, and says so in the same breath:
+"Prototype build - this account is not stored, **and bookings use the demo household address**".
+Nothing is persisted, on purpose — with one resident slot in the prototype, storing the registered name
+would show it to the next person who signs in as the demo, and a reload returning the demo identity is
+exactly what the sentence promises. Re-measured through the same walkthrough:
+
+```
+name "Nueva Residente"   brgy "Buayan"   descriptionTyped true   sendButton enabled
+bookings 16 -> 17        newRecordAddress "Blk 4 Lot 12, Rizal St. (Home)"
+```
+
+Two refusals along the way were the app behaving correctly, and are recorded so nobody re-files them:
+the sheet will not accept a request with no description, and the fruit pilot will not accept one until
+harvesting-or-buying is chosen. The walkthrough now aims at a trade with no mode gate.
+
+Three gate checks hold it (`suite('login')`): the name and barangay land and differ from the seed, the
+address and its saved list survive, and the register writes no bytes — with a control that calls
+`persist()` explicitly to prove the storage check can see a write at all.
+`node tools/falsify-register-identity.cjs` — **4 breaks, 4 caught, 0 not applied** — drops the name,
+drops the barangay (told apart by which field the failing detail names), blanks the address, which is
+the option the owner did not choose, and adds the persist.
+
+Gate **537**; whole suite **37 families, 191 mutants applied, 191 caught, 0 not applied** (`node tools/falsify-all.cjs`), every family
+above reading clean inside the full run. `node tools/sweep-text-scale.cjs`: **7 of 7 corners, 24
+tallies each, all clear** — the register branch touches no layout, and the sweep is what says so
+rather than the observation that it could not. `node tools/probe-all.cjs` over the three new
+instruments: each classifies correctly (two page probes with their own `--only=`, one node probe)
+and each answers.
+
+What remains §3f is now only what genuinely needs the device: TalkBack announcing an opened dialog,
+the day-offset states read off a real screen, and the concierge refusing to guess through the system
+file picker — the last thing adb cannot drive without the UI.
