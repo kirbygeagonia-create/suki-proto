@@ -2214,7 +2214,7 @@ entire repository at whatever URL the site resolves to: the deck's 15.8 MB PDF a
 `AGENTS.md`, `CHANGES.md`, the three prompt documents, `schema/`, all 73 files in `tools/`, and
 `.gitignore` itself — each at a path a stranger could guess. It now runs
 `node tools/build-web-dist.cjs` and publishes `dist/`: the two HTML files, the logo, `assets/`,
-`avatars/`, `fonts/`, `leaflet/`, and `reicon.js` — 60 files, 11,141 KB, of which 8.3 MB is the icon
+`avatars/`, `fonts/`, `leaflet/`, and `reicon.js` — 60 files, 11,182 KB, of which 8.3 MB is the icon
 library only `Sukinnect.html` needs, published because that page is published so a reviewer can run
 one flow in two tabs. What makes this more than a smaller folder is that the copy list is checked
 against the application rather than against memory: every quoted `.css/.js/.png/.woff2` path in both
@@ -2223,8 +2223,13 @@ inside `dist`, and a build that would ship a hole exits 1 — proved by dropping
 list, which reports 17 of 29 referenced paths missing. It also refuses any copied file that turns out
 to be a Git LFS pointer, because `existsSync` is satisfied by 130 bytes of pointer text while the page
 boots happily with no icons at all. Then the subset's completeness was measured rather than argued:
-the camera painted all 62 screens out of `dist/` with zero images asking for a file and getting no
-pixels, zero console errors, and every other tally zero.
+the camera painted all **72** screens out of `dist/` with zero images asking for a file and getting no
+pixels, zero console errors, and every other tally zero — re-run on 2026-10-20 after the folder was
+found to be three passes behind (§76–§78 had all landed since the last build). That staleness is local
+only, and knowing which kind it is matters: `netlify.toml` runs `node tools/build-web-dist.cjs` as its
+build command, so a deploy cannot publish the stale copy — but anything read *from this machine's
+`dist/`*, including a count quoted here, can be. Rebuild before quoting the folder, and `md5sum
+Sukinnect-next.html dist/Sukinnect-next.html` answering one hash is the whole check.
 
 A FIGURE KEPT BY HAND IN PROSE IS THE NEXT FIGURE THAT IS WRONG. `node tools/falsify-all.cjs`
 now runs every mutant family in one sequential pass and prints, per family, how many breaks were
