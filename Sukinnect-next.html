@@ -3153,25 +3153,21 @@ function onAccept(booking, actor) {
     booking.listingTitle = listing ? listing.title : provider.service;
     }
   }
-  booking.acceptedAt = new Date().toISOString();
   authorizeBooking(booking);            /* held for a partner job, nothing for cash */
   return { notify:{ to:'customer', title:'Booking confirmed',
                     body: actor.name + ' accepted ' + booking.summary + ' for ' + booking.date + ', ' + booking.time + '.' } };
 }
 
 function onStart(booking) {
-  booking.startedAt = new Date().toISOString();
   return { notify:{ to:'customer', title:'Work started', body: booking.summary + ' is in progress.' } };
 }
 
 function onArrive(booking) {
-  booking.arrivedAt = new Date().toISOString();
   return { notify:{ to:'customer', title:'Your provider has arrived',
                     body: providerOf(booking).name + ' is at ' + (booking.address || 'the address you gave') + '.' } };
 }
 
 function onComplete(booking) {
-  booking.completedAt = new Date().toISOString();
   booking.confirmedBy = null;            /* the customer still has to say yes */
   if (isSettled(booking))                /* already converted into earnings */
     return { notify:{ to:'customer', title:'Service completed', body:'Confirm and rate the job when you are satisfied.' } };
@@ -3326,6 +3322,10 @@ function nextActionFor(booking, role) {
   return options;
 }
 
+/* Which stamp on the record each state leaves behind. The step and its event are one moment, so
+   attemptTransition writes both from one clock read. */
+const STEP_STAMPS = { upcoming:'acceptedAt', arrived:'arrivedAt', ongoing:'startedAt', completed:'completedAt' };
+
 function attemptTransition(bookingId, to, actor, opts) {
   const booking = bookingById(bookingId);
   if (!booking) throw new Error('no booking ' + bookingId);
@@ -3340,9 +3340,16 @@ function attemptTransition(bookingId, to, actor, opts) {
     : {};
 
   booking.status = to;
-  booking.statusChangedAt = new Date().toISOString();
+  /* One clock read for one moment. The step stamp (written by the effect above), statusChangedAt and
+     the event's own `at` used to be three separate new Date() calls, so the record's stamp and the log
+     entry naming the same act could land on either side of a second — and the tracking card reads one
+     while the evidence chain and the admin audit read the other. They agreed by luck of timing; now
+     they agree by construction. */
+  const at = new Date().toISOString();
+  booking.statusChangedAt = at;
+  if (STEP_STAMPS[to]) booking[STEP_STAMPS[to]] = at;
   if (outcome.refundDue) booking.refundDue = true;
-  recordStatusEvent(booking, from, to, actor, (opts && opts.note) || '');
+  recordStatusEvent(booking, from, to, actor, (opts && opts.note) || '', at);
 
   if (outcome.ledger)
     postEvent(outcome.ledger.type, outcome.ledger.lines,

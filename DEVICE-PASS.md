@@ -1415,4 +1415,26 @@ one file.
 `preview.33` is still what is installed. `svc power stayon true` is still set on the device — clear it
 with `svc power stayon false` when it is next handled.
 
+## `1.2-preview.36` — supersedes `.35`; **still not handset-verified**, 2026-10-21
+
+§83 is the only application change since `.35`: `attemptTransition` now takes one clock reading and
+hands it to the step stamp, `statusChangedAt` and the `STATUS_EVENTS` row, where those three each took
+their own `new Date()` before. `versionCode 38`, `versionName 1.2-preview.36`,
+`./gradlew --offline --no-daemon :app:assembleDebug` → BUILD SUCCESSFUL in 55s, and the archive was
+opened: `unzip -p Sukinnect-1.2-preview.36-debug.apk assets/Sukinnect.html | md5sum` answers
+`4bfd9d614c89c18c41da3af9ff476bd3`, the same value `md5sum Sukinnect-next.html` and
+`dist/Sukinnect-next.html` answer.
+
+**What the phone can add over the bench here is small, and it is named so it does not look like a gap.**
+The stamps this touches are painted as relative labels — "Made 6 hours ago", "received 7 minutes ago",
+the tracking view's step times — so the one thing worth a look at the device's own 1.35 text on a 320
+CSS px panel is that a booking's tracking card and its timeline agree to the second, which is now true by
+construction rather than by timing. Everything else in the `.35` list still stands and is still owed in
+that order: the de-typed Provider Insights figures (60 / 75 / 38 and a flag named with a count), an
+unbroken `1039` in the admin stat row, the `6 of 8 … 1 awaits review and 1 is suspended` caption,
+whether **TalkBack speaks** an opened dialog, and the concierge's **system file picker**.
+
+`preview.33` remains what is installed on `S4CUYTJB6HNNWC49`; `svc power stayon true` is still set.
+
+
 

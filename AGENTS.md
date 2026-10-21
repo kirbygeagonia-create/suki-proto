@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 11,802 lines, ONE :root block, 1,751 var() usages, 95 tokens declared with 92
+Sukinnect-next.html— 11,809 lines, ONE :root block, 1,751 var() usages, 95 tokens declared with 92
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1213,7 +1213,7 @@ Sukinnect-next.html— 11,802 lines, ONE :root block, 1,751 var() usages, 95 tok
                     heading count, all of them moved by the nav-label work — which is why the
                     figures above were re-run rather than re-read. They moved a fourth time the
                     next day (§76's eleven lines of day helpers) and a fifth the same evening
-                    (§77's dialog labelling), a sixth time with §78's register branch, a seventh for §79's nav-box correction, an eighth for §81's analytics row and a ninth for §82's Insights rewrite — and each time the fix was to run the tool, not to re-read the sentence. The next
+                    (§77's dialog labelling), a sixth time with §78's register branch, a seventh for §79's nav-box correction, an eighth for §81's analytics row, a ninth for §82's Insights rewrite and a tenth for §83's single clock reading — and each time the fix was to run the tool, not to re-read the sentence. The next
                     reader should cite the tool rather than trust it.
                     Everything that was a real violation is now a token: #fff became
                     --surface and --on-brand, the modal dim became --scrim, and the phone
@@ -2555,6 +2555,43 @@ fourth time from the direction of "nobody had ever looked". Two rules: a statist
 it is deleted rather than re-labelled, and a rating averaged out of five is never painted as a percentage
 of a hundred, because a bar cannot tell a reader which unit it is reading.
 
+ONE ACT, ONE MOMENT, AND THREE CLOCK READS THAT AGREED BY LUCK. A booking's step stamp (`acceptedAt`)
+and the `STATUS_EVENTS` row naming the same act are two representations of one instant, and they are read
+in different screens: the tracking view takes the stamp, while the dispute evidence chain and the
+administrator's audit take the log — the file's own comment above the log says "One timeline, three
+uses". `attemptTransition` took three separate `new Date()` readings for them: the transition effect
+wrote the stamp, the next line wrote `statusChangedAt`, and `recordStatusEvent` took a third when no
+`at` was passed. Measured on a live transition they were 0ms apart, which is a fact about machine speed
+and not about the code. Now one reading is taken and handed to all three (`STEP_STAMPS` names which
+stamp each state leaves behind) and the four effects' own writes are gone, because a dead write of a
+second clock reading is precisely what returns as a divergence. Six checks in `machine`, split
+deliberately: four behavioural (every stamp equals its event on every booking; no log is appended out of
+time order; two population controls so neither can pass on an empty scan) and two structural (the shared
+reading is threaded to both writers; no effect re-reads the clock, with the seed builder's
+`b.acceptedAt = acceptedAt;` as the positive control that stops the scan passing because it matches
+nothing). The split is the lesson: **a behavioural check cannot pin a race that usually does not
+happen** — restoring the third reading leaves the behavioural pair green, because two `new Date()` calls
+a statement apart land in the same millisecond. `node tools/falsify-step-stamps.cjs` — 4 breaks, 4
+caught, the two shape breaks seeing what the two timing ones cannot. Note also how it was found: the
+census that led here reported a clean bill of health on the **seeds** while the live path held the
+defect, so an instrument that never reaches a branch cannot see it changed — and its one flagged line
+was its own error, testing for a state named `accepted` when the vocabulary says `upcoming`, and
+accusing seven bookings of carrying stamps their status never reached.
+
+A FLAGGED ROW THAT CARRIES ONLY A COUNT IS AN UNRECORDABLE FLAKE. The first §83 pass reported `41
+families, 210 applied, 209 caught, 0 not applied — 1 family needs attention`, and the flagged row was
+`chart-collide` 5 applied / 4 caught. Re-run alone it read 5 of 5; re-run *through the runner* it read
+5 of 5. The reading did not reproduce, and the pass log held nothing to say **which** break had gone
+quiet or with what numbers, because `falsify-all` parsed each family's summary line and discarded the
+rest of its output — so a survivor that only appears under load leaves no evidence at all. The runner now
+echoes a flagged family's own `MISSED`/`SKIP`/`BROKEN`/`QUIET` lines under its row, proved by a throwaway
+family that prints a known-surviving break and exits 1 (written, read, deleted in one command — a reader
+never seen to refuse is decoration). Two rules follow: re-running until green is not a fix, so the suite
+figure this session quotes comes from a second full pass with the first pass's survivor stated; and
+where a behavioural check cannot see a defect because the machine is fast enough to hide it — two
+`new Date()` calls a statement apart landing in the same millisecond — pin the shape as well, which is
+why `machine` carries the structural pair beside the behavioural one.
+
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by
 the 479-byte `ATKINSON-AUTHORS.txt` that sits beside it, a `--font-ui` opening with a family
@@ -3587,14 +3624,18 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate **546**; whole suite **40 families, 206 mutants applied, 206 caught, 0 not applied** (`node tools/falsify-all.cjs`) — re-run 2026-10-21 with `falsify-insights-records` and `falsify-split-figures` added, and the rows the last session flagged stay cleared: `falsify-verification-progress` 6 of 6, `falsify-verification-records` 10 of 10, `falsify-nav-fit` 4 of 4 including the box the fit must measure, `falsify-chart-collide` 5 of 5 inside the run, `falsify-seed-dates` 4 of 4, `falsify-dialog-focus` 4 of 4, `falsify-register-identity` 4 of 4 and `falsify-probe-population` 3 of 3. Quote a total from a pass that printed one.
-Of these, `falsify-flex-crush`, `falsify-control-reach`,
-`falsify-focus-trap`, `falsify-long-input`, `falsify-stale-overlay`, `falsify-double-tap`, `falsify-chart-collide`
-and `falsify-nav-fit` are the ten that drive the camera rather than the gate — a geometry rule, a
-real tap, or a second tap has no Node assertion available to it — and `falsify-camera-surfaces` and
-`falsify-probe-population` are the two that read an instrument instead of the application — the first the
-camera's own surface lists, the second the probe runner's aggregation, proved by planting probes that
-measure nothing. `falsify-probe-population` belongs to both lists: it drives Chrome through the runner.
+Gate **552**; whole suite **41 families, 210 mutants applied, 210 caught, 0 not applied** (`node tools/falsify-all.cjs`) — re-run 2026-10-21 with `falsify-step-stamps` added, and the rows the last sessions flagged stay cleared: `falsify-insights-records` 7 of 7, `falsify-split-figures` 1 of 1 with its redundant half printed as an observation, `falsify-verification-progress` 6 of 6, `falsify-verification-records` 10 of 10, `falsify-nav-fit` 4 of 4, `falsify-chart-collide` 5 of 5 inside the run, `falsify-seed-dates` 4 of 4, `falsify-dialog-focus` 4 of 4, `falsify-register-identity` 4 of 4 and `falsify-probe-population` 3 of 3. Quote a total from a pass that printed one.
+Of these, the families that drive the camera rather than the gate are whatever
+`grep -l shot.cjs tools/falsify-*.cjs` names — fourteen on 2026-10-21: `blank-query`,
+`camera-surfaces`, `chart-collide`, `control-reach`, `dialog-focus`, `double-tap`, `flex-crush`,
+`focus-trap`, `long-input`, `nav-fit`, `notification-routes`, `probe-population`, `split-figures` and
+`stale-overlay` — because a geometry rule, a real tap, or a second tap has no Node assertion available
+to it. (That sentence used to say "the ten" and name eight; the count and the list had both drifted from
+the tree, which is the same failure `falsify-all` exists to prevent, in prose.) Of those,
+`falsify-camera-surfaces` and `falsify-probe-population` read an instrument instead of the application —
+the first the camera's own surface lists, the second the probe runner's aggregation, proved by planting
+probes that measure nothing. `falsify-probe-population` belongs to both lists: it drives Chrome through
+the runner.
 
 Measure it with `node tools/sweep-text-scale.cjs` — seven phone corners, the camera each time: 320px
 @ 200% text, default width @ 200%, 450px @ 135% (a vivo panel at the OPPO's setting), **320x638 @

@@ -580,7 +580,7 @@ suite('ledger', async () => {
 suite('machine', async () => {
   const c = makeChecker();
   const app = boot();
-  const { BOOKINGS, BOOKING_STATES, TRANSITIONS, STATUS_EVENTS, LEDGER, NOTIFICATIONS, state, CONFIG,
+  const { BOOKINGS, BOOKING_STATES, TRANSITIONS, STATUS_EVENTS, STEP_STAMPS, LEDGER, NOTIFICATIONS, state, CONFIG,
           attemptTransition, transitionAllowed, nextActionFor, bookingTimeline, providerOf, customerOf,
           accountBalance, settlementToProvider, applyDueTransitions, pendingProviderRequests, label } = app;
 
@@ -679,6 +679,50 @@ suite('machine', async () => {
   c.check('and each carries a real instant', steps.every(e => !Number.isNaN(Date.parse(e.at))));
   c.check('the customer was notified along the way',
     NOTIFICATIONS.some(n => n.bookingId === target.id && n.title === 'Booking confirmed'));
+
+  /* One act, one moment. The step stamp on the record and the event naming that same act used to be
+     three separate clock reads — the transition effect wrote acceptedAt, the next line wrote
+     statusChangedAt, and recordStatusEvent took a third of its own. They agree only while nothing
+     spends a millisecond between them, and the two representations are not read side by side in the
+     same place: the tracking view reads the stamps, while the dispute evidence chain and the admin
+     audit read the log. attemptTransition now takes one read and hands it to all three. */
+  const stampPairs = [], stampOffs = [];
+  BOOKINGS.forEach(b => Object.keys(STEP_STAMPS).forEach(to => {
+    const ev = STATUS_EVENTS.filter(e => e.bookingId === b.id && e.to === to).pop();
+    const stamp = b[STEP_STAMPS[to]];
+    if (!ev && !stamp) return;
+    stampPairs.push(b.id + '→' + to);
+    if (!ev || !stamp || ev.at !== stamp) stampOffs.push(b.id + '→' + to + ': ' +
+      (ev ? ev.at : 'no event') + ' vs ' + (stamp || 'no stamp'));
+  }));
+  c.check('the step stamp and the event naming that act are the same instant',
+    stampOffs.length === 0, stampOffs.slice(0, 4).join(' | ') || stampPairs.length + ' pairs agree');
+  c.check('and there really are pairs to compare, seeded and live',
+    stampPairs.length >= 8, 'compared ' + stampPairs.length);
+  const byBookingLog = {};
+  STATUS_EVENTS.forEach(e => (byBookingLog[e.bookingId] = byBookingLog[e.bookingId] || []).push(e));
+  const backwards = [];
+  Object.keys(byBookingLog).forEach(id => { const l = byBookingLog[id];
+    for (let i = 1; i < l.length; i++) if (Date.parse(l[i].at) < Date.parse(l[i - 1].at)) backwards.push(id); });
+  c.check('no booking’s log is appended out of time order',
+    backwards.length === 0, backwards.join(','));
+  c.check('and enough logs exist for that to be a measurement',
+    Object.keys(byBookingLog).length >= 8, 'bookings with events: ' + Object.keys(byBookingLog).length);
+  /* The behavioural checks above can only see a divergence that actually happened, and two clock reads
+     a few statements apart usually land in the same millisecond — so a mutant that hands the event a
+     fresh reading would pass them. These two pin the shape instead: the transition's own read is the
+     one the log receives and the one the stamp takes, and no step effect writes a stamp of its own.
+     The positive control is the seed builder, which legitimately writes stamps from its own arithmetic
+     and has to keep matching, or the scan would pass on a file where both halves had gone missing. */
+  const src = app._source;
+  c.check('the transition hands its own read to the event and the stamp',
+    /recordStatusEvent\(booking, from, to, actor, \(opts && opts\.note\) \|\| '', at\);/.test(src) &&
+    /if \(STEP_STAMPS\[to\]\) booking\[STEP_STAMPS\[to\]\] = at;/.test(src),
+    'the single reading is no longer threaded through the transition');
+  c.check('no step effect writes a stamp from its own clock',
+    !/booking\.(acceptedAt|arrivedAt|startedAt|completedAt) = new Date\(\)/.test(src) &&
+    /b\.acceptedAt = acceptedAt;/.test(src),
+    'an effect took a second reading, or the seed control stopped matching');
 
   /* demo history must not claim steps it cannot show */
   c.check('every demo booking’s timeline reaches its stated status',

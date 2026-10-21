@@ -80,14 +80,21 @@ function runOne(file) {
     out = (err.stdout || '') + (err.stderr || '');
     if (err.status === undefined || err.status === null) crashed = err.message;
   }
+  /* The verdict lines a family prints about WHICH break survived. Without echoing them the runner
+     reports a count and the reader has to re-run the family to learn anything — and a survivor that
+     does not reproduce (as one did on 2026-10-21, inside this pass and not outside it) leaves no
+     record at all of which rule was seen quiet. */
+  const notes = out.split(/\r?\n/)
+    .filter(l => /^(MISSED|SKIP|BROKEN|QUIET|NOTED|BASELINE|the run)/.test(l))
+    .map(l => l.slice(0, 158));
   for (const shape of SHAPES) {
     const m = out.match(shape.re);
     if (m) {
       const r = shape.read(m);
-      return { ...r, crashed, missed: (out.match(/^MISSED\b/gm) || []).length };
+      return { ...r, crashed, missed: (out.match(/^MISSED\b/gm) || []).length, notes };
     }
   }
-  return { applied: 0, caught: 0, skipped: 0, crashed, missed: 0, silent: true };
+  return { applied: 0, caught: 0, skipped: 0, crashed, missed: 0, silent: true, notes };
 }
 
 let A = 0, C = 0, S = 0, bad = 0;
@@ -103,6 +110,7 @@ for (const f of families) {
     + (r.silent ? '   <<< printed no summary — nothing was proven' : '')
     + (!r.silent && r.caught !== r.applied ? '   <<< MUTANT SURVIVED' : '')
     + (r.crashed ? '   <<< exited on a signal: ' + String(r.crashed).slice(0, 40) : ''));
+  if (trouble) (r.notes || []).forEach(n => console.log('      | ' + n));
 }
 console.log('─'.repeat(72));
 console.log(families.length + ' families, ' + A + ' mutants applied, ' + C + ' caught, '

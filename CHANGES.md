@@ -5282,4 +5282,96 @@ the sweep was re-run whole rather than argued: **7 of 7 corners clean at 25 tall
 rewrote a screen §81 had already added rather than opening a new one. `node tools/probe-all.cjs`
 re-run against the camera whose tally changed: **41 instruments, 0 needing attention**.
 
+## 83. One act, one moment — and the three clock reads that agreed by luck
+
+The device is still off adb, so the pass went looking for a class with no instrument: **does every
+record's own timeline run forwards?** Two censuses were written rather than guessed at.
+
+`.scratch/date-order.cjs` enumerated every date-shaped field the record sets hold — bookings carry
+`createdAt, acceptedAt, arrivedAt, startedAt, completedAt`; credentials carry `expiresAt`; cases carry
+`openedAt`; documents, applicants, messages, offers and the ledger each carry their own — and asked
+whether each parses and whether each chain runs backwards. Answer: **0 unparseable, 0 backwards**. Its
+one flagged line, `STAMPS WITHOUT STATE`, was the census's own error: it tested for a state named
+`accepted`, which is not in the vocabulary — the state is `upcoming` — so it accused seven bookings of
+carrying stamps their status never reached. Seven more instances of "correct the instrument before
+concluding".
+
+`.scratch/event-chain.cjs` then asked the sharper question, because `STATUS_EVENTS` is a second
+representation of the same acts: does the log run forwards, does each event start where the last ended,
+does the last event name the status the record carries, and does each stamp agree with the event that
+wrote it? Answer on the seeds: **43 events, 0 gaps, 0 log-vs-record disagreements, 0 stamp
+disagreements**. The class looked closed.
+
+It was not, and the census was the reason: **it only looked at seeds.** Driving a live transition
+through `attemptTransition` showed the moment being taken **three separate times** — the effect wrote
+`booking.acceptedAt = new Date()`, the next line wrote `statusChangedAt = new Date()`, and
+`recordStatusEvent` took a third when no `at` was passed. The measurement read 0ms apart, which is a
+fact about how fast the machine was, not about the code: an effect that spends a millisecond (freezing
+a price, posting a ledger entry, a collection) puts the record's stamp and the log entry naming the same
+act on either side of a second. And those two representations are not read side by side in one place —
+the file's own comment above `STATUS_EVENTS` says *"One timeline, three uses"*: the tracking view reads
+the stamps, while the dispute evidence chain and the administrator's audit read the log. At the second
+precision this app paints, a straddle is visible in two screens a person can open one after the other.
+
+### The fix is one reading, and the checks need two kinds
+
+`attemptTransition` now takes one `const at = new Date().toISOString()` and hands it to all three
+writers, with a `STEP_STAMPS` map naming which stamp each state leaves behind. The four effects' own
+writes (`onAccept`, `onStart`, `onArrive`, `onComplete`) were deleted — nothing read them, and a dead
+write of a *second* clock reading is exactly the thing that comes back as a divergence.
+
+Six checks in `suite('machine')`, and the split between them is the point:
+
+- **behavioural** — every booking's step stamp equals the event naming that act (`the step stamp and the
+  event naming that act are the same instant`), no log is appended out of time order, and two positive
+  controls pin the populations (≥ 8 stamp pairs, ≥ 8 bookings with events) so neither can pass on an
+  empty scan;
+- **structural** — the transition's reading is the one threaded to the event and the stamp, and no step
+  effect writes a stamp from its own clock, with the seed builder's `b.acceptedAt = acceptedAt;` as the
+  control that keeps the scan from passing because it matches nothing.
+
+The structural pair exists because **a behavioural check cannot pin a race that usually does not
+happen.** Restoring `recordStatusEvent(...)` without the shared `at` — the exact defect — leaves the
+behavioural checks green, because two `new Date()` calls a statement apart land in the same
+millisecond. That is recorded in the family's own header so the next reader does not delete the shape
+checks as belt-and-braces duplication.
+
+`node tools/falsify-step-stamps.cjs` — **4 breaks, 4 caught, 0 not applied**: the event taking a fresh
+reading (caught structurally), the accept effect writing its own stamp (caught structurally), the seed
+stamping acceptance with the request time instead of the event's (caught behaviourally — a real
+divergence, not a timing coincidence), and the transition ceasing to write the stamp at all (caught
+behaviourally, because the live booking then has an event and no stamp).
+
+### Then a survivor that could not say which break it was
+
+The first full pass came back **41 families, 210 applied, 209 caught, 0 not applied — 1 family needs
+attention**, and the flagged row was `chart-collide`: 5 applied, 4 caught. Re-running that family alone
+read **5 of 5**, and re-running it *through the runner* also read 5 of 5. So the reading did not
+reproduce — which is a fact about the instrument under load, not a clean bill of health, and not
+something to delete a break over.
+
+What made it worth a change is that the pass log carried no way to learn *which* break had read quiet,
+or with what numbers. `falsify-all` parsed a family's summary line and threw the rest of its output
+away, so a flagged row was a count and nothing else, and the diagnosis depended on the survivor
+reproducing at the moment a human thought to re-run it. The runner now echoes a flagged family's own
+verdict lines under its row:
+
+```
+zz-echo-test                                 2        1            0       1   <<< MUTANT SURVIVED
+      | MISSED  the break that does not  (findings present, but the worst escape is 3px, below the 6px the break promises)
+```
+
+That row came from a throwaway family written to prove the echo and deleted in the same command that
+read it — the rule the money-sums probe follows: a reader that has never been seen to refuse is
+decoration. And because a flake must not be smoothed over by re-running until green, the suite figure
+quoted below comes from a **second full pass**, with this survivor recorded as a measurement of the
+reading rather than edited out of it.
+
+Gate **552**; whole suite **41 families, 210 mutants applied, 210 caught, 0 not applied** (`node tools/falsify-all.cjs`), `falsify-step-stamps`
+reading **4 of 4 inside the full run**. The timestamps this pass touches are painted as relative
+labels ("Made 6 hours ago"), so the camera was re-run rather than argued: **7 of 7 corners clean at
+25 tallies each** across **73 screens**, and the walk count is unchanged. `node tools/probe-all.cjs`
+re-run after the build: **41 instruments, 0 needing attention**.
+
+
 
