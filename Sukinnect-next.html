@@ -7410,6 +7410,64 @@ function syncBackHandles(isRootTab){
      landed on controls behind it — content that is covered, cannot be clicked (the scrim takes the
      tap and closes the layer), and can still be typed into and submitted. */
   setInertOutside(topLayerEl());
+  labelTopLayer(topLayerEl());
+}
+/* A layer the platform is not told is a dialog is not a dialog. Measured on 2026-10-20 with
+   tools/probe-layer-focus.js across the nine layer screens the camera can reach: every SHEET already
+   declares `role="dialog"` with a name ("Book an appointment", "Make an offer", "Raise a case"),
+   while every MODAL declares nothing — `.modal-layer` holds a heading in a <b> and a Close button
+   with its own aria-label, and the box around them is a plain div. Eight of those nine screens also
+   held the caret on <body>. So when an edit form, a payment picker or a confirm dialog opened, a
+   screen reader was told nothing at all: the content behind it is inert by the pass above, so there
+   was nothing left to read, and the new box was neither a dialog, nor named, nor focused.
+   This lives in the render pass rather than at the paint sites — three of them declare
+   `class="modal-layer" data-layer="modal"`, one per role, and each is a place where a new dialog can
+   be added without anyone remembering the semantics. A guarantee placed at call sites is a guarantee
+   someone will forget, which is the same reasoning that put the negative-price guard at the seam
+   rather than in the two writers it had measured. */
+let layerFocusSig = '', layerReturnFocus = null, layerTitleSeq = 0;
+function labelTopLayer(layer){
+  if (!layer) { restoreLayerFocus(); return; }
+  const box = (layer.querySelector && (layer.querySelector('[role="dialog"]')
+    || layer.querySelector('.modal, .sheet, .card'))) || layer;
+  if (!box.getAttribute('role')) box.setAttribute('role', 'dialog');
+  if (!box.getAttribute('aria-modal')) box.setAttribute('aria-modal', 'true');
+  if (!box.getAttribute('aria-label') && !box.getAttribute('aria-labelledby')) {
+    const head = box.querySelector('h1, h2, h3, .sheet-title, .card-title, b');
+    if (head) {
+      /* An id is assigned, not guessed: aria-labelledby points at the words the screen already paints,
+         so the announcement and the sighted title cannot drift apart. */
+      if (!head.id) head.id = 'layer-title-' + (++layerTitleSeq);
+      box.setAttribute('aria-labelledby', head.id);
+    }
+  }
+  focusIntoLayer(box, layer);
+}
+/* Only a layer that was not the top layer a moment ago takes the caret. Stealing it on every repaint
+   would close the keyboard mid-word, which is the one thing §73 says a phone never forgives, and a
+   default focus() scrolls the page under a fixed dialog, so it is asked not to. */
+function focusIntoLayer(box, layer){
+  const sig = (layer.getAttribute('data-layer') || '') + '|'
+    + (box.getAttribute('aria-labelledby') || box.getAttribute('aria-label') || '');
+  if (sig === layerFocusSig) return;
+  layerFocusSig = sig;
+  const act = document.activeElement;
+  if (act && act !== document.body && layer.contains && layer.contains(act)) return;
+  if (act && act !== document.body) layerReturnFocus = act;
+  if (typeof box.focus !== 'function') return;
+  if (!box.hasAttribute('tabindex')) box.setAttribute('tabindex', '-1');
+  try { box.focus({ preventScroll: true }); } catch (err) { box.focus(); }
+}
+function restoreLayerFocus(){
+  if (!layerFocusSig) return;
+  layerFocusSig = '';
+  const back = layerReturnFocus;
+  layerReturnFocus = null;
+  /* The button that opened the layer is where the reader should land again, if it is still there —
+     a drill-in underneath may have been replaced by the render that closed the layer. */
+  if (back && back.isConnected !== false && typeof back.focus === 'function') {
+    try { back.focus({ preventScroll: true }); } catch (err) { back.focus(); }
+  }
 }
 /* The layer the user is actually in, decided from state rather than from a class list: a modal
    outranks a sheet and a sheet outranks the screen, and nothing outranks either when both are

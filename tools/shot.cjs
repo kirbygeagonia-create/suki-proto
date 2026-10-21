@@ -100,7 +100,7 @@ const FONT_SCALE = flag('font-scale', '');
    what a real browser actually laid out.
    -------------------------------------------------------------------------------- */
 const AUDIT_JS = `(function(){
-  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], belowFloor: [], chartEscape: [], chartOver: [], navCut: [], textCollide: [], navEscape: [], squashedCircle: [], unreachable: [], contrast: [], overlaps: [], stretched: [], broken: [], remote: [], svgSmall: [], vendor: [], mapEscape: [], occluded: [], modalInert: [], nameless: [], placeholderOnly: [], catMotion: [], hOverflow: 0 };
+  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], belowFloor: [], chartEscape: [], chartOver: [], navCut: [], layerDialog: [], textCollide: [], navEscape: [], squashedCircle: [], unreachable: [], contrast: [], overlaps: [], stretched: [], broken: [], remote: [], svgSmall: [], vendor: [], mapEscape: [], occluded: [], modalInert: [], nameless: [], placeholderOnly: [], catMotion: [], hOverflow: 0 };
   const vw = document.documentElement.clientWidth;
   out.hOverflow = document.documentElement.scrollWidth - vw;
   const TAP = 44;
@@ -289,6 +289,36 @@ const AUDIT_JS = `(function(){
     if (atFloor <= slot - 1) out.navCut.push({ text: (l.textContent || '').trim().slice(0, 16),
       px: Math.round(px * 10) / 10, slot: Math.round(slot), wants: Math.round(wants), atFloor: Math.round(atFloor) });
   });
+
+  /* A layer that opens without dialog semantics, or with the caret still outside it, is invisible to
+     a screen reader. Everything behind the top layer is inert — that is the point of the pass that
+     marks it — so when the new box does not say it is a dialog and does not take focus, there is
+     nothing left to read and nothing announced. Measured on 2026-10-20 with tools/probe-layer-focus.js
+     across nine layer screens: every SHEET already declared role=dialog with a name ("Book an
+     appointment", "Make an offer", "Raise a case"), every MODAL declared nothing, and eight of the
+     nine held the caret on <body>. The reasons are listed rather than summed, because a fix that only
+     moves focus must not read as a fix that names the dialog too. */
+  const layerEls = [].slice.call(document.querySelectorAll('[data-layer], .modal-layer, .sheet-layer'))
+    .filter(el => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el);
+      return r.width > 0 && r.height > 0 && s.display !== 'none' && s.visibility !== 'hidden'; });
+  if (layerEls.length) {
+    const rank = (el) => { const v = parseInt(getComputedStyle(el).zIndex, 10); return isNaN(v) ? -1 : v; };
+    /* Highest z-index wins; DOM order breaks a tie, since a later sibling paints over an earlier one
+       at the same level. Asking the layer the user is actually in is the whole question — the app
+       raises a modal three ways and a rule naming one of them misses the other two. */
+    const topEl = layerEls.slice().sort((a, b) => rank(b) - rank(a)
+      || (a.compareDocumentPosition(b) & 4 ? 1 : -1))[0];
+    const box = topEl.querySelector('[role=dialog]') || topEl.querySelector('.modal, .sheet, .card') || topEl;
+    const why = [];
+    if (box.getAttribute('role') !== 'dialog') why.push('role');
+    if (box.getAttribute('aria-modal') !== 'true') why.push('modal');
+    if (!box.getAttribute('aria-label') && !box.getAttribute('aria-labelledby')) why.push('name');
+    const act = document.activeElement;
+    if (!act || act === document.body || !topEl.contains(act)) why.push('focus');
+    if (why.length) out.layerDialog.push({ layer: (topEl.className || 'inline-layer').toString().trim().split(/\\s+/)[0],
+      why: why.join('+'), title: ((box.querySelector('h1,h2,h3,.sheet-title,b') || {}).textContent || '')
+        .trim().replace(/\\s+/g, ' ').slice(0, 30) });
+  }
 
   /* Text painted on top of other text. Every other sensor here asks a containment question — is this
      clipped, is it outside its box, is it under the nav — and none of them asks whether two labels
@@ -1593,7 +1623,12 @@ async function main() {
     tally(flat('remote'), 'requests that left the device for a network', r => r.screen + '  ' + r.kind + '  ' + r.url);
     tally(flat('svgSmall'), 'chart text that paints below the 14px floor', r => r.screen + '  "' + r.text + '" declares ' + r.declared + 'px, paints ' + r.rendered + 'px');
     tally(flat('chartEscape'), 'chart labels painted outside their own chart box', r => r.screen + '  "' + r.text + '" (' + r.cls + ') hangs ' + r.over + 'px ' + r.dir + ' of a ' + r.box + 'px box');
-    tally(flat('navCut'), 'bottom-nav labels cut although the 14px floor would have fitted them', r => r.screen + '  "" + r.text + "" is cut at " + r.px + "px in a " + r.slot + "px slot, needing only " + r.atFloor + "px');
+    tally(flat('navCut'), 'bottom-nav labels cut although the 14px floor would have fitted them', r => r.screen + '  "' + r.text + '" is cut at ' + r.px + 'px in a ' + r.slot + 'px slot, needing only ' + r.atFloor + 'px');
+    /* Written as one string by the pass that added it — '  "" + r.text + "" is cut at " + r.px + …'
+       substitutes nothing, so the count was right and every detail line printed its own source. The
+       family that guards this tally reads the count, which is how it survived: a checker whose
+       numbers are right and whose sentences are junk teaches you to stop reading the sentences. */
+    tally(flat('layerDialog'), 'layers that opened without dialog semantics or the caret inside them', r => r.screen + '  .' + r.layer + ' "' + r.title + '" is missing ' + r.why);
     tally(flat('chartOver'), 'bars painted above their own top gridline (a scale smaller than its data)', r => r.screen + '  a bar rises ' + r.over + 'px above the line that names its maximum in a ' + r.box + 'x' + r.h + 'px drawing');
     tally(flat('textCollide'), 'text painted on top of other text in the same card', r => r.screen + '  "' + r.a + '" x "' + r.b + '" in ' + r.card + ' overlap ' + r.ox + 'x' + r.oy + 'px');
     tally(flat('navEscape'), 'bottom-nav items pushed off the panel', r => r.screen + '  "' + r.text + '" hangs ' + r.over + 'px past a ' + r.box + 'px row (the row needs ' + r.scroll + 'px)');
