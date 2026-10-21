@@ -4382,13 +4382,21 @@ function opsWorkload(k){
 function marketplaceRates(){
   const closed = BOOKINGS.filter(b => FINISHED_STATES.includes(b.status) && b.status !== 'disputed');
   const done = closed.filter(b => ['completed', 'rated', 'paid'].includes(b.status));
-  const roster = PROVIDERS.length + PENDING_APPLICANTS.length;
+  /* "Provider verification progress" divided the whole roster by the roster plus the applicant
+     queue, so the analytics card printed "8 of 11 on the roster are verified" beside a record
+     that says six are verified and one is suspended — and approving an applicant moved neither
+     number, because both were taken from a static array. A progress bar that cannot progress.
+     The population is the one the label names, and the record decides the numerator. */
+  const verifiedOnRoster = verifiedProviderList().length;
+  const awaitingReview = PROVIDERS.filter(p => (p.verification || {}).status === 'pending').length;
+  const suspended = PROVIDERS.filter(p => (p.verification || {}).status === 'suspended').length;
   const resolved = DISPUTES.filter(d => !caseIsOpen(d)).length;
   return {
     completion: closed.length ? Math.round(done.length / closed.length * 100) : null,
     completionOf: closed.length, doneCount: done.length,
-    verification: roster ? Math.round(PROVIDERS.length / roster * 100) : null,
-    verificationOf: roster,
+    verification: PROVIDERS.length ? Math.round(verifiedOnRoster / PROVIDERS.length * 100) : null,
+    verifiedCount: verifiedOnRoster, verificationOf: PROVIDERS.length,
+    awaitingReview, suspendedCount: suspended,
     cases: DISPUTES.length ? Math.round(resolved / DISPUTES.length * 100) : null,
     casesResolved: resolved, casesTotal: DISPUTES.length
   };
@@ -9347,8 +9355,15 @@ function adminDashboard(){
         ${[
           { label:'Completed bookings', pct:rates.completion, tone:'var(--verified)',
             note: rates.completionOf ? rates.doneCount + ' of ' + rates.completionOf + ' closed jobs finished' : 'no job has closed yet' },
-          { label:'Provider verification progress', pct:rates.verification, tone:'var(--warning-600)',
-            note: PROVIDERS.length + ' of ' + rates.verificationOf + ' on the roster are verified' },
+          { label:'Provider verification', pct:rates.verification, tone:'var(--warning-600)',
+            note: rates.verificationOf ? rates.verifiedCount + ' of ' + rates.verificationOf +
+              ' providers on the roster are verified' +
+              (rates.awaitingReview || rates.suspendedCount
+                ? '; ' + [
+                    rates.awaitingReview ? rates.awaitingReview + (rates.awaitingReview === 1 ? ' awaits' : ' await') + ' review' : '',
+                    rates.suspendedCount ? rates.suspendedCount + (rates.suspendedCount === 1 ? ' is' : ' are') + ' suspended' : ''
+                  ].filter(Boolean).join(' and ')
+                : '') : 'no provider is on the roster yet' },
           { label:'Cases resolved', pct:rates.cases, tone:'var(--deep)',
             note: rates.casesTotal ? rates.casesResolved + ' of ' + rates.casesTotal + ' cases closed' : 'no case has been opened yet' }
         ].map(row => `<div>

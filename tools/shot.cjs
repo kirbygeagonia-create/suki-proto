@@ -1149,6 +1149,12 @@ const SCREENS = [
      table was written — 46 screens never included it — and it is the screen that holds the
      admin's editable name, phone and office. */
   ['admin-account',    `state.view='app'; state.role='admin'; state.tab='profile'; render();`],
+  /* Reached by the "Insights" button in the Providers top bar — a whole destination behind a
+     real control, and the word 'insights' appeared nowhere in this file until this entry was
+     added, so it had never been
+     photographed or measured by any tally. Found while grepping the application for statistics
+     taken from a raw seed-array length; the screen it leads to types four of its numbers. */
+  ['admin-insights',   `state.view='app'; state.role='admin'; state.tab='admin_provider_insights'; render();`],
   /* Placed after every screen that reads the pending counts, because it leaves one
      applicant decided. The record is written the way verificationAction writes it, so the
      shot shows the same shape a real approval produces. */

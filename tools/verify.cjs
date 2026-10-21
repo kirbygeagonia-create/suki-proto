@@ -2018,13 +2018,33 @@ suite('honesty', async () => {
   };
   c.check('the analytics card shows the rates the records give',
     pct('Completed bookings') === rates.completion &&
-    pct('Provider verification progress') === rates.verification &&
+    pct('Provider verification') === rates.verification &&
     pct('Cases resolved') === rates.cases,
-    [pct('Completed bookings'), pct('Provider verification progress'), pct('Cases resolved')]
+    [pct('Completed bookings'), pct('Provider verification'), pct('Cases resolved')]
       .join(' / ') + ' vs ' + [rates.completion, rates.verification, rates.cases].join(' / '));
   c.check('and each rate travels with its denominator',
-    /\d+ of \d+ closed jobs finished/.test(adminDash) && /\d+ of \d+ on the roster are verified/.test(adminDash)
+    /\d+ of \d+ closed jobs finished/.test(adminDash) && /\d+ of \d+ providers on the roster are verified/.test(adminDash)
     && /\d+ of \d+ cases closed/.test(adminDash), 'a percentage with no denominator reads as a measurement');
+  /* A denominator that matches the label's shape is not a denominator that matches its meaning.
+     This row printed "8 of 11 on the roster are verified" while the records say six are verified,
+     one is suspended and one awaits review — the 8 was every provider record, and the 11 was the
+     roster plus the applicant queue, which is not a roster. Both numbers came from static arrays,
+     so approving an applicant moved neither. The pair is pinned to the records now, not to a shape. */
+  const frac = adminDash.match(/(\d+) of (\d+) providers on the roster are verified/);
+  c.check('the verification row counts the verified out of the roster',
+    !!frac && +frac[1] === app.verifiedProviderList().length && +frac[2] === app.PROVIDERS.length &&
+    +frac[1] < +frac[2] && Math.round(+frac[1] / +frac[2] * 100) === rates.verification,
+    (frac ? frac[0] : 'no verification fraction painted') + ' vs verified ' +
+      app.verifiedProviderList().length + ' of ' + app.PROVIDERS.length);
+  c.check('and the row says what the providers who are not verified are',
+    /awaits review/.test(adminDash) && /suspended/.test(adminDash),
+    'a count that leaves members unexplained invites the reader to invent them');
+  /* Positive control for the two checks above: a scan whose "good pattern" never matches reads
+     exactly like a screen that got the fraction right, so the fraction has to be found at all. */
+  c.check('the roster really does hold an unverified provider, so the check above can fail',
+    rates.awaitingReview > 0 && rates.suspendedCount > 0 && rates.verifiedCount < rates.verificationOf,
+    'awaiting ' + rates.awaitingReview + ' suspended ' + rates.suspendedCount +
+      ' of ' + rates.verificationOf);
   /* The operations donut was typed: 18 items split 45/25/30 on a screen whose own
      tiles said 3 applications and 1 case. */
   const work = app.opsWorkload(app.adminCounts());

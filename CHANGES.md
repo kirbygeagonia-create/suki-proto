@@ -5102,3 +5102,113 @@ cleanup  app restored: true
 runner's aggregation rule applies to it from its first check-in. No product defect came out of this
 pass — the receipts add up on every screen — and that is recorded as a measurement rather than a
 non-event, because the three false findings each documented a way a money sensor can lie.
+
+## 81. "8 of 11 on the roster are verified": arithmetically impeccable, and false
+
+The device is off adb still, so the pass went looking for the next unmeasured class. It started as a
+**range sensor**: sweep the numeric-shaped tokens every screen paints and ask whether any sits outside
+what its unit allows — a count above its own denominator, a percentage above 100, a rating above five.
+`.scratch/probe-number-scan.js` ran the sweep and the corpus said **none does**:
+
+```
+of     0 of 8 providers · 3 of 5 closed jobs · 8 of 11 on the roster · 0 of 1 cases · 3 of 4 · 4 of 4
+pct    0% 5% 10% 42% 50% 53% 60% 73% 100%
+slash  88 / 100 · 96 / 100        star  4★ 5★ 4.7 rating
+unit   0.8–4.0 km · 9 minutes–59 days ago · 38–200 kg
+```
+
+So that sensor was not written — there is no rule that fires on this file and no mutant to make it
+fire — and the defect arrived instead from *reading* the list. `8 of 11 on the roster are verified`
+passes every arithmetic test and is false:
+
+| the row said | the records say |
+|---|---|
+| 8 verified | **6** verified, 1 suspended (`p4`), 1 awaiting review (`p7`) |
+| 11 on the roster | the roster is **8**; the 11 was `PROVIDERS.length + PENDING_APPLICANTS.length` |
+| "progress" | both halves read off static arrays, so a decision moved neither number |
+
+The denominator was the applicant queue wearing the roster's name, and the numerator was every
+provider record including the two the verification record says are not verified. The queue has its own
+filtered list — `pendingApplicantList()`, which is what the dashboard tile beside this one counts — so
+the same screen printed a queue that shrinks on approval next to a denominator that cannot.
+
+### The fix, and why the label went too
+
+`marketplaceRates()` takes the numerator from `verifiedProviderList().length` and the denominator from
+`PROVIDERS.length`, and returns `awaitingReview` and `suspendedCount` so the caption can name what the
+providers who are not verified *are*:
+
+```
+Provider verification   75%
+6 of 8 providers on the roster are verified; 1 awaits review and 1 is suspended
+```
+
+The row was also renamed, from "Provider verification progress" to **Provider verification**. A
+progress bar promises a target and a direction, and this prototype gives it neither: `verificationAction`
+writes a review record and never creates a provider row, so nothing a thumb can do changes a provider's
+status. The one target that exists is the deck's 150 verified providers — a pilot **planning assumption**,
+and §76 and §86 both forbid one of those being painted as a system figure. The honest reading is the
+roster's state, which is what the caption now says.
+
+### The checks
+
+Three checks in `suite('honesty')` and a positive control, in that order:
+
+1. `the verification row counts the verified out of the roster` — the painted numerator equals
+   `verifiedProviderList().length`, the denominator equals `PROVIDERS.length`, the numerator is
+   strictly smaller, and the percentage is the same division;
+2. `and the row says what the providers who are not verified are`;
+3. `the roster really does hold an unverified provider, so the check above can fail` — the control that
+   keeps (1) from passing on a roster where everybody is verified, which is the shape this file keeps
+   meeting: a scan whose good pattern matches nothing reads exactly like cleanliness.
+
+`node tools/falsify-verification-progress.cjs` — **6 breaks, 6 caught, 0 not applied**: the numerator
+back to every provider record, the denominator taking the queue back in, the percentage dividing by a
+population the caption never shows, the note painting the roster length, the note dropping the
+exception clause, and — the sixth — the seed verifying `p4`, which must make the *control* fail. That
+last break is the family proving its own positive control is live rather than decorative.
+
+### The same pass orphaned another family's needle, and the `not applied` column said so
+
+The new numerator was written as `const verified = verifiedProviderList().length;` — which is
+already what `adminCounts()` says two functions earlier. `falsify-verification-records` needles that
+exact line to put the dashboard tile back to the whole roster, so it matched 2 where it requires 1 and
+printed **NOT APPLIED**: the aggregate run came back `38 families, 197 caught, 1 not applied`, and
+every other column looked healthy.
+
+Two decisions in the repair. The **new** local was renamed to `verifiedOnRoster` rather than the
+needle being widened, because two functions holding the same-named local with the same initializer is
+a readability defect as well as a tooling one — a grep for `const verified =` cannot say which screen
+it found. And both families were re-run before the full suite was re-run, since the failure mode of an
+orphaned needle is a *smaller* applied count, not a red row: 197 of 197 is a pass that quietly tests
+less than it did.
+
+### And the same grep found a screen nobody had ever looked at
+
+`grep -n "PROVIDERS.length|PENDING_APPLICANTS.length|DISPUTES.length"` aimed at statistics landed on
+`networkSummary()` → `adminProviderInsights()`: the Providers bar's **Insights** button, a destination
+that was in no camera table — the string `insights` occurred nowhere in `tools/shot.cjs` until the entry
+below was added. It types
+four bars (Completion 88, Rating 96, Credentials 75, Capacity 68), a "Providers by service" list naming
+four trades where the roster holds seven, a sentence asserting which trade has the highest cancellation
+rate, and one named provider "needing attention" two lines below a count derived from the records.
+
+It is `admin-insights` in the walk now (**73** screens, `node tools/shot.cjs --list`) and it measures
+clean on every tally — which is the finding worth keeping: a screen can satisfy the camera completely
+and still be §76's decorative statistic, because geometry has no opinion about where a number came
+from. De-typing it is the next pass and is recorded as found-not-fixed rather than quietly folded into
+this one.
+
+Gate **540**; whole suite **38 families, 198 mutants applied, 198 caught, 0 not applied** (`node tools/falsify-all.cjs`), the new family
+reading **6 of 6 inside the full run** rather than only alone — the runner parses
+`N of M breaks caught, K not applied`, and the sixth break edits the *seed*, which is how the family
+proves its own positive control is live. After that pass the family was tightened to refuse a needle
+matching twice (`replace` plants only the first, so a second `const verified = …` would have put the
+mutant in the wrong function and still printed CAUGHT — the exact defect it had just been caught in)
+and re-ran alone: **6 of 6, 0 not applied**.
+
+The walk gained a screen, so it was re-run rather than argued: **7 of 7 corners clean at 24 tallies
+each** across **73 screens** (`node tools/sweep-text-scale.cjs`), and `admin-insights` on its
+own reports every tally zero (`node tools/shot.cjs --measure --only=admin-insights`) — clean geometry
+around four typed numbers, which is the measurement this section ends on.
+

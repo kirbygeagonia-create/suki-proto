@@ -1356,3 +1356,32 @@ was left on the concierge/login after the failed tap), and `svc power stayon tru
 screen would not sleep between probes — clear it with `svc power stayon false` when the phone is next
 handled. `font_scale` is **1.35**; the older line in this file saying the device was left at 1.0 was
 written about a different session and is now contradicted by the device itself.
+
+## `1.2-preview.34` — built, **not handset-verified**, 2026-10-21
+
+§81 is the only application change since `preview.33` (§80 was tooling and documentation), so this is a
+one-caption build: the admin dashboard's analytics row. `Sukinnect-Android/app/src/main/assets/Sukinnect.html`
+was re-copied from `Sukinnect-next.html` and the archive was opened rather than assumed —
+`unzip -p Sukinnect-Android/app/build/outputs/apk/debug/Sukinnect-1.2-preview.34-debug.apk
+assets/Sukinnect.html | md5sum` answers `f0e810f970d4f920bf138ce290932ace`, which is the same hash
+`md5sum Sukinnect-next.html` answers, so the APK on disk carries the file the repository says it does.
+Built with `./gradlew --offline --no-daemon :app:assembleDebug` (BUILD SUCCESSFUL in 40s,
+`versionCode 36`).
+
+**Nothing in this section was measured on a phone.** `adb devices` lists nothing — the OPPO slept and
+has not been reconnected since walk 4 — so what the handset owes this build is small but real:
+
+- the admin dashboard's **Marketplace analytics** row read on a real screen: it should say
+  `Provider verification 75%` above `6 of 8 providers on the roster are verified; 1 awaits review and
+  1 is suspended`. It is text, not geometry, so the sweep cannot see it and only an eye can confirm
+  nothing overflows at the device's own 1.35 text on a 320 CSS px panel;
+- `admin-insights`, now in the walk and photographed for the first time, has never been seen on the
+  handset either — and the four typed bars on it are the next pass's subject, so the screen will change
+  before it is worth a thumb;
+- the two legs walk 4 left open: whether **TalkBack speaks** an opened dialog (the platform *tree* is
+  proven; speech is not, and enabling the owner's accessibility service needs their say-so), and the
+  concierge's **system file picker**, which a synthetic tap cannot reach at this corner.
+
+`preview.33` is what is installed on the device. When it is next connected: reinstall `.34`, remember
+`svc power stayon true` is still set, and read the analytics row before the Insights work lands.
+

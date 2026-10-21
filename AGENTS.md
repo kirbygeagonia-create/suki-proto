@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 11,684 lines, ONE :root block, 1,752 var() usages, 95 tokens declared with 92
+Sukinnect-next.html— 11,699 lines, ONE :root block, 1,752 var() usages, 95 tokens declared with 92
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1213,7 +1213,7 @@ Sukinnect-next.html— 11,684 lines, ONE :root block, 1,752 var() usages, 95 tok
                     heading count, all of them moved by the nav-label work — which is why the
                     figures above were re-run rather than re-read. They moved a fourth time the
                     next day (§76's eleven lines of day helpers) and a fifth the same evening
-                    (§77's dialog labelling), a sixth time with §78's register branch and a seventh for §79's nav-box correction — and each time the fix was to run the tool, not to re-read the sentence. The next
+                    (§77's dialog labelling), a sixth time with §78's register branch, a seventh for §79's nav-box correction and an eighth for §81's analytics row — and each time the fix was to run the tool, not to re-read the sentence. The next
                     reader should cite the tool rather than trust it.
                     Everything that was a real violation is now a token: #fff became
                     --surface and --on-brand, the modal dim became --scrim, and the phone
@@ -1265,7 +1265,7 @@ official mark is a PNG, not an icon, and it is still the only brand image on the
 The rebuild also added a real verification surface, because reading the file cannot
 see a layout: `node tools/shot.cjs` drives the machine's own Chrome headless over the
 DevTools Protocol with no npm packages, and `--measure` runs an in-page instrument
-across every screen in the walk (72 as of §68; `node tools/shot.cjs --list` is the count) for tap
+across every screen in the walk (73 as of §81; `node tools/shot.cjs --list` is the count) for tap
 targets, WCAG contrast (sampling gradients at the text's
 own position), clipped text, off-scale fonts, content trapped under the nav, unnamed
 controls, form fields a screen reader cannot name, images that asked for a file and got no
@@ -2478,6 +2478,53 @@ reports `painted 425 sumOfParts 415 delta 10` on exactly the cards that hold it,
 therefore a measurement rather than a silence. The verdict on this build: the money adds up on every
 screen that can be checked.
 
+A DENOMINATOR HAS TO BE THE POPULATION THE LABEL NAMES, AND A RANGE CHECK CANNOT SEE ONE THAT IS
+NOT. The pass began as a plausibility sensor: dump every numeric-shaped token the walk paints
+(`N of M`, `%`, `x / y`, durations) and ask whether any sits outside what its unit allows. At the
+default panel and text size the corpus answered *none does* — no count exceeds its own denominator,
+no percentage passes 100, no rating passes five — so that sensor was not shipped, and the finding
+came instead from **reading** the list, which is the one thing a rule-based scan cannot do.
+`8 of 11 on the roster are verified` was arithmetically impeccable and false: the records hold six
+verified, one suspended and one awaiting review out of eight, and the 11 was
+`PROVIDERS.length + PENDING_APPLICANTS.length` — the roster plus a queue that is not a roster, both
+halves read off static arrays, so approving an applicant (which removes them from the queue the same
+dashboard counts) moved neither number. `marketplaceRates()` now takes the numerator from
+`verifiedProviderList()` and the denominator from `PROVIDERS.length`, and the caption names the
+exceptions. The row is labelled **Provider verification**, not "progress": no action in this
+prototype changes a provider record, and the deck's 150-provider pilot target must not become a
+denominator — §76 forbids a planning assumption wearing a measurement. Three `honesty` checks pin
+the painted pair to the records (numerator equals the verified list, denominator equals the roster,
+percent is the same division) behind a positive control that fails if the seed ever verifies
+everybody, because `6 < 8` is the only reason that check can fail at all. `node
+tools/falsify-verification-progress.cjs` — 6 breaks, 6 caught, 0 not applied — the sixth break *is*
+that seed change. The lesson about the instrument is the ordering: a scan found nothing it was built
+to find and something else entirely, so print the corpus and read it, and do not treat a rule that
+fires on nothing as evidence of an empty room.
+
+THE SAME GREP FOUND A DESTINATION NO INSTRUMENT HAD EVER READ, AND IT IS RECORDED RATHER THAN
+FIXED. Looking for statistics taken from raw seed-array lengths led to the admin's Provider
+Insights screen — reached by the "Insights" button on the Providers bar, and in **no camera table** until
+it was added: the word `insights` occurred nowhere in `tools/shot.cjs`. It types four bars (Completion 88, Rating
+96, Credentials 75, Capacity 68), a service breakdown naming four trades where the roster holds
+seven, a sentence asserting which trade has the highest cancellation rate, and one named provider
+"needing attention" two lines below a count derived from the records. `admin-insights` is in the
+walk now (73 screens) and measures clean — which is the point: geometry cannot see a typed number, so
+a screen can pass every tally in the camera and still be §76's decorative statistic. What it needs is
+§76 applied to it, and that is the next pass, not this one.
+
+THE ORPHANED-NEEDLE CLASS RECURRED IN THE SAME MINUTE, AND THE RUNER IS WHAT REPORTED IT. Adding
+`marketplaceRates()`'s numerator as `const verified = verifiedProviderList().length;` put a second
+identical line in the file, and `falsify-verification-records` needles exactly that string inside
+`adminCounts()` — so its break matched 2 where it requires 1 and printed NOT APPLIED, taking a
+guarding mutant out of the suite while every other family read clean. The runner's `not applied`
+column is what surfaced it: 38 families, 197 caught, **1 not applied**, and only that column said the
+pass was not whole. The fix was to rename the *new* local to `verifiedOnRoster` rather than to
+disambiguate the needle, because two functions holding the same-named local with the same initializer
+is the ambiguity a reader inherits as well as a reader a family does — and a needle widened to a
+line number would only have moved the collision. Re-run both families after either change
+(`falsify-verification-progress` 6 of 6, `falsify-verification-records` 10 of 10, 0 not applied), then
+the whole suite, because a mutation that no longer applies is invisible in a headline count.
+
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by
 the 479-byte `ATKINSON-AUTHORS.txt` that sits beside it, a `--font-ui` opening with a family
@@ -3510,7 +3557,7 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate **537**; whole suite **37 families, 192 mutants applied, 192 caught, 0 not applied** (`node tools/falsify-all.cjs`) — re-run on 2026-10-20 with `falsify-register-identity` added and a fourth break on `falsify-nav-fit`, and the rows this session flagged stay cleared: `falsify-chart-collide` 5 of 5 inside the run, `falsify-nav-fit` 4 of 4 including the box the fit must measure, `falsify-seed-dates` 4 of 4, `falsify-dialog-focus` 4 of 4 and `falsify-probe-population` 3 of 3. Quote a total from a pass that printed one.
+Gate **540**; whole suite **38 families, 198 mutants applied, 198 caught, 0 not applied** (`node tools/falsify-all.cjs`) — re-run overnight 2026-10-20 → 21 with `falsify-verification-progress` added, and the rows this session flagged stay cleared: `falsify-nav-fit` 4 of 4 including the box the fit must measure, `falsify-chart-collide` 5 of 5 inside the run, `falsify-seed-dates` 4 of 4, `falsify-dialog-focus` 4 of 4, `falsify-register-identity` 4 of 4 and `falsify-probe-population` 3 of 3. Quote a total from a pass that printed one.
 Of these, `falsify-flex-crush`, `falsify-control-reach`,
 `falsify-focus-trap`, `falsify-long-input`, `falsify-stale-overlay`, `falsify-double-tap`, `falsify-chart-collide`
 and `falsify-nav-fit` are the ten that drive the camera rather than the gate — a geometry rule, a

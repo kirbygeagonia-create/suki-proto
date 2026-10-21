@@ -1,5 +1,5 @@
 /* One expression the camera evaluates on every screen of the walk:
-     node tools/shot.cjs --probe=@tools/probe-money-sums.js            # all 72 screens
+     node tools/shot.cjs --probe=@tools/probe-money-sums.js     # every screen in the walk
    A STATISTIC CAN COUNT TWO QUESTIONS UNDER ONE LABEL, and this file already records two instances:
    the admin tile that printed 10 under "Live bookings" by summing two different questions, and the
    resident's profile module showing ₱2,500 where the records held ₱590. Both were caught by checking
