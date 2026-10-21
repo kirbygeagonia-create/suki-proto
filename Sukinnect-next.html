@@ -7899,7 +7899,28 @@ function submitAuth(){
         ? 'Signed in to the demo environment'
         : 'Signed in as ' + state.providerProfileData.name + ' — the fruit pilot');
     } else {
-      showToast(isRegister ? 'Prototype build - this account is not stored' : 'Signed in to the demo environment');
+      showToast(isRegister
+        ? 'Prototype build - this account is not stored, and bookings use the demo household address'
+        : 'Signed in to the demo environment');
+    }
+    /* The register form asked for a name and a barangay, validated them with "Tell us who to greet"
+       and "Your barangay decides who is nearby", and then threw both away: measured through the
+       painted path, a person who registered as Nueva in Buayan was greeted as Ana Dela Cruz and
+       booked against Poblacion's providers. That is the identity-substitution class this file has
+       already sealed at providerOf(), at the record lookups and at the id-carrying entries — arriving
+       from the other side, not a dangling id but a form whose answers were dropped.
+       Nothing here is persisted, on purpose: the disclosure says the account is not stored, and the
+       one resident slot this prototype has would otherwise show the registered name to the next
+       person who signs in as the demo. A reload returning the demo identity is what the sentence
+       promises, so the behaviour and the claim agree. */
+    if (isRegister) {
+      const profile = state.role === 'provider' ? state.providerProfileData : state.profileData;
+      const typedName = value('reg-name').trim();
+      const typedBarangay = value('reg-brgy').trim();
+      if (typedName) profile.name = typedName;
+      if (typedBarangay && Object.prototype.hasOwnProperty.call(profile, 'barangay')) {
+        profile.barangay = typedBarangay;
+      }
     }
     state.view='app';
     clearProfileModals();

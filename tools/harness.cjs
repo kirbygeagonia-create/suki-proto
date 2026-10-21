@@ -55,7 +55,7 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'CREDENTIALS', 'LISTINGS'
   'openSheet', 'closeSheet', 'openChatThread', 'stepBack', 'openLayers', 'receiptCard',
   'layerKeys', 'modalAboveSheet', 'openProfileSection', 'residentProfileAction',
   'startOfDay', 'daysBetween', 'applicantWaitDays', 'applicantWaitLabel', 'credentialState',
-  'isoDay', 'isoDayAgo', 'isoDayAhead',
+  'isoDay', 'isoDayAgo', 'isoDayAhead', 'saveProviderProfessionalProfile', 'submitAuth',
   'adminVerifications', 'emptyState',
   'requestChoices', 'requestAddressBook', 'requestPaymentOptions', 'requestDays',
   'residentChatRoom', 'draftListing',

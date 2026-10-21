@@ -1674,6 +1674,63 @@ suite('login', async () => {
     one.indexOf('ana@demo.ph') > -1 && screens[2][1].indexOf('ramil@demo.ph') > -1);
   c.check('the sheet is the only scroller, so the keyboard cannot bury the action',
     /class="auth-sheet"/.test(one));
+
+  /* Registration collected a name and a barangay, promised both in its own validation copy — "Tell us
+     who to greet", "Your barangay decides who is nearby" — and then discarded them: measured through
+     the painted path, a person who registered as Nueva in Buayan was greeted as Ana Dela Cruz and
+     shown Poblacion's providers. That is the identity-substitution class this repository has already
+     closed at providerOf(), at the record lookups and at the id-carrying entries, arriving from the
+     other direction. These three checks hold the ruling: use what the form asks for, keep the demo
+     household's address because the form never asked for one, and write nothing to storage so that
+     "this account is not stored" stays true. Each drives the real handler and waits past its 700 ms
+     commit — calling the wiring, not the model, because a screen nobody can reach is not a screen. */
+  const regBoot = boot();
+  const seedName = regBoot.state.profileData.name;
+  const seedBrgy = regBoot.state.profileData.barangay;
+  regBoot.state.view = 'login'; regBoot.state.role = 'resident'; regBoot.state.authMode = 'register';
+  regBoot.render();
+  [['reg-name', 'Nueva Residente'], ['reg-brgy', 'Buayan'],
+   ['login-email', 'nueva@example.com'], ['login-pass', 'demo1234']].forEach(([id, v]) => {
+    regBoot._document.getElementById(id).value = v;
+  });
+  regBoot.submitAuth();
+  await new Promise(r => setTimeout(r, 900));
+  c.check('a register writes the name and barangay the form collected',
+    regBoot.state.profileData.name === 'Nueva Residente'
+      && regBoot.state.profileData.barangay === 'Buayan'
+      && regBoot.state.profileData.name !== seedName && regBoot.state.profileData.barangay !== seedBrgy,
+    'typed into a fresh boot -> name "' + regBoot.state.profileData.name + '" (seed "' + seedName
+      + '"), barangay "' + regBoot.state.profileData.barangay + '" (seed "' + seedBrgy + '")');
+  /* The address is the demo's by decision, not by accident, and the disclosure says so — so it is
+     asserted here rather than left to the prose. A booking still has a door. */
+  c.check('a register keeps the demo household address, which the disclosure now names',
+    regBoot.state.profileData.address === 'Blk 4 Lot 12, Rizal St.'
+      && (regBoot.state.profileData.savedAddresses || []).length >= 1,
+    'address "' + regBoot.state.profileData.address + '", '
+      + (regBoot.state.profileData.savedAddresses || []).length + ' saved address(es)');
+
+  /* Not-persisted is a claim about bytes, so it is measured as one: the same register run against a
+     shared store must leave the key exactly as it was. The control that follows writes on purpose,
+     because "no change" from a checker that cannot see a change is the failure this repository has
+     been taught twice — a positive control makes the zero mean something. */
+  const regStore = fakeStorage();
+  const regBoot2 = boot({ storage: regStore });
+  regBoot2.state.view = 'login'; regBoot2.state.role = 'resident'; regBoot2.state.authMode = 'register';
+  regBoot2.render();
+  [['reg-name', 'Nueva Residente'], ['reg-brgy', 'Buayan'],
+   ['login-email', 'nueva@example.com'], ['login-pass', 'demo1234']].forEach(([id, v]) => {
+    regBoot2._document.getElementById(id).value = v;
+  });
+  const beforeBytes = regStore.getItem('sukinnect.snapshot.v1');
+  regBoot2.submitAuth();
+  await new Promise(r => setTimeout(r, 900));
+  const afterBytes = regStore.getItem('sukinnect.snapshot.v1');
+  regBoot2.persist();
+  const controlBytes = regStore.getItem('sukinnect.snapshot.v1');
+  c.check('a register stores nothing, as its own toast claims',
+    afterBytes === beforeBytes && typeof controlBytes === 'string' && controlBytes.length > 0,
+    'bytes after register: ' + (afterBytes === null ? 'none' : (afterBytes || '').length)
+      + ', after an explicit persist(): ' + (controlBytes || '').length);
   return c;
 });
 
