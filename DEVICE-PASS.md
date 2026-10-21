@@ -1279,3 +1279,33 @@ What only a handset can now settle, in rough order of how much it changes the cl
 
 `1.2-preview.29` is still the build whose hardware claims in §73/§74 (nav labels at 14.0px rendered,
 the accessibility tree, split-screen reachability) can be quoted as verified.
+
+## `1.2-preview.32` — the current build; **still not handset-verified**, 2026-10-20
+
+§78 changed the application file, so `.31` was superseded the same day: `versionCode 34`,
+`versionName 1.2-preview.32`, `./gradlew --offline --no-daemon :app:assembleDebug` (`BUILD SUCCESSFUL
+in 1m 3s`). The archive was opened rather than assumed: `unzip -p Sukinnect-1.2-preview.32-debug.apk
+assets/Sukinnect.html | md5sum` answers `97320aa179e24ad01d6d865aba5ce1db`, the same hash as
+`Sukinnect-next.html` on disk.
+
+Two §3f items were closed **without** a phone, and that is stated rather than glossed, because they
+were on this file's owed list for sessions: the sheet's marked payment row against the booking record
+(`tools/probe-request-payment.js` — marked rail, painted `aria-pressed`, model code, stored
+`payMethod`/`payStatus` and the detail screen's words all agree, booking count 16 → 17), and the
+provider reload check (`tools/probe-provider-reload.cjs` — the script is re-evaluated in a fresh scope
+against the same store, signed in as p7, and 3/3 edited fields come back, each differing from the
+seed). Walking the third, "booking with no address", is what surfaced the registration defect §78
+fixes: the typed name and barangay were discarded and the demo resident's identity was kept.
+
+What remains in this section is genuinely handset-only:
+
+1. **TalkBack announcing an opened dialog** (§77's `role=dialog` + name + caret are measured in
+   Chromium; whether Android turns that into speech is a different claim, and this file already
+   records the bench disagreeing with a phone once — the 14px floor that rendered 18.9px);
+2. **§76's day states and §78's register greeting read off a real screen** — anything date-shaped or
+   typed-by-hand belongs on a device, per the standing rule;
+3. **the concierge refusing to guess through the system file picker**, which adb cannot drive without
+   the UI;
+4. **the device's actual `font_scale`** — still unknown, not 1.0.
+
+`1.2-preview.29` remains the last build actually verified on hardware.
