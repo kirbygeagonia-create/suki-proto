@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 11,699 lines, ONE :root block, 1,752 var() usages, 95 tokens declared with 92
+Sukinnect-next.html— 11,802 lines, ONE :root block, 1,751 var() usages, 95 tokens declared with 92
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1213,7 +1213,7 @@ Sukinnect-next.html— 11,699 lines, ONE :root block, 1,752 var() usages, 95 tok
                     heading count, all of them moved by the nav-label work — which is why the
                     figures above were re-run rather than re-read. They moved a fourth time the
                     next day (§76's eleven lines of day helpers) and a fifth the same evening
-                    (§77's dialog labelling), a sixth time with §78's register branch, a seventh for §79's nav-box correction and an eighth for §81's analytics row — and each time the fix was to run the tool, not to re-read the sentence. The next
+                    (§77's dialog labelling), a sixth time with §78's register branch, a seventh for §79's nav-box correction, an eighth for §81's analytics row and a ninth for §82's Insights rewrite — and each time the fix was to run the tool, not to re-read the sentence. The next
                     reader should cite the tool rather than trust it.
                     Everything that was a real violation is now a token: #fff became
                     --surface and --on-brand, the modal dim became --scrim, and the phone
@@ -2525,6 +2525,36 @@ line number would only have moved the collision. Re-run both families after eith
 (`falsify-verification-progress` 6 of 6, `falsify-verification-records` 10 of 10, 0 not applied), then
 the whole suite, because a mutation that no longer applies is invisible in a headline count.
 
+A FIGURE THAT BREAKS IN HALF IS INVISIBLE TO EVERY TALLY THAT ASKS ABOUT BOXES. The rebuilt Insights
+screen at 320 CSS px with the text at 200% painted `1039` as "10" over "39". Nothing in the camera saw
+it: the number is not clipped, collides with nothing, sits on the scale, clears the nav, and its contrast
+is fine. The cause is this file's own long-input guard — `body{ overflow-wrap:anywhere }` makes a flex
+item's min-content width **one character**, so a growing label takes the figure apart instead of wrapping
+itself, which is §68's second half arriving from the other direction. The guard is
+`.stat-strip .f b{ flex-shrink:0; white-space:nowrap }`; the sensor is the camera's 25th tally,
+`stat-strip figures painted across more than one line`, counting line boxes through a `Range`, proven by
+`node tools/falsify-split-figures.cjs` reading `split=3` where the shipped file reads 0. The family also
+plants the half-break — `nowrap` removed, `flex-shrink:0` kept — and it reads `split=0, clip=0,
+overflow=0`: an item that cannot shrink keeps its width and the label wraps instead, so the two
+declarations are redundant at this corner. That edit is printed as an observation and **not** counted as
+a break, because a break that reads zero belongs in prose while a surviving mutant belongs in the
+aggregate's red column, and the nav-fit family already recorded what happens when the two are
+conflated.
+
+A SCREEN CAN SATISFY EVERY SENSOR AND STILL BE A DECORATIVE STATISTIC. `adminProviderInsights` — the
+Providers bar's "Insights" button — was missing from the camera's table until §81 added it, and once it
+was in, it read clean on all 25 tallies at every corner. That is the lesson worth keeping: the camera
+measures geometry, so a covered screen is still an unmeasured one where the defect is *where a number
+came from*. It typed four bars (Completion 88, Rating 96, Credentials 75, Capacity 68 where the records
+answer 60% and 75% and 38%, and capacity is not a record at all), named four trades at "1 provider" each
+while eight providers hold seven trades, asserted a cancellation-rate verdict nothing computes, and listed
+one provider needing attention under a strip on the same screen that counts six. `networkAttentionList()`
+is now the single filter both halves read, so the strip and the card cannot drift apart by construction —
+the same seam closed at `providerOf()`, at the id-carrying entries and at the register form, arriving a
+fourth time from the direction of "nobody had ever looked". Two rules: a statistic with no record behind
+it is deleted rather than re-labelled, and a rating averaged out of five is never painted as a percentage
+of a hundred, because a bar cannot tell a reader which unit it is reading.
+
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by
 the 479-byte `ATKINSON-AUTHORS.txt` that sits beside it, a `--font-ui` opening with a family
@@ -3557,7 +3587,7 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate **540**; whole suite **38 families, 198 mutants applied, 198 caught, 0 not applied** (`node tools/falsify-all.cjs`) — re-run overnight 2026-10-20 → 21 with `falsify-verification-progress` added, and the rows this session flagged stay cleared: `falsify-nav-fit` 4 of 4 including the box the fit must measure, `falsify-chart-collide` 5 of 5 inside the run, `falsify-seed-dates` 4 of 4, `falsify-dialog-focus` 4 of 4, `falsify-register-identity` 4 of 4 and `falsify-probe-population` 3 of 3. Quote a total from a pass that printed one.
+Gate **546**; whole suite **40 families, 206 mutants applied, 206 caught, 0 not applied** (`node tools/falsify-all.cjs`) — re-run 2026-10-21 with `falsify-insights-records` and `falsify-split-figures` added, and the rows the last session flagged stay cleared: `falsify-verification-progress` 6 of 6, `falsify-verification-records` 10 of 10, `falsify-nav-fit` 4 of 4 including the box the fit must measure, `falsify-chart-collide` 5 of 5 inside the run, `falsify-seed-dates` 4 of 4, `falsify-dialog-focus` 4 of 4, `falsify-register-identity` 4 of 4 and `falsify-probe-population` 3 of 3. Quote a total from a pass that printed one.
 Of these, `falsify-flex-crush`, `falsify-control-reach`,
 `falsify-focus-trap`, `falsify-long-input`, `falsify-stale-overlay`, `falsify-double-tap`, `falsify-chart-collide`
 and `falsify-nav-fit` are the ten that drive the camera rather than the gate — a geometry rule, a

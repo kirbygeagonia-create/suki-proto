@@ -1385,3 +1385,34 @@ has not been reconnected since walk 4 — so what the handset owes this build is
 `preview.33` is what is installed on the device. When it is next connected: reinstall `.34`, remember
 `svc power stayon true` is still set, and read the analytics row before the Insights work lands.
 
+## `1.2-preview.35` — supersedes `.34` an hour later; **still not handset-verified**, 2026-10-21
+
+§82 landed while the device was off adb, so `.34` was never installed anywhere and this is the build to
+put on the phone: `versionCode 37`, `versionName 1.2-preview.35`, built with
+`./gradlew --offline --no-daemon :app:assembleDebug` (BUILD SUCCESSFUL in 1m 1s). The asset was re-copied
+from `Sukinnect-next.html` and the archive opened rather than assumed — `unzip -p
+Sukinnect-Android/app/build/outputs/apk/debug/Sukinnect-1.2-preview.35-debug.apk assets/Sukinnect.html |
+md5sum` answers `0cb42e60c9372474efbb68ed49f88697`, the same hash `md5sum Sukinnect-next.html` and
+`dist/Sukinnect-next.html` answer, so the repository, the published subset and the installed archive hold
+one file.
+
+**What the handset is now owed, in priority order.** Two of these are things the bench cannot settle:
+
+1. **The admin's Provider Insights screen**, at the device's own `font_scale 1.35` on a 320 CSS px panel.
+   It should read `Analytics over the 8 providers on the roster`, a stat row of `8 / 4.8 / 1039 / 6`, and
+   three bars answering **60% / 75% / 38%** with an `x of y` line under each. The old screen typed
+   `88 / 96 / 75 / 68`, so if any of those four numbers is still visible the rewrite did not ship.
+2. **A figure that breaks in half.** §82's second fix is a CSS declaration (`.stat-strip .f b` refuses to
+   shrink or break) and the sensor for it counts line boxes in Chrome. The phone's engine is the same
+   Chromium family but not the same build, and this is precisely the class where §73's
+   multiply-after-CSS lesson bit twice — so read the admin dashboard's stat row and the Insights stat row
+   at 1.35 text and confirm `1039` paints as one word.
+3. The `.34` item, still unread: the analytics caption `6 of 8 providers on the roster are verified; 1
+   awaits review and 1 is suspended`.
+4. The two legs walk 4 left open: whether **TalkBack speaks** an opened dialog, and the concierge's
+   **system file picker**.
+
+`preview.33` is still what is installed. `svc power stayon true` is still set on the device — clear it
+with `svc power stayon false` when it is next handled.
+
+

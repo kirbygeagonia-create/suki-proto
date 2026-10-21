@@ -100,7 +100,7 @@ const FONT_SCALE = flag('font-scale', '');
    what a real browser actually laid out.
    -------------------------------------------------------------------------------- */
 const AUDIT_JS = `(function(){
-  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], belowFloor: [], chartEscape: [], chartOver: [], navCut: [], layerDialog: [], textCollide: [], navEscape: [], squashedCircle: [], unreachable: [], contrast: [], overlaps: [], stretched: [], broken: [], remote: [], svgSmall: [], vendor: [], mapEscape: [], occluded: [], modalInert: [], nameless: [], placeholderOnly: [], catMotion: [], hOverflow: 0 };
+  const out = { small: [], unlabelled: [], truncated: [], previews: [], offScale: [], belowFloor: [], chartEscape: [], chartOver: [], navCut: [], layerDialog: [], splitFigure: [], textCollide: [], navEscape: [], squashedCircle: [], unreachable: [], contrast: [], overlaps: [], stretched: [], broken: [], remote: [], svgSmall: [], vendor: [], mapEscape: [], occluded: [], modalInert: [], nameless: [], placeholderOnly: [], catMotion: [], hOverflow: 0 };
   const vw = document.documentElement.clientWidth;
   out.hOverflow = document.documentElement.scrollWidth - vw;
   const TAP = 44;
@@ -323,6 +323,24 @@ const AUDIT_JS = `(function(){
       why: why.join('+'), title: ((box.querySelector('h1,h2,h3,.sheet-title,b') || {}).textContent || '')
         .trim().replace(/\\s+/g, ' ').slice(0, 30) });
   }
+
+  /* A figure broken across two lines is clipped by nothing, collides with nothing, sits on the scale
+     and clears the nav — so every sensor above reads zero while the number itself is unreadable.
+     "1039" painted as "10" over "39" on the admin Insights screen at 200% text, found by looking at a
+     screenshot rather than by any tally. The cause is the file's own overflow-wrap:anywhere: it makes a
+     flex item's min-content width one character, so a growing label takes the number apart instead of
+     wrapping itself. The stat strip is where the app paints its largest figures, so its figures are
+     the population; a Range answers one client rect per line box, and two distinct tops is a break. */
+  [].slice.call(document.querySelectorAll('.stat-strip .f b')).forEach(el => {
+    const t = (el.textContent || '').trim();
+    if (!t) return;
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    const boxes = [].slice.call(r.getClientRects()).filter(b => b.width > 1 && b.height > 1);
+    const tops = [];
+    boxes.forEach(b => { if (!tops.some(x => Math.abs(x - b.top) < b.height * 0.5)) tops.push(b.top); });
+    if (tops.length > 1) out.splitFigure.push({ text: t.slice(0, 18), lines: tops.length });
+  });
 
   /* Text painted on top of other text. Every other sensor here asks a containment question — is this
      clipped, is it outside its box, is it under the nav — and none of them asks whether two labels
@@ -1639,6 +1657,7 @@ async function main() {
        family that guards this tally reads the count, which is how it survived: a checker whose
        numbers are right and whose sentences are junk teaches you to stop reading the sentences. */
     tally(flat('layerDialog'), 'layers that opened without dialog semantics or the caret inside them', r => r.screen + '  .' + r.layer + ' "' + r.title + '" is missing ' + r.why);
+    tally(flat('splitFigure'), 'stat-strip figures painted across more than one line', r => r.screen + '  "' + r.text + '" breaks into ' + r.lines + ' lines');
     tally(flat('chartOver'), 'bars painted above their own top gridline (a scale smaller than its data)', r => r.screen + '  a bar rises ' + r.over + 'px above the line that names its maximum in a ' + r.box + 'x' + r.h + 'px drawing');
     tally(flat('textCollide'), 'text painted on top of other text in the same card', r => r.screen + '  "' + r.a + '" x "' + r.b + '" in ' + r.card + ' overlap ' + r.ox + 'x' + r.oy + 'px');
     tally(flat('navEscape'), 'bottom-nav items pushed off the panel', r => r.screen + '  "' + r.text + '" hangs ' + r.over + 'px past a ' + r.box + 'px row (the row needs ' + r.scroll + 'px)');

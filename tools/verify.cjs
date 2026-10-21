@@ -2045,6 +2045,62 @@ suite('honesty', async () => {
     rates.awaitingReview > 0 && rates.suspendedCount > 0 && rates.verifiedCount < rates.verificationOf,
     'awaiting ' + rates.awaitingReview + ' suspended ' + rates.suspendedCount +
       ' of ' + rates.verificationOf);
+  /* The Insights screen — the Providers bar's "Insights" button, which sat in no camera table until
+     §81 found it — typed four bars (Completion 88, Rating 96, Credentials 75, Capacity 68), named
+     four trades at "1 provider" each while eight providers hold seven trades, asserted a
+     cancellation-rate verdict no record makes, and listed one provider needing attention under a
+     strip that counted six. Every figure on it is now a division over the records, and the strip and
+     the card are the same filter, so the two halves cannot drift apart by construction.
+     A fresh boot: the empty-roster check below shrinks the roster and must not touch the context the
+     rest of this suite reads. */
+  const ins = boot();
+  ins.state.view = 'app'; ins.state.role = 'admin'; ins.state.tab = 'admin_provider_insights';
+  const insHtml = String(ins.adminProviderInsights());
+  const insText = insHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+  const insRates = ins.marketplaceRates();
+  const insRoster = ins.PROVIDERS.length;
+  const insStanding = insRoster - ins.expiringProviderCount();
+  const insRows = ins.networkHealthRows();
+  c.check('every bar on the insights screen is a division the records make',
+    insRows.length === 3 && insRows[0].pct === insRates.completion &&
+    insRows[1].pct === insRates.verification &&
+    insRows[2].pct === Math.round(insStanding / insRoster * 100) &&
+    insRows.every(r => /\d+ of \d+/.test(r.note) && insText.indexOf(r.pct + '%') > -1 &&
+      insText.indexOf(r.note) > -1),
+    insRows.map(r => r.label + '=' + r.pct + ' ("' + r.note + '")').join(' | ') +
+      ' vs records ' + insRates.completion + '/' + insRates.verification + '/' +
+      Math.round(insStanding / insRoster * 100));
+  /* The invented figures leave no trace in what the screen paints. The positive control is the count
+     of painted percentages: a check that passes because the screen printed nothing would otherwise
+     look exactly like this one passing. */
+  c.check('the invented figures are gone from the painted screen',
+    !/Capacity/.test(insText) && !/highest average cancellation rate/.test(insText) &&
+    !/improvement opportunities/.test(insText) && (insText.match(/\d+%/g) || []).length >= 3,
+    'figures painted: ' + (insText.match(/\d+%/g) || []).join(' '));
+  const svc = ins.networkServiceRows();
+  c.check('the trade list is the roster, not a list somebody maintains',
+    svc.length >= 7 && svc.reduce((t, s) => t + s.count, 0) === insRoster &&
+    svc.every(s => insText.indexOf(s.label.replace(/&/, '&amp;')) > -1),
+    svc.map(s => s.label + ' ' + s.count).join(', ') + ' over ' + insRoster + ' providers');
+  const attn = ins.networkAttentionList();
+  c.check('the attention card lists exactly the providers the strip counts',
+    attn.length > 1 && attn.length === ins.networkSummary().needsAttention &&
+    attn.every(x => insHtml.indexOf("openAdminProviderProfile('" + x.provider.id + "')") > -1),
+    'strip ' + ins.networkSummary().needsAttention + ' rows ' + attn.length + ' painted ' +
+      attn.filter(x => insHtml.indexOf("openAdminProviderProfile('" + x.provider.id + "')") > -1).length);
+  const savedRoster = ins.PROVIDERS.slice();
+  let insEmpty = '', insEmptyHtml = '';
+  try { ins.PROVIDERS.length = 0; insEmptyHtml = String(ins.adminProviderInsights());
+        insEmpty = insEmptyHtml.replace(/<[^>]*>/g, ' '); }
+  finally { savedRoster.forEach(p => ins.PROVIDERS.push(p)); }
+  c.check('an empty roster explains itself instead of painting dashes',
+    /Nobody is on the roster/.test(insEmpty) && !/\d+%/.test(insEmpty) &&
+    ins.PROVIDERS.length === savedRoster.length,
+    'empty says: ' + (insEmptyHtml.match(/empty-title">([^<]*)</) || [, 'nothing'])[1]);
+  c.check('and a roster that has providers shows the cards, not the empty state',
+    !/Nobody is on the roster/.test(insText) && /Providers by service/.test(insText) &&
+      /Providers needing attention/.test(insText),
+    'restored roster ' + ins.PROVIDERS.length);
   /* The operations donut was typed: 18 items split 45/25/30 on a screen whose own
      tiles said 3 applications and 1 case. */
   const work = app.opsWorkload(app.adminCounts());

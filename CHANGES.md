@@ -5212,3 +5212,74 @@ each** across **73 screens** (`node tools/sweep-text-scale.cjs`), and `admin-ins
 own reports every tally zero (`node tools/shot.cjs --measure --only=admin-insights`) — clean geometry
 around four typed numbers, which is the measurement this section ends on.
 
+## 82. The Insights screen, de-typed: seven trades, three divisions, and a number that was breaking in half
+
+§81 found this screen by grepping for statistics taken from a raw seed-array length. It is the admin's
+**Provider Insights**, reached by the "Insights" button on the Providers bar, and it had never been
+photographed, never been checked against a record, and typed almost everything on it. Measured against
+the records with `.scratch/insights-measure.cjs`:
+
+| what the screen said | what the records answer |
+|---|---|
+| bars at Completion **88**, Rating **96**, Credentials **75**, Capacity **68** | closed jobs finished **60%** (3 of 5), verified **75%** (6 of 8), documents in good standing **38%** (3 of 8) — and a rating is out of five, not a percentage of a hundred |
+| "Plumbing 1, Electrical 1, Cleaning 1, Appliance 1" | **seven** trades across eight providers, two of them fruit harvesters |
+| "Electrical providers currently have the highest average cancellation rate." | nothing computes it |
+| "Credential health and available capacity are the main network improvement opportunities." | capacity is not a record, so the sentence ranked an invention |
+| one provider named under "needing attention" | the strip on the same screen counts **six** |
+
+The last row is the same defect this file has now closed at three seams: two halves of one screen
+answering one question with two numbers, because one was derived and the other was typed.
+
+### The rewrite
+
+Five helpers, and one filter that both halves read:
+
+- `networkAttentionList()` — the providers whose `adminProviderMeta().reasons` is non-empty. The strip
+  counts this list and the card prints it, so the two cannot drift apart by construction;
+- `networkServiceRows()` — the roster grouped by trade, sorted by how many serve;
+- `networkHealthRows()` — three bars, each a division the records make, each with its `x of y` printed
+  under it. **Capacity is gone** because no record holds it; **Rating is gone** because painting a
+  one-to-five average as a percentage of a hundred is a unit that does not exist, and the strip already
+  carries it out of five;
+- `networkFlagSummary()` — replaces the verdict sentence with a count of the flags actually raised:
+  *"The most common flag is a document expiring within 30 days — 4 of 6 providers needing attention."*;
+- the screen's subtitle now names its population (`Analytics over the 8 providers on the roster`)
+  instead of claiming "verified provider analytics" over a roster that includes a suspended account and
+  an unreviewed one — §81's label-versus-population defect, one screen over.
+
+The bar row became the admin dashboard's analytics-card shape rather than staying a hand-rolled row of
+four columns, because that card is the one already proven at 200% text on a 320px panel with its
+denominator printed under each figure. And an empty roster — which `tools/probe-empty-states.js`
+produces, and which a reviewer reaches by approving everybody — now explains itself instead of painting
+four dashes.
+
+### Then a screenshot showed something no tally asks about
+
+The rebuilt screen at 320 CSS px with the text at 200% painted **"10" over "39"**: the figure `1039`
+broken in half. Nothing in the camera can see that class. The number is not clipped, it collides with
+nothing, it sits on the scale, it clears the nav, and its contrast is fine — `body{
+overflow-wrap:anywhere }`, the long-input guard, makes a flex item's min-content width **one character**,
+so a growing label takes the number apart instead of wrapping itself.
+
+The guard is `.stat-strip .f b{ flex-shrink:0; white-space:nowrap }`, and the sensor is the camera's
+25th tally, `stat-strip figures painted across more than one line`, which counts a figure's line boxes
+through a `Range`. `node tools/falsify-split-figures.cjs` plants the removal and reads
+**`split=3, overflow=0, clip=0`** on six screens at that corner, so the clean baseline is the sensor
+answering.
+
+The family also records a redundancy rather than smoothing it: removing **only** `nowrap` and leaving
+`flex-shrink:0` reads `split=0, clip=0, overflow=0` — an item that cannot shrink keeps its figure's
+width, the label wraps instead, and the break opportunity inside the number is never reached. So at this
+corner either declaration alone holds the shape. That second edit is planted and printed every run as an
+observation, deliberately **not** counted as a break: a break that reads zero belongs in prose, whereas a
+mutant that survives belongs in the aggregate's red column, and conflating the two is how the chart
+family once deleted the evidence of its own blind sensor.
+
+Gate **546**; whole suite **40 families, 206 mutants applied, 206 caught, 0 not applied** (`node tools/falsify-all.cjs`), the two new
+families reading **7 of 7** and **1 of 1** inside the full run. The camera gained its 25th tally, so
+the sweep was re-run whole rather than argued: **7 of 7 corners clean at 25 tallies each** across
+**73 screens** (`node tools/sweep-text-scale.cjs`), and the walk count is unchanged because §82
+rewrote a screen §81 had already added rather than opening a new one. `node tools/probe-all.cjs`
+re-run against the camera whose tally changed: **41 instruments, 0 needing attention**.
+
+

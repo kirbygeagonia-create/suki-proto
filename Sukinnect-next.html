@@ -1060,7 +1060,11 @@
     padding:11px 13px; margin-bottom:12px;
   }
   .stat-strip .f{ display:inline-flex; align-items:baseline; gap:6px; padding:2px 0; }
-  .stat-strip .f b{ font-family:var(--font-display); font-size:var(--t-body-lg); font-weight:600; color:var(--deep); }
+  /* The figure keeps its shape and the words give up their line. `body{ overflow-wrap:anywhere }`
+     makes a flex item's min-content width one character, so at 200% text a four-digit count was
+     breaking in the middle — "1039" painted as "10" over "39" — which no tally can see: nothing is
+     clipped, nothing collides, the size is on scale, and the number is simply unreadable. */
+  .stat-strip .f b{ font-family:var(--font-display); font-size:var(--t-body-lg); font-weight:600; color:var(--deep); flex-shrink:0; white-space:nowrap; }
   .stat-strip .f span{ font-size:var(--t-caption); color:var(--mist); }
   .stat{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px;}
   .stat .num{font-family:var(--font-display); font-size:var(--t-num); font-weight:600;}
@@ -9801,22 +9805,121 @@ function openAdminProviderProfile(id){
   render();
 }
 
+/* One filter, two consumers: the stat strip counts this list and the card prints it, so the screen
+   cannot disagree with itself the way it did when the count was derived and the list beside it was
+   typed — six providers flagged in the strip, one named in the card. */
+function networkAttentionList(){
+  return PROVIDERS.map(p => ({ provider: p, reasons: adminProviderMeta(p).reasons }))
+    .filter(x => x.reasons.length);
+}
 function networkSummary(){
   const roster = PROVIDERS.length;
   const avg = roster ? PROVIDERS.reduce((t, p) => t + p.rating, 0) / roster : 0;
+  const attention = networkAttentionList();
   return {
     roster,
     /* one decimal, because an average of one-decimal ratings shown at two implies a
        precision the demo records do not hold */
     avgRating: avg.toFixed(1),
     jobs: PROVIDERS.reduce((t, p) => t + (p.jobs || 0), 0),
-    needsAttention: PROVIDERS.filter(p => adminProviderMeta(p).reasons.length).length
+    needsAttention: attention.length,
+    attention
   };
+}
+/* The trade mix is a count over the roster, not a list somebody maintains: the screen named four
+   trades at "1 provider" each while eight providers hold seven trades and two of them harvest
+   fruit. Sorted by how many serve, then by name, so a new trade appears where a reader expects it. */
+function networkServiceRows(){
+  const by = {};
+  PROVIDERS.forEach(p => { const k = p.service || 'Unspecified'; by[k] = (by[k] || 0) + 1; });
+  return Object.keys(by).map(k => ({ label: k, count: by[k] }))
+    .sort((a, b) => b.count - a.count || (a.label < b.label ? -1 : 1));
+}
+/* Every bar divides something a record states by something a record counts. "Capacity" is gone
+   because no record holds it, and "Rating" is gone because a one-to-five average painted as a
+   percentage of a hundred is a unit that does not exist — the strip already carries it out of five.
+   The shape is the admin dashboard's analytics card rather than a hand-rolled row of bars, because
+   that card is the one proven at 200% text on a 320px panel with its denominator printed under
+   each figure. */
+function networkHealthRows(){
+  const roster = PROVIDERS.length;
+  const rates = marketplaceRates();
+  const standing = roster - expiringProviderCount();
+  return [
+    { label: 'Closed jobs finished', pct: rates.completion,
+      note: rates.completionOf ? rates.doneCount + ' of ' + rates.completionOf +
+        ' jobs that reached a final state' : 'no job has closed yet' },
+    { label: 'Providers verified', pct: rates.verification,
+      note: roster ? rates.verifiedCount + ' of ' + roster + ' on the roster' : 'nobody is on the roster yet' },
+    { label: 'Documents in good standing', pct: roster ? Math.round(standing / roster * 100) : null,
+      note: roster ? standing + ' of ' + roster + ' hold no expired or soon-expiring document'
+        : 'nobody is on the roster yet' }
+  ];
+}
+/* The sentence under the bars used to name two network improvements, one of which no record
+   measures. This counts the flags the records actually raised instead, and says how many. */
+function networkFlagSummary(){
+  const attention = networkAttentionList();
+  if (!attention.length) return 'No provider on the roster is carrying a flag right now.';
+  const counts = {};
+  attention.forEach(x => x.reasons.forEach(r => { counts[r] = (counts[r] || 0) + 1; }));
+  const top = Object.keys(counts).sort((a, b) => counts[b] - counts[a] || (a < b ? -1 : 1))[0];
+  return 'The most common flag is ' + top + ' — ' + counts[top] + ' of ' + attention.length +
+    ' providers needing attention.';
 }
 
 function adminProviderInsights(){
   const network = networkSummary();
-  return `<div class="topbar"><div><h1 style="font-size:var(--t-lead);">Provider Insights</h1><div class="sub">Network-level verified provider analytics</div></div><button class="btn sm" style="background:rgba(255,255,255,0.12); color:var(--on-brand); box-shadow:none;" onclick="state.tab='admin_verifications'; state.adminProviderCategory='verified'; render();">Back</button></div><div class="pad" style="background:var(--cloud);"><div class="stat-strip"><span class="f"><b>${network.roster}</b><span>on the roster</span></span><span class="f"><b>${network.avgRating}</b><span>average rating</span></span><span class="f"><b>${network.jobs}</b><span>jobs claimed by the roster</span></span><span class="f"><b>${network.needsAttention}</b><span>needing attention</span></span></div><div class="card"><b class="card-title">Providers by service</b><div style="margin-top:10px; display:flex; flex-direction:column; gap:8px; font-size:var(--t-caption);"><div class="row"><span>Plumbing</span><b>1 provider</b></div><div class="row"><span>Electrical</span><b>1 provider</b></div><div class="row"><span>Cleaning</span><b>1 provider</b></div><div class="row"><span>Appliance</span><b>1 provider</b></div></div><div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:10px;">Electrical providers currently have the highest average cancellation rate.</div></div><div class="card"><b class="card-title">Provider network health</b><div style="height:110px; display:flex; align-items:flex-end; gap:10px; margin-top:10px; border-bottom:1px solid var(--line);">${[['Completion',88],['Rating',96],['Credentials',75],['Capacity',68]].map(([label,height])=>`<div style="flex:1; height:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:center;"><div style="width:28px; height:${height}%; background:${height > 90 ? 'var(--verified)' : height > 75 ? 'var(--gold)' : 'var(--alert)'}; border-radius:5px 5px 0 0;"></div><span style="font-size:var(--t-caption); margin-top:5px; color:var(--mist);">${label}</span></div>`).join('')}</div><div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:10px;">Credential health and available capacity are the main network improvement opportunities.</div></div><div class="card"><b class="card-title">Providers needing attention</b><div style="font-size:var(--t-caption); margin-top:8px;">Allan Buenaflor - Needs Review - Expired credential</div><button class="btn sm secondary btn-block" style="margin-top:10px;" onclick="openAdminProviderProfile('p4')">Review Provider</button></div></div>`;
+  const services = networkServiceRows();
+  const health = networkHealthRows();
+  const empty = !network.roster;
+  return `<div class="topbar">
+    <div>
+      <h1 style="font-size:var(--t-lead);">Provider Insights</h1>
+      <div class="sub">${empty ? 'Analytics over an empty roster'
+        : 'Analytics over the ' + network.roster + ' provider' + (network.roster === 1 ? '' : 's') + ' on the roster'}</div>
+    </div>
+    <button class="btn sm" style="background:rgba(255,255,255,0.12); color:var(--on-brand); box-shadow:none;" onclick="state.tab='admin_verifications'; state.adminProviderCategory='verified'; render();">Back</button>
+  </div>
+  <div class="pad" style="background:var(--cloud);">
+    <div class="stat-strip">
+      <span class="f"><b>${empty ? '—' : network.roster}</b><span>on the roster</span></span>
+      <span class="f"><b>${empty ? '—' : network.avgRating}</b><span>average rating, out of five</span></span>
+      <span class="f"><b>${empty ? '—' : network.jobs}</b><span>jobs claimed by the roster</span></span>
+      <span class="f"><b>${empty ? '—' : network.needsAttention}</b><span>needing attention</span></span>
+    </div>
+    ${empty ? emptyState('inbox', 'Nobody is on the roster',
+      'These figures count provider records: verifications, credentials and closed work. With no provider on the roster there is nothing to count. An application approved under Provider verification is what puts a row here.')
+      : `<div class="card">
+      <b class="card-title">Providers by service</b>
+      <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px; font-size:var(--t-caption);">
+        ${services.map(s => `<div class="row"><span>${esc(s.label)}</span><b>${s.count} provider${s.count === 1 ? '' : 's'}</b></div>`).join('')}
+      </div>
+      <div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:10px;">${services.length} trade${services.length === 1 ? '' : 's'} are on the roster. Counted from the provider records, not from the category list.</div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div class="row" style="margin-bottom:10px;"><b class="card-title">Provider network health</b><span class="chip">From these records</span></div>
+      <div style="display:flex; flex-direction:column; gap:10px; font-size:var(--t-caption); color:var(--ink-soft);">
+        ${health.map(row => `<div>
+          <div class="row"><span>${row.label}</span><b>${row.pct === null ? '—' : row.pct + '%'}</b></div>
+          <div style="height:7px; margin-top:4px; background:var(--line); border-radius:999px; overflow:hidden;"><div style="width:${row.pct || 0}%; height:100%; background:var(--brand-primary); border-radius:999px;"></div></div>
+          <div style="font-size:var(--t-caption); color:var(--mist); margin-top:4px;">${row.note}</div>
+        </div>`).join('')}
+      </div>
+      <div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:10px;">${networkFlagSummary()}</div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <b class="card-title">Providers needing attention</b>
+      ${network.attention.length ? network.attention.map(x => `
+      <button type="button" class="job-row" onclick="openAdminProviderProfile('${x.provider.id}')">
+        <span style="min-width:0; flex:1;">
+          <span class="jr-t">${esc(x.provider.name)}</span>
+          <span class="jr-s">${esc(x.reasons.join(' · '))}</span>
+        </span>
+        <span class="jr-time">Open</span>
+      </button>`).join('') : emptyState('shield', 'No provider is flagged', networkFlagSummary())}
+    </div>`}
+  </div>`;
 }
 
 function adminProviderManagementProfile(){
