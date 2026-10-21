@@ -15,7 +15,12 @@
    Sequential on purpose: each family rewrites Sukinnect-next.html and restores it in a finally,
    so two families at once would measure each other's mutants.
 
-     node tools/falsify-all.cjs                (~15 minutes: every mutant is a fresh gate run)
+     node tools/falsify-all.cjs                (40 families, 206 mutants: ~80 minutes measured on
+                                                2026-10-21 — one gate run per mutant, and the gate
+                                                itself takes 13s. The "~15 minutes" this line quoted
+                                                was true of a smaller suite on a quieter machine, and
+                                                a reader who budgets by it will abandon the run early,
+                                                which is the one way to leave a mutant in the tree.)
      node tools/falsify-all.cjs count-labes    # only families whose name matches
 */
 'use strict';
