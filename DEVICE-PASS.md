@@ -1238,3 +1238,44 @@ repository says it does.
 `1.2-preview.29` remains the last build actually verified on hardware, and the claims attached to it in
 §73/§74 (the nav labels rendering at 14.0px, the a11y tree, split-screen reachability) stand on that
 build only.
+
+## `1.2-preview.31` — the current build, still **not handset-verified**, 2026-10-20
+
+§77 changed the application file again, so `.30` was superseded inside the same session rather than
+left as the newest artifact: `versionCode 33`, `versionName 1.2-preview.31`, built with
+`./gradlew --offline --no-daemon :app:assembleDebug` (`BUILD SUCCESSFUL in 51s`). The archive was
+opened rather than assumed, as with `.30`:
+
+```
+unzip -p Sukinnect-1.2-preview.31-debug.apk assets/Sukinnect.html | md5sum
+b427857296593895236ef9f7248788c1
+md5sum Sukinnect-next.html
+b427857296593895236ef9f7248788c1
+```
+
+So this APK carries §76's day offsets and §77's dialog labelling. **It has never been on a phone.**
+`adb devices` has listed nothing since `1.2-preview.29`, which remains the last build actually verified
+on hardware — and the gap is not symmetric: everything verified up to `.29` was verified on the vivo,
+and everything since has been verified only by Chrome.
+
+What only a handset can now settle, in rough order of how much it changes the claims in this repository:
+
+1. **Whether TalkBack announces an opened dialog.** §77 asserts the box now declares `role=dialog`, is
+   named, and takes the caret — all three measured in Chromium. Whether Android's screen reader turns
+   that into speech on a real WebView is a different claim, and this file has already caught one
+   case (`1.2-preview.23`) where the platform behaved unlike the bench: a specified 14px rendered
+   18.9px because Android multiplies the used font size after CSS resolves.
+2. **§76's states on a real screen** — the queue's "waiting 10/11/12 days", a credential banner reading
+   Expiring against today's date. Anything date-shaped has to be read off a screenshot here; the day a
+   reviewer opens the app is now part of the input, and the whole point of the conversion was that they
+   see the intended states whatever that day is.
+3. **The four §3f items** — the concierge refusing to guess through the real system file picker, the
+   sheet's marked payment row against the booking record, a booking with no address, the provider
+   reload check.
+4. **The device's own text size**, which is unknown, not 1.0. This file's earlier line says
+   `font_scale 1.0`; a later session set 1.35 and Android then refused adb's write back
+   (`com.android.shell was not granted WRITE_SETTINGS`). Read it off the handset rather than quoting
+   either claim.
+
+`1.2-preview.29` is still the build whose hardware claims in §73/§74 (nav labels at 14.0px rendered,
+the accessibility tree, split-screen reachability) can be quoted as verified.
