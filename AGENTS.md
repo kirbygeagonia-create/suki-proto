@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 11,677 lines, ONE :root block, 1,752 var() usages, 95 tokens declared with 92
+Sukinnect-next.html— 11,684 lines, ONE :root block, 1,752 var() usages, 95 tokens declared with 92
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1213,7 +1213,7 @@ Sukinnect-next.html— 11,677 lines, ONE :root block, 1,752 var() usages, 95 tok
                     heading count, all of them moved by the nav-label work — which is why the
                     figures above were re-run rather than re-read. They moved a fourth time the
                     next day (§76's eleven lines of day helpers) and a fifth the same evening
-                    (§77's dialog labelling), a sixth time with §78's register branch — and each time the fix was to run the tool, not to re-read the sentence. The next
+                    (§77's dialog labelling), a sixth time with §78's register branch and a seventh for §79's nav-box correction — and each time the fix was to run the tool, not to re-read the sentence. The next
                     reader should cite the tool rather than trust it.
                     Everything that was a real violation is now a token: #fff became
                     --surface and --on-brand, the modal dim became --scrim, and the phone
@@ -2426,6 +2426,41 @@ captured *before* the click answers what was painted before the tap, because the
 detaches them; and navigating by guessing at state fields instead of calling the entry the camera table
 uses (`openBookingDetail(id)`) makes a screen look wrong when the navigation was never real.
 
+A SENSOR THAT SHARES ITS ASSUMPTION WITH THE CODE IS NOT A CHECK — AND THE PHONE FOUND THE CASE. The
+bottom-nav fit compared each word against `.navitem.clientWidth`, which **includes the item's 4px
+horizontal padding**, so in a 74px slot the label can only use 66px; the loop breaks as soon as
+`slot/wants >= 1` and therefore stops shrinking while the word still overflows the box that clips it.
+`shot.cjs`'s `navCut` tally compared against the same `item.clientWidth`. Four sessions of sweeps read
+0 while an OPPO CPH2179 at its own `font_scale 1.35` had "Bookings" and "Messages" clipped by ~2px:
+`--nav-label-size: 11.85px`, which the platform multiplies to a 16px rendered size. Both now measure
+the **label's** own box, and `falsify-nav-fit` gained a break that reinstates the item width — it
+reports `cut=2`, the same two words, so the family now proves the boundary rather than the arithmetic
+alone. Verified on the device after reinstalling: `10.52px` written → `14.2px` rendered → `cut none`,
+stable across samples, the floor honoured in the only space a phone measures in.
+
+Two rules to carry from it. When a bench sensor and the code it watches agree, the agreement is not
+evidence: ask which box each is looking at, and check the same pixels on a handset before calling a
+typography claim settled — this is the second time §73's multiply-after-CSS lesson has cost a session.
+And when a device reports something the sweep says is impossible, believe the device and go find the
+shared assumption; the sweep being clean is not a rebuttal, it is a hint about which two files agree.
+
+The same attach produced three other hardware confirmations, all of them reading the platform rather
+than the DOM: a `preview.29` snapshot written 2026-10-18 (schema 16) hydrated on the new build with
+§76's day offsets holding (`waiting 10/11/12 days ago`, `1 expired / 5 expiring / 5 valid`); an open
+`Edit profile` modal reaching `uiautomator dump` as a dialog with its name and every labelled field
+and nothing from the inert screen behind it — with the caveat that the first dump listed 6 nodes
+because Chromium builds the tree lazily, and that a tree is not a spoken announcement, which needs
+TalkBack enabled on the owner's device and was not; and §78's register path greeting `Nueva` while the
+snapshot on disk still named `Ana Dela Cruz`, which is the not-persisted promise kept. The device's
+real `font_scale` is **1.35**, so the older "left clean at 1.0" line in `DEVICE-PASS.md` was stale.
+
+One leg stays open honestly: the concierge's system file picker. The photo control sits below the fold
+at that corner and three attempts to scroll it into view left the rect unmoved, so the synthetic tap
+landed on the gesture bar. The instrument failed, not the app — `controls no tap can reach` reads 0 at
+320x638 @ 1.35 across all 72 screens, which answers "can a thumb get there" — but the narrower claim
+that a real picker opens and that §75's promise about keeping only the file name holds against it is
+still unverified.
+
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by
 the 479-byte `ATKINSON-AUTHORS.txt` that sits beside it, a `--font-ui` opening with a family
@@ -3458,7 +3493,7 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate **537**; whole suite **37 families, 191 mutants applied, 191 caught, 0 not applied** (`node tools/falsify-all.cjs`) — re-run on 2026-10-20 with `falsify-register-identity` added, and the rows this session flagged stay cleared: `falsify-chart-collide` 5 of 5 inside the run, `falsify-nav-fit` 3 of 3 with the floor sensor seeing nav labels, `falsify-seed-dates` 4 of 4, `falsify-dialog-focus` 4 of 4 and `falsify-probe-population` 3 of 3. Quote a total from a pass that printed one.
+Gate **537**; whole suite **37 families, 192 mutants applied, 192 caught, 0 not applied** (`node tools/falsify-all.cjs`) — re-run on 2026-10-20 with `falsify-register-identity` added and a fourth break on `falsify-nav-fit`, and the rows this session flagged stay cleared: `falsify-chart-collide` 5 of 5 inside the run, `falsify-nav-fit` 4 of 4 including the box the fit must measure, `falsify-seed-dates` 4 of 4, `falsify-dialog-focus` 4 of 4 and `falsify-probe-population` 3 of 3. Quote a total from a pass that printed one.
 Of these, `falsify-flex-crush`, `falsify-control-reach`,
 `falsify-focus-trap`, `falsify-long-input`, `falsify-stale-overlay`, `falsify-double-tap`, `falsify-chart-collide`
 and `falsify-nav-fit` are the ten that drive the camera rather than the gate — a geometry rule, a

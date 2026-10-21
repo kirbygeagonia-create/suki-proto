@@ -4988,3 +4988,78 @@ and each answers.
 What remains §3f is now only what genuinely needs the device: TalkBack announcing an opened dialog,
 the day-offset states read off a real screen, and the concierge refusing to guess through the system
 file picker — the last thing adb cannot drive without the UI.
+
+## 79. The phone found what the bench and its own sensor could not: the nav fit measured the wrong box
+
+The device came back attached, and the first thing it reported was a claim this repository believed for
+two sessions: that the resident nav fits at 320 CSS px with nothing cut. On an OPPO CPH2179 at its own
+`font_scale 1.35` — `Override density: 360` on a 720px panel, so 320 CSS px, `innerHeight` 638, the
+corner §68 added from the device itself — the fit loop wrote `--nav-label-size: 11.85px` and left
+**"Bookings" and "Messages" clipped by ~2px each**.
+
+The loop and the sensor were wrong together, which is why four passes of sweeps read clean:
+
+```
+fitNavLabels:  const slot = item.clientWidth;      ← .navitem's clientWidth INCLUDES its 4px padding
+navCut tally:  const slot = item.clientWidth, wants = l.scrollWidth;
+```
+
+In a 74px slot the label's own box is 66px. The loop computes `worst = slot / wants`, breaks as soon as
+`worst >= 1`, and so stops shrinking while the word still does not fit the box that clips it. Nothing
+in `tools/` could see this, because the only sensor that asks the question asks it against the same
+wrong box. Both now measure `l.clientWidth`, and the family got a break that reinstates the item width:
+
+```
+baseline: 0 avoidable cuts and 0 sub-floor text on resident-home,provider-dash,admin-dash at --width=320 --font-scale=2
+CAUGHT  the fit pass never runs …            (cut=9, floor=0)
+CAUGHT  the floor is lowered to 8px …       (cut=0, floor=9)
+CAUGHT  the fit ratio is inverted …          (cut=9, floor=0)
+CAUGHT  the fit measures the item's box …    (cut=2, floor=0)
+4 of 4 breaks caught, 0 not applied
+```
+
+`cut=2` is the same two words the phone showed. And the fix is confirmed where it was found — the
+device, after reinstalling as `1.2-preview.33`:
+
+```
+before: size 11.85px · label 16px   · cut Bookings,Messages   (stable at 900ms and 1600ms)
+after:  size 10.52px · label 14.2px · cut none                (stable at 900ms and 1600ms)
+```
+
+14.2px rendered, above the 14px floor, with no word cut — the floor honoured in the only space a phone
+measures in, which is the lesson §73 wrote down and this is the second time collecting on.
+
+**What the device also settled, all in one direction:**
+
+- the upgrade path: a snapshot written by `preview.29` on **2026-10-18** (schema 16) hydrated on the
+  new build, and §76's states held — waits `maria 10 · joel 11 · liza 12 days ago`,
+  `1 expired / 5 expiring / 5 valid`. That is the day-offset conversion working on a device whose
+  stored data predates it;
+- §77 reaches the **platform tree**, not just the DOM: with the "Edit profile" modal open,
+  `uiautomator dump` lists the dialog's own nodes — `Edit profile`, `Close`, each labelled field,
+  `Save Changes` — and nothing from the screen behind it (32 nodes). Two cautions recorded the honest
+  way: the first dump listed **6** nodes, which is Chromium building the tree lazily and one tap
+  fixing it, and this measures the tree rather than the *speech* — TalkBack was not enabled, because
+  switching on the owner's accessibility service is not mine to do;
+- §78 on hardware: greeting `Nueva`, toast `Prototype build - this account is not stored, and bookings
+  use the demo household address`, and the snapshot on disk still naming `Ana Dela Cruz` — the
+  not-persisted promise and the bytes agree;
+- `font_scale` is **1.35**, so the older line in this file saying the device was left at 1.0 was stale.
+
+**What is still owed, and why it is not closed here:** the concierge's system file picker. The photo
+control sits at `centreCss.y = 666` in a 638px viewport, and three attempts to bring it into view left
+the rect unmoved, so the shell's tap landed on the gesture bar and sent the app to the launcher. That
+is the instrument failing, not the app: the sweep's `controls no tap can reach` tally reads 0 at
+320x638 @ 1.35 on all 72 screens, which is the sensor's answer to "can a thumb get there". The
+unverified claim is narrower — that a real picker opens and that the app keeps only the file **name**
+(§75) — and it stays open.
+
+Gate **537**; whole suite **37 families, 192 mutants applied, 192 caught, 0 not applied** (`node tools/falsify-all.cjs`), with
+`falsify-nav-fit` reading **4 of 4 inside the full run** rather than only alone — the fourth break
+being the one that reinstates the item box. `node tools/sweep-text-scale.cjs` after the change:
+**7 of 7 corners clean at 24 tallies each**; this one did touch layout, since the labels are now
+shrunk a half-step further on narrow panels, which is what the sweep rather than an argument
+settles. And `node tools/probe-all.cjs nav-fit` re-run against the camera whose tally changed.
+
+The measured pair, on the device that found it: `11.85px → 16px rendered, cut Bookings,Messages`
+before; `10.52px → 14.2px rendered, cut none` after.

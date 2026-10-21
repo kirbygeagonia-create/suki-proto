@@ -1309,3 +1309,50 @@ What remains in this section is genuinely handset-only:
 4. **the device's actual `font_scale`** — still unknown, not 1.0.
 
 `1.2-preview.29` remains the last build actually verified on hardware.
+
+## Handset walk 4 — `1.2-preview.33` on the OPPO CPH2179, 2026-10-20
+
+Device: `S4CUYTJB6HNNWC49`, `CPH2179T2`, WebView `155.0.8059.45`, `Physical size: 720x1600` with
+`Override density: 360` → **320 CSS px × 638**, `font_scale **1.35**`, root computing **21.6px**.
+Installed over `preview.29` with data retained, so the upgrade path was part of the walk.
+
+**Four claims settled on the platform, one of them by the platform disagreeing with the bench.**
+
+1. **§76's day states, from a pre-existing dump.** The snapshot on disk was written 2026-10-18 at
+   schema 16 by `preview.29`; the new build hydrated it and still reads `maria = 10 days ago`,
+   `joel = 11`, `liza = 12`, with `1 expired / 5 expiring / 5 valid`. The relative-date conversion
+   holds on a device whose stored data predates it, which is exactly the case it was built for.
+2. **§77, as a tree.** With the "Edit profile" modal open, `uiautomator dump` lists the dialog's own
+   nodes — `Edit profile`, `Close`, `Full Name`, `Email (read-only)`, `Phone Number`, `Home Address`,
+   `Barangay`, `Emergency Contact`, `Save Changes` — and no node from the screen behind it, in 32
+   nodes total. The in-page read agrees: `role=dialog`, `aria-modal=true`,
+   `aria-labelledby=layer-title-1 → "Edit profile"`, focus inside, 8 inert siblings. Two limits stated
+   rather than smoothed: the *first* dump listed 6 nodes with no text at all, which is Chromium
+   building the tree lazily (a tap warms it — read a dump twice before calling it a defect), and this
+   is the tree, not speech. **TalkBack was not enabled**, because turning on the owner's accessibility
+   service is a device change to ask for, so "the dialog is announced aloud" remains unverified.
+3. **§78, on screen.** Registering `Nueva Residente` / `Buayan` through the painted form greets
+   `Nueva`, toasts `Prototype build - this account is not stored, and bookings use the demo household
+   address`, and the snapshot still on disk names `Ana Dela Cruz` — the not-persisted promise, read
+   as bytes rather than as a sentence.
+4. **The nav boundary bug, found here and fixed here.** The first pass reported the fit loop writing
+   `--nav-label-size: 11.85px` (16px rendered) with **`Bookings` and `Messages` cut** — where the
+   bench and the camera's own tally had read zero for four sessions, because both measured the
+   `.navitem`'s box, which includes 4px of padding the label never gets. After fixing the loop and the
+   tally to measure the label's own box (§79) and reinstalling as `.33`: `10.52px` written →
+   **`14.2px` rendered** → `cut none`, stable at 900ms and 1600ms. The floor is met in rendered space,
+   on the platform that multiplies after CSS resolves.
+
+**Not settled: the concierge's system file picker.** The photo control measures below the fold at this
+corner (`centreCss.y = 666` in a 638px viewport) and `scrollIntoView` — with the animation suppressed,
+which is the trap the keyboard walk documents — left the rect unmoved, so the synthetic tap landed on
+the gesture bar and sent the app to the launcher. The instrument failed, not the application:
+`controls no tap can reach` reads 0 here on all 72 screens, so a thumb can scroll to it. What stays
+unverified is the narrower thing — that a real picker opens, and that §75's "we keep the name, not the
+picture" holds against it. That needs a finger or a scroll container the probe can actually move.
+
+**Device state at the end of the walk:** `preview.33` installed, signed-out state not restored (the app
+was left on the concierge/login after the failed tap), and `svc power stayon true` was set so the
+screen would not sleep between probes — clear it with `svc power stayon false` when the phone is next
+handled. `font_scale` is **1.35**; the older line in this file saying the device was left at 1.0 was
+written about a different session and is now contradicted by the device itself.
