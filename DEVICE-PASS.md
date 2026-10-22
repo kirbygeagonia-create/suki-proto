@@ -1436,20 +1436,125 @@ whether **TalkBack speaks** an opened dialog, and the concierge's **system file 
 
 `preview.33` remains what is installed on `S4CUYTJB6HNNWC49`; `svc power stayon true` is still set.
 
+## Handset walk 5 — `1.2-preview.37` on the vivo 1906, 2026-10-22
+
+Device: `80d20768`, vivo 1906, Android 10, WebView `155.0.8059.43`, `Physical size: 720x1544` with
+`Override density: 256` → **450 CSS px**. Read from the page this walk, not assumed: `innerWidth 450`,
+`innerHeight 889`, `devicePixelRatio 1.600000023841858`, and the WebView node occupying device
+`[0,54][720,1423]` — two coordinate spaces, which matters because `--tap` takes **page** coordinates and
+`adb shell input tap` takes **device** ones. Installed over `preview.28` with data retained, so the
+upgrade path was walked: `dumpsys package com.sukinnect.app` answers `versionCode=39`,
+`versionName=1.2-preview.37`.
+
+**All six owed legs were put to the phone. Five settled, one settled as far as an automated thumb can.**
+
+1. **§81's caption, on screen.** The admin analytics row reads
+   `6 of 8 providers on the roster are verified; 1 awaits review and 1 is suspended`, and the row is
+   labelled *Provider verification*, not progress.
+2. **§82's Insights, de-typed on the device — and reading different numbers than the bench.** The three
+   divisions paint **33 / 75 / 38** here where the bench paints 60 / 75 / 38, and the difference is the
+   derivation doing its job: this device's stored snapshot carries extra live bookings, so the screen
+   says `3 of 9 jobs that reached a final state` against the seed's 3-of-5. The flag sentence names a
+   count, the attention card holds 6 rows and the strip counts 6, and nothing on the screen is typed.
+   A bench screenshot of a clean number would have hidden both facts.
+3. **§82's split-figure guard, broken and then honoured on hardware.** At the device's own **2.0** text
+   on a 450px panel, with `white-space:nowrap` deleted the admin stat row paints `1039` across
+   **2 line boxes**; with the shipped rule it paints **1**. This is the measurement the camera's 25th
+   tally makes, taken where the type is actually multiplied.
+4. **§85's identity, on the account the camera has never been.** Signing in as the second provider
+   through the *painted* form (`erning@demo.ph`) yields the dashboard header
+   `Erning Bautista · Fruit Harvest & Buy · Brgy. Buayan` — no typed `Ramil Odiada (Pro)`, no
+   `Plumbing Specialist · Brgy. Poblacion`. The sign-in chips read **Resident / Provider** on the
+   platform's own text engine, so §85's one-word ruling is on hardware too.
+5. **§77's dialog semantics, re-read on this device.** With the resident's "Edit profile" open:
+   `role=dialog`, `aria-modal=true`, `aria-labelledby=layer-title-2`, focus inside the layer; after the
+   `×` tap the `[data-layer]` list is empty. The sign-out confirmation is the same shape (`×`, `Cancel`,
+   `Log Out` inside one modal layer), so the guarantee holds for a dialog the app raised second.
+6. **TalkBack does speak an opened dialog — and an earlier "no" from this walk was the instrument.**
+   The channel is `dumpsys audio`'s `SpeechControllerImpl` focus transitions, taken as a **set
+   difference** against a snapshot (the log is a ring buffer, and a lexical timestamp comparison against
+   a bare `HH:MM:SS` silently answers "nothing new" forever). Order: positive control first, so a
+   silence can mean something.
+
+   | tap | focus stack clear before? | new speech lines |
+   | --- | --- | --- |
+   | non-interactive card on the profile hub | yes | **0** |
+   | dialog body text | yes | **0** |
+   | "Edit Profile" → dialog opens | yes | **2** — `requestAudioFocus()`, `GAIN_TRANSIENT_MAY_DUCK`, `usage=USAGE_ASSISTANCE_ACCESSIBILITY` |
+   | the `×` → dialog closes | yes | **2** |
+
+   The first attempt at the close row read **0** and would have been filed as "closing announces
+   nothing". It was not: TalkBack keeps its focus entry on the stack for tens of seconds after it
+   speaks (observed holds of 39s and 51s, and one still held 81s after the request), and a new
+   `requestAudioFocus()` line only appears when the stack is empty — so an utterance inside a held
+   session is invisible to a burst count. The driver now waits for the stack to clear and prints how
+   long it waited. **A silence from a channel that is still busy is not a negative result.**
+   What this does *not* prove: that the announcement *names* the dialog. No utterance text is
+   recoverable here — `logcat` carries no TalkBack speech line for this walk (0 lines matching
+   `talkback|accessib`), and Android 10's `PlaybackActivityMonitor` dump lists client handles without
+   per-player detail. The naming is carried by the tree evidence in row 5, not by this row.
+
+**Not settled by automation, with the whole chain recorded: picking the file.** The concierge's photo
+control opens the real system picker — `mResumedActivity: com.google.android.documentsui/…picker.PickActivity`
+— reached by `--tap` on the painted button, which is the §75 leg's blocker before this session
+(`element.click()` from `Runtime.evaluate` carries no user activation, so the chooser never appeared).
+Two obstacles sit between that and a completed selection, and both belong to the instrument:
+
+- *The file has to exist where the picker looks.* `adb push` preserved the source file's 2026-09-20
+  date and did not index it, so "RECENT IMAGES" showed only the owner's real photos — and selecting one
+  of those is not mine to do. `touch` + `MEDIA_SCANNER_SCAN_FILE` put `suki-leg6-test.png` at MediaStore
+  row 667 and at the **top** of the grid, labelled `9.05 kB, 6:21 AM`.
+- *ColorOS's DocumentsUI will not hand a document to a synthetic pointer.* Four attempts on two layouts —
+  grid tile centre `(141,629)`, grid preview icon `(205,564)`, list-view preview icon `(662,577)`, and the
+  same icon as `motionevent DOWN` + 1s + `UP` — left the picker resumed and our page unchanged. The
+  injected input is *not* being dropped wholesale: a tap at `(106,194)` flipped the "Large files" chip
+  from `checked="false"` to `checked="true"`, and a swipe at `360,1200→360,700` scrolled the very list
+  whose rows refuse taps. So the chrome answers and the document rows do not. **A thumb is still owed
+  for this one tap.**
+
+The app's half of the same promise was then measured in a real browser instead: a `File` handed to
+`#hidden-file-input` through `DataTransfer` — the mechanism the browser itself uses when a picker returns
+a document — then a `change` event, then a read of the painted screen.
+`node tools/shot.cjs --probe=@.scratch/probe-name-only.js --only=concierge` answers
+`inputHolds "1 file(s), name=IMG_kitchen_leak.jpg"`, the screen text contains
+`Attach a photo of the problem IMG_kitchen_leak`, and `imgSrcsForPhoto` is **empty** — no `blob:` or
+`data:` source anywhere on the screen. §75's "you see the name you gave it, not the photo" is a
+measurement, not a comment. No console errors.
+
+**One trap re-encountered, third time in this repository:** after `scrollIntoView({block:'center'})` the
+concierge entry's rect still read `y=897` in an 889px viewport, because `#screen` scrolls smoothly by
+contract. Setting `style.scrollBehavior='auto'` and moving `scrollTop` directly put it at `y=496`,
+`vis:true`. A rect read in the breath after a scroll is the element's *old* position — §72 says so, the
+keyboard walk says so, and this walk fell for it anyway.
+
+**Device state at the end of the walk — restored, and each item is what was set for the test:**
+`enabled_accessibility_services` back to `null` and `accessibility_enabled` back to `0` (both were off
+before TalkBack was turned on for row 6); `svc power stayon false`; `/sdcard/Pictures/suki-leg6-test.png`
+deleted and re-scanned so its MediaStore row is gone; 11 `uiautomator` dumps left by this and earlier
+walks deleted from `/sdcard` (`ls /sdcard/*.xml` answers 0); `font_scale` back to its default (the
+global setting reads `null`, i.e. 1.0, after being set to 1.35 and 2.0 for rows 3 and 4); and the app
+signed out through its own Log Out control and confirmation dialog, so the device shows the sign-in
+screen with `Resident / Provider` chips. `preview.37` stays installed.
+
 ## Owed, in order — a pointer list, not an explanation
 
 Everything below is written out where it belongs; this is only the list of what the next person finds
 open. Nothing here is a defect the bench can close.
 
-**On the handset (install `1.2-preview.37`, `versionCode 39`)** — six items, each needing a phone rather
-than a bench: the de-typed Provider Insights figures (60 / 75 / 38 and a flag named with a count), an
-unbroken `1039` in a stat row at the device's own 1.35 text, the `6 of 8 … 1 awaits review and 1 is
-suspended` caption, **signing in as the second provider account and reading your own dashboard header**
-(§85 found that header typed as p1, and the camera has only ever walked as p1, so the fix's whole point
-is a case no screenshot has contained), whether **TalkBack speaks** an opened dialog (§77's tree is
-proven; speech is not, and enabling the owner's accessibility service needs their say-so), and the
-concierge's **system file picker** (a synthetic tap cannot reach the control at 320×638 @ 1.35). Also
-outstanding on the device: `svc power stayon false` to clear, and the signed-out state to restore.
+**On the handset** — one item, and it needs a thumb rather than a phone: **tap one document in the
+system picker** the concierge's photo control opens. Everything else the `.37` list owed was put to the
+vivo on 2026-10-22 and is written up in *Handset walk 5* above — the caption, the Insights figures, the
+`1039`, the second provider's own header, the dialog tree, and whether TalkBack speaks an opened dialog.
+What that walk could not automate is ColorOS handing a document to a synthetic pointer, and it records
+the four attempts plus the two controls that show the injected input reaching that same window. The
+app's half of the promise was then measured in a browser and holds: a real `File` arrives, the screen
+paints only its name, no `blob:` or `data:` image exists.
+
+Two more device-shaped things stay open because they are owner questions, not bench work: whether
+TalkBack's *wording* names the dialog (no channel here recovers spoken text — the tree proves the name
+is exposed, the burst proves an announcement happens), and whether either provider or admin reaches a
+notification surface at all in this build (§27 is untestable for the other two roles, as
+`tools/probe-notification-targets.js` reports).
 
 **Decided 2026-10-21 and closed** —
 - `color-scheme: only light` is declared in `:root`, with `--measure --dark` re-run afterwards across all

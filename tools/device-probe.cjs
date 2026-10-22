@@ -6,6 +6,19 @@
 
      node tools/device-probe.cjs '<expression>'          # one expression, prints the answer
      node tools/device-probe.cjs --file=tools/probe-x.js # same as the camera's --probe=@
+     node tools/device-probe.cjs --tap=225,452 '<expr>'  # a real gesture at page coords, then the answer
+
+   --tap exists because of §75's file-picker leg. `element.click()` run from Runtime.evaluate carries no
+   user activation, and Chrome refuses to open a file chooser without one — so the first handset attempt
+   at that leg reported "no picker appears", which was the instrument, not the application. Input events
+   dispatched over CDP arrive through the browser's own input path and do count as activation.
+
+   The coordinates are **page** ones (CSS px, so 0..innerWidth), not the device pixels `uiautomator`
+   bounds and `adb shell input tap` speak in — on the vivo 1906 those differ by devicePixelRatio 1.6 plus
+   a 54px status bar. Ask the page for a rect instead of converting: read `getBoundingClientRect()` here,
+   then tap the answer. And this reaches only our own WebView; a document row inside another app's picker
+   refuses synthetic activation on some OEM builds even when their own chrome accepts it. See Handset
+   walk 5 in DEVICE-PASS.md.
 
    Needs the debug shell's WebView.setWebContentsDebuggingEnabled(true). Requires nothing from
    npm: it speaks the DevTools Protocol over a hand-rolled WebSocket, the same way shot.cjs does. */
@@ -17,6 +30,11 @@ const { execFileSync } = require('child_process');
 const ADB = process.env.ADB || 'adb';
 const argv = process.argv.slice(2);
 const fileFlag = argv.find(a => a.startsWith('--file='));
+const tapFlag = argv.find(a => a.startsWith('--tap='));
+const tap = tapFlag ? tapFlag.slice(6).split(',').map(Number) : null;
+if (tapFlag && (tap.length !== 2 || tap.some(n => !Number.isFinite(n))) ) {
+  console.error('--tap wants page coordinates: --tap=225,452'); process.exit(1);
+}
 const expr = fileFlag
   ? require('fs').readFileSync(fileFlag.slice(7), 'utf8')
   : (argv.find(a => !a.startsWith('--')) || 'document.title');
@@ -138,6 +156,13 @@ function httpGet(port, path) {
 
   await new Promise(r => { if (sock.connecting) sock.once('connect', r); else r(); });
   await new Promise(r => setTimeout(r, 900));
+  if (tap) {
+    /* touchStart then touchEnd through the browser's input path — this is what carries user
+       activation, and what a page-side .click() does not. */
+    await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: tap[0], y: tap[1] }] });
+    await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await new Promise(r => setTimeout(r, 1200));
+  }
   /* awaitPromise, like the camera: without it an async probe serialises to `{}`, which reads exactly
      like a page that found nothing. The first device run of §77 hit that and looked like a failure of
      the app rather than of this tool. */

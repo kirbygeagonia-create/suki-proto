@@ -2632,6 +2632,58 @@ painting nothing. `node tools/falsify-declared-state.cjs` — 6 breaks, 6 caught
 only light` is now declared, decided by the owner 2026-10-21, with `--measure --dark` re-run across all
 73 screens afterwards to prove the declaration costs nothing measurable.
 
+A CHANNEL THAT IS STILL BUSY CANNOT REPORT A NEGATIVE — AND A RING BUFFER CANNOT BE READ BY TIMESTAMP.
+Handset walk 5 (`1.2-preview.37` on the vivo 1906, `80d20768`, Android 10, WebView `155.0.8059.43`,
+720x1544 at `Override density: 256` → **450 CSS px**, read from the page as `innerWidth 450`,
+`innerHeight 889`, `devicePixelRatio 1.6`) settled five of the six owed legs and its write-up is
+*Handset walk 5* in `DEVICE-PASS.md`. The two findings that outlive that phone are about instruments.
+**Whether TalkBack speaks an opened dialog** was first answered "no" by an instrument: the channel is
+`dumpsys audio`'s `SpeechControllerImpl` focus transitions, and the close-case tap produced no new line —
+because TalkBack keeps its `GAIN_TRANSIENT_MAY_DUCK` entry on the audio focus stack for tens of seconds
+after it speaks (holds of 39s and 51s, one still held 81s after its request), and a new
+`requestAudioFocus()` only appears when the stack is empty. Waiting for the stack to clear and printing
+how long the wait took made the same tap read two new lines, and the same wait is what gives the two
+control rows — a non-interactive card and a dialog's body text, both 0 — their meaning. The first version
+also compared a bare `HH:MM:SS` against lines beginning `MM-DD HH:MM:SS:mmm`, a lexical comparison that
+answers "nothing new" forever; the log is a ring buffer, so read it as a **set difference against a
+snapshot**. And no channel here recovers the *words*: `logcat` printed 0 lines matching
+`talkback|accessib` across the walk and Android 10's `PlaybackActivityMonitor` dump lists client handles
+with no per-player detail. So the burst proves an announcement occurs, §77's tree proves the name is
+exposed, and neither proves the wording is spoken — say it that way rather than as "TalkBack announces
+the dialog by name".
+**A platform that answers one injected tap and refuses the next is telling you which surface it
+protects.** The concierge's photo control opens the real
+`com.google.android.documentsui/.picker.PickActivity` — proved by the `--tap` addition to
+`tools/device-probe.cjs`, since `element.click()` from `Runtime.evaluate` carries no user activation and
+Chrome refuses a chooser without one. But ColorOS will not hand a *document* to a synthetic pointer: four
+attempts across two layouts (grid tile centre, grid preview icon, list preview icon, and that icon again
+as `motionevent DOWN` + 1s + `UP`) left the picker resumed and our page unchanged, while a tap at
+`(106,194)` toggled the "Large files" chip `checked="false"` → `"true"` and a swipe scrolled the very list
+whose rows refuse taps. Two controls — same window, same widget — are what turn "it did not work" into
+"this affordance does not accept synthetic activation"; the leg still owed is one thumb-tap. Before even
+that, `adb push` preserved a 2026-09-20 date and indexed nothing, so the picker's RECENT IMAGES held only
+the owner's real photographs — which are not the agent's to select — and the test file appeared at all
+only after `touch` plus `MEDIA_SCANNER_SCAN_FILE` (MediaStore row 667, top of the grid,
+`suki-leg6-test.png, 9.05 kB, 6:21 AM`).
+
+§75's "the provider sees the name you gave it, not the photo" is now backed by pixels, and in a browser
+rather than on the phone that refuses the pick: a `File` handed to `#hidden-file-input` through
+`DataTransfer` — the mechanism the browser itself uses when a picker returns a document, so this is a state
+a person produces, not one written into a model — then `change`, then a read of the painted screen answers
+`inputHolds "1 file(s), name=IMG_kitchen_leak.jpg"`, the screen text contains `Attach a photo of the
+problem IMG_kitchen_leak`, and `imgSrcsForPhoto` is **empty**: no `blob:` or `data:` source anywhere on
+it. Two further handset readings worth carrying: the admin Insights screen paints **33 / 75 / 38** on this
+device where the bench paints 60 / 75 / 38, because the stored snapshot holds extra live bookings and the
+screen says `3 of 9 jobs that reached a final state` — different numbers, both correct, which is what a
+derivation looks like from the inside, and the reason a bench screenshot is not the answer to "what does
+this number say"; and §82's `1039` paints across **2** line boxes at the device's own 2.0 text with
+`white-space:nowrap` removed and **1** with the shipped rule, which is the camera's 25th tally confirmed
+where the type is actually multiplied. `scrollIntoView` bit a third time: the concierge entry's rect still
+read `y=897` in an 889px viewport right after the call, because `#screen` scrolls smoothly by contract, and
+`style.scrollBehavior='auto'` with a direct `scrollTop` moved it to `y=496`. When the phone is next handled:
+it was left restored — accessibility settings back to `null`/`0`, `svc power stayon false`, the pushed image
+and 11 `uiautomator` dumps deleted, `font_scale` at its default, the app signed out through its own control.
+
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by
 the 479-byte `ATKINSON-AUTHORS.txt` that sits beside it, a `--font-ui` opening with a family

@@ -5484,9 +5484,91 @@ archive opened rather than assumed — `unzip -p Sukinnect-1.2-preview.37-debug.
 md5sum` answers `d63ffb2b8bd54624fa46cc64c3dac8ab`, the same value `md5sum Sukinnect-next.html` and
 `dist/Sukinnect-next.html` answer. Nothing was on adb when it finished, so the §85 header fix — the one
 change in this build whose whole point is a case the camera has never walked — is unverified on hardware
-by construction, and `preview.33` is still what the phone holds.
+by construction, and `preview.33` is still what the phone holds. (superseded next morning by §86: the phone holds `.37` now, and five of the six legs are settled there)
 
+## 86. Handset walk 5: what a phone settled, and the two silences that were the instrument
 
+Six legs were owed on `1.2-preview.37`. The vivo 1906 (`80d20768`, Android 10, WebView
+`155.0.8059.43`, 720x1544 at `Override density: 256` → **450 CSS px**, read from the page as
+`innerWidth 450 / innerHeight 889 / devicePixelRatio 1.6`) took all six, and five closed. The write-up is
+*Handset walk 5* in `DEVICE-PASS.md`; what belongs here are the facts that generalise.
 
+**A silence from a channel that is still busy is not a negative result.** TalkBack does speak an opened
+dialog — measured as a new `requestAudioFocus()` from `SpeechControllerImpl` with
+`GAIN_TRANSIENT_MAY_DUCK` and `usage=USAGE_ASSISTANCE_ACCESSIBILITY`, against a non-interactive card and a
+dialog body text that each produce nothing. The first attempt at the *close* case read zero new lines and
+was one sentence away from being recorded as "closing announces nothing". The channel is idle only when
+`dumpsys audio`'s focus stack is empty, and TalkBack keeps its entry there for tens of seconds after
+speaking (holds of 39s and 51s, and one still held 81s after its request), so an utterance inside a held
+session cannot appear as a new request. The driver now waits for the stack to clear before each measured
+tap and prints how long it waited — which is also what makes the 0 on the two control rows mean something.
+The same run reads the log as a **set difference** against a snapshot, because the speech log is a ring
+buffer and the first version compared a bare `HH:MM:SS` string against lines that begin
+`MM-DD HH:MM:SS:mmm`: a lexical comparison that answers "nothing new" forever, which is a passing test
+nobody can distinguish from a dead one.
 
+**A platform that answers one injected tap and refuses the next is telling you which surface it
+protects.** The concierge's photo control opens the real
+`com.google.android.documentsui/.picker.PickActivity` — the `--tap` addition to
+`tools/device-probe.cjs` is what proved it, because `element.click()` from `Runtime.evaluate` carries no
+user activation and Chrome refuses a chooser without one. But ColorOS will not hand a *document* to a
+synthetic pointer: four attempts across two layouts (grid tile centre, grid preview icon, list preview
+icon, and the same icon as a `motionevent DOWN` + 1s + `UP`) left the picker resumed and our page
+unchanged, while a tap at `(106,194)` toggled the "Large files" chip from `checked="false"` to
+`checked="true"` and a swipe at `360,1200 → 360,700` scrolled the very list whose rows refuse taps. Two
+controls — one on the same window, one on the same widget — are what turn "it did not work" into "this
+specific affordance does not accept synthetic activation". Before even that, the test file was invisible:
+`adb push` preserved a 2026-09-20 date and indexed nothing, so the picker's RECENT IMAGES held only the
+owner's real photographs, which are not mine to select. `touch` plus `MEDIA_SCANNER_SCAN_FILE` put
+`suki-leg6-test.png` at MediaStore row 667 and at the top of the grid.
 
+**The app's half of §75 is now a measurement rather than a comment.** A `File` handed to
+`#hidden-file-input` through `DataTransfer` — the mechanism a browser itself uses when a picker returns a
+document, so this is a state a person produces rather than one written into a model — then `change`, then a
+read of the painted screen:
+
+```
+node tools/shot.cjs --probe=@.scratch/probe-name-only.js --only=concierge
+  probe → {"inputHolds":"1 file(s), name=IMG_kitchen_leak.jpg",
+           "namePainted":[" Describe the issue Attach a photo of the problem IMG_kitchen_leak"],
+           "imgSrcsForPhoto":[], "screenH1":"AI Service Concierge"}
+no console errors across 1 screens
+```
+
+The screen paints the name and `imgSrcsForPhoto` is empty: no `blob:` or `data:` source anywhere on it.
+The two refusals in the code ("This prototype keeps the picture on your device", and the concierge
+refusing to sort a photo with no words beside it) are now backed by pixels.
+
+Also confirmed on hardware, and worth listing because each is a case the bench cannot contain: §85's
+second-provider header `Erning Bautista · Fruit Harvest & Buy · Brgy. Buayan`, signed in through the
+painted form, with `Resident / Provider` chips; §82's `1039` painted across **2** line boxes at the
+device's own 2.0 text with `white-space:nowrap` removed and **1** with the shipped rule; §82's Insights
+reading **33 / 75 / 38** on this device against the bench's 60 / 75 / 38, because the stored snapshot holds
+extra live bookings and the screen says `3 of 9 jobs that reached a final state` — different numbers, both
+correct, which is what a derivation looks like from the inside; and §77's dialog tree on a *second*
+surface, the sign-out confirmation, whose `[data-layer]` list empties on the `×` tap.
+
+**What stays unverified, stated because two instruments can prove a thing happened without proving what
+was said.** No channel here recovers TalkBack's utterance text — `logcat` produced 0 lines matching
+`talkback|accessib` across the whole walk, and Android 10's `PlaybackActivityMonitor` dump lists client
+handles with no per-player detail — so the burst proves an announcement occurs and the a11y tree proves the
+name is exposed, and neither proves the wording is spoken. And one thumb-tap inside the picker is still
+owed.
+
+One trap re-encountered for the third time in this repository: after `scrollIntoView({block:'center'})`
+the concierge entry's rect still read `y=897` in an 889px viewport, because `#screen` scrolls smoothly by
+contract. `style.scrollBehavior='auto'` plus a direct `scrollTop` moved it to `y=496, vis:true`. A rect
+read in the breath after a scroll is the element's *old* position.
+
+The device was left as it was found: `enabled_accessibility_services=null` and `accessibility_enabled=0`
+(both off before this walk asked them), `svc power stayon false`, the pushed test image deleted and
+re-scanned out of MediaStore, 11 `uiautomator` dumps from this and earlier walks deleted
+(`ls /sdcard/*.xml` answers 0), `font_scale` back to its default, and the app signed out through its own
+control and confirmation dialog. `preview.37` (`versionCode 39`) stays installed.
+
+`node tools/verify.cjs` re-run at the end of this walk: **all 560 checks passed**, with
+`git status --porcelain -- Sukinnect-next.html` answering nothing — no application file changed while the
+phone was attached. The suite (**43 families, 219 mutants, 219 caught, 0 not applied**), the seven-corner
+sweep and `node tools/probe-all.cjs` (**41 instruments**) are quoted from the §85 pass for that reason, and
+were not re-run here. The instruments added during this walk live in `.scratch/` and are throwaway by
+design: a handset driver written to answer one question about one phone is not a gate.
