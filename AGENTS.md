@@ -2676,13 +2676,43 @@ it. Two further handset readings worth carrying: the admin Insights screen paint
 device where the bench paints 60 / 75 / 38, because the stored snapshot holds extra live bookings and the
 screen says `3 of 9 jobs that reached a final state` — different numbers, both correct, which is what a
 derivation looks like from the inside, and the reason a bench screenshot is not the answer to "what does
-this number say"; and §82's `1039` paints across **2** line boxes at the device's own 2.0 text with
-`white-space:nowrap` removed and **1** with the shipped rule, which is the camera's 25th tally confirmed
-where the type is actually multiplied. `scrollIntoView` bit a third time: the concierge entry's rect still
+this number say"; and §82's `1039` paints across **2** line boxes at the device's own 2.0 text with the
+`.stat-strip .f b` guard removed and **1** with the shipped rule — against the guard as a pair, since
+§82 already recorded that dropping only `white-space:nowrap` while keeping `flex-shrink:0` breaks nothing.
+This is the camera's 25th tally confirmed where the type is actually multiplied.
+`scrollIntoView` bit a third time: the concierge entry's rect still
 read `y=897` in an 889px viewport right after the call, because `#screen` scrolls smoothly by contract, and
 `style.scrollBehavior='auto'` with a direct `scrollTop` moved it to `y=496`. When the phone is next handled:
 it was left restored — accessibility settings back to `null`/`0`, `svc power stayon false`, the pushed image
 and 11 `uiautomator` dumps deleted, `font_scale` at its default, the app signed out through its own control.
+
+A FINDING COUNT AND AN INSTRUMENT ROW MUST NOT SHARE ONE KEY, AND A RUNNER THAT ONLY ASKS "DID YOU
+ANSWER" WILL PRINT `ok` BESIDE A DEFECT. Adding the §75 probe (`tools/probe-concierge-photo-name.js`,
+which hands the concierge's file input a `File` through `DataTransfer` — the browser's own mechanism when
+a picker returns a document — and then reads whether any bytes reached the painted screen) put the count
+for the whole instrument pass up to 42, and reading that pass's own line found `probe-whitespace.js`
+printing `ok … findings:1` for the chat room. Both halves of that line were wrong, in different ways. The
+count was the instrument: the probe captured one element handle per field and clicked Send, the room
+re-rendered, and tokens two and three answered `NO CONTROL FOUND` about a button painted in front of the
+detached node — while the file's own comment four lines above said plainly that such rows "say nothing
+about the app". The predicate counted the string as an app finding anyway. The sentence was the header
+bullet claiming a whitespace chat message "gives no feedback"; `sendChatMessage()` trims, refuses and
+raises `Type a message first`, and the bullet had been written from the record count and never from the
+screen. Two fixes: `relive()` re-resolves the field by id or name before every token — the same lesson
+`probe-blank-query.js` records in its header, arrived at twice because the second file did not read the
+first — and `findings` now counts only rows where the app did something, with rows the probe could not
+complete reported separately as `instrumentRows`. Re-run: both screens answer `findings:0,
+instrumentRows:0, report:[]`. `tools/falsify-photo-name.cjs` (2 breaks, 2 caught, 0 not applied) is what
+earned the §75 probe's own zero: storing `URL.createObjectURL(file)` in place of `file.name` answers
+`LEAK: 0 image source(s) and 1 bytes-bearing string(s)` — the mutant a probe counting `<img>` elements
+alone would have called clean, which is why it reads the painted markup as well — and returning before the
+read answers `NO CONCLUSION: … the screen paints no file name`, so a clean row cannot come from a screen
+that measured nothing. One mechanism stays recorded rather than built: `probe-all.cjs` prints each page
+answer through `.slice(0, 78)`, applied to the longest answer, so the tail that explains a count never
+reaches the page, and the runner has no vocabulary for what an answer *means*. The convention that would
+close it — every page probe names its defect key `findings`, and the runner promotes a positive count from
+`ok` to `XX` — is not half-implemented for the reason the shipped-file gap is not: `grep -l findings
+tools/probe-*` answers two files, and those two do not yet agree on what a finding is.
 
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by

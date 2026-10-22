@@ -29,13 +29,30 @@
        fallbacks intend, and the unchanged-save guard then said "No change to save";
      - two residuals, neither of which paints a lie: the sign-in form writes `state.auth.email = " "`
        while refusing with "Enter your email to continue." — nothing in the app reads `auth.email`, so
-       the blank value is stored and never shown; and a space sent in chat appends no record and gives
-       no feedback, leaving the field as it was typed, which is its own answer.
+       the blank value is stored and never shown; and a space sent in chat appends no record and leaves
+       the field as it was typed, which is its own answer.
      No whitespace value was found stored in a record a person can see.
 
-   KNOWN LIMIT OF THE INSTRUMENT: after the first token is clicked the layer re-renders, so the
-   element handle held for the second and third tokens is detached and reports `NO CONTROL FOUND`.
-   Those rows say nothing about the app; read a finding only from a row that named a real control.
+   CORRECTED IN THE INSTRUMENT ON 2026-10-22. Re-read after the chat room was added to the walk, that
+   second bullet was wrong in its last clause and the counter was wrong in a worse way. The app does give
+   feedback: `sendChatMessage()` trims, refuses, and raises the toast "Type a message first". And the
+   `findings:1` the runner printed for `chat-input` was not the application at all — the first click
+   re-renders the room, so the handle captured before it was detached, and tokens two and three answered
+   NO CONTROL FOUND for a Send button painted in front of the probe. `findings` counted that as an app
+   row, so the line read `ok … findings:1` and `probe-all.cjs`, which judges a page probe by whether it
+   answered rather than by what it answered, said nothing needed attention. Two changes: the field is
+   re-resolved by id or name before every token (`relive`), and an instrument row is counted under
+   `instrumentRows` and never inside `findings`. A clean number and a blind sensor must not share a key.
+   Re-run: `node tools/shot.cjs --probe=@tools/probe-whitespace.js
+   --only=resident-edit-form,chat-room` answers `findings:0, instrumentRows:0`.
+
+   LIMIT CLOSED, AND THE SENTENCE THAT REPLACED IT. What used to sit here read "KNOWN LIMIT OF THE
+   INSTRUMENT: after the first token is clicked the layer re-renders, so the element handle held for the
+   second and third tokens is detached and reports NO CONTROL FOUND. Those rows say nothing about the app;
+   read a finding only from a row that named a real control." That is the correct diagnosis of an
+   instrument defect written as a standing limit on the reader instead of a fix in the code — and the
+   counter disagreed with the comment the whole time. `relive()` now re-resolves the field before every
+   token, so no row is produced from a detached node.
    A companion attempt to ask what the SEARCH screen says about a blank query was deleted the same
    day: it painted in the breath after the tap, while the simulated discovery was still reading
    "Finding nearby providers…", so every query — including one that matches — printed zero cards. An
@@ -112,12 +129,26 @@
   }
 
   const fs = fields();
+  /* One handle per token, not one per field. The first click re-renders the screen, so every element
+     captured before it is detached, and `submitFor` on a detached node answers NO CONTROL FOUND about a
+     control that is painted right there. This is the companion file to `probe-blank-query.js`, whose
+     header records the identical mistake — "it held one search-input element across the whole loop, so
+     from the second case on it typed into a detached node" — and it is why the two rows after the first
+     one said nothing about the application. */
+  function relive(el) {
+    if (el.isConnected) return el;
+    const same = [].slice.call(document.querySelectorAll('input, textarea'));
+    return same.find(x => x.id && x.id === el.id) ||
+      same.find(x => x.name && x.name === el.name) || el;
+  }
   const report = [];
-  for (const el of fs) {
+  for (const found of fs) {
+    let el = found;
     const before = snap();
     const label = el.id || el.name;
     const claims = [];
     for (const tok of TOKENS) {
+      el = relive(found);
       if (!type(el, tok)) { claims.push({ token: JSON.stringify(tok), typed: false }); continue; }
       const btn = submitFor(el);
       const btnText = btn ? (btn.textContent || '').trim().slice(0, 22) : '';
@@ -144,16 +175,24 @@
         grew: grew, changed: changed, blankPainted: blankPainted() });
       restore(before);
     }
-    /* A finding is: whitespace stored anywhere, a record created, a blank painted row, or a claim
-       (modal/error/toast) set. A row whose only change is a draft object and no claim is the app
-       refusing quietly, which is correct behaviour and stays out of the report. */
+    /* A finding is: whitespace stored anywhere, a record created, a blank painted row, or the app's own
+       handler throwing. A row whose only change is a draft object and no claim is the app refusing
+       quietly, which is correct behaviour and stays out of the report.
+       A row the probe could not complete is counted SEPARATELY. `findings` used to include
+       NO CONTROL FOUND, so a detached handle looked like an application defect — and because
+       `probe-all.cjs` judges a page probe by whether it answered rather than by what it answered, the
+       line printed `ok … findings:1` and nothing forced anyone to read which kind it was. */
     const flat = [];
     claims.forEach(c => (c.changed || []).forEach(ch => flat.push(ch)));
-    const bad = claims.some(c => c.threw || c.submit === 'NO CONTROL FOUND' ||
+    const bad = claims.some(c => c.threw ||
       (c.blankPainted || []).length || c.grew || (c.changed || []).some(ch => ch.blank));
+    const blind = claims.some(c => c.submit === 'NO CONTROL FOUND' || c.typed === false);
     const stored = flat.some(ch => ch.blank);
-    if (bad || stored) report.push({ field: label, tokens: claims });
+    if (bad || blind || stored) report.push({ field: label, tokens: claims, appFinding: bad || stored });
   }
 
-  return { typedFields: fs.length, findings: report.length, report: report };
+  return { typedFields: fs.length,
+    findings: report.filter(r => r.appFinding).length,
+    instrumentRows: report.filter(r => !r.appFinding).length,
+    report: report };
 })()

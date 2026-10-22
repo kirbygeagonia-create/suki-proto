@@ -5528,14 +5528,20 @@ document, so this is a state a person produces rather than one written into a mo
 read of the painted screen:
 
 ```
-node tools/shot.cjs --probe=@.scratch/probe-name-only.js --only=concierge
-  probe → {"inputHolds":"1 file(s), name=IMG_kitchen_leak.jpg",
-           "namePainted":[" Describe the issue Attach a photo of the problem IMG_kitchen_leak"],
-           "imgSrcsForPhoto":[], "screenH1":"AI Service Concierge"}
+node tools/shot.cjs --probe=@tools/probe-concierge-photo-name.js --only=concierge
+  probe → {"painted":["ibe the issue Attach a photo of the problem IMG_kitchen_leak"],
+           "sizePainted":false,"imageSourcesHoldingBytes":0,"blobOrDataInPaintedHtml":0, …}
 no console errors across 1 screens
 ```
 
-The screen paints the name and `imgSrcsForPhoto` is empty: no `blob:` or `data:` source anywhere on it.
+The screen paints the name and both byte counters read 0: no `blob:` or `data:` source anywhere on it,
+as an element attribute or in the markup. The probe refuses rather than reporting that, so a clean answer
+cannot come from a screen that measured nothing — its rows are ordered control → bytes → name-painted,
+and `node tools/falsify-photo-name.cjs` breaks the second and third steps and requires a different
+non-clean answer from each: storing `URL.createObjectURL(file)` where the handler stores `file.name`
+answers `LEAK: 0 image source(s) and 1 bytes-bearing string(s)`, which is the mutant a probe counting
+`<img>` tags alone would have called clean, and returning before the read answers `NO CONCLUSION: the pick
+landed and no bytes leaked, but the screen paints no file name`. 2 of 2, 0 not applied.
 The two refusals in the code ("This prototype keeps the picture on your device", and the concierge
 refusing to sort a photo with no words beside it) are now backed by pixels.
 
@@ -5570,5 +5576,79 @@ control and confirmation dialog. `preview.37` (`versionCode 39`) stays installed
 `git status --porcelain -- Sukinnect-next.html` answering nothing — no application file changed while the
 phone was attached. The suite (**43 families, 219 mutants, 219 caught, 0 not applied**), the seven-corner
 sweep and `node tools/probe-all.cjs` (**41 instruments**) are quoted from the §85 pass for that reason, and
-were not re-run here. The instruments added during this walk live in `.scratch/` and are throwaway by
-design: a handset driver written to answer one question about one phone is not a gate.
+were not re-run here. The handset drivers stayed in `.scratch/` — a driver written to answer one question
+about one phone is not a gate — but the two bench instruments this walk produced are committed and counted:
+`tools/probe-concierge-photo-name.js`, which takes the instrument total to 42, and
+`tools/falsify-photo-name.cjs`, which takes the suite to 44 families; §87 records the instrument correction
+that adding the probe surfaced, and both totals were re-derived by the passes named there.
+
+## 87. A clean number and a blind sensor must not share a key
+
+Found while adding one instrument, not while testing the application. The full pass of
+`node tools/probe-all.cjs` that took the total to 42 printed this, and stopped there:
+
+```
+ok probe-whitespace.js               [page resident-edit-form,chat-room]2 answers · {"typedFields":1,"findings":1,"report":[{"field":"chat-input","tok
+```
+
+`ok` beside `findings:1` is two sentences about the same row that disagree, and only one of them is a
+verdict the runner reads: `probe-all.cjs` judges a page probe by whether it ANSWERED, not by what the
+answer said. The line is also cut by the runner's own `.slice(0, 78)` — applied to the LONGEST answer,
+so the tail of a row that would have explained the count never reaches the page a human reads. Asked
+directly, the probe answered:
+
+```
+{"typedFields":1,"findings":1,"report":[{"field":"chat-input","tokens":[
+  {"token":"\" \"","submit":"Send","stayedInField":" ","grew":null,"changed":[],"blankPainted":[]},
+  {"token":"\"   \"","submit":"NO CONTROL FOUND"},
+  {"token":"\"\t\"","submit":"NO CONTROL FOUND"}]}]}
+```
+
+Reading that row rather than the count found two errors, one in a sentence and one in a number.
+
+**The sentence.** `probe-whitespace.js`'s own header recorded that a space sent in chat "appends no
+record and gives no feedback". It does give feedback: `sendChatMessage()` trims, refuses, and raises the
+toast `Type a message first`. The bullet was written from the record count and never from the screen.
+
+**The number.** `findings:1` was not the application at all. The probe captured one element handle per
+field and then clicked the layer's primary control for each of three tokens; the first click re-renders
+the room, so from the second token on the handle was detached and `submitFor()` answered
+`NO CONTROL FOUND` about a Send button painted in front of it. The predicate counted that string as an
+app finding — while the file's own comment, four lines above, said plainly that `NO CONTROL FOUND` rows
+"say nothing about the app". The comment and the code had been written by the same hand and disagreed.
+
+Two fixes. The field is re-resolved by id or name before every token (`relive()`), which is the same
+lesson `probe-blank-query.js` records in its header — "it held one `search-input` element across the
+whole loop, so from the second case on it typed into a detached node" — arrived at twice because the
+second file did not read the first. And the counters split: `findings` now counts only rows where the app
+did something (whitespace stored, a record created, a blank painted, its own handler throwing) and
+`instrumentRows` counts rows the probe could not complete. Re-run:
+
+```
+node tools/shot.cjs --probe=@tools/probe-whitespace.js --only=resident-edit-form,chat-room
+  probe → {"typedFields":1,"findings":0,"instrumentRows":0,"report":[]}
+  probe → {"typedFields":5,"findings":0,"instrumentRows":0,"report":[]}
+```
+
+Both screens now report nothing, and they report nothing because nothing happened, not because the probe
+lost its handle. **A clean answer and a blind sensor must not print the same character** is the rule this
+file has written for screens, for data, for a wait, and for a probe runner — and here it was hiding
+inside a count that a human had already learned to skim past. Which is also why the instrument total in
+§86 is 42 and not 41, and why `tools/probe-concierge-photo-name.js` names its population in its header
+instead of leaving the runner to guess it.
+
+**The class is wider than the one probe, and the fix for the runner is recorded rather than built.** Any
+page probe can print a non-zero defect count inside an `ok` line, because the runner has no vocabulary
+for what an answer means — it has `NO CONCLUSION` as a sentinel for *did not measure*, which is the one
+question a runner can answer without knowing the subject. The shape that would close this is a
+convention, not a parser: every page probe that counts defects names its key `findings`, and
+`probe-all.cjs` promotes any answer whose `findings` is a positive integer from `ok` to `XX`. Not built
+in this pass, for the reason the shipped-file gap is recorded rather than closed: a rule that only two of
+42 probes currently obeys is a half-built surface, and the falsifier for it (`falsify-probe-population`
+already owns the sentinel rule) would have to gain a second planted probe before the convention means
+anything. `grep -l findings tools/probe-*` names exactly two files — this one and `probe-money-sums.js`,
+whose `findings` is an array and whose header already argues the same case from the other direction ("a
+zero that means nothing must not print like a zero that means clean", which is why it reports `checked`
+beside `findings`). Making the runner read that key is the next pass, and the two probes would first have
+to agree on what a finding is.
+

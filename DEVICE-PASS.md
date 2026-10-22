@@ -1458,9 +1458,12 @@ upgrade path was walked: `dumpsys package com.sukinnect.app` answers `versionCod
    count, the attention card holds 6 rows and the strip counts 6, and nothing on the screen is typed.
    A bench screenshot of a clean number would have hidden both facts.
 3. **§82's split-figure guard, broken and then honoured on hardware.** At the device's own **2.0** text
-   on a 450px panel, with `white-space:nowrap` deleted the admin stat row paints `1039` across
-   **2 line boxes**; with the shipped rule it paints **1**. This is the measurement the camera's 25th
-   tally makes, taken where the type is actually multiplied.
+   on a 450px panel, with the whole guard removed from `.stat-strip .f b` the admin stat row paints
+   `1039` across **2 line boxes**; with the shipped rule it paints **1**. (Which half of the rule does
+   the work is already recorded in CHANGES §82: dropping only `white-space:nowrap` while keeping
+   `flex-shrink:0` breaks nothing, because the item then keeps its width and the label wraps — so this
+   row was taken against the guard as a pair, not against one declaration.) This is the measurement the
+   camera's 25th tally makes, taken where the type is actually multiplied.
 4. **§85's identity, on the account the camera has never been.** Signing in as the second provider
    through the *painted* form (`erning@demo.ph`) yields the dashboard header
    `Erning Bautista · Fruit Harvest & Buy · Brgy. Buayan` — no typed `Ramil Odiada (Pro)`, no
@@ -1515,11 +1518,13 @@ Two obstacles sit between that and a completed selection, and both belong to the
 The app's half of the same promise was then measured in a real browser instead: a `File` handed to
 `#hidden-file-input` through `DataTransfer` — the mechanism the browser itself uses when a picker returns
 a document — then a `change` event, then a read of the painted screen.
-`node tools/shot.cjs --probe=@.scratch/probe-name-only.js --only=concierge` answers
-`inputHolds "1 file(s), name=IMG_kitchen_leak.jpg"`, the screen text contains
-`Attach a photo of the problem IMG_kitchen_leak`, and `imgSrcsForPhoto` is **empty** — no `blob:` or
-`data:` source anywhere on the screen. §75's "you see the name you gave it, not the photo" is a
-measurement, not a comment. No console errors.
+`node tools/shot.cjs --probe=@tools/probe-concierge-photo-name.js --only=concierge` answers
+`painted ["…Attach a photo of the problem IMG_kitchen_leak"]`, `imageSourcesHoldingBytes: 0` and
+`blobOrDataInPaintedHtml: 0` — no `blob:` or `data:` anywhere on the screen, as an attribute or in the
+markup. The probe refuses rather than printing those zeros, and `node tools/falsify-photo-name.cjs`
+(2 breaks, 2 caught) proves both refusal paths fire: a handler that keeps an object URL instead of the
+name answers `LEAK`, and one that returns before reading the pick answers `NO CONCLUSION`. §75's "you see
+the name you gave it, not the photo" is a measurement, not a comment. No console errors.
 
 **One trap re-encountered, third time in this repository:** after `scrollIntoView({block:'center'})` the
 concierge entry's rect still read `y=897` in an 889px viewport, because `#screen` scrolls smoothly by
@@ -1555,6 +1560,11 @@ TalkBack's *wording* names the dialog (no channel here recovers spoken text — 
 is exposed, the burst proves an announcement happens), and whether either provider or admin reaches a
 notification surface at all in this build (§27 is untestable for the other two roles, as
 `tools/probe-notification-targets.js` reports).
+
+And one flag on the *other* phone, which was not attached for this walk: `S4CUYTJB6HNNWC49` (the OPPO
+CPH2179) still has `svc power stayon true` set from Handset walk 4 and still holds `preview.33`. Clear it
+and install `.37` the next time that device is on the cable. The vivo `80d20768` was left clean —
+`settings get global stay_on_while_plugged_in` answers `0`, verified after this walk.
 
 **Decided 2026-10-21 and closed** —
 - `color-scheme: only light` is declared in `:root`, with `--measure --dark` re-run afterwards across all
