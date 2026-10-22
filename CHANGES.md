@@ -5416,6 +5416,77 @@ records that were right.
 
 No application file changed, so `preview.36` is still the current build and the sweep still stands; what grew is the gate (**556**) and the suite (**42 families, 213 mutants applied, 213 caught, 0 not applied**), with `falsify-pay-records` reading **3 of 3 inside the full run** rather than only alone.
 
+## 85. Four owner rulings, one of which turned into an identity bug
+
+The owed list was put to the owner as four decisions. Three are recorded where they belong — refresh
+PR #9 rather than merge it, leave the y-gutter as documented, and the two that changed the file:
+
+- **`color-scheme: only light`** declared in `:root`. The app declares no dark theme, and
+  `node tools/shot.cjs --measure --dark` was re-run *after* the declaration across all 73 screens: every
+  failure tally zero, contrast included, no console errors — so suppressing Chrome's algorithmic
+  darkening costs nothing measurable and removes the one path that could rewrite the §30 palette with no
+  media query for any instrument to catch. The cost is stated in the comment: a person who asked their
+  browser for dark gets the light app.
+- **One word for the role.** The sign-in chip read **Service Pro** while every card, row, header and
+  roster inside the app says *provider*, and the master prompt's role model says SERVICE PROVIDER. The
+  chip, and a demo notification titled "Verified Pro Nearby", now read Provider / verified provider.
+
+### The wording hunt found a typed identity on the provider dashboard
+
+Widening the scan from the phrase `Service Pro` to the standalone word `Pro` turned up exactly one more
+hit in the whole file — and it was not a wording problem:
+
+```
+11204:  <h1>Ramil Odiada (Pro)</h1>
+11205:  <div class="sub">Plumbing Specialist · Brgy. Poblacion</div>
+```
+
+That is the **provider dashboard's own header**, typed. Whoever holds the phone was told, in the `<h1>`
+of their own screen, that they are Ramil Odiada the plumber in Poblacion — including the fruit harvester
+in Buayan, whose bookings, earnings and reviews the rest of the page correctly scopes to him. It is the
+public-preview-card defect (`4.9` and `214`, p1's figures, so every screenshot of it looked right)
+arriving from the other side: a typed identity is invisible in every screenshot taken as p1, which is the
+only identity the camera has ever walked by default.
+
+The header now reads the signed-in record through the `me` the function already resolves and already
+guards, with the saved professional profile winning where the person has edited it. The gate check signs
+in as p7 and requires the name, the trade and the barangay to move together — `Erning Bautista` and
+`Buayan` in, `Ramil Odiada` and `Plumbing Specialist` out — because a check that only asks whether the
+old string is gone would pass on a header that painted nothing.
+
+### Two of the new checks were wrong before the falsifier finished
+
+The first drafts failed on their own file, and both failures were the instrument:
+
+1. `!/prefers-color-scheme/.test(css)` — **true**, because the comment explaining the decision contains
+   the phrase. The rule now matches the *rule form*: `/@media[^{]*\(\s*prefers-color-scheme/`.
+2. "the old word survives only in the comment that explains it went", written as a per-line test for a
+   comment marker — the comment's `/*` is three lines above the line holding the word, so a block
+   comment's continuation line is not a comment to a line-anchored regex. The scan now strips comments
+   and searches the remainder, and *requires* the word to still exist in the comment, so the exemption
+   cannot pass by both halves going missing.
+
+And the break that exposed the too-narrow rule: reviving "Verified Pro Nearby" printed **MISSED** against
+the phrase-based check — the notification never contained the string `Service Pro`. The break was right
+and the rule was small; widening it to `\bPro\b` is what found the dashboard header. `node
+tools/falsify-declared-state.cjs` — **6 breaks, 6 caught, 0 not applied**.
+
+Gate **560**; whole suite **43 families, 219 mutants applied, 219 caught, 0 not applied** (`node tools/falsify-all.cjs`), the new family
+reading **6 of 6 inside the full run**. `node tools/shot.cjs --measure --dark` re-run with the
+declaration in place: every failure tally zero across **73 screens**, contrast included —
+which is the measurement that makes `only light` a free choice rather than a trade. Then the whole
+seven-corner sweep: **7 of 7 corners clean at 25 tallies each**, because three painted strings
+(the chip, the notification title, the dashboard header) changed width. `node tools/probe-all.cjs`
+re-run after both: **41 instruments, 0 needing attention**.
+
+And the build that carries it: `1.2-preview.37`, `versionCode 39`, `BUILD SUCCESSFUL in 38s`, with the
+archive opened rather than assumed — `unzip -p Sukinnect-1.2-preview.37-debug.apk assets/Sukinnect.html |
+md5sum` answers `d63ffb2b8bd54624fa46cc64c3dac8ab`, the same value `md5sum Sukinnect-next.html` and
+`dist/Sukinnect-next.html` answer. Nothing was on adb when it finished, so the §85 header fix — the one
+change in this build whose whole point is a case the camera has never walked — is unverified on hardware
+by construction, and `preview.33` is still what the phone holds.
+
+
 
 
 

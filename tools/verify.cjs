@@ -1244,6 +1244,43 @@ suite('hygiene', async () => {
   c.check('no control claims success it does not deliver', congratulating.length === 0,
     congratulating.map(t => t.slice(0, 60)).join(' | '));
 
+  /* Decided 2026-10-21: the app declares no dark theme, so it declares itself light. Without this the
+     published web surface is exposed to Chrome for Android's Auto Dark Theme, which rewrites colours
+     algorithmically — no media query fires, so no instrument in tools/ could see it happen. The paired
+     rule is the half-built state AGENTS has warned about since the measurement: a prefers-color-scheme
+     block here would put UA-darkened widgets beside authored light text, so this refuses that too. The
+     positive control is @media itself — without it, "no prefers-color-scheme" passes on a stylesheet
+     that has no media queries at all. */
+  c.check('the page declares itself light-only and asks for no dark treatment',
+    /color-scheme:\s*only light/.test(css) && !/@media[^{]*\(\s*prefers-color-scheme/.test(css) &&
+      /@media/.test(css),
+    'declared: ' + /color-scheme:\s*only light/.test(css) + ' · dark block present: ' +
+      /@media[^{]*\(\s*prefers-color-scheme/.test(css) + ' · any @media: ' + /@media/.test(css));
+
+  /* One vocabulary for the two roles the marketplace exists for. The sign-in chip read "Service Pro"
+     while every card, row, header and roster inside the app says "provider", and the master prompt's
+     role model says SERVICE PROVIDER. The owner settled it toward one word on 2026-10-21. The check
+     reads the painted chips rather than the constant, because a label can be re-typed on the way to the
+     screen — and it checks the resident chip too, so it cannot pass on markup that painted nothing. */
+  const auth = boot();
+  const authHtml = String(auth.loginHTML());
+  c.check('the sign-in card names the roles the rest of the app names',
+    auth.AUTH_ROLE_LABEL.provider === 'Provider' && /Provider/.test(authHtml) &&
+      /Resident/.test(authHtml) && !/Service Pro/.test(authHtml),
+    'labels ' + JSON.stringify(auth.AUTH_ROLE_LABEL) + ' · old word painted: ' +
+      /Service Pro/.test(authHtml));
+  /* And nowhere else in the file: the demo notification reading "Verified Pro Nearby" and the provider
+     dashboard's own header reading "Ramil Odiada (Pro)" were the other hold-outs. Comments are stripped
+     before the scan, because the word is allowed to survive in the comment that records why it went —
+     a needle that reads prose as code is how a check passes on the wrong evidence, and this file has
+     been caught doing exactly that with a typed claim inside a comment. */
+  const codeOnly = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '');
+  const proInCode = (codeOnly.match(/\bPro\b/g) || []).length;
+  c.check('no code, label or painted string calls a provider "Pro"',
+    proInCode === 0 && codeOnly.indexOf('Service Pro') < 0 && src.indexOf('Service Pro') > -1,
+    'standalone Pro in code: ' + proInCode + ' · exemption comment present: ' +
+      (src.indexOf('Service Pro') > -1));
+
   /* Every number field in this app holds money, a weight, a count of days or a rate, and none of
      them can sensibly be negative. Seven declared a lower bound and four did not — including the
      unit price that let a -₱5.00/kg offer through to the record. `min` does not block the typing
@@ -2145,6 +2182,23 @@ suite('honesty', async () => {
     !/Nobody is on the roster/.test(insText) && /Providers by service/.test(insText) &&
       /Providers needing attention/.test(insText),
     'restored roster ' + ins.PROVIDERS.length);
+  /* The provider dashboard's header typed "Ramil Odiada (Pro)" and "Plumbing Specialist · Brgy.
+     Poblacion" — one provider's identity, painted on the screen of whoever is actually signed in. The
+     device can be signed in as the fruit harvester in Buayan and the bar still says plumber in
+     Poblacion, which is the public-preview-card defect arriving from the other side: a typed identity
+     looks right in every screenshot taken as p1. Name, trade and barangay now come from the record and
+     the saved professional profile together. */
+  const dash = boot();
+  dash.state.view = 'app'; dash.state.role = 'provider'; dash.state.tab = 'dashboard';
+  const asP1 = String(dash.providerDashboard());
+  dash.applyProviderIdentity('p7');
+  const asP7 = String(dash.providerDashboard());
+  const h1of = html => ((html.match(/<h1[^>]*>([^<]*)<\/h1>/) || [, 'none'])[1]);
+  const subOf = html => ((html.match(/<div class="sub">([^<]*)<\/div>/) || [, 'none'])[1]);
+  c.check('the dashboard header is the signed-in record’s identity, not a typed one',
+    /Ramil Odiada/.test(asP1) && /Erning Bautista/.test(asP7) && !/Ramil Odiada/.test(asP7) &&
+      /Buayan/.test(subOf(asP7)) && !/Plumbing Specialist/.test(asP7),
+    'p1: ' + h1of(asP1) + ' / ' + subOf(asP1) + ' — p7: ' + h1of(asP7) + ' / ' + subOf(asP7));
   /* The operations donut was typed: 18 items split 45/25/30 on a screen whose own
      tiles said 3 applications and 1 case. */
   const work = app.opsWorkload(app.adminCounts());

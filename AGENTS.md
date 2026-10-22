@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 11,809 lines, ONE :root block, 1,751 var() usages, 95 tokens declared with 92
+Sukinnect-next.html— 11,829 lines, ONE :root block, 1,751 var() usages, 95 tokens declared with 92
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1213,7 +1213,7 @@ Sukinnect-next.html— 11,809 lines, ONE :root block, 1,751 var() usages, 95 tok
                     heading count, all of them moved by the nav-label work — which is why the
                     figures above were re-run rather than re-read. They moved a fourth time the
                     next day (§76's eleven lines of day helpers) and a fifth the same evening
-                    (§77's dialog labelling), a sixth time with §78's register branch, a seventh for §79's nav-box correction, an eighth for §81's analytics row, a ninth for §82's Insights rewrite and a tenth for §83's single clock reading — and each time the fix was to run the tool, not to re-read the sentence. The next
+                    (§77's dialog labelling), a sixth time with §78's register branch, a seventh for §79's nav-box correction, an eighth for §81's analytics row, a ninth for §82's Insights rewrite, a tenth for §83's single clock reading and an eleventh for §85's declared scheme and dashboard header — and each time the fix was to run the tool, not to re-read the sentence. The next
                     reader should cite the tool rather than trust it.
                     Everything that was a real violation is now a token: #fff became
                     --surface and --on-brand, the modal dim became --scrim, and the phone
@@ -2185,10 +2185,14 @@ darkens them when the page *opts in*. Auto Dark Theme — the one feature that c
 palette — is not reproducible by emulating a media query, so it was settled from the shipping
 configuration instead: the activity parents `Theme.Material.Light.NoActionBar`, a fixed Light theme,
 and `MainActivity` makes no `setForceDark` / `setAlgorithmicDarkeningAllowed` call. The residual is
-the *browser* surface of the published `dist/`, where Chrome for Android would apply it; declaring
-`only light` is the fix and is left to the owner, because suppressing a user's dark preference is a
-product judgement. What must not happen is a half-built `prefers-color-scheme` block: that would put
-the app in the exact state where UA-darkened controls meet authored light text.
+the *browser* surface of the published `dist/`, where Chrome for Android would apply it. **Decided and
+done 2026-10-21: `color-scheme: only light` is declared in `:root`**, accepting the cost the owner was
+told — a person who asked their browser for dark gets the light app — and `--measure --dark` was re-run
+afterwards across all 73 screens to show the declaration changes nothing measurable (every failure tally
+zero, contrast included). A hygiene check pins the declaration and refuses a `@media
+(prefers-color-scheme…` block, so the app cannot drift into the half-built state. What must not happen is
+that half-built block: it would put the app in the exact state where UA-darkened controls meet authored
+light text.
 
 THE SHIPPED `Sukinnect.html` IS MEASURED BY NOTHING, and that is now stated rather than implied.
 Every instrument in `tools/` addresses the rebuild: `harness.cjs` pins `APP` to
@@ -2606,6 +2610,27 @@ that were right). The general rule: when a field and its evidence are written by
 consistency check between them is a tautology; the check that earns its place asserts the *call*, or the
 *vocabulary*, or the *route*, and the falsifier tells you which in about a minute — before the prose,
 which is the order this repository keeps failing to use and then writing down again.
+
+A CHECK THAT MATCHES PROSE PASSES ON THE WRONG EVIDENCE, AND A TOO-NARROW RULE HIDES THE DEFECT. §85
+began as an owner ruling on one word — the sign-in chip said "Service Pro" where every screen says
+*provider* — and ended on a typed identity. Two of the first-draft checks failed on their own file:
+`!/prefers-color-scheme/.test(css)` was false because the comment *explaining the decision* contains the
+phrase (the rule now matches the rule form, `/@media[^{]*\(\s*prefers-color-scheme/`), and "the old word
+survives only in the comment" was written as a per-line test for a comment marker, so a block comment's
+continuation line failed it — the scan now strips comments and searches the remainder, and requires the
+word to still be present in the comment so the exemption cannot pass by both halves going missing. Then
+the break that revived "Verified Pro Nearby" printed **MISSED** against the phrase rule: the notification
+never contained `Service Pro`. Widening to `\bPro\b` returned exactly one hit in the whole file, and it
+was the provider dashboard's `<h1>` — `Ramil Odiada (Pro)` and `Plumbing Specialist · Brgy. Poblacion`,
+typed, on the screen of whoever is signed in, including the fruit harvester in Buayan whose bookings,
+earnings and reviews the rest of the page correctly scopes to him. Same class as the public preview card
+typing p1's rating and job count: **a typed identity is invisible in every screenshot taken as p1**,
+which is the only identity the camera walks by default. The header now reads the signed-in record and the
+saved professional profile, and the gate check signs in as p7 and requires name, trade and barangay to
+move together — a check that only asked whether the old string was gone would have passed on a header
+painting nothing. `node tools/falsify-declared-state.cjs` — 6 breaks, 6 caught. And `color-scheme:
+only light` is now declared, decided by the owner 2026-10-21, with `--measure --dark` re-run across all
+73 screens afterwards to prove the declaration costs nothing measurable.
 
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by
@@ -3639,7 +3664,7 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate **556**; whole suite **42 families, 213 mutants applied, 213 caught, 0 not applied** (`node tools/falsify-all.cjs`) — re-run 2026-10-21 with `falsify-pay-records` added, and the rows the earlier sessions flagged stay cleared: `falsify-step-stamps` 4 of 4, `falsify-insights-records` 7 of 7, `falsify-split-figures` 1 of 1 with its redundant half printed as an observation, `falsify-verification-progress` 6 of 6, `falsify-verification-records` 10 of 10, `falsify-nav-fit` 4 of 4, `falsify-chart-collide` 5 of 5 inside the run, `falsify-seed-dates` 4 of 4, `falsify-dialog-focus` 4 of 4, `falsify-register-identity` 4 of 4 and `falsify-probe-population` 3 of 3. Quote a total from a pass that printed one.
+Gate **560**; whole suite **43 families, 219 mutants applied, 219 caught, 0 not applied** (`node tools/falsify-all.cjs`) — re-run overnight 2026-10-21 → 22 with `falsify-declared-state` added, and the rows the earlier sessions flagged stay cleared: `falsify-pay-records` 3 of 3, `falsify-step-stamps` 4 of 4, `falsify-insights-records` 7 of 7, `falsify-split-figures` 1 of 1 with its redundant half printed as an observation, `falsify-verification-progress` 6 of 6, `falsify-verification-records` 10 of 10, `falsify-nav-fit` 4 of 4, `falsify-chart-collide` 5 of 5 inside the run, `falsify-seed-dates` 4 of 4, `falsify-dialog-focus` 4 of 4, `falsify-register-identity` 4 of 4 and `falsify-probe-population` 3 of 3. Quote a total from a pass that printed one.
 Of these, the families that drive the camera rather than the gate are whatever
 `grep -l shot.cjs tools/falsify-*.cjs` names — fourteen on 2026-10-21: `blank-query`,
 `camera-surfaces`, `chart-collide`, `control-reach`, `dialog-focus`, `double-tap`, `flex-crush`,

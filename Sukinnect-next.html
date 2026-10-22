@@ -29,6 +29,15 @@
      Semantic state colors stay outside the brand on purpose (section 34).
      ============================================================ */
   :root{
+  /* The app declares no dark theme, and none was measured to work: `node tools/shot.cjs --measure
+     --dark` forces prefers-color-scheme across the whole walk and every tally — contrast included —
+     reads zero, because a page that declares nothing is treated as light-only for its widgets. What
+     that leaves exposed is Chrome for Android's Auto Dark Theme on the published surface, which
+     rewrites colours algorithmically with no media query for any check to catch. `only light`
+     suppresses it. Decided by the owner 2026-10-21, with the cost stated: a person who asked their
+     browser for dark gets the light app. The Android build was already safe — the activity parents a
+     fixed Light theme and MainActivity never calls setForceDark. */
+  color-scheme: only light;
   /* Bounds the browser's default font size on the desktop/web surface, where 1em on the root
      resolves against a size the user can set. It does NOT cap an Android phone: measured on a
      vivo at font_scale 1.35 the root computed 21.6px, because Chromium multiplies the *used*
@@ -506,10 +515,14 @@
      carries four fields, the toggle and the Admin line — fits a 640pt phone
      without the last control falling off the bottom of the card. */
   .auth-form{ margin-top:var(--s-6); text-align:left; }
-  /* Resident and Service Pro are the two roles the marketplace exists for, so
+  /* Resident and Provider are the two roles the marketplace exists for, so
      they are the only two choices on the card. Admin is an operations console,
      not a person looking for a plumber: it is reached from a quiet line at the
-     foot of the create-account card, never as a third chip. */
+     foot of the create-account card, never as a third chip. The provider chip
+     used to read "Service Pro" — one word on the sign-in card against "provider"
+     on every card, row, header and admin roster inside the app, and against the
+     role model in AGENTS.md. The owner settled it toward one vocabulary on
+     2026-10-21. */
   .auth-role{
     display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:var(--s-5);
     padding:3px; background:var(--cloud); border-radius:var(--r-md);
@@ -2134,7 +2147,7 @@ function serviceAvatar(providerOrId, size = 40, style = ''){
 // booking or profile it describes rather than on a screen of the same name.
 const NOTIFICATIONS = [
   {id:'n1', title:'Booking Confirmed', body:'Ramil Odiada has confirmed your plumbing request for Sat, Sep 12.', time:'10m ago', unread:true, icon:'droplet', bg:'var(--deep-100)', bookingId:'b1'},
-  {id:'n2', title:'Verified Pro Nearby', body:'Cristy Fernandez (Cleaning Specialist) is now available in your area.', time:'2h ago', unread:true, icon:'bubbles', bg:'var(--verified-100)', providerId:'p3'},
+  {id:'n2', title:'Verified provider nearby', body:'Cristy Fernandez (Cleaning Specialist) is now available in your area.', time:'2h ago', unread:true, icon:'bubbles', bg:'var(--verified-100)', providerId:'p3'},
   {id:'n3', title:'Payment Processed', body:'Your payment of ₱515 to Cristy Fernandez was successful.', time:'Aug 30', unread:false, icon:'credit-card', bg:'var(--warning-100)', bookingId:'b3'},
   {id:'n4', title:'Service Completed', body:'Jerico Salamat completed electrical service. Please leave a rating!', time:'Aug 21', unread:false, icon:'star', bg:'var(--warning-100)', bookingId:'b6'}
 ];
@@ -7718,7 +7731,7 @@ const DEMO_LOGIN = {
   name: 'Juan Dela Cruz', brgy: 'Poblacion', pass: 'demo1234'
 };
 
-const AUTH_ROLE_LABEL = { resident:'Resident', provider:'Service Pro', admin:'Admin' };
+const AUTH_ROLE_LABEL = { resident:'Resident', provider:'Provider', admin:'Admin' };
 /* Same glyphs the bottom navigation uses, so a role looks like the place it
    takes you: a home, a wrench, a shield. */
 const AUTH_ROLE_ICON = { resident:'home', provider:'wrench', admin:'shield' };
@@ -11177,6 +11190,13 @@ function providerDashboard(){
   const demand = providerDemandByBarangay(CURRENT_PROVIDER_ID, 30);
   const demandJobs = demand.reduce((t, d) => t + d.jobs, 0);
   const waiting = pendingProviderRequests();
+  /* The header used to type "Ramil Odiada (Pro)" and "Plumbing Specialist · Brgy. Poblacion" — p1's
+     identity, painted on the dashboard of whoever is actually signed in. The device can be signed in as
+     the fruit harvester and still be told it is a plumber in Tupi, which is the public-preview-card
+     defect arriving from the other side: a typed identity looks right in every screenshot taken as p1.
+     `me` above is already the signed-in record and already returns early when there is none; the saved
+     professional profile wins where it exists, because that is the identity the person edited. */
+  const dashPp = state.providerProfileData || {};
   /* Ordered by when the job happens, then split by day — the heading says Today, so
      only today's jobs may sit under it. */
   const scheduled = bookingsForProvider()
@@ -11188,8 +11208,8 @@ function providerDashboard(){
     <div style="display:flex; align-items:center; gap:10px;">
       ${photoAvatar('self', 40)}
       <div>
-        <h1>Ramil Odiada (Pro)</h1>
-        <div class="sub">Plumbing Specialist · Brgy. Poblacion</div>
+        <h1>${esc(dashPp.name || me.name)}</h1>
+        <div class="sub">${esc(dashPp.service || me.service)} · Brgy. ${esc(dashPp.barangay || me.barangay)}</div>
       </div>
     </div>
   </div>
