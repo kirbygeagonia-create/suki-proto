@@ -1465,8 +1465,10 @@ outstanding on the device: `svc power stayon false` to clear, and the signed-out
 - Promotion. `Sukinnect.html` is still `origin/main` and untouched (proved with
   `git diff --quiet origin/main -- Sukinnect.html`), so the floors the rebuild earned are proven for
   `Sukinnect-next.html` and unproven for the file a reviewer opens today. The owner's ruling is to
-  **refresh PR #9 rather than merge it** — the branch stays the working surface and the merge button
-  stays theirs.
+  **refresh PR #9 rather than merge it** — done 2026-10-22, so the pull request now describes the
+  rebuild it actually carries (70 commits, the verification totals, and what merging would ship
+  unverified) and stays OPEN. The merge button is still a human's, and the handset legs above are the
+  reason it should stay that way for now.
 
 
 
