@@ -4595,6 +4595,51 @@ suite('dates', async () => {
     /Prioritize applications/.test(withRows) && !/No applications are waiting/.test(withRows),
     'rows=' + q.PENDING_APPLICANTS.length);
 
+  /* A payment code is a claim about money, and the payment rows are the money. The census that led here
+     (.scratch/pay-table.cjs) printed the whole seed table — 4 authorized, 3 captured, 1 collected,
+     2 pending_site, 4 unpaid, 2 voided — and every code is backed by a row that says so, so this ships
+     a pin rather than a fix. The vocabulary is read from the app's own PAYMENT_LABELS: the first census
+     hand-wrote its own map, did not know the word `captured`, and reported three false findings against
+     records that were right.
+
+     Three checks survived their own falsifier, and only three. The first draft had five, and four of
+     them passed while every mutant survived, because the seed rows are DERIVED from the booking — the
+     back-fill at the bottom of the seed pass calls recordPayment, which writes the row and the code in
+     one statement — so editing a seed's code regenerates its row and the pair cannot be pulled apart
+     from that side. A check that cannot fail looks exactly like one that passes; these three are pinned
+     where the derivation can actually be broken: an undeclared code in a seed, the route test flipped so
+     a cash job is coded as partner money, and the settlement row never written. */
+  const pay = boot();
+  const MOVED = ['authorized', 'captured', 'collected', 'refunded', 'partially_refunded'];
+  const PARTNER_CODES = ['authorized', 'captured', 'refunded', 'partially_refunded'];
+  const rowsFor = id => pay.PAYMENTS.filter(p => p.bookingId === id);
+  const badCode = [], unsupported = [], mixedRoute = [];
+  pay.BOOKINGS.forEach(b => {
+    const code = b.payStatus || 'unpaid';
+    const rows = rowsFor(b.id);
+    if (!pay.PAYMENT_LABELS[code]) badCode.push(b.id + '=' + code);
+    if (MOVED.includes(code) && !rows.some(r => r.status === code))
+      unsupported.push(b.id + '=' + code + ' with rows ' + (rows.map(r => r.type).join(',') || 'none'));
+    const cash = b.payMethod === 'cash';
+    if (cash && PARTNER_CODES.includes(code)) mixedRoute.push(b.id + '=cash job coded ' + code);
+    if (!cash && code === 'collected') mixedRoute.push(b.id + '=partner job coded collected');
+  });
+  c.check('every payment code is one the vocabulary declares',
+    badCode.length === 0 && pay.BOOKINGS.length >= 12,
+    badCode.join(',') || pay.BOOKINGS.length + ' codes all declared');
+  c.check('a code claiming money moved is backed by a row saying so',
+    unsupported.length === 0, unsupported.join(',') || 'no unsupported claim');
+  c.check('the two payment routes never borrow each other’s code',
+    mixedRoute.length === 0, mixedRoute.join(',') || 'cash and partner stay apart');
+  /* Positive control: the table has to hold at least one of each shape, or the two checks above pass on
+     an empty set — which is how a scan that measured nothing reads as cleanliness. */
+  const seenCodes = {};
+  pay.BOOKINGS.forEach(b => { const k = b.payStatus || 'unpaid'; seenCodes[k] = (seenCodes[k] || 0) + 1; });
+  c.check('the seed table really holds partner money, cash money and no money',
+    PARTNER_CODES.some(k => seenCodes[k]) && seenCodes.collected > 0 &&
+      ['unpaid', 'pending_site'].some(k => seenCodes[k]) && pay.PAYMENTS.length >= 8,
+    Object.keys(seenCodes).map(k => k + '=' + seenCodes[k]).join(' ') + ' | rows ' + pay.PAYMENTS.length);
+
   return c;
 });
 

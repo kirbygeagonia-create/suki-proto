@@ -1436,5 +1436,35 @@ whether **TalkBack speaks** an opened dialog, and the concierge's **system file 
 
 `preview.33` remains what is installed on `S4CUYTJB6HNNWC49`; `svc power stayon true` is still set.
 
+## Owed, in order — a pointer list, not an explanation
+
+Everything below is written out where it belongs; this is only the list of what the next person finds
+open. Nothing here is a defect the bench can close.
+
+**On the handset (install `1.2-preview.36`, `versionCode 38`)** — the five items and why each needs a
+phone are in the two sections above: the de-typed Provider Insights figures, an unbroken `1039` in a stat
+row at the device's own 1.35 text, the `6 of 8 … 1 awaits review and 1 is suspended` caption, whether
+**TalkBack speaks** an opened dialog (§77's tree is proven; speech is not, and enabling the owner's
+accessibility service needs their say-so), and the concierge's **system file picker** (a synthetic tap
+cannot reach the control at 320×638 @ 1.35). Also outstanding: `svc power stayon false` to clear, and the
+signed-out state to restore.
+
+**Owner decisions, not engineering** —
+- `color-scheme: only light` on the published `dist/` surface. The app declares no colour scheme and the
+  sweep proves nothing breaks under a dark emulation; the residual is the *browser* surface, where Chrome
+  for Android would apply its own. Suppressing a user's dark preference is a product call (AGENTS §"THE
+  APP HAS NO DARK MODE AND THAT WAS MEASURED").
+- The y-axis gutter is 2–3px short on the device engine and 0 on the bench at the same width, root font
+  and screen. It is recorded above as an owner decision rather than patched on the strength of a 2px
+  number, because the ticks sit flush against the card's padding and are not clipped.
+- The provider role's word. The sign-in chip says **Service Pro** (`AUTH_ROLE_LABEL`, Sukinnect-next.html:7721)
+  while the master prompt's role model (§12–§15) and every screen inside the app say **provider**. The
+  comment beside the chip explains why there are two chips and not three; it does not speak to the word.
+- Promotion: `Sukinnect.html` is still `origin/main` and untouched (proved with
+  `git diff --quiet origin/main -- Sukinnect.html`), so the floors the rebuild earned are proven for
+  `Sukinnect-next.html` and unproven for the file a reviewer opens today. Merging or opening a PR is a
+  shared-state action and is left to the owner.
+
+
 
 

@@ -2592,6 +2592,21 @@ where a behavioural check cannot see a defect because the machine is fast enough
 `new Date()` calls a statement apart landing in the same millisecond — pin the shape as well, which is
 why `machine` carries the structural pair beside the behavioural one.
 
+A CHECK THE DERIVATION ABSORBS IS NOT A CHECK — BREAK THE DERIVATION, NOT THE SEED. The money axis looks
+like a two-representation seam: `booking.payStatus` beside the `PAYMENTS` rows. Five checks were written
+against it and **four passed while every mutant survived**, because the demo rows are not stored — the
+seed back-fill calls `recordPayment`, which writes the row and the code in one statement — so editing a
+seed's code regenerates the row that agrees with it. Three checks survived, each broken where the
+derivation can actually be broken: an undeclared code typed into a seed, the settlement back-fill's guard
+forced off, and the cash/partner route test flipped. `node tools/falsify-pay-records.cjs` — 3 breaks, 3
+caught — with a positive control requiring the table to hold partner money, cash money and no-money rows
+at once, and the vocabulary read from the app's own `PAYMENT_LABELS` rather than a hand-written map (the
+first census hand-wrote one, did not know the word `captured`, and printed three findings against records
+that were right). The general rule: when a field and its evidence are written by the same call, a
+consistency check between them is a tautology; the check that earns its place asserts the *call*, or the
+*vocabulary*, or the *route*, and the falsifier tells you which in about a minute — before the prose,
+which is the order this repository keeps failing to use and then writing down again.
+
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by
 the 479-byte `ATKINSON-AUTHORS.txt` that sits beside it, a `--font-ui` opening with a family
@@ -3624,7 +3639,7 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate **552**; whole suite **41 families, 210 mutants applied, 210 caught, 0 not applied** (`node tools/falsify-all.cjs`) — re-run 2026-10-21 with `falsify-step-stamps` added, and the rows the last sessions flagged stay cleared: `falsify-insights-records` 7 of 7, `falsify-split-figures` 1 of 1 with its redundant half printed as an observation, `falsify-verification-progress` 6 of 6, `falsify-verification-records` 10 of 10, `falsify-nav-fit` 4 of 4, `falsify-chart-collide` 5 of 5 inside the run, `falsify-seed-dates` 4 of 4, `falsify-dialog-focus` 4 of 4, `falsify-register-identity` 4 of 4 and `falsify-probe-population` 3 of 3. Quote a total from a pass that printed one.
+Gate **556**; whole suite **42 families, 213 mutants applied, 213 caught, 0 not applied** (`node tools/falsify-all.cjs`) — re-run 2026-10-21 with `falsify-pay-records` added, and the rows the earlier sessions flagged stay cleared: `falsify-step-stamps` 4 of 4, `falsify-insights-records` 7 of 7, `falsify-split-figures` 1 of 1 with its redundant half printed as an observation, `falsify-verification-progress` 6 of 6, `falsify-verification-records` 10 of 10, `falsify-nav-fit` 4 of 4, `falsify-chart-collide` 5 of 5 inside the run, `falsify-seed-dates` 4 of 4, `falsify-dialog-focus` 4 of 4, `falsify-register-identity` 4 of 4 and `falsify-probe-population` 3 of 3. Quote a total from a pass that printed one.
 Of these, the families that drive the camera rather than the gate are whatever
 `grep -l shot.cjs tools/falsify-*.cjs` names — fourteen on 2026-10-21: `blank-query`,
 `camera-surfaces`, `chart-collide`, `control-reach`, `dialog-focus`, `double-tap`, `flex-crush`,

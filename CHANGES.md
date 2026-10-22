@@ -5373,5 +5373,49 @@ labels ("Made 6 hours ago"), so the camera was re-run rather than argued: **7 of
 25 tallies each** across **73 screens**, and the walk count is unchanged. `node tools/probe-all.cjs`
 re-run after the build: **41 instruments, 0 needing attention**.
 
+## 84. Five payment checks became three, because the derivation absorbs a seed edit
+
+The last bench-measurable seam before the next big task was the money axis: a booking carries
+`payStatus`, and `PAYMENTS` holds the rows that say what actually moved. §22 keeps those axes apart on
+purpose, so the question is whether the code is ever a claim the records do not support.
+
+`.scratch/pay-table.cjs` printed the whole seed table before any rule was written, because the previous
+census had invented a vocabulary and misfired three times:
+
+```
+ 4  authorized      | gcash | authorization:authorized
+ 3  captured        | gcash | authorization:authorized,capture:captured
+ 1  collected       | cash  | collection:collected
+ 2  pending_site    | cash  | NO PAYMENT ROWS
+ 4  unpaid          |   —   | NO PAYMENT ROWS
+ 2  voided          |       | NO PAYMENT ROWS
+```
+
+Every code is backed, so this pass ships a pin rather than a fix. The first draft wrote five checks —
+declared code, claim-backed-by-row, no-claim-without-row, cash-never-partner-coded, void-keeps-nothing —
+and **four of them passed while every mutant survived.** The reason is in the seed pass: the demo rows
+are not stored, they are *derived*, by calling `recordPayment`, which writes the row and the code in one
+statement. So editing a seed's `payStatus` regenerates the matching row and the pair cannot be pulled
+apart from that side. A check that cannot fail looks exactly like a check that passes, and here four of
+five looked like coverage.
+
+Three remain, and each is broken where the derivation itself can be broken rather than at the seed:
+
+| the check | the break that condemns it |
+|---|---|
+| every payment code is one the vocabulary declares | an undeclared code typed into a seed row — nothing regenerates a word that is not in `PAYMENT_LABELS` |
+| a code claiming money moved is backed by a row saying so | the settlement back-fill's guard forced off, so the code stands and the row is never written |
+| the two payment routes never borrow each other's code | the route test flipped, so a cash collection is coded as partner money |
+
+`node tools/falsify-pay-records.cjs` — **3 breaks, 3 caught, 0 not applied**, and a positive control
+requiring the table to hold partner money, cash money and no-money rows at once (`4 authorized /
+1 collected / 4 unpaid / 2 pending_site`), because three checks that scan an empty table would print the
+same green. The vocabulary is read from the app's own `PAYMENT_LABELS` rather than a hand-written map —
+the first census hand-wrote one, did not know the word `captured`, and reported three findings against
+records that were right.
+
+No application file changed, so `preview.36` is still the current build and the sweep still stands; what grew is the gate (**556**) and the suite (**42 families, 213 mutants applied, 213 caught, 0 not applied**), with `falsify-pay-records` reading **3 of 3 inside the full run** rather than only alone.
+
+
 
 
