@@ -5576,9 +5576,10 @@ control and confirmation dialog. `preview.37` (`versionCode 39`) stays installed
 `git status --porcelain -- Sukinnect-next.html` answering nothing — no application file changed while the
 phone was attached. The suite (**43 families, 219 mutants, 219 caught, 0 not applied**), the seven-corner
 sweep and `node tools/probe-all.cjs` (**41 instruments**) were the §85 figures at the time of writing, and
-this walk did not re-run them. They have since moved, and §88 carries the pass that moved them: **44
-families, 221 mutants applied, 221 caught, 0 not applied**, no flagged family, with the instrument total at
-42. The handset drivers stayed in `.scratch/` — a driver written to answer one question about one phone is
+this walk did not re-run them. They have since been re-run to the day, and §88 carries the passes that
+moved them: **44 families, 221 mutants applied, 221 caught, 0 not applied** with no flagged family,
+**42 instruments** with 0 needing attention, and **7 of 7** corners clean at 25 tallies each. The handset
+drivers stayed in `.scratch/` — a driver written to answer one question about one phone is
 not a gate — but the two bench instruments this walk produced are committed and counted:
 `tools/probe-concierge-photo-name.js` and `tools/falsify-photo-name.cjs`, and §87 records the instrument
 correction that adding the probe surfaced.
@@ -5742,4 +5743,7 @@ After everything, the application file was verified untouched by the whole exerc
 and `md5sum Sukinnect-next.html dist/Sukinnect-next.html
 Sukinnect-Android/app/src/main/assets/Sukinnect.html` answering one value (`d63ffb2b8bd54624fa46cc64c3dac8ab`)
 for all three — so `dist/` and the APK's bundled asset are still the file that earned the floors, and
-nothing needed rebuilding.
+nothing needed rebuilding. The layout sweep was then re-run to the same date rather than left as §85's
+figure: **7 of 7 phone corners measured clean**, 25 tallies each, 73 screens — which it should have been,
+since nothing in the application changed, and a claim that "nothing changed" is only evidence once the
+sensor has been pointed at the file again.
