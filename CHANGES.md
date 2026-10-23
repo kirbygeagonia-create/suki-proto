@@ -5823,3 +5823,13 @@ pointers), and `md5sum Sukinnect-next.html dist/Sukinnect-next.html
 Sukinnect-Android/app/src/main/assets/Sukinnect.html` plus the asset extracted from
 `Sukinnect-1.2-preview.38-debug.apk` all answer `a4cf6fc31df59ae2964b0d726b071534`.
 `Sukinnect.html` remains identical to `origin/main`.
+
+**The aggregate, re-derived rather than added up.** `node tools/falsify-all.cjs` printed **45 families,
+228 mutants applied, 228 caught, 0 not applied**, no flagged row, `nav-fit` 5 of 5 and
+`probe-population` 6 of 6 inside the run, and `preflight` 3 of 3 inside it for the first time. The
+prediction in the notes before the pass was **225** — 221 plus the four new breaks — and it was wrong
+because `falsify-preflight`'s own three had never been inside an aggregate at all. Three more mutants
+nobody inferred, and no arithmetic error: the point is that a total assembled from a list of diffs is
+not a measurement, and §88 exists precisely because a hand-kept figure drifts. This section quotes the
+printed line. The tree was clean when the pass ended, which is the post-flight guard in the runner
+answering for the run that was using it.
