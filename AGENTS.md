@@ -2507,18 +2507,24 @@ that seed change. The lesson about the instrument is the ordering: a scan found 
 to find and something else entirely, so print the corpus and read it, and do not treat a rule that
 fires on nothing as evidence of an empty room.
 
-THE SAME GREP FOUND A DESTINATION NO INSTRUMENT HAD EVER READ, AND IT IS RECORDED RATHER THAN
-FIXED. Looking for statistics taken from raw seed-array lengths led to the admin's Provider
+THE SAME GREP FOUND A DESTINATION NO INSTRUMENT HAD EVER READ, AND THE SCREEN WAS TYPING ITS OWN
+FACTS. Looking for statistics taken from raw seed-array lengths led to the admin's Provider
 Insights screen — reached by the "Insights" button on the Providers bar, and in **no camera table** until
-it was added: the word `insights` occurred nowhere in `tools/shot.cjs`. It types four bars (Completion 88, Rating
+it was added: the word `insights` occurred nowhere in `tools/shot.cjs`. It typed four bars (Completion 88, Rating
 96, Credentials 75, Capacity 68), a service breakdown naming four trades where the roster holds
 seven, a sentence asserting which trade has the highest cancellation rate, and one named provider
 "needing attention" two lines below a count derived from the records. `admin-insights` is in the
 walk now (73 screens) and measures clean — which is the point: geometry cannot see a typed number, so
-a screen can pass every tally in the camera and still be §76's decorative statistic. What it needs is
-§76 applied to it, and that is the next pass, not this one.
+a screen can pass every tally in the camera and still be §76's decorative statistic. That was written
+as found-not-fixed, and the pass after it de-typed the screen (`CHANGES.md` §82): the three bars the
+records can answer are divisions of them, the capacity bar and the cancellation verdict are gone
+because no record asserts either, the breakdown names the trades the roster actually holds, and
+`networkAttentionList()` is now the single filter the stat strip and the attention card both read, so
+they cannot drift apart by construction. Verified on the file today: no `Completion 88`, `Rating 96`
+or `Capacity 68` literal survives anywhere in `Sukinnect-next.html`, and
+`node tools/falsify-insights-records.cjs` runs 7 breaks, 7 caught.
 
-THE ORPHANED-NEEDLE CLASS RECURRED IN THE SAME MINUTE, AND THE RUNER IS WHAT REPORTED IT. Adding
+THE ORPHANED-NEEDLE CLASS RECURRED IN THE SAME MINUTE, AND THE RUNNER IS WHAT REPORTED IT. Adding
 `marketplaceRates()`'s numerator as `const verified = verifiedProviderList().length;` put a second
 identical line in the file, and `falsify-verification-records` needles exactly that string inside
 `adminCounts()` — so its break matched 2 where it requires 1 and printed NOT APPLIED, taking a
@@ -2718,7 +2724,7 @@ either print shape — an object answer and a `JSON.stringify` answer arrive dif
 one of them is what let a planted `findings:1` look clean — promotes a positive count from `ok` to `XX`,
 and prints the number ahead of the answer so the truncation cannot swallow it.
 `grep -l findings tools/probe-*` answers three files, and they agree on the key. Last full instrument
-pass: **42 probes, 0 needing attention — 3 of them report a findings count the runner reads**.
+pass: **43 probes, 0 needing attention — 3 of them report a findings count the runner reads**.
 
 A MUTANT RUN THAT IS KILLED LEAVES ITS OWN DEFECT IN THE TREE, AND ONLY `git status` CAN SEE IT. The
 runner's header has always warned that abandoning a pass early "is the one way to leave a mutant in the
@@ -2797,6 +2803,43 @@ Out" *button*, so the confirm re-tapped the row — lookups are scoped to the to
 open. Finally §77's `focusInside:false` on this phone was the reader again: `document.activeElement` is
 `<body>` whenever `document.hasFocus()` is false, so that reading is "the instrument was blind", and
 `hasFocus()` is now printed beside it.
+
+A DOCUMENT'S STATE SENTENCES OUTLIVE THE PASS THAT CLOSES THEM, AND ONLY A CENSUS SEES IT. The goal was
+"finish the open items", and the items were finished — four sentences describing them were not. AGENTS.md
+still said the admin's Insights screen "needs §76 applied to it, and that is the next pass" three sections
+after §82 applied it; CHANGES §81 recorded the de-typing as found-not-fixed with no pointer to §82
+shipping it; DEVICE-PASS's walk-4 list still owed a thumb to a screen walk 5 had read on a vivo; and
+README.md told a reviewer the app has "never" been measured on a handset, six walks across two phones ago,
+while its preamble quoted 517 checks and 63 screens against the tree's 562 and 73. Nothing in `tools/`
+could see any of it: every instrument measures the application or its own output, and a stale sentence is
+neither. §90 caught hand-kept *numbers*; these are hand-kept *states*, and "still owed" is not falsifiable
+by arithmetic. The instrument is `node tools/audit-open-items.cjs` — sixteen present-tense deferral phrases
+across the documents that speak in the present tense, one row per hit with its sentence, exit 0 because an
+open item is legitimate. `CHANGES.md` is out of scope by design: it is a dated log, and the house rule for a
+superseded row is the dated note §81 and §87 now carry, not a rewrite. Two properties keep the census from
+becoming the thing it detects. Every marker prints in the tally **including the zeros**, so a rotted
+vocabulary shows as silent markers rather than as a suspiciously short list; and if nothing matches at all
+the answer is `NO CONCLUSION` with exit 1, because an empty census must not answer like a clean one.
+`node tools/falsify-open-items.cjs` proves it — 4 breaks, 4 caught — and two of the four were the family's
+own bugs on the way. **A sentinel that appears in the text being scanned is not the scanner's verdict:** the
+positive control tested `/NO CONCLUSION/.test(entire output)` and aborted on the *unbroken* census, because
+AGENTS.md quotes that sentinel in prose about §75's probe and the census prints those sentences as rows;
+read the instrument's own last line, never its body. **A partly-dead scan is not a dead one:** the
+vacuous-scan break prefixed four of sixteen markers, twelve kept matching, and the break printed MISSED
+against a census answering cheerfully about 22 claims — emptiness has to be planted completely. A third,
+smaller: extracting the marker list with two separate quoted-string scans let the single-quote pass start
+inside `"next pass's subject"`, which is written in double quotes precisely because it carries an
+apostrophe, so the "names" were punctuation fragments no summary line contains; one alternation matched left
+to right never treats that apostrophe as a token start. And a tail is not the last character of a buffer —
+`out.split('\n').pop()` answers the empty string for any output ending in a newline, which is how a control
+printed a blank verdict beside its own `yes`. The census lists claims and does not judge them; **34 rows**
+came back at the end of the pass that wrote it, and the count *rose* while that pass was being written — 28
+became 34 — because a document explaining that a deferral was closed is necessarily full of deferral
+phrases. Telling a settled sentence from an open one is a person reading, the same limit §62 records for the
+review lines, and it is why this is a list to read rather than a gate to pass. Registration stayed
+structural: `probe-all.cjs`
+picked the census up from its filename (`^(probe|audit)-…`), the same trick by which `layerKeys()` derives
+the modal fields from `state` rather than from a list someone maintains.
 
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by
@@ -3830,7 +3873,7 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate **562** (the two new `hygiene` checks in §89); whole suite **45 families, 228 mutants applied, 228 caught, 0 not applied** (`node tools/falsify-all.cjs`, pass completed 2026-10-23 with no flagged family and the tree clean after it — §89 added three count breaks to `falsify-probe-population`, one conversion break to `falsify-nav-fit`, and brought `falsify-preflight`’s three into the aggregate for the first time; the hand arithmetic before the pass said 225, which is precisely why this figure is quoted from the run and not from the addition). Per-family rows from the earlier pass, with the two families restated at their new totals: `falsify-pay-records` 3 of 3, `falsify-step-stamps` 4 of 4, `falsify-insights-records` 7 of 7, `falsify-split-figures` 1 of 1 with its redundant half printed as an observation, `falsify-verification-progress` 6 of 6, `falsify-verification-records` 10 of 10, `falsify-chart-collide` 5 of 5 inside the run, `falsify-seed-dates` 4 of 4, `falsify-dialog-focus` 4 of 4, `falsify-register-identity` 4 of 4, `falsify-photo-name` 2 of 2 inside the run, `falsify-preflight` 3 of 3 inside the run, `falsify-nav-fit` 5 of 5 with §89’s conversion break, and `falsify-probe-population` 6 of 6 with §89’s three count rules. Quote a total from a pass that printed one.
+Gate **562** (the two new `hygiene` checks in §89); whole suite **46 families, 232 mutants applied, 232 caught, 0 not applied** (`node tools/falsify-all.cjs`, pass completed 2026-10-23 in ~53 minutes with no flagged family and the tree clean after it — §91 added the `open-items` family's four breaks and §89 three count breaks to `falsify-probe-population` plus one conversion break to `falsify-nav-fit`, so the addition before this pass said 232 and the run printed 232; the addition before the last pass said 225 and that run printed 228, which is the reason the quoted figure is read off the log rather than derived in prose). Per-family rows read off that same log, each matching the run: `falsify-pay-records` 3 of 3, `falsify-step-stamps` 4 of 4, `falsify-insights-records` 7 of 7, `falsify-split-figures` 1 of 1 with its redundant half printed as an observation, `falsify-verification-progress` 6 of 6, `falsify-verification-records` 10 of 10, `falsify-chart-collide` 5 of 5 inside the run, `falsify-seed-dates` 4 of 4, `falsify-dialog-focus` 4 of 4, `falsify-register-identity` 4 of 4, `falsify-photo-name` 2 of 2 inside the run, `falsify-preflight` 3 of 3 inside the run, `falsify-nav-fit` 5 of 5 with §89’s conversion break, and `falsify-probe-population` 6 of 6 with §89’s three count rules, and `falsify-open-items` 4 of 4. Quote a total from a pass that printed one.
 Of these, the families that drive the camera rather than the gate are whatever
 `grep -l shot.cjs tools/falsify-*.cjs` names — fifteen on 2026-10-23: `blank-query`,
 `camera-surfaces`, `chart-collide`, `control-reach`, `dialog-focus`, `double-tap`, `flex-crush`,

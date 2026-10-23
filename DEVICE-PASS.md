@@ -1,12 +1,16 @@
 # Handset pass — the thing no browser check can prove
 
-The rebuild in `Sukinnect-next.html` has been rendered in Node (517 checks), painted in
-real Chrome across 63 screens at 320, 390 and 450 CSS px — and at a keyboard-height viewport of
-360×380, in the desktop shell at 1280×900, with `prefers-reduced-motion` emulated, and under
-`prefers-color-scheme: dark` — then
-measured for tap targets, contrast, clipping and occlusion. None of that is a phone. Three
-categories are still unverified because no instrument can reach them: a thumb, an on-screen
-keyboard, and a slow device.
+The rebuild in `Sukinnect-next.html` is rendered in Node (562 checks), painted and measured in real
+Chrome across 73 screens at seven corners (`node tools/sweep-text-scale.cjs`: 320 CSS px at 200% text,
+the default panel at 200%, 450 px at 135%, the OPPO's own 320×638 at 135%, 320×480 at 200%, 320×300 at
+100% as the keyboard proxy, and the 100% anchor — and separately in the desktop shell at 1280×900, with
+`prefers-reduced-motion` emulated and under `prefers-color-scheme: dark`). When a phone is attached,
+the same page questions are asked again inside the device's own WebView by
+`node tools/device-probe.cjs` driving Chrome over the DevTools socket. Handset walks 1–6 below, and the
+earlier `.17`–`.28` passes above, all on two phones, mean this file is
+not a list of things a browser cannot do. It is the record of what only a phone showed, and of the
+three things that still outrun every instrument here: how the app *feels* under a thumb, whether a slow
+device keeps up with it, and what TalkBack actually says aloud when a dialog opens.
 
 **The Android assets copy is a third file, and `git status` cannot see it.**
 `Sukinnect-Android/app/src/main/assets/Sukinnect.html` is gitignored, so no working-tree check
@@ -1381,6 +1385,8 @@ has not been reconnected since walk 4 — so what the handset owes this build is
 - `admin-insights`, now in the walk and photographed for the first time, has never been seen on the
   handset either — and the four typed bars on it are the next pass's subject, so the screen will change
   before it is worth a thumb;
+  *(closed: CHANGES §82 de-typed it, and Handset walk 5 read the three derived divisions — 33 / 75 / 38
+  on the vivo against the bench's 60 / 75 / 38, both correct — so the thumb arrived after the change.)*
 - the two legs walk 4 left open: whether **TalkBack speaks** an opened dialog (the platform *tree* is
   proven; speech is not, and enabling the owner's accessibility service needs their say-so), and the
   concierge's **system file picker**, which a synthetic tap cannot reach at this corner.
@@ -1688,9 +1694,10 @@ Menu is the owner's own setting, left alone.
 - Promotion. `Sukinnect.html` is still `origin/main` and untouched (proved with
   `git diff --quiet origin/main -- Sukinnect.html`), so the floors the rebuild earned are proven for
   `Sukinnect-next.html` and unproven for the file a reviewer opens today. The owner's ruling is to
-  **refresh PR #9 rather than merge it** — done 2026-10-22, so the pull request now describes the
-  rebuild it actually carries (70 commits, the verification totals, and what merging would ship
-  unverified) and stays OPEN. The merge button is still a human's, and the handset legs above are the
+  **refresh PR #9 rather than merge it** — done 2026-10-22 (70 commits) and refreshed again 2026-10-23
+  (83 commits, gate 562, 45 families / 228 mutants, 42 probes with 3 reporting a findings count), so the
+  pull request describes the rebuild it actually carries and what merging would ship
+  unverified, and stays OPEN. The merge button is still a human's, and the handset legs above are the
   reason it should stay that way for now.
 
 

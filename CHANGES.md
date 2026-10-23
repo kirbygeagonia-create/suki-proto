@@ -5212,6 +5212,12 @@ each** across **73 screens** (`node tools/sweep-text-scale.cjs`), and `admin-ins
 own reports every tally zero (`node tools/shot.cjs --measure --only=admin-insights`) — clean geometry
 around four typed numbers, which is the measurement this section ends on.
 
+> **Closed by §82, which is the next section.** The de-typing this paragraph declined to fold in is what
+> §82 shipped: three bars divided out of the records, the capacity bar and the cancellation verdict
+> deleted for having no record behind them, and `networkAttentionList()` made the single filter the strip
+> and the attention card both read. Handset walk 5 then read the derived figures on a vivo, where they
+> differ from the bench and both readings are correct.
+
 ## 82. The Insights screen, de-typed: seven trades, three divisions, and a number that was breaking in half
 
 §81 found this screen by grepping for statistics taken from a raw seed-array length. It is the admin's
@@ -5879,3 +5885,80 @@ one. Nothing here was verified by having been rewritten.
 The shipped file's other quoted figures were checked the same way and all still match exactly — 4,707
 lines, one `:root`, 86 tokens with 9 never reached, 1,138 `var()` uses, 75 hex-shaped strings outside
 `:root`.
+
+
+## 91. Four sentences that were true when written and false the next commit, and a census for the class
+
+A goal of "finish the open items" turned out to need an instrument for *statements about what is still
+open*, because the items themselves were closed and the prose was not.
+
+**What was stale, and how each one was caught.** AGENTS.md still said the admin's Provider Insights screen
+"needs §76 applied to it, and that is the next pass, not this one" — three sections after §82 applied it.
+CHANGES.md §81 recorded the de-typing as found-not-fixed with no pointer to §82 shipping it.
+DEVICE-PASS.md's walk-4 list still owed a thumb to that same screen, which Handset walk 5 had already
+read on a vivo. README.md told a reviewer the app has "never" been measured on a handset, six walks and
+two phones ago, and that a `finally` means "a crash cannot leave a mutation behind" — which §88 disproved
+for the case that matters, because a *cancelled* run never reaches its `finally`. The same file's
+preamble quoted 517 checks and 63 screens where the tree says 562 and 73. Each was verified before being
+corrected, not after: the Insights claim was checked by grepping the app for the typed bar literals it was
+supposed to still contain (none survives) and running `node tools/falsify-insights-records.cjs` —
+**7 breaks, 7 caught** — and the README's runner claim by re-running `node tools/falsify-preflight.cjs`,
+which printed its control line and **3 of 3**.
+
+**Why no existing instrument could see any of it.** Every tool in `tools/` measures the application or its
+own outputs. A stale sentence is neither: the app changed, the document describing it did not, and the
+document still reads perfectly. §90 caught hand-kept *numbers* in prose; these are hand-kept *states*, and
+a number that is wrong is at least comparable — "still owed" is not falsifiable by arithmetic.
+
+**The census.** `tools/audit-open-items.cjs` greps the documents that speak in the present tense
+(AGENTS.md, DEVICE-PASS.md, README.md) for sixteen deferral phrases and prints one row per hit with the
+sentence around it, exiting 0 because an open item is legitimate — the concierge's picker really does owe
+a thumb. `CHANGES.md` is out of scope by design: it is a dated log, and the house rule for a superseded
+row is the dated note §81 and §87 now carry, not a rewrite. Two properties keep it honest. Every marker
+prints in the summary tally **including the ones at zero**, so a vocabulary that has rotted is visible as
+silent markers rather than as a suspiciously short list; and if nothing matches at all, or no document
+could be opened, the last line is `NO CONCLUSION` and the exit code is 1, because an empty census must not
+answer like a clean one. `probe-all.cjs` picked it up from the filename alone — the discovery glob is
+`^(probe|audit)-…` — which is registration made structural rather than a list someone maintains, the same
+trick by which `layerKeys()` derives the modal fields from `state`.
+
+**Four breaks, and two of them were the family's own bugs.** `tools/falsify-open-items.cjs` runs the
+control first (a nonzero list, three of three documents, every marker named, no refusal), then empties the
+scan's vocabulary, hides the zero-counting markers, renames a document out of existence, and finally
+forces the refusal branch dead *while* the vocabulary is dead — the blind-sensor break, which is what proves
+the first break is caught by the refusal and not by a number the census happens to print. Two instrument
+defects surfaced on the way and both generalise:
+
+- **A sentinel that appears in the text being scanned is not the scanner's verdict.** The control tested
+  `/NO CONCLUSION/.test(entire output)` and aborted on the *unbroken* census, because AGENTS.md quotes that
+  exact sentinel in prose about §75's probe — and the census prints those sentences as its rows. The check
+  now reads the tool's own last line. This is the needle-matching-prose defect from §84 arriving in a
+  reader rather than a writer, and it cost a full control cycle to find.
+- **A partly-dead scan is not a dead one.** The vacuous-scan break first prefixed four of the sixteen
+  markers with `zzz `, which left twelve live markers still matching 22 claims: the census answered
+  cheerfully and the break printed MISSED. Emptiness has to be planted completely, in this case by
+  replacing the loop's iterable in one line. A related trap in the same file: extracting the marker names
+  with two separate quoted-string scans let the single-quote pass start inside `"next pass's subject"` —
+  written in double quotes precisely because it carries an apostrophe — so the "names" were fragments of
+  punctuation. One alternation, matched left to right, never treats that apostrophe as a token start.
+
+Then the family's own extraction was the last thing wrong: the summary line was read with
+`out.split('\n').pop()`, which answers the empty string for any output ending in a newline, and the control
+printed a blank verdict beside a `yes`. A tail is not the last character of a buffer.
+
+The run that carried the new family printed **46 families, 232 mutants applied, 232 caught, 0 not
+applied**, no flagged row, and the tree clean afterwards; `tools/falsify-all.cjs`’s own header now says 46
+families and ~53 minutes, which is the wall clock from that launch to its summary line rather than the
+~35 minutes the previous revision advertised from memory.
+
+The residual, stated so it is not mistaken for a solved problem: the census lists claims, it does not judge
+them. 34 rows came back at the end of this pass, and reading them is the work: two are the handset legs the
+`Owed` section keeps open, a few are owner-level (whether either other role reaches a notification surface,
+whether PR #9 merges), one is the vocabulary mistaking an overlay "left open" *on a screen* for a task left
+open — a false positive the phrase list cannot tell from a real one — and the rest are dated sections of
+`DEVICE-PASS.md` and `AGENTS.md` that the house rule keeps as written. The count also *rose* during the
+pass, 28 to 34, and the reason is worth keeping: §91 and its AGENTS twin are full of sentences explaining
+that a deferral was closed, and a census of deferral phrases cannot tell "this was once called the next
+pass" from "this still is". Writing about the closure adds a row. That is not a defect to fix by narrowing
+the vocabulary — a narrower vocabulary is how §81 and §87 got missed for three sections — it is the cost of
+the instrument, and the reason it is a list to read rather than a gate to pass.

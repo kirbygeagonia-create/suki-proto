@@ -105,18 +105,29 @@ never matched the file — the third column being the point, because a family wh
 matching reports a smaller applied count and looks like a clean run. No total is quoted in prose
 here: this passage said "twenty-six targeted breaks" for a while and was three families out of
 date by the time anyone read it. Each family restores the file from an in-memory copy in a
-`finally`, so a crash cannot leave a mutation behind; one earlier version of that harness died
-mid-run to a console-encoding error and poisoned its own backup, and the gate then reported green
-on a file that still carried a mutation. The restore is now the last thing that runs, and totals
-are only ever quoted from a run that ended green. (The harness is Node now for a second reason:
+`finally`, so a crash mid-family cannot leave a mutation behind — but a *cancelled* run never reaches
+its `finally`, and one did leave the exact defect its own family exists to condemn sitting in the app
+file, where the next measurement would have read it as the application. An earlier version had already
+shown the harder failure mode: it died mid-run to a console-encoding error and poisoned its own backup,
+so the gate reported green on a file that still carried a mutation — which is why the restore is the
+last thing that runs. So the runner asks the tree:
+`git status --porcelain -- Sukinnect-next.html` before the first family and again after the last.
+Dirty before means it prints the paths and exits without touching the file; dirty after prints
+`BROKEN` and folds into the exit code. A second pass started while one is alive is refused for the same
+reason, because the app file is the mutex. `node tools/falsify-preflight.cjs` proves the guards, and
+its first control is that a clean tree must still run the pass — a guard that refuses everything passes
+two of its tests by never running anything. Totals are only ever quoted from a run that ended green, and
+one pass at a time. (The harness is Node now for a second reason:
 three of its first mutants had silently matched nothing, because the app file is CRLF and a
 find-string carrying a newline missed every time. An unapplied mutant is a rule nobody tested.)
 
-Two runners keep the rest of the suite honest, and both were written after being mis-read by hand:
+Three runners keep the rest of the suite honest. Two were written after a total was mis-read by hand;
+the third was written after a cancelled pass left a mutation in the tree:
 
 ```
 node tools/falsify-all.cjs          # every mutant family, with applied / caught / not-applied
 node tools/probe-all.cjs            # every probe and audit, each run the way it is meant to run
+node tools/falsify-preflight.cjs    # the tree guards above, proved by dirtying the file on purpose
 ```
 
 `tools/probe-all.cjs` exists because the suite has two kinds of probe and the extension is what
@@ -125,6 +136,15 @@ is a single expression ending `})()` is evaluated inside a real page by `shot.cj
 and running it with plain node dies on `document is not defined`. A probe that prints nothing is
 called out rather than counted as a pass — an instrument nobody reads is how a stale needle spent a
 week guarding nothing.
+
+```
+node tools/audit-open-items.cjs     # every "still owed" sentence the present-tense documents still make
+```
+
+That one is a list, not a verdict: an open item is legitimate, so it exits 0 and a person reads the rows.
+It exists because four sentences went stale by describing an item as owed after the pass that closed it —
+see CHANGES.md §91 — and it refuses (exit 1, `NO CONCLUSION`) if its own phrase list matches nothing,
+because a rotted vocabulary must not read as a clean document.
 
 ### Look at the painted page
 
@@ -348,10 +368,16 @@ To swap an image, replace the file and keep the name. To add a trade, add a row 
   the screen plus a toast naming what was refused and why. A warning nobody who lost their session
   will read is not a warning.
 - `Sukinnect-Android/app/src/main/assets/` holds a **separate copy** of the web files. Any
-  accepted change must be re-synced there before it reaches a device build. It currently holds
-  the rebuild, staged for a handset pass — see [`DEVICE-PASS.md`](DEVICE-PASS.md), which also
-  says how to put the shipped file back.
-- Screens are rendered in Node and painted in a real browser at a phone size and measured, but
-  never on a handset. Touch feel, the on-screen keyboard, and device performance are the three
-  things no instrument in this repo can prove; [`DEVICE-PASS.md`](DEVICE-PASS.md) is the
-  checklist for the pass that is still owed.
+  accepted change must be re-synced there before it reaches a device build. It currently holds the
+  rebuild — `assets/Sukinnect.html` carries the same bytes as `Sukinnect-next.html`, and
+  `md5sum` on both answering one hash is the whole check — staged under the name the shell loads, and
+  those bytes went out as `1.2-preview.38` and were read on a handset. See
+  [`DEVICE-PASS.md`](DEVICE-PASS.md), which also says how to put the shipped file back.
+- Screens are rendered in Node, then painted and measured in a real browser at a phone size, and —
+  when a phone is attached — on that phone: `tools/device-probe.cjs` drives the WebView's own Chrome
+  over the DevTools socket, and [`DEVICE-PASS.md`](DEVICE-PASS.md) records six walks across two
+  handsets. What still owes a thumb is two legs: a document returned from the OEM file picker, and the
+  provider nav re-read on the second phone. What no instrument here can prove is how any of it
+  *feels*, and what TalkBack actually says aloud when a dialog opens — its burst proves an
+  announcement happens and the accessibility tree proves the name is exposed, but no channel on these
+  devices recovers the spoken words.

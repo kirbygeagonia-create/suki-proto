@@ -15,16 +15,14 @@
    Sequential on purpose: each family rewrites Sukinnect-next.html and restores it in a finally,
    so two families at once would measure each other's mutants.
 
-     node tools/falsify-all.cjs                (45 families on the tree as of 2026-10-23. The last full
-                                                pass printed 44 families, 221 mutants applied, 221 caught,
-                                                0 not applied in ~35 minutes; the 45th, `falsify-preflight`,
-                                                landed after that pass started and ran standalone at 3 of 3.
-                                                An earlier revision of this line promised "40 families, 206
-                                                mutants: ~80 minutes" — both figures were kept by hand and
-                                                both had drifted, the runtime because the machine was loaded
-                                                when it was timed. A runner whose advertised cost is wrong
-                                                gets its runs abandoned early, which is the one way to leave
-                                                a mutant in the tree.)
+     node tools/falsify-all.cjs                (46 families on the tree as of 2026-10-23. The last full
+                                                pass printed 46 families, 232 mutants applied, 232 caught,
+                                                0 not applied in ~53 minutes — the wall clock from the
+                                                launch to the summary line, not an estimate, because the
+                                                earlier revision of this note advertised ~35 minutes and
+                                                this run took 53 on the same machine with the same seed.
+                                                An advertised cost that is wrong gets its runs abandoned
+                                                early, which is the one way to leave a mutant in the tree.)
      node tools/falsify-all.cjs count-labels    # only families whose name matches
 */
 'use strict';
