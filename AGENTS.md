@@ -2714,6 +2714,34 @@ close it — every page probe names its defect key `findings`, and the runner pr
 `ok` to `XX` — is not half-implemented for the reason the shipped-file gap is not: `grep -l findings
 tools/probe-*` answers two files, and those two do not yet agree on what a finding is.
 
+A MUTANT RUN THAT IS KILLED LEAVES ITS OWN DEFECT IN THE TREE, AND ONLY `git status` CAN SEE IT. The
+runner's header has always warned that abandoning a pass early "is the one way to leave a mutant in the
+tree" — every family rewrites `Sukinnect-next.html` and restores it in a `finally`, so a process that
+never reaches its `finally` leaves the break in the working file. On 2026-10-22 that happened to a pass
+that was cancelled, not abandoned: the log froze mid-table at 847 bytes with no `node` process left, and
+`git diff` showed `if (changed.length) {` replaced by `if (true) {` in `saveAdminProfile()` — the exact
+defect `falsify-double-tap` exists to condemn, sitting in the file the next measurement would read. The
+recovery is three commands and they are now what the guard prints: save the current bytes somewhere,
+`git checkout -- Sukinnect-next.html`, re-run `node tools/verify.cjs` before quoting any number.
+`tools/falsify-all.cjs` asks `git status --porcelain -- Sukinnect-next.html` before the first family and
+again after the last; a dirty answer before means it prints the paths and exits 1 **without touching the
+file**, a dirty answer after prints `BROKEN` and folds into the exit code, and no git on PATH prints
+`NOTED the target was never checked against git` rather than pretending the guard ran. It refuses a
+*second* pass started while the first is alive too, which is the same signal for a different cause — and
+the first version of that message asserted "a previous pass was interrupted" and told the reader to
+`git checkout --`, which would have deleted a running family's work from under it. It now names both
+causes, says this runner is the only writer, tells you to ask `tasklist | grep -i node` which one this is,
+and only then offers the restore. `node tools/falsify-preflight.cjs` — 3 breaks, 3 caught, 0 not applied —
+separates them: a clean tree must still RUN the pass, a filter naming no family must print `NO MATCH`
+rather than `0 families, 0 caught — every rule is still being tested` and exit 0, a dirty tree must be
+REFUSED with no family row in the output, and the refusal must leave the tree dirty, because reporting a
+hazard and repairing it are different acts. The second row exists because the fixture for the first one
+copied `count-labes` out of this runner's own header, which matches nothing: the nested pass ran zero
+families and exited 0, and only the positive control refused to credit its own baseline. A hand-kept count
+in a tool's header is the same drift this runner was written to catch in prose — that line now states the
+tree's 45 families and the last pass's 44/221/~35 minutes, and says why an advertised runtime that is too
+long gets a run abandoned early.
+
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by
 the 479-byte `ATKINSON-AUTHORS.txt` that sits beside it, a `--font-ui` opening with a family
@@ -3746,18 +3774,19 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate **560**; whole suite **43 families, 219 mutants applied, 219 caught, 0 not applied** (`node tools/falsify-all.cjs`) — re-run overnight 2026-10-21 → 22 with `falsify-declared-state` added, and the rows the earlier sessions flagged stay cleared: `falsify-pay-records` 3 of 3, `falsify-step-stamps` 4 of 4, `falsify-insights-records` 7 of 7, `falsify-split-figures` 1 of 1 with its redundant half printed as an observation, `falsify-verification-progress` 6 of 6, `falsify-verification-records` 10 of 10, `falsify-nav-fit` 4 of 4, `falsify-chart-collide` 5 of 5 inside the run, `falsify-seed-dates` 4 of 4, `falsify-dialog-focus` 4 of 4, `falsify-register-identity` 4 of 4 and `falsify-probe-population` 3 of 3. Quote a total from a pass that printed one.
+Gate **560**; whole suite **44 families, 221 mutants applied, 221 caught, 0 not applied** (`node tools/falsify-all.cjs`, pass completed 2026-10-23 in ~35 minutes, no flagged family — the tree now holds **45**, because `falsify-preflight` landed after that pass started and ran standalone at 3 of 3, 0 not applied) — re-run overnight 2026-10-21 → 22 with `falsify-declared-state` added, and the rows the earlier sessions flagged stay cleared: `falsify-pay-records` 3 of 3, `falsify-step-stamps` 4 of 4, `falsify-insights-records` 7 of 7, `falsify-split-figures` 1 of 1 with its redundant half printed as an observation, `falsify-verification-progress` 6 of 6, `falsify-verification-records` 10 of 10, `falsify-nav-fit` 4 of 4, `falsify-chart-collide` 5 of 5 inside the run, `falsify-seed-dates` 4 of 4, `falsify-dialog-focus` 4 of 4, `falsify-register-identity` 4 of 4, `falsify-photo-name` 2 of 2 inside the run and `falsify-probe-population` 3 of 3. Quote a total from a pass that printed one.
 Of these, the families that drive the camera rather than the gate are whatever
-`grep -l shot.cjs tools/falsify-*.cjs` names — fourteen on 2026-10-21: `blank-query`,
+`grep -l shot.cjs tools/falsify-*.cjs` names — fifteen on 2026-10-23: `blank-query`,
 `camera-surfaces`, `chart-collide`, `control-reach`, `dialog-focus`, `double-tap`, `flex-crush`,
-`focus-trap`, `long-input`, `nav-fit`, `notification-routes`, `probe-population`, `split-figures` and
-`stale-overlay` — because a geometry rule, a real tap, or a second tap has no Node assertion available
-to it. (That sentence used to say "the ten" and name eight; the count and the list had both drifted from
-the tree, which is the same failure `falsify-all` exists to prevent, in prose.) Of those,
+`focus-trap`, `long-input`, `nav-fit`, `notification-routes`, `photo-name`, `probe-population`,
+`split-figures` and `stale-overlay` — because a geometry rule, a real tap, or a second tap has no Node
+assertion available to it. (That sentence used to say "the ten" and name eight; the count and the list had
+both drifted from the tree, which is the same failure `falsify-all` exists to prevent, in prose.) Of those,
 `falsify-camera-surfaces` and `falsify-probe-population` read an instrument instead of the application —
 the first the camera's own surface lists, the second the probe runner's aggregation, proved by planting
 probes that measure nothing. `falsify-probe-population` belongs to both lists: it drives Chrome through
-the runner.
+the runner. `falsify-preflight` belongs to neither: it drives `falsify-all.cjs` itself, and is the only
+family whose target is the test machinery's own hygiene.
 
 Measure it with `node tools/sweep-text-scale.cjs` — seven phone corners, the camera each time: 320px
 @ 200% text, default width @ 200%, 450px @ 135% (a vivo panel at the OPPO's setting), **320x638 @

@@ -15,13 +15,17 @@
    Sequential on purpose: each family rewrites Sukinnect-next.html and restores it in a finally,
    so two families at once would measure each other's mutants.
 
-     node tools/falsify-all.cjs                (40 families, 206 mutants: ~80 minutes measured on
-                                                2026-10-21 — one gate run per mutant, and the gate
-                                                itself takes 13s. The "~15 minutes" this line quoted
-                                                was true of a smaller suite on a quieter machine, and
-                                                a reader who budgets by it will abandon the run early,
-                                                which is the one way to leave a mutant in the tree.)
-     node tools/falsify-all.cjs count-labes    # only families whose name matches
+     node tools/falsify-all.cjs                (45 families on the tree as of 2026-10-23. The last full
+                                                pass printed 44 families, 221 mutants applied, 221 caught,
+                                                0 not applied in ~35 minutes; the 45th, `falsify-preflight`,
+                                                landed after that pass started and ran standalone at 3 of 3.
+                                                An earlier revision of this line promised "40 families, 206
+                                                mutants: ~80 minutes" — both figures were kept by hand and
+                                                both had drifted, the runtime because the machine was loaded
+                                                when it was timed. A runner whose advertised cost is wrong
+                                                gets its runs abandoned early, which is the one way to leave
+                                                a mutant in the tree.)
+     node tools/falsify-all.cjs count-labels    # only families whose name matches
 */
 'use strict';
 const fs = require('fs');
@@ -39,6 +43,51 @@ const families = fs.readdirSync(TOOLS)
   .filter(f => f !== 'falsify-all.cjs')
   .filter(f => !filter || f.includes(filter))
   .sort();
+
+const TARGET = 'Sukinnect-next.html';
+/* A filter that matches nothing must not print a green zero. Found by the family that tests the
+   preflight guard: its fixture copied the example filter from this file's own header, which is
+   `count-labes` — two letters short of `count-labels` — so the nested pass ran ZERO families, printed
+   `0 families, 0 mutants applied, 0 caught, 0 not applied — every rule is still being tested`, and
+   exited 0. The word "every" in that sentence is precisely the claim a zero-selection pass cannot make,
+   and the positive control in `falsify-preflight` refused to credit its own baseline because of it,
+   which is the only reason anyone noticed. */
+if (filter && families.length === 0) {
+  console.log('NO MATCH — the filter `' + filter + '` named no family, so nothing was tested. Family file names are');
+  console.log('`falsify-<name>.cjs`; `node tools/falsify-all.cjs` with no argument runs all ' +
+    fs.readdirSync(TOOLS).filter(f => /^falsify-.*\.cjs$/.test(f) && f !== 'falsify-all.cjs').length + '.');
+  process.exit(1);
+}
+/* A pass that starts on a dirty target measures a file nobody has. Each family rewrites
+   Sukinnect-next.html and restores it in a `finally`, so a family that is KILLED — not abandoned,
+   killed — leaves its own mutant in the tree with nothing to say about it. This happened on
+   2026-10-22: a pass was cancelled while `falsify-double-tap` held its break in place
+   (`if (changed.length) {` → `if (true) {` in `saveAdminProfile`), the log simply stopped mid-table,
+   and the injected defect — the exact bug that family exists to detect — sat in the working file
+   until `git status` was asked. The header of this file already warns that abandoning a run early
+   is the one way to leave a mutant in the tree; the warning was about the reader's patience and no
+   instrument checked the tree afterwards.
+   So ask the tree, before and after. `git status --porcelain` on the one path is the whole test. If
+   git itself is unavailable the pass still runs and says so, because a guard that silently disables
+   itself is the failure mode this repository has now written down four times. */
+function dirtyTarget() {
+  try {
+    return execFileSync('git', ['status', '--porcelain', '--', TARGET],
+      { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  } catch (noGit) { return null; }
+}
+const gitUnavailable = dirtyTarget() === null;
+const dirtyBefore = gitUnavailable ? '' : dirtyTarget();
+if (dirtyBefore) {
+  console.log('TARGET NOT CLEAN — nothing was mutated. `git status --porcelain -- ' + TARGET + '` answers:');
+  console.log(dirtyBefore.split(/\r?\n/).map(l => '   ' + l).join('\n'));
+  console.log('Either a previous pass was cancelled while a family held a mutant in the file, or another pass is');
+  console.log('running right now and this is its live break — this runner is the only writer, so two of them read');
+  console.log('each other\'s mutants. Find out which before doing anything: `tasklist | grep -i node` on Windows.');
+  console.log('If nothing is running, recover by saving the current bytes somewhere, `git checkout -- ' + TARGET + '`,');
+  console.log('then re-running `node tools/verify.cjs` before quoting any number from this runner.');
+  process.exit(1);
+}
 
 /* The summary shapes the families print, plus the skip line each one emits when its needle no
    longer matches the file. A runner that mis-parses a result is worse than no runner, because it
@@ -113,6 +162,13 @@ for (const f of families) {
   if (trouble) (r.notes || []).forEach(n => console.log('      | ' + n));
 }
 console.log('─'.repeat(72));
+const dirtyAfter = gitUnavailable ? '' : dirtyTarget();
 console.log(families.length + ' families, ' + A + ' mutants applied, ' + C + ' caught, '
   + S + ' not applied' + (bad ? ' — ' + bad + ' family needs attention' : ' — every rule is still being tested'));
+if (gitUnavailable) console.log('NOTED the target was never checked against git — no git on PATH, so a leftover mutant would not have been seen');
+else if (dirtyAfter) {
+  console.log('BROKEN the tree is not clean after the pass, so this table is a measurement of a file nobody has:');
+  console.log(dirtyAfter.split(/\r?\n/).map(l => '   ' + l).join('\n'));
+  bad++;
+}
 process.exit(bad ? 1 : 0);

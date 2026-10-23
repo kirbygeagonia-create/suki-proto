@@ -5575,12 +5575,13 @@ control and confirmation dialog. `preview.37` (`versionCode 39`) stays installed
 `node tools/verify.cjs` re-run at the end of this walk: **all 560 checks passed**, with
 `git status --porcelain -- Sukinnect-next.html` answering nothing — no application file changed while the
 phone was attached. The suite (**43 families, 219 mutants, 219 caught, 0 not applied**), the seven-corner
-sweep and `node tools/probe-all.cjs` (**41 instruments**) are quoted from the §85 pass for that reason, and
-were not re-run here. The handset drivers stayed in `.scratch/` — a driver written to answer one question
-about one phone is not a gate — but the two bench instruments this walk produced are committed and counted:
-`tools/probe-concierge-photo-name.js`, which takes the instrument total to 42, and
-`tools/falsify-photo-name.cjs`, which takes the suite to 44 families; §87 records the instrument correction
-that adding the probe surfaced, and both totals were re-derived by the passes named there.
+sweep and `node tools/probe-all.cjs` (**41 instruments**) were the §85 figures at the time of writing, and
+this walk did not re-run them. They have since moved, and §88 carries the pass that moved them: **44
+families, 221 mutants applied, 221 caught, 0 not applied**, no flagged family, with the instrument total at
+42. The handset drivers stayed in `.scratch/` — a driver written to answer one question about one phone is
+not a gate — but the two bench instruments this walk produced are committed and counted:
+`tools/probe-concierge-photo-name.js` and `tools/falsify-photo-name.cjs`, and §87 records the instrument
+correction that adding the probe surfaced.
 
 ## 87. A clean number and a blind sensor must not share a key
 
@@ -5652,3 +5653,93 @@ zero that means nothing must not print like a zero that means clean", which is w
 beside `findings`). Making the runner read that key is the next pass, and the two probes would first have
 to agree on what a finding is.
 
+
+## 88. A killed mutant run left its own defect in the tree, and nothing in the suite could see it
+
+`node tools/falsify-all.cjs` had been running for about forty minutes, through ten families, when it was
+cancelled while `falsify-double-tap` was mid-flight. The log stopped after `dialog-focus`, frozen at 847
+bytes across a twenty-second wait, with no `node` process left. The working file, which every
+family rewrites and restores in a `finally`, was left holding the break:
+
+```
+   const changed = Object.keys(state.adminProfileData)
+     .filter(k => state.adminProfileData[k] !== before[k]);
+-  if (changed.length) {
++  if (true) {
+     adminLog('Admin profile updated', state.adminProfileData.name,
+```
+
+That is the exact defect `falsify-double-tap` exists to condemn — one press of **Save** on an untouched
+admin form appending `Admin profile updated` to the audit log — sitting in the file the next measurement
+would read. `git status --porcelain -- Sukinnect-next.html` is the only thing in this repository that
+says so, and no tool had ever asked it. The runner's own header has a paragraph about the pass taking
+~80 minutes, and its last sentence warns that a reader who budgets by a wrong number will abandon the run
+early "which is the one way to leave a mutant in the tree". The warning was about patience; the tree was
+never checked.
+
+**The guard is two asks, at the two ends of the pass.** Before the first family, `git status
+--porcelain -- Sukinnect-next.html` must answer nothing; if it answers anything, the runner prints the
+dirty paths, prints the recovery (save the bytes, `git checkout --`, re-run the gate), and exits 1
+**without touching the file** — reporting a hazard and repairing it are different acts, and a guard that
+repairs would hide the run that made the mess. After the last family, the same question is asked again and
+a dirty answer is printed as `BROKEN` and folded into the exit code, because a table whose last family
+left a mutant is a measurement of a file nobody has. If `git` is not on PATH the pass still runs and
+prints `NOTED the target was never checked against git` — a guard that silently disables itself is the
+failure mode §81 through §87 have now written down four times.
+
+Proved by `node tools/falsify-preflight.cjs`, which dirties the tree with the real line and runs the
+runner against a one-family filter: a positive control on a clean tree first (exit 0, a family row
+printed), then the refusal, then the same dirty tree a second time to require that the tree is *still*
+dirty after the refusal. **3 breaks, 3 caught, 0 not applied**, file restored, `git status` empty again —
+and it is the middle row that turned up a second defect:
+
+The fixture's filter was `count-labes`, copied from this runner's own header example, which is two letters
+short of `count-labels` and matches no family. So the nested pass ran **zero** families, printed
+`0 families, 0 mutants applied, 0 caught, 0 not applied — every rule is still being tested`, and exited 0.
+The control caught it only because it asserts that a family row appears. Two things were wrong: the typo,
+and a runner that reports a green zero for a filter that selected nothing — the word "every" in that
+sentence is exactly the claim a zero-selection pass cannot make. `falsify-all.cjs` now prints `NO MATCH`
+with the filter and the full family count and exits 1, and that behaviour is the family's second row.
+
+It did not have to wait for a fixture. Loading the guard while the replacement pass was still running
+found the condition live: `git diff` showed `residentFinished().filter(b => ['captured',
+'collected'].includes(b.payStatus))` replaced by `bookingsForResident(state.customerId)` — the break
+`falsify-history` holds while it runs — so the tree was dirty because a pass was alive at that moment,
+and a nested `node tools/falsify-all.cjs count-labes` answered
+
+```
+TARGET NOT CLEAN — nothing was mutated. `git status --porcelain -- Sukinnect-next.html` answers:
+   M Sukinnect-next.html
+```
+
+with exit **1** and no family row, and the outer pass carried on untouched. Two readings of that
+exchange, and the second is the reason the message was rewritten: the dirty bytes were not leftover
+damage at all but a **live** mutant from a pass that was still running, so the first version's sentence —
+"A previous pass was interrupted while a family held a mutant in the file" — asserted a history it could
+not know, and named the wrong recovery (`git checkout --`, which would have deleted a running family's
+work from under it). The message now states both causes, says this runner is the only writer, tells the
+reader to ask `tasklist | grep -i node` which case they are in, and only then offers the restore. A
+checker whose numbers are right and whose sentences guess is the failure §87 already named.
+
+**The pass the guard was installed for.** With the checks in place, `node tools/falsify-all.cjs` ran to
+completion on 2026-10-23: **44 families, 221 mutants applied, 221 caught, 0 not applied**, no flagged row,
+and `falsify-photo-name` reading 2 of 2 inside the aggregate rather than only standalone — the first pass
+since §85, and the first that included the §86/§87 instruments. `falsify-preflight` landed after that pass
+had already listed its families, so it ran standalone (3 of 3, 0 not applied) and the next full pass should
+print 45 and 224; the tree's own count is in `node tools/falsify-all.cjs`'s header rather than in this
+paragraph, because that header was one of the hand-kept figures this section exists to stop.
+
+Then the loop closes on itself. That header had advertised "40 families, 206 mutants: ~80 minutes", both
+numbers kept by hand and both wrong — the suite was 44, and the pass had just taken about 35 minutes. An
+advertised cost that is too high is not a cosmetic problem in this particular tool: the sentence right
+next to it warns that a reader who budgets by a wrong number will abandon the run early, and abandoning a
+run is the mechanism that leaves a mutant in the tree. A stale runtime in the guard's own file was the
+same defect one level up, so the header now carries the measured pass and says why the old figure got a
+run killed.
+
+After everything, the application file was verified untouched by the whole exercise rather than assumed:
+`git status --porcelain -- Sukinnect-next.html` empty, `node tools/verify.cjs` **all 560 checks passed**,
+and `md5sum Sukinnect-next.html dist/Sukinnect-next.html
+Sukinnect-Android/app/src/main/assets/Sukinnect.html` answering one value (`d63ffb2b8bd54624fa46cc64c3dac8ab`)
+for all three — so `dist/` and the APK's bundled asset are still the file that earned the floors, and
+nothing needed rebuilding.
