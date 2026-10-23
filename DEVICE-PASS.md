@@ -1222,9 +1222,12 @@ repository says it does.
 **Nothing in this section was measured on a phone.** No device was on adb when the build finished
 (`adb devices` lists nothing), so:
 
-- the four remaining §3f items are still owed (concierge refusing to guess through the real system
+- the four remaining §3f items were owed that afternoon (concierge refusing to guess through the real system
   file picker, the sheet's marked payment row against the booking record, a booking with no address,
-  the provider reload check);
+  the provider reload check)
+  — disposition as of 2026-10-23: the payment-row, no-address and provider-reload legs were walked
+  in Chrome and recorded in §78–§79, the concierge’s refuse-to-guess state is a screen in the camera’s
+  table (`concierge-no-match`), and the real system picker was reached on hardware in walk 5;
 - §76's date conversion is verified only by the camera diff — the wait labels, document counts and
   credential states printed identical before and after — and the handset leg is what would show a
   *rendered* difference the Node and Chrome frames cannot see, which is exactly the mistake §73 made
@@ -1635,8 +1638,13 @@ Everything below is written out where it belongs; this is only the list of what 
 open. Nothing here is a defect the bench can close.
 
 **On the handset** — two items, and neither is a bench task:
-1. **Tap one document in the system picker** the concierge's photo control opens. ColorOS accepts an
-   injected tap on the picker's own chrome and refuses one on a document row, so this is one finger.
+1. **Return a document from the system picker** the concierge’s photo control opens. ColorOS accepts an
+   injected tap on the picker’s own chrome and refuses one on a document row — four attempts, two
+   layouts, taps and a held `motionevent`. That was read as "one finger", but **the key path has never
+   been tried**: `input keyevent` with `KEYCODE_DPAD_DOWN` / `KEYCODE_TAB` to move focus and
+   `KEYCODE_DPAD_CENTER` to activate is a different input route from the ones refused, and this same
+   walk already had to fall back to `KEYCODE_ENTER` to submit the sign-in form once the keyboard moved
+   the page out from under the coordinates. Try the key route before treating this as a thumb-only leg.
 2. **Install `1.2-preview.38` on the vivo `80d20768`** and read the provider nav there — written size and
    computed size — because the nav-floor fix (§89) is confirmed on the OPPO's 320px panel and on no other.
    The vivo currently runs `.37`.
@@ -1644,8 +1652,8 @@ open. Nothing here is a defect the bench can close.
 Everything else the `.37` list owed was put to a phone and is written up in *Handset walk 5* and
 *Handset walk 6* above — the caption, the Insights figures, the `1039`, the second provider's own header,
 the dialog tree, whether TalkBack speaks an opened dialog, the five-item nav at the OPPO's own text scale,
-and the sign-out confirmation as a second modal surface. What those walks could not automate is ColorOS
-handing a document to a synthetic pointer, recorded with the four attempts and the two controls that show
+and the sign-out confirmation as a second modal surface. What those walks could not automate with injected pointers is ColorOS
+refusing a document row to a synthetic tap — four taps and one held press across two layouts, with the two controls that show
 the injected input reaching that same window. The app's half of the promise was measured in a browser and
 holds: a real `File` arrives, the screen paints only its name, no `blob:` or `data:` image exists.
 

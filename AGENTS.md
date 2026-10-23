@@ -1194,7 +1194,7 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 11,829 lines, ONE :root block, 1,751 var() usages, 95 tokens declared with 92
+Sukinnect-next.html— 11,836 lines, ONE :root block, 1,751 var() usages, 95 tokens declared with 92
                     of them reached. Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
@@ -1213,7 +1213,7 @@ Sukinnect-next.html— 11,829 lines, ONE :root block, 1,751 var() usages, 95 tok
                     heading count, all of them moved by the nav-label work — which is why the
                     figures above were re-run rather than re-read. They moved a fourth time the
                     next day (§76's eleven lines of day helpers) and a fifth the same evening
-                    (§77's dialog labelling), a sixth time with §78's register branch, a seventh for §79's nav-box correction, an eighth for §81's analytics row, a ninth for §82's Insights rewrite, a tenth for §83's single clock reading and an eleventh for §85's declared scheme and dashboard header — and each time the fix was to run the tool, not to re-read the sentence. The next
+                    (§77's dialog labelling), a sixth time with §78's register branch, a seventh for §79's nav-box correction, an eighth for §81's analytics row, a ninth for §82's Insights rewrite, a tenth for §83's single clock reading and an eleventh for §85's declared scheme and dashboard header, a twelfth for §89’s seven lines of nav-floor comment and conversion — and each time the fix was to run the tool, not to re-read the sentence. The next
                     reader should cite the tool rather than trust it.
                     Everything that was a real violation is now a token: #fff became
                     --surface and --on-brand, the modal dim became --scrim, and the phone
