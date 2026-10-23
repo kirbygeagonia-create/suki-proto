@@ -79,7 +79,29 @@ const BREAKS = [
      loop wrote 11.85px (16px rendered) and clipped two words while both sensors said zero. */
   { name: 'the fit measures the item\u2019s box again, so it stops while the label is still clipped',
     edits: [['const slot = l.clientWidth || item.clientWidth;', 'const slot = item.clientWidth;']] },
+  /* The conversion break, which NO camera on this machine can see. `size` is the rendered 14px floor and
+     the property takes specified px, so dividing by the measured factor and rounding to NEAREST wrote
+     10.37 on a 1.35 handset, which the platform multiplied back to 13.9995px — under the declared floor
+     by half a thousandth of a pixel, and the camera's below-14px walk carries a 0.7px tolerance that
+     would never report it. On the bench the factor is exactly 1, so specified and rendered are the same
+     number and every tallies stays 0 under either rounding: the defect is only visible on hardware, and
+     this break is proved by the hygiene check that pins the shape instead. */
+  { name: 'the specified size is rounded to nearest again, so a 1.35 handset renders under the floor',
+    gate: 'the nav floor is converted upward, so the specified size never renders under it',
+    edits: [["(Math.ceil((size / scale) * 100) / 100)", "(Math.round((size / scale) * 100) / 100)"]] },
 ];
+
+/* One gate run per break that asks the Node suite rather than the browser. */
+function gateVerdict(label) {
+  let out = '';
+  try {
+    out = execFileSync(process.execPath, [path.join(ROOT, 'tools', 'verify.cjs')],
+      { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  } catch (err) { out = (err.stdout || '') + (err.stderr || ''); }
+  const line = out.split(/\r?\n/).find(l => l.indexOf(label) >= 0);
+  if (!line) return { seen: false, failed: false };
+  return { seen: true, failed: /^\s*FAIL/.test(line) };
+}
 
 let caught = 0, applied = 0, unmatched = 0;
 const base = measure();
@@ -104,6 +126,13 @@ try {
     }
     applied++;
     fs.writeFileSync(TARGET, mutated);
+    if (b.gate) {
+      const g = gateVerdict(b.gate);
+      if (!g.seen) console.log('MISSED  ' + b.name + '  (the named gate check is not in verify.cjs output at all)');
+      else if (g.failed) { caught++; console.log('CAUGHT  ' + b.name + '  (the gate check for the conversion fails)'); }
+      else console.log('MISSED  ' + b.name + '  (the gate check still passes, so it does not read the rounding)');
+      continue;
+    }
     const r = measure();
     const t = total(r);
     if (t === null) console.log('MISSED  ' + b.name + '  (the camera printed none of its tallies)');
@@ -113,5 +142,8 @@ try {
 } finally {
   fs.writeFileSync(TARGET, original);
 }
+const gateBase = gateVerdict('the nav floor is converted upward, so the specified size never renders under it');
+if (!gateBase.seen) console.log('NOTE the conversion check is absent from the gate, so its break was not run');
+else if (gateBase.failed) console.log('BASELINE the conversion check already fails before any break — nothing above this line is trustworthy');
 console.log('\n' + caught + ' of ' + applied + ' breaks caught, ' + unmatched + ' not applied; file restored.');
-process.exit(applied > 0 && caught === applied && unmatched === 0 ? 0 : 1);
+process.exit(applied > 0 && caught === applied && unmatched === 0 && gateBase.failed === false ? 0 : 1);

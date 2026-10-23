@@ -1541,6 +1541,81 @@ global setting reads `null`, i.e. 1.0, after being set to 1.35 and 2.0 for rows 
 signed out through its own Log Out control and confirmation dialog, so the device shows the sign-in
 screen with `Resident / Provider` chips. `preview.37` stays installed.
 
+## Handset walk 6 — `1.2-preview.37` installed on the OPPO CPH2179, 2026-10-23
+
+Device: `S4CUYTJB6HNNWC49`, `CPH2179T2`, WebView `155.0.8059.45`, `Physical size: 720x1600` with
+`Override density: 360` → **320 CSS px**, confirmed from the page as `innerWidth 320`, `innerHeight 638`,
+`devicePixelRatio 2.25`. This is the panel that produced the nav-label boundary bug in walk 4, so the
+point of the walk was to re-check it on the build the rebuild actually ships.
+
+**The phone contradicted this file before anything was measured, twice.**
+
+- `dumpsys package com.sukinnect.app` answered nothing at all: **Sukinnect was not installed**, while the
+  line above this section said the device "still holds `preview.33`". The install was therefore a fresh
+  install rather than an upgrade, and no data carried over.
+- `settings get global font_scale` reads `null`, which looked like the text scale having returned to
+  default — and contradicted walk 4's finding that the device's real scale is **1.35**. It is: the value
+  lives in the **`system`** namespace, and `settings get system font_scale` answers `1.35`. Asking the
+  wrong table and reporting the silence as a fact is the same mistake §86 wrote up twice in one day.
+- `svc power stayon true`, which this file still owed to be cleared, was already `0`
+  (`stay_on_while_plugged_in` reads 0). Cleared by somebody between walks; the owed line was stale.
+- Accessibility is on and is **not** mine to touch: `enabled_accessibility_services` is
+  `com.google.android.marvin.talkback/…AccessibilityMenuService` with `accessibility_enabled=1`. That is
+  the Accessibility *Menu*, not the TalkBack engine, so this phone offered no speech channel for §77's
+  wording question, and nothing was changed.
+
+**Installed**: `Sukinnect-1.2-preview.37-debug.apk` streamed and `-r -g` → `Success`,
+`versionCode=39`, `versionName=1.2-preview.37`.
+
+**Four readings on the platform, and one defect found in a number nobody could see on the bench.**
+
+1. **Resident nav, 4 items, at the device's own 1.35:** `--nav-label-size` written `10.52px` → every
+   label computes **14.202px**, and all four report `scrollWidth <= clientWidth`, i.e. **no cuts**. This
+   matches walk 4's `.33` reading exactly, so the fit loop still behaves on `.37`.
+2. **Provider nav, 5 items, 58px slots, at 1.35:** written `10.37px` → computes **13.9995px**; `Dash`,
+   `FSM` and `Profile` are whole, and `Bookings` and `Messages` are cut — the documented outcome of
+   holding the floor rather than shrinking below it. The new thing is the fifth decimal: the floor is
+   declared as 14px and the phone painted 13.9995px. `size` is the rendered floor, the property takes the
+   *specified* size, and `Math.round(14 / 1.35 * 100) / 100` sends `10.37` out, which the platform
+   multiplies back to just under 14. No bench run can see this — `navFontScale()` is exactly 1 there, so
+   specified and rendered are the same number — and the camera's below-14px walk carries a 0.7px
+   tolerance that would never report half a thousandth. Fixed by converting upward
+   (`Math.ceil((size / scale) * 100) / 100`), pinned by two `hygiene` checks (the conversion direction,
+   and that the factor is still measured rather than assumed, so the check cannot pass on a build where
+   the loop was deleted), and proved by a fifth break in `node tools/falsify-nav-fit.cjs` that restores
+   `Math.round` and requires the gate check to fail. **A rule stated in one coordinate space has to be
+   converted in the direction that keeps it true, and a tolerance is not a floor.**
+3. **§82's stat figures on this device:** the provider dashboard carries two, `₱2,750` and `50%`, and each
+   returns **one** client rectangle — no figure breaks in half here.
+4. **§77 on the provider's own editor dialog:** `role=dialog`, `aria-modal=true`,
+   `aria-labelledby=layer-title-3`, focus inside, **8 inert siblings**, with
+   `document.hasFocus() === true`. An earlier read of the same dialog said `focusInside:false`, and that
+   was the instrument: when a document does not have focus, `document.activeElement` is `<body>` by
+   specification, so the answer is "the reader was blind", not "the app lost the caret". `hasFocus()` is
+   printed beside the reading in this walk's driver for exactly that reason.
+
+**Three more ways the handset defeated the driver, all recorded because the next driver will repeat them.**
+
+- **The on-screen keyboard moves the page and `window.visualViewport` does not report it.** The Log in
+  button measured `y=454` with the keyboard open and `y=688`/`y=547` without it, so two `--tap` calls at
+  a rect that had been read honestly hit nothing; a probe that waits for the viewport to change saw no
+  change either. The reliable submit is the field's own `Enter` — `inp.onkeydown = (e) => { if(e.key ===
+  'Enter') submitAuth(); }` — so `adb shell input keyevent KEYCODE_ENTER` after typing reached the
+  provider dashboard where four coordinate taps had missed.
+- **A blind `KEYCODE_BACK` is not a harmless dismiss.** Hardware Back is wired to the app's own history
+  (§65), so pressing it to close a keyboard that is not open pops a screen, and at a root tab it exits
+  the app. The driver now asks the page first and presses Back only when the viewport really shrank.
+- **Two same-named controls, one of them the target.** On the provider hub the "Log Out" *row* is at page
+  `y=2374` — below the 638px viewport, reachable by scroll, which is what `controls no tap can reach`
+  reading 0 has always meant — while the confirmation dialog's "Log Out" *button* is inside the open
+  layer. A document-wide search by label matched the row first, in DOM order, so the confirm tap re-tapped
+  the row and the app never signed out. Every lookup is now scoped to the top `[data-layer]` when one is
+  open, and the scroll-then-read-then-tap order is: read the rect **after** the last layout change.
+
+**Device left:** `preview.37` installed, signed out through its own control and confirmation dialog, text
+scale 1.35 (its own value, never written by this walk), `stay_on_while_plugged_in` 0 (as found), the
+owner's Accessibility Menu left enabled, no files pushed and no dumps written.
+
 ## Owed, in order — a pointer list, not an explanation
 
 Everything below is written out where it belongs; this is only the list of what the next person finds
@@ -1561,10 +1636,13 @@ is exposed, the burst proves an announcement happens), and whether either provid
 notification surface at all in this build (§27 is untestable for the other two roles, as
 `tools/probe-notification-targets.js` reports).
 
-And one flag on the *other* phone, which was not attached for this walk: `S4CUYTJB6HNNWC49` (the OPPO
-CPH2179) still has `svc power stayon true` set from Handset walk 4 and still holds `preview.33`. Clear it
-and install `.37` the next time that device is on the cable. The vivo `80d20768` was left clean —
-`settings get global stay_on_while_plugged_in` answers `0`, verified after this walk.
+And one flag that this file used to owe and no longer does: the OPPO `S4CUYTJB6HNNWC49` was found with the
+app **uninstalled** and `svc power stayon` already cleared, and it now runs `1.2-preview.37` (Handset walk
+6). Its text scale is 1.35 in the `system` namespace — `settings get global font_scale` answers `null` and
+means nothing there — and its Accessibility Menu is the owner's own setting, left alone. What walk 6 found
+is a rounding bug, fixed in `fitNavLabels`, whose re-measurement on hardware waits on the next build: the
+provider nav should read `10.38px` written and **at least 14px** rendered rather than the 13.9995px this
+walk measured.
 
 **Decided 2026-10-21 and closed** —
 - `color-scheme: only light` is declared in `:root`, with `--measure --dark` re-run afterwards across all

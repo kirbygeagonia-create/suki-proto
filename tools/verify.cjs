@@ -1244,6 +1244,21 @@ suite('hygiene', async () => {
   c.check('no control claims success it does not deliver', congratulating.length === 0,
     congratulating.map(t => t.slice(0, 60)).join(' | '));
 
+  /* The nav floor is declared in RENDERED px and written in SPECIFIED px, so the conversion direction
+     is the whole rule: rounding to nearest sent 10.37 out for a 14px rendered floor and the platform
+     multiplied it back to 13.9995px — measured on the OPPO at its own 1.35 text. The camera cannot see
+     that on this machine, because `navFontScale()` is 1 on the bench and the two spaces are the same
+     number, and its below-14px walk carries a 0.7px tolerance anyway. So the shape is pinned here,
+     with a positive control that the conversion exists at all: a check that only asked whether the file
+     avoided `Math.round` would also pass on a build where the fit loop was deleted. */
+  const written = /nav\.style\.setProperty\('--nav-label-size',\s*\(Math\.(\w+)\(\(size \/ scale\) \* 100\) \/ 100\)/.exec(body) || [];
+  c.check('the nav floor is converted upward, so the specified size never renders under it',
+    written.length === 2 && written[1] === 'ceil',
+    'conversion found: ' + (written[1] || 'none'));
+  c.check('the fit loop still measures the factor instead of assuming it',
+    /const scale = navFontScale\(\);/.test(body) && /function navFontScale/.test(body),
+    'navFontScale() must exist and must be consulted before the property is written');
+
   /* Decided 2026-10-21: the app declares no dark theme, so it declares itself light. Without this the
      published web surface is exposed to Chrome for Android's Auto Dark Theme, which rewrites colours
      algorithmically — no media query fires, so no instrument in tools/ could see it happen. The paired

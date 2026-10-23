@@ -8075,7 +8075,14 @@ function fitNavLabels(){
     const size = Math.max(NAV_LABEL_FLOOR_PX, Math.floor(cur * worst * 0.985 * 10) / 10);
     if (size >= cur) break;
     cur = size;
-    nav.style.setProperty('--nav-label-size', (Math.round((size / scale) * 100) / 100) + 'px');
+    /* Rounded UP, not to nearest. `size` is the RENDERED floor of 14px and the property takes
+       SPECIFIED px, so on a 1.35 handset 14 / 1.35 = 10.37037 — and `Math.round` sent 10.37 back out,
+       which the platform multiplies to 13.9995px: a hair under the floor this file declares, found by
+       reading the computed size on the OPPO CPH2179 rather than by any bench run, because on the bench
+       `navFontScale()` is 1 and the two spaces are the same number. Ceiling makes the declared
+       invariant literally true; the camera's 0.7px tolerance would never have reported the shortfall,
+       which is why the gate pins the shape as well. */
+    nav.style.setProperty('--nav-label-size', (Math.ceil((size / scale) * 100) / 100) + 'px');
   }
 }
 function navItem(id,icon,label,count){

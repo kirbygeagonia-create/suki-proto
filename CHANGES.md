@@ -5747,3 +5747,79 @@ nothing needed rebuilding. The layout sweep was then re-run to the same date rat
 figure: **7 of 7 phone corners measured clean**, 25 tallies each, 73 screens — which it should have been,
 since nothing in the application changed, and a claim that "nothing changed" is only evidence once the
 sensor has been pointed at the file again.
+
+
+## 89. A probe answer is printed two ways, a floor is stated in the wrong space, and the phone said so
+
+Three findings, each from putting an instrument in front of a case it had never been asked about.
+Gate **562** (560 + the two new shape checks); `node tools/falsify-probe-population.cjs` **6 of 6 breaks
+caught, 0 not applied**; `node tools/falsify-nav-fit.cjs` **5 of 5, 0 not applied**; sweep and instrument
+totals are quoted from the re-runs at the end of this section, because the application file changed.
+
+**1. `probe-all` now reads a defect count — and its first version could not see one.** §87 left the
+convention recorded rather than built because only two of 42 probes used the key. Building it found the
+reason conventions need care: the runner's page answers come back in **two shapes**. A probe that returns
+an object prints as plain JSON; a probe that returns `JSON.stringify(…)` prints as a JSON *string*, every
+quote escaped. The first matcher looked for `"findings"` in the text, so `probe-money-sums.js` — which
+stringifies — was invisible to it, and the planted probe that reported `findings: 1` was printed as
+**clean**. The family's positive control refused to credit its own baseline ("the probe that counts a
+defect read clean where the contract needs flagged; nothing below this line is a test"), which is the only
+reason the bug was caught the same minute it shipped rather than after a pass that quoted it. The value is
+now unwrapped through both shapes, so a probe cannot opt out of its count by choosing how it returns.
+`probe-money-sums.js` also had to change: its `findings` was the array itself, which no runner can compare
+against zero without parsing prose; it prints `findings: out.length` and keeps `findingRows` beside it.
+The count is printed **ahead of** the answer (`findings=1 · …`), because the runner truncates each page
+answer at 78 characters and the tail that explains a number is exactly what nobody read.
+
+The family grew from three breaks to six, and the three new ones are the boundaries as much as the rule:
+a counted defect must be flagged, an unfinished leg (`instrumentRows`) must be flagged *separately*, and a
+probe that reports **no** count key must still be clean — the last one is proved by making the runner read
+a missing count as one and requiring the verdict to flip. `falsify-probe-population` does not take the
+application-file mutex, but it drives Chrome, so it runs alone.
+
+**2. A floor stated in rendered pixels, converted by `Math.round`, is a floor with a hole in it.**
+Handset walk 6 signed into the provider account on the OPPO CPH2179 at the panel's own 1.35 text and read
+the computed size of each nav label: `--nav-label-size` written `10.37px`, rendering **13.9995px**. The
+declared floor is 14. `fitNavLabels` works in rendered pixels and converts back to specified pixels for the
+property, and `Math.round(14 / 1.35 * 100) / 100` is 10.37, which the platform multiplies to just under 14.
+Half a thousandth of a pixel — and the point is not the size of the error but that **nothing in this
+repository could have seen it**: on the bench `navFontScale()` is exactly 1, so specified and rendered are
+the same number and the fit is bit-identical under either rounding; and the camera's below-14px walk
+carries a 0.7px tolerance, so even a reading of 13.9995 on a phone would not register as a finding. Fixed
+by converting upward (`Math.ceil((size / scale) * 100) / 100`) and pinned the way §83 pins what a machine
+is too coarse to observe: two `hygiene` checks, one on the direction of the rounding and one that the
+factor is still *measured* rather than assumed — the second is the positive control, because a check that
+only asked whether the file avoided `Math.round` would also pass on a build where the loop had been deleted
+altogether. `node tools/falsify-nav-fit.cjs` gained a fifth break that restores `Math.round` and requires
+the gate check to fail.
+
+Proved where it can be proved, on `1.2-preview.38` (`versionCode 40`, the bundled asset extracted from the
+APK and hashed against the source): the same provider nav now writes `10.38px` and computes
+**14.013px** — above the floor, not a tolerance away from under it. `Bookings` and `Messages` remain cut at
+14px, which is the documented and intended outcome on a 320px panel with five items in 58px slots.
+
+**3. The handset contradicted `DEVICE-PASS.md` before anything was measured, twice, and both times the
+file was wrong.** The OPPO was found with **Sukinnect not installed at all** (`dumpsys package
+com.sukinnect.app` answered nothing) while the owed list still said it held `preview.33`; and
+`svc power stayon` was already cleared while the same list still owed the clearing. Its text scale is 1.35
+in the **`system`** namespace — `settings get global font_scale` answers `null`, so reading the wrong table
+turns a silence into a fact, which is §86's busy-channel lesson arriving from the other side. Three driver
+lessons from the same walk are written up in *Handset walk 6*: the on-screen keyboard moves the page and
+`window.visualViewport` does not report it (the Log in button measured y=454 with the keyboard up and
+y=547 without, so two honest coordinate taps hit nothing and the sign-in finally landed on the field's own
+`Enter` → `submitAuth()`); hardware Back is wired to the app's history, so a blind `KEYCODE_BACK` meant to
+dismiss a keyboard pops a screen or exits at a root tab; and a document-wide label search matched the hub's
+"Log Out" *row* at page y=2374 instead of the open dialog's "Log Out" *button*, so the confirm re-tapped
+the row — every lookup is now scoped to the top `[data-layer]` when one is open. And §77's
+`focusInside:false` on this phone was the reader again: `document.activeElement` is `<body>` whenever
+`document.hasFocus()` is false, so the honest reading is "the instrument was blind", and `hasFocus()` now
+prints beside it.
+
+**Re-derived after the change, because the application file moved.** `node tools/verify.cjs` — **all 562
+checks passed**. `node tools/falsify-nav-fit.cjs` — 5 of 5 breaks caught, 0 not applied. Sweep and
+instrument totals: see the note at the end of this section, filled from the two passes that printed them.
+`node tools/build-web-dist.cjs` re-published `dist/` (29 referenced paths, all resolving; no LFS
+pointers), and `md5sum Sukinnect-next.html dist/Sukinnect-next.html
+Sukinnect-Android/app/src/main/assets/Sukinnect.html` plus the asset extracted from
+`Sukinnect-1.2-preview.38-debug.apk` all answer `a4cf6fc31df59ae2964b0d726b071534`.
+`Sukinnect.html` remains identical to `origin/main`.

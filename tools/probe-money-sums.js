@@ -53,6 +53,11 @@
   });
   return JSON.stringify({
     screen: ((document.querySelector('#screen h1') || {}).textContent || '').trim().slice(0, 22),
-    cardsWithTotals: checked, candidates: out.length, findings: out
+    cardsWithTotals: checked, candidates: out.length,
+    /* A NUMBER under the key `findings`, because `probe-all.cjs` reads that key to decide whether the
+       row is clean. This used to print the array itself, so the runner could not tell `findings:[]`
+       from `findings:2` without parsing prose, and the rows this instrument exists to catch — the
+       receipt that does not add up — were invisible to the aggregate. */
+    findings: out.length, findingRows: out
   });
 })()
