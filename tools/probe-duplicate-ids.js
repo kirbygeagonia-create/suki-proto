@@ -28,5 +28,8 @@
   byId.forEach((list, id) => {
     if (list.length > 1 && list.some(n => ['input', 'select', 'textarea'].indexOf(n.tag) >= 0)) forms.push(id);
   });
-  return JSON.stringify({ screen: head, ids: byId.size, dupes: dupes, formCollisions: forms });
+    /* `findings` is the number `probe-all.cjs` reads to decide whether this row is clean; `dupes` stays
+     as the detail. Before this the probe reported a collision as data inside an `ok` line, which is the
+     §87 shape exactly. */
+  return JSON.stringify({ screen: head, ids: byId.size, findings: dupes.length, dupes: dupes, formCollisions: forms });
 })()

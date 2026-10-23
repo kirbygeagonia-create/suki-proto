@@ -5657,6 +5657,10 @@ beside `findings`). Making the runner read that key is the next pass, and the tw
 to agree on what a finding is.
 
 
+> **Overtaken the same day.** §89 builds the runner rule this paragraph declined to half-build, and §90
+> brings the last probe that was still keeping its count as an array into the convention. The two files
+> named above are now three, agreeing on the key.
+
 ## 88. A killed mutant run left its own defect in the tree, and nothing in the suite could see it
 
 `node tools/falsify-all.cjs` had been running for about forty minutes, through ten families, when it was
@@ -5835,3 +5839,43 @@ nobody inferred, and no arithmetic error: the point is that a total assembled fr
 not a measurement, and §88 exists precisely because a hand-kept figure drifts. This section quotes the
 printed line. The tree was clean when the pass ended, which is the post-flight guard in the runner
 answering for the run that was using it.
+
+
+## 90. Three numbers the operating doc kept after the instruments outgrew them — and a fourth I got wrong while fixing them
+
+A drift sweep, prompted by nothing but reading the claims instead of trusting them.
+
+**Handler count: 71 → 78.** AGENTS quoted `tools/audit-handler-reachability.cjs` as resolving "71
+handlers, all 71 resolve". Run today it answers **78 distinct handler names, every one resolving to a
+defined function**. The claim's substance held; its number was four passes behind. Fixed in place.
+
+**The duplicate-id probe's walk size: 62 → 73, and its count was still prose.** Same edit for the
+screen count, but this one was a live blind spot, not just a stale figure: the probe returns
+`{ screen, ids, dupes: [...], formCollisions: [...] }` — it counts collisions into an **array** with no
+`findings` key, which is exactly the shape §87 and §89 built the convention to make unreadable-by-accident.
+A real duplicate would have printed `ok probe-duplicate-ids.js … dupes:[…` and been cut at the runner's
+78 characters, so the instrument that exists to catch a save writing a number from a field nobody
+touched would itself have been the thing that hid the finding. It now reports `findings: dupes.length`
+and keeps `dupes` as the detail. Re-run against just it: `1 probes, 0 needing attention — 1 of them
+report a findings count this runner reads`. Across the whole suite the count of instrumented probes is
+printed in the same sentence, so the convention's reach is a measured number rather than a claim.
+(Also verified while here: zero duplicate ids across all 73 screens, read by parsing every screen's answer
+through both print shapes — the `node tools/probe-duplicate-ids.js` invocation that crashes with
+`document is not defined` is the same reader mistake §79 wrote up for `probe-injection.js`, since this
+file is a camera expression, not a Node script.)
+
+**"No tool even contains the string `Sukinnect.html`" was false.** `grep -rln Sukinnect\.html tools/`
+answers `tools/build-web-dist.cjs`, five times — it publishes the shipped file into `dist/`. The sentence
+was written to make the measurement gap vivid and ended up being a fact that any grep disproves.
+Rewritten to what the grep supports: no *instrument* reads it; `build-web-dist.cjs` copies it without
+measuring it, and `measure.cjs` can read it only because it takes a file argument.
+
+**And the correction was wrong too.** My replacement said "the only two files in `tools/` that name it
+at all are `measure.cjs` … and `build-web-dist.cjs`" — but `measure.cjs` doesn't contain the literal
+either, it accepts a path. I caught it by running the very command I had just cited as evidence, which is
+the point: a fix is a new claim, and it earns its place only by the same check that condemned the old
+one. Nothing here was verified by having been rewritten.
+
+The shipped file's other quoted figures were checked the same way and all still match exactly — 4,707
+lines, one `:root`, 86 tokens with 9 never reached, 1,138 `var()` uses, 75 hex-shaped strings outside
+`:root`.

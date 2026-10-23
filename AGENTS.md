@@ -1529,7 +1529,7 @@ screen, and the check asserts both halves: the foreign id leaks no other client'
 or phone, **and** a legitimate id still shows its own client location — the positive control that
 stops the check passing by rendering nothing. The same sweep also closed the reverse of a rule the
 gate already had: `tools/audit-handler-reachability.cjs` checks every function named in an
-`onclick`/`onchange` against the page's definitions — 71 handlers, all 71 resolve — where the gate
+`onclick`/`onchange` against the page's definitions — 78 handlers, all 78 resolve — where the gate
 had only ever proved that no defined function is unreferenced, which catches a dead function and
 misses a dead button. And the privacy promise the resident's card makes was measured rather than
 assumed: for every booking the provider can actually open, a `requested` job shows a lock card and
@@ -2011,7 +2011,7 @@ shown, empty state not). Two lessons in the same sweep. **An instrument that can
 clean result:** the probe first looked the sets up as `window[name]`, and top-level `const` bindings
 never become window properties, so all twelve came back "not a reachable array" — resolve by bare
 identifier, and print the row count it saw so a silent zero is impossible. The duplicate-id probe
-(`tools/probe-duplicate-ids.js`: 62 screens, **zero collisions**, ids 5–21 per screen, a forced
+(`tools/probe-duplicate-ids.js`: 73 screens, **zero collisions**, ids 5–21 per screen, a forced
 duplicate fires immediately) exists in the same shape for the same reason — a static read cannot see
 a collision produced by rendering one template twice, and `getElementById` answering with the first
 match is how a save writes a number from a field nobody touched. And **a fix that has never been
@@ -2196,8 +2196,10 @@ light text.
 
 THE SHIPPED `Sukinnect.html` IS MEASURED BY NOTHING, and that is now stated rather than implied.
 Every instrument in `tools/` addresses the rebuild: `harness.cjs` pins `APP` to
-`Sukinnect-next.html`, `shot.cjs` defaults the same way, and no tool even contains the string
-`Sukinnect.html` — `measure.cjs` can read it only because it takes a file argument. The static shape
+`Sukinnect-next.html`, `shot.cjs` defaults the same way, and no instrument
+reads it: the only file in `tools/` that contains the literal string at all is `build-web-dist.cjs`, which
+copies it into `dist/` without measuring it, and `measure.cjs` can read it only because it takes a file
+argument. (`grep -c "Sukinnect\.html" tools/*` answers one file.) The static shape
 is therefore known and re-checked (`node tools/measure.cjs Sukinnect.html`: 4,707 lines, one `:root`,
 86 tokens with 9 never reached, 1,138 `var()` uses, 75 hex-shaped strings outside `:root`, matching
 what this section quotes). The painted surface is not. Pointing the camera at it —
@@ -2707,12 +2709,16 @@ earned the §75 probe's own zero: storing `URL.createObjectURL(file)` in place o
 `LEAK: 0 image source(s) and 1 bytes-bearing string(s)` — the mutant a probe counting `<img>` elements
 alone would have called clean, which is why it reads the painted markup as well — and returning before the
 read answers `NO CONCLUSION: … the screen paints no file name`, so a clean row cannot come from a screen
-that measured nothing. One mechanism stays recorded rather than built: `probe-all.cjs` prints each page
-answer through `.slice(0, 78)`, applied to the longest answer, so the tail that explains a count never
-reaches the page, and the runner has no vocabulary for what an answer *means*. The convention that would
-close it — every page probe names its defect key `findings`, and the runner promotes a positive count from
-`ok` to `XX` — is not half-implemented for the reason the shipped-file gap is not: `grep -l findings
-tools/probe-*` answers two files, and those two do not yet agree on what a finding is.
+that measured nothing. The mechanism that was recorded rather than built is now built.
+`probe-all.cjs` prints each page answer through `.slice(0, 78)`, applied to the longest answer, so the
+tail that explains a count never reaches the page, and a runner with no vocabulary for what an answer
+*means* will print `ok` beside a defect. Every page probe that counts defects names its number
+`findings` (and any leg it could not complete `instrumentRows`); the runner unwraps that count through
+either print shape — an object answer and a `JSON.stringify` answer arrive differently, and reading only
+one of them is what let a planted `findings:1` look clean — promotes a positive count from `ok` to `XX`,
+and prints the number ahead of the answer so the truncation cannot swallow it.
+`grep -l findings tools/probe-*` answers three files, and they agree on the key. Last full instrument
+pass: **42 probes, 0 needing attention — 3 of them report a findings count the runner reads**.
 
 A MUTANT RUN THAT IS KILLED LEAVES ITS OWN DEFECT IN THE TREE, AND ONLY `git status` CAN SEE IT. The
 runner's header has always warned that abandoning a pass early "is the one way to leave a mutant in the
