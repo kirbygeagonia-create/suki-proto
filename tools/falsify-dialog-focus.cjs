@@ -7,7 +7,8 @@
    while every MODAL declared nothing, and eight of the nine held the caret on <body>. The app now
    labels the top layer and moves focus into it in the same render pass that marks everything else
    inert, and the tally `layers that opened without dialog semantics or the caret inside them`
-   reads 0 across all 72 screens.
+   reads 0 across every screen in the walk — 73 as of 2026-10-23, and `node tools/shot.cjs --list`
+   prints that count rather than this comment being trusted with it.
 
    Four breaks, one per guarantee:
      1  the label+focus call is removed from render        -> every modal screen reports role+modal+name+focus

@@ -90,7 +90,7 @@ for (const f of probes) {
      walk, so the first answer belongs to whatever screen happens to be first — and for two probes
      that was the only answer ever read. `probe-nav-fit.js` says "no bottom nav painted" there,
      which is true of the sign-in page and nothing else: measured on 2026-10-19 it answered on all
-     72 screens and 69 of them hold a nav. `probe-chart-axis-coverage.js` answered `charts:[]` on
+     72 screens and 69 of them hold a nav (the counts from that day; the walk is longer now). `probe-chart-axis-coverage.js` answered `charts:[]` on
      the first screen and the runner called that an answer, while the question it exists to ask —
      does an axis name its tallest bar — went unasked for the whole pass. */
   const values = (run.out.match(/probe → (\S[^\n]*)/g) || []).map(s => s.replace(/^probe → /, ''));
@@ -99,7 +99,7 @@ for (const f of probes) {
   const threw = /threw:/.test(run.out);
   const nothing = run.out.trim().length === 0;
   /* A probe refuses by saying `NO CONCLUSION`: an empty population is not a clean measurement.
-     Refuse on it only when EVERY answer refused — one refusal among 72 screens is the subject
+     Refuse on it only when EVERY answer refused — one refusal among the screens of a long walk is the subject
      genuinely not existing on one screen, and flagging that would punish the honest probe. */
   const refused = values.filter(v => v.indexOf('NO CONCLUSION') > -1).length;
   const answered = values.length - refused;

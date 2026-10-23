@@ -5,7 +5,7 @@
    evaluates a probe once per screen, so the first line belongs to whatever the walk happens to start
    with — the sign-in page. Two instruments died there silently. `probe-nav-fit.js` printed "no bottom
    nav painted", which is true of the sign-in screen and of nothing else: measured across the walk it
-   answered on 72 screens and 69 hold a nav. `probe-chart-axis-coverage.js` printed `charts:[]`, so
+   answered on 72 screens and 69 hold a nav (that day’s walk; it is longer now). `probe-chart-axis-coverage.js` printed `charts:[]`, so
    the question it was written to ask — does a chart's axis name its tallest bar — went unasked while
    the pass reported the probe clean; the real answer, once pinned to the two screens that actually
    hold a `.chart-cols`, is that `provider-dash` names its tallest bar and `admin-dash` does not. And
