@@ -7,11 +7,19 @@
      node tools/device-probe.cjs '<expression>'          # one expression, prints the answer
      node tools/device-probe.cjs --file=tools/probe-x.js # same as the camera's --probe=@
      node tools/device-probe.cjs --tap=225,452 '<expr>'  # a real gesture at page coords, then the answer
+     node tools/device-probe.cjs --keys=DPAD_DOWN,DPAD_CENTER '<expr>'   # platform key events first
 
    --tap exists because of §75's file-picker leg. `element.click()` run from Runtime.evaluate carries no
    user activation, and Chrome refuses to open a file chooser without one — so the first handset attempt
    at that leg reported "no picker appears", which was the instrument, not the application. Input events
    dispatched over CDP arrive through the browser's own input path and do count as activation.
+
+   --keys exists for the other half of the same leg, and it is added before being proven: ColorOS's
+   DocumentsUI accepts an injected tap on its own chrome and refuses one on a document row, which was
+   read as "a thumb owes this" — but the key route was never tried. `input keyevent` reaches whichever
+   window is on screen, not only this WebView, so DPAD/tab focus movement plus DPAD_CENTER is the
+   attempt to make before treating the pick as unautomatable. The codes are named or numeric, applied in
+   order with 700ms between them; run it against the picker with the page expression as the reader.
 
    The coordinates are **page** ones (CSS px, so 0..innerWidth), not the device pixels `uiautomator`
    bounds and `adb shell input tap` speak in — on the vivo 1906 those differ by devicePixelRatio 1.6 plus
@@ -35,6 +43,20 @@ const tap = tapFlag ? tapFlag.slice(6).split(',').map(Number) : null;
 if (tapFlag && (tap.length !== 2 || tap.some(n => !Number.isFinite(n))) ) {
   console.error('--tap wants page coordinates: --tap=225,452'); process.exit(1);
 }
+/* Android key events through `adb shell input keyevent`, so they reach the window that is actually on
+   screen — including another app's, which CDP cannot. Accepts keycode numbers or the names without their
+   KEYCODE_ prefix, applied in order with a short settle between each. */
+const KEYCODES = { BACK: 4, DPAD_UP: 19, DPAD_DOWN: 20, DPAD_LEFT: 21, DPAD_RIGHT: 22, DPAD_CENTER: 23,
+  ENTER: 66, TAB: 61, ESCAPE: 111, MENU: 82 };
+const keyFlag = argv.find(a => a.startsWith('--keys='));
+const keys = keyFlag ? keyFlag.slice(7).split(',').filter(Boolean).map(tok => {
+  const named = KEYCODES[tok.trim().toUpperCase()];
+  if (named !== undefined) return named;
+  const n = Number(tok);
+  if (Number.isInteger(n)) return n;
+  console.error('--keys does not know ' + JSON.stringify(tok) + '; use a keycode number or '
+    + Object.keys(KEYCODES).join('/')); process.exit(1);
+}) : [];
 const expr = fileFlag
   ? require('fs').readFileSync(fileFlag.slice(7), 'utf8')
   : (argv.find(a => !a.startsWith('--')) || 'document.title');
@@ -162,6 +184,24 @@ function httpGet(port, path) {
     await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: tap[0], y: tap[1] }] });
     await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await new Promise(r => setTimeout(r, 1200));
+  }
+  if (keys.length) {
+    /* Deliberately NOT CDP: `Input.dispatch*` reaches only our own WebView, and the reason this exists
+       is the system picker, which is another app's window. `input keyevent` goes in through the
+       platform, lands on whatever is focused, and is a different input route from the taps ColorOS's
+       DocumentsUI refuses on a document row. Untested on hardware — no phone was attached when it was
+       added; the sequence it was added for is in DEVICE-PASS.md's owed list. */
+    for (const k of keys) {
+      try {
+        execFileSync(ADB, ['shell', 'input', 'keyevent', String(k)], { stdio: 'ignore' });
+      } catch (noKey) {
+        /* Loud, and before the expression: an answer read from a screen the keys never reached is the
+           state-nobody-can-reach mistake this repository has now written down four times. */
+        console.error('KEY FAILED: `input keyevent ' + k + '` did not go through (' + noKey.message.split('\n')[0] + ') — nothing was evaluated');
+        process.exit(1);
+      }
+      await new Promise(r => setTimeout(r, 700));
+    }
   }
   /* awaitPromise, like the camera: without it an async probe serialises to `{}`, which reads exactly
      like a page that found nothing. The first device run of §77 hit that and looked like a failure of
