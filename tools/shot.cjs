@@ -1283,12 +1283,20 @@ const SCREENS = [
 /* A run that hit EPERM on its own profile leaves the folder in the user's temp forever, because
    only that run ever knew its name. This sweeps by prefix, skips anything younger than an hour
    (a live run's own folder is being written to right now), and never throws: a folder still held
-   by Chrome is a folder that will be reclaimed by the next run, not an error to report. */
+   by Chrome is a folder that will be reclaimed by the next run, not an error to report.
+
+   Two prefixes, because one is history. `suki-diag-` was what a one-off diagnostic driver named its
+   profiles on 2026-10-11; that script is gone from `tools/`, so nothing creates the name any more and
+   its orphan can never be collected by a reclaimer that only knows the live prefix. Listing a dead
+   prefix is safe precisely because of the hour guard: whatever still holds such a folder is a run that
+   started less than an hour ago, and a run in this repository's own naming is the only thing that ever
+   made one. */
+const PROFILE_PREFIXES = ['suki-shot-', 'suki-diag-'];
 function reclaimAbandonedProfiles(keep) {
   const tmp = os.tmpdir();
   let gone = 0;
   for (const name of fs.readdirSync(tmp)) {
-    if (!name.startsWith('suki-shot-')) continue;
+    if (!PROFILE_PREFIXES.some(p => name.startsWith(p))) continue;
     const p = path.join(tmp, name);
     if (p === keep) continue;
     try { if (Date.now() - fs.statSync(p).mtimeMs < 3600000) continue; } catch (e) { continue; }

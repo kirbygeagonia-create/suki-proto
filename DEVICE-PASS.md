@@ -1,6 +1,7 @@
 # Handset pass — the thing no browser check can prove
 
-The rebuild in `Sukinnect-next.html` is rendered in Node (562 checks), painted and measured in real
+The rebuild in `Sukinnect-next.html` is rendered in Node (`node tools/verify.cjs` prints the count),
+painted and measured in real
 Chrome across 73 screens at seven corners (`node tools/sweep-text-scale.cjs`: 320 CSS px at 200% text,
 the default panel at 200%, 450 px at 135%, the OPPO's own 320×638 at 135%, 320×480 at 200%, 320×300 at
 100% as the keyboard proxy, and the 100% anchor — and separately in the desktop shell at 1280×900, with

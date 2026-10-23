@@ -5962,3 +5962,53 @@ that a deferral was closed, and a census of deferral phrases cannot tell "this w
 pass" from "this still is". Writing about the closure adds a row. That is not a defect to fix by narrowing
 the vocabulary — a narrower vocabulary is how §81 and §87 got missed for three sections — it is the cost of
 the instrument, and the reason it is a list to read rather than a gate to pass.
+
+
+## 92. Asked whether anything was left, the task list said no and the file times said the sweep was stale
+
+The question was "is everything complete?", and the honest answer required not reading the task list — 58 of
+58 completed — but comparing **when each measurement ran** against **when the thing it measured last
+changed**. The list is a claim about intentions; a log line is a claim about a run, and only the second can
+be stale in this particular way.
+
+**What the audit found, in the order it was found.** `git log -1 -- Sukinnect-next.html` says the nav-floor
+conversion (`Math.round` → `Math.ceil`) landed at 06:40; `ls -lt .scratch` says the newest layout sweep ran
+at 06:14. So the "seven corners clean" figure the operating doc carried was measured on the file **26
+minutes before** its last change — the falsifier pass, the instrument pass and the gate had all been re-run
+against current bytes, and the sweep had not. It was re-run: **7 of 7 corners, 25 tallies each, all clear**,
+across the 73 screens `node tools/shot.cjs --list` counts. The conversion cannot move a bench reading
+(`navFontScale()` is exactly 1 on this machine, so `ceil(size*100)/100` and `round(size*100)/100` are the
+same number), and that is exactly the argument the §68 sweep exists to refuse: reason about why a re-run is
+unnecessary is how every stale figure in this file survived.
+
+**A second hole, found while checking whether the browser cleanup was real.** Task 17 reclaimed the Chrome
+profiles the camera abandons in temp, and the sweep's own directory listing showed a `suki-shot-*` folder
+twelve days old under a different name: `suki-diag-aJhAb1`, from a one-off diagnostic driver that is no
+longer in `tools/`. The reclaimer matched one literal prefix, so an orphan from a retired tool could never
+be collected by any run — the leak had a name, and the name was the only thing the guard knew not to look
+for. `tools/shot.cjs` now holds `PROFILE_PREFIXES = ['suki-shot-', 'suki-diag-']`, and naming the dead
+prefix is safe because of the hour guard: nothing that still holds such a folder is older than an hour, and
+only this repository's own tools ever made one. Measured on the next run: `reclaimed 3 abandoned Chrome
+profile folder(s) from earlier runs`, and the temp listing afterwards holds no `suki-*` directory at all.
+
+**Then the guard got a guard.** A prefix list fails silently — the tool just prints a smaller number — so
+one `hygiene` check pins it (both prefixes present, at least two entries so an emptied list cannot pass, and
+the `3600000` hour guard still in place, because the guard is the reason the retired prefix is safe to
+name). Proven by three plantings against the live file, each refused by the named check and each restored
+byte-for-byte: drop `suki-diag-`, replace the hour guard with `< 1`, empty the list entirely. Baseline after
+the restore: **all 563 checks passed**.
+
+**And why the aggregate had to run again.** The camera is a *target*: fifteen families needle
+`tools/shot.cjs`, and §82 established that editing a file a family needles can orphan a needle and take a
+guarding mutant out of the suite while every headline number still reads healthy. So the totals this section
+quotes come from a full pass started after the camera edit, not from the pass that ran before it: it printed **46
+families, 232 mutants applied, 232 caught, 0 not applied**, no flagged row, and the tree clean
+afterwards — the same table as the pass before it, which is the evidence that editing the camera orphaned no
+needle in the fifteen families that needle it.
+
+Two rules out of one question. **A green task list is not evidence of completeness — compare measurement
+times to change times** (`ls -lt` against `git log -1 -- <path>` is under a minute and catches what no
+assertion can, because nothing was wrong with the old run; it was merely old). And **a cleanup rule written
+as one literal is a cleanup rule with a hole shaped like history**: enumerate the names your tool has to
+collect, including the names its own retired tools used, or the residue outlives every run that could have
+cleared it.

@@ -2812,7 +2812,8 @@ still said the admin's Insights screen "needs §76 applied to it, and that is th
 after §82 applied it; CHANGES §81 recorded the de-typing as found-not-fixed with no pointer to §82
 shipping it; DEVICE-PASS's walk-4 list still owed a thumb to a screen walk 5 had read on a vivo; and
 README.md told a reviewer the app has "never" been measured on a handset, six walks across two phones ago,
-while its preamble quoted 517 checks and 63 screens against the tree's 562 and 73. Nothing in `tools/`
+while its preamble quoted 517 checks and 63 screens against the tree's live figures, which are printed in
+seconds by `node tools/verify.cjs` and `node tools/shot.cjs --list`. Nothing in `tools/`
 could see any of it: every instrument measures the application or its own output, and a stale sentence is
 neither. §90 caught hand-kept *numbers*; these are hand-kept *states*, and "still owed" is not falsifiable
 by arithmetic. The instrument is `node tools/audit-open-items.cjs` — sixteen present-tense deferral phrases
@@ -2842,6 +2843,31 @@ review lines, and it is why this is a list to read rather than a gate to pass. R
 structural: `probe-all.cjs`
 picked the census up from its filename (`^(probe|audit)-…`), the same trick by which `layerKeys()` derives
 the modal fields from `state` rather than from a list someone maintains.
+
+A GREEN TASK LIST IS NOT EVIDENCE OF COMPLETENESS — COMPARE MEASUREMENT TIMES TO CHANGE TIMES. Asked
+"is everything complete?" with 58 of 58 tasks closed, the answer came from `ls -lt` against
+`git log -1 -- Sukinnect-next.html`, and it was no: the nav-floor conversion landed at 06:40 and the newest
+layout sweep had run at 06:14, so the "seven corners clean" figure the operating doc carried was measured on
+the file 26 minutes before its last edit. Nothing was *wrong* with the old run — it was merely old, which is
+the one failure mode an assertion cannot express. Re-run: **7 of 7 corners, 25 tallies each, all clear** over
+the 73 screens `--list` counts. The conversion cannot move a bench reading (`navFontScale()` is exactly 1
+here, so ceil and round are the same number), and reasoning that a re-run is therefore unnecessary is exactly
+how every stale figure in this file survived; the argument for re-running is that the measurement, not the
+argument, is the evidence.
+
+THE SAME AUDIT FOUND A CLEANUP RULE WITH A HOLE SHAPED LIKE HISTORY. The camera reclaims the Chrome profiles
+its failed runs leave in temp, and the listing showed a twelve-day-old orphan named `suki-diag-*` — a prefix
+a retired one-off driver used, which the reclaimer's single literal could never match. So `shot.cjs` now
+holds `PROFILE_PREFIXES = ['suki-shot-', 'suki-diag-']`, and naming a dead prefix is safe only because of the
+hour guard beside it. Measured: the next run printed `reclaimed 3 abandoned Chrome profile folder(s)` and the
+temp listing afterwards holds no `suki-*` directory. Because a prefix list fails silently — the tool just
+prints a smaller number — one `hygiene` check pins both prefixes, a minimum of two entries so an emptied list
+cannot pass, and the hour guard itself, since the guard is the reason the retired name is safe. It was proven
+by three plantings against the live file (drop the retired prefix, set the guard to `< 1`, empty the list),
+each refused by the named check, each restored byte-for-byte; **all 563 checks passed** after the restore.
+The camera is also a *target*: fifteen families needle `tools/shot.cjs`, so editing it means re-running the
+whole aggregate before quoting its totals, which is §82's orphaned-needle class arriving from the direction
+of "the file I changed is a test instrument".
 
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by
@@ -3875,7 +3901,7 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate **562** (the two new `hygiene` checks in §89); whole suite **46 families, 232 mutants applied, 232 caught, 0 not applied** (`node tools/falsify-all.cjs`, pass completed 2026-10-23 in ~53 minutes with no flagged family and the tree clean after it — §91 added the `open-items` family's four breaks and §89 three count breaks to `falsify-probe-population` plus one conversion break to `falsify-nav-fit`, so the addition before this pass said 232 and the run printed 232; the addition before the last pass said 225 and that run printed 228, which is the reason the quoted figure is read off the log rather than derived in prose). Per-family rows read off that same log, each matching the run: `falsify-pay-records` 3 of 3, `falsify-step-stamps` 4 of 4, `falsify-insights-records` 7 of 7, `falsify-split-figures` 1 of 1 with its redundant half printed as an observation, `falsify-verification-progress` 6 of 6, `falsify-verification-records` 10 of 10, `falsify-chart-collide` 5 of 5 inside the run, `falsify-seed-dates` 4 of 4, `falsify-dialog-focus` 4 of 4, `falsify-register-identity` 4 of 4, `falsify-photo-name` 2 of 2 inside the run, `falsify-preflight` 3 of 3 inside the run, `falsify-nav-fit` 5 of 5 with §89’s conversion break, and `falsify-probe-population` 6 of 6 with §89’s three count rules, and `falsify-open-items` 4 of 4. Quote a total from a pass that printed one.
+Gate **563** (the two new `hygiene` checks in §89 and the profile-reclaim guard in §92); whole suite **46 families, 232 mutants applied, 232 caught, 0 not applied** (`node tools/falsify-all.cjs`, re-run 2026-10-23 after `tools/shot.cjs` was edited and printing the same table in ~53 minutes with no flagged family and the tree clean after it — §91 added the `open-items` family's four breaks and §89 three count breaks to `falsify-probe-population` plus one conversion break to `falsify-nav-fit`, so the addition before this pass said 232 and the run printed 232; the addition before the last pass said 225 and that run printed 228, which is the reason the quoted figure is read off the log rather than derived in prose). Per-family rows read off that same log, each matching the run: `falsify-pay-records` 3 of 3, `falsify-step-stamps` 4 of 4, `falsify-insights-records` 7 of 7, `falsify-split-figures` 1 of 1 with its redundant half printed as an observation, `falsify-verification-progress` 6 of 6, `falsify-verification-records` 10 of 10, `falsify-chart-collide` 5 of 5 inside the run, `falsify-seed-dates` 4 of 4, `falsify-dialog-focus` 4 of 4, `falsify-register-identity` 4 of 4, `falsify-photo-name` 2 of 2 inside the run, `falsify-preflight` 3 of 3 inside the run, `falsify-nav-fit` 5 of 5 with §89’s conversion break, and `falsify-probe-population` 6 of 6 with §89’s three count rules, and `falsify-open-items` 4 of 4. Quote a total from a pass that printed one.
 Of these, the families that drive the camera rather than the gate are whatever
 `grep -l shot.cjs tools/falsify-*.cjs` names — fifteen on 2026-10-23: `blank-query`,
 `camera-surfaces`, `chart-collide`, `control-reach`, `dialog-focus`, `double-tap`, `flex-crush`,

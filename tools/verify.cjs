@@ -1656,6 +1656,22 @@ suite('hygiene', async () => {
     modalAsked > -1 && sheetAsked > -1 && modalAsked < sheetAsked,
     'dialog lookup at ' + modalAsked + ', sheet lookup at ' + sheetAsked);
 
+  /* The camera also cleans up the Chrome profiles its own failed runs leave in the user's temp, and
+     it collects by prefix. One of the two prefixes names a tool that no longer exists: `suki-diag-`
+     was what a one-off diagnostic driver called its profiles on 2026-10-11, and its orphan survived
+     twelve days of sweeps because the reclaimer only knew the live prefix. A list that loses an entry
+     fails silently — the tool prints `reclaimed N` and N simply gets smaller — so the list is
+     asserted, and the hour guard is asserted with it, because the guard is the only reason naming a
+     dead prefix is safe rather than a way to delete a live run's data. */
+  const prefixBlock = (camera.match(/const PROFILE_PREFIXES = \[([^\]]*)\]/) || [])[1] || '';
+  const prefixes = (prefixBlock.match(/'[^']+'/g) || []).map(s => s.slice(1, -1));
+  const hourGuard = /< 3600000/.test(camera);
+  c.check('the profile reclaimer collects both the live and the retired Chrome profile prefixes',
+    prefixes.length >= 2 && prefixes.indexOf('suki-shot-') > -1
+      && prefixes.indexOf('suki-diag-') > -1 && hourGuard,
+    prefixes.length + ' prefixes [' + prefixes.join(' ') + '], hour guard '
+      + (hourGuard ? 'present' : 'MISSING'));
+
   /* The collision tally is new, and every one of its three guards exists because the first version
      produced a false finding without it: text inside a CLOSED <details> still has a layout box in
      Chrome (seven findings on four screens, all of them collapsed content), a clipped sr-only data
