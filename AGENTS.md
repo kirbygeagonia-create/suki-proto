@@ -2770,8 +2770,10 @@ and two `hygiene` checks pin the shape (the direction of the rounding, and that 
 measured — the positive control that stops the check passing on a build where the loop was deleted),
 because §83's lesson applies exactly here: **when the machine is too coarse to observe a rule, assert the
 shape.** A fifth break in `node tools/falsify-nav-fit.cjs` restores `Math.round` and requires the gate
-check to fail, so the guard cannot rot into a comment. Re-measuring on hardware waits on the next build:
-the provider nav should read `10.38px` written and at least 14px rendered.
+check to fail, so the guard cannot rot into a comment. Measured back on the hardware that found it, on
+`1.2-preview.38` on the same OPPO: `10.38px` written and **14.013px** rendered, with `Bookings` and
+`Messages` still cut at the floor as documented. The vivo has not carried `.38` yet, so the second panel is
+still owed that reading.
 
 A HANDSET CONTRADICTED THIS FILE BEFORE ANYTHING WAS MEASURED, AND BOTH CONTRADICTIONS WERE MY READER.
 Walk 6 found the OPPO `S4CUYTJB6HNNWC49` with Sukinnect **uninstalled** while `DEVICE-PASS.md` still said

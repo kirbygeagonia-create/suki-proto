@@ -1616,19 +1616,38 @@ point of the walk was to re-check it on the build the rebuild actually ships.
 scale 1.35 (its own value, never written by this walk), `stay_on_while_plugged_in` 0 (as found), the
 owner's Accessibility Menu left enabled, no files pushed and no dumps written.
 
+**Then the reading above became a fix, and the fix was re-measured on this phone.** The 13.9995px is a
+rounding direction in `fitNavLabels` (§89): the conversion back from rendered to specified px was
+`Math.round`, and it now goes up. `1.2-preview.38` (`versionCode 40`, asset hashed
+`a4cf6fc31df59ae2964b0d726b071534` against the source, `dist/` and the staged copy) was built and
+installed over `.37` on this same device, and the provider nav re-measured: **`10.38px` written,
+14.013px rendered**, still `Bookings` and `Messages` cut at the floor and `Dash`/`FSM`/`Profile` whole.
+That is the first time a nav-floor number in this project has been confirmed in the space the platform
+actually paints in, rather than inferred from the bench where the factor is 1. The phone is again signed
+out with its own settings untouched. The vivo `80d20768` was not on the cable for this and still runs
+`preview.37`; walk 5 never read the *provider* nav on that phone, so the shortfall was never measured
+there — when it is next attached, install `.38` and read the same two numbers (written size and computed
+size) to confirm the fix on a second panel.
+
 ## Owed, in order — a pointer list, not an explanation
 
 Everything below is written out where it belongs; this is only the list of what the next person finds
 open. Nothing here is a defect the bench can close.
 
-**On the handset** — one item, and it needs a thumb rather than a phone: **tap one document in the
-system picker** the concierge's photo control opens. Everything else the `.37` list owed was put to the
-vivo on 2026-10-22 and is written up in *Handset walk 5* above — the caption, the Insights figures, the
-`1039`, the second provider's own header, the dialog tree, and whether TalkBack speaks an opened dialog.
-What that walk could not automate is ColorOS handing a document to a synthetic pointer, and it records
-the four attempts plus the two controls that show the injected input reaching that same window. The
-app's half of the promise was then measured in a browser and holds: a real `File` arrives, the screen
-paints only its name, no `blob:` or `data:` image exists.
+**On the handset** — two items, and neither is a bench task:
+1. **Tap one document in the system picker** the concierge's photo control opens. ColorOS accepts an
+   injected tap on the picker's own chrome and refuses one on a document row, so this is one finger.
+2. **Install `1.2-preview.38` on the vivo `80d20768`** and read the provider nav there — written size and
+   computed size — because the nav-floor fix (§89) is confirmed on the OPPO's 320px panel and on no other.
+   The vivo currently runs `.37`.
+
+Everything else the `.37` list owed was put to a phone and is written up in *Handset walk 5* and
+*Handset walk 6* above — the caption, the Insights figures, the `1039`, the second provider's own header,
+the dialog tree, whether TalkBack speaks an opened dialog, the five-item nav at the OPPO's own text scale,
+and the sign-out confirmation as a second modal surface. What those walks could not automate is ColorOS
+handing a document to a synthetic pointer, recorded with the four attempts and the two controls that show
+the injected input reaching that same window. The app's half of the promise was measured in a browser and
+holds: a real `File` arrives, the screen paints only its name, no `blob:` or `data:` image exists.
 
 Two more device-shaped things stay open because they are owner questions, not bench work: whether
 TalkBack's *wording* names the dialog (no channel here recovers spoken text — the tree proves the name
@@ -1637,12 +1656,11 @@ notification surface at all in this build (§27 is untestable for the other two 
 `tools/probe-notification-targets.js` reports).
 
 And one flag that this file used to owe and no longer does: the OPPO `S4CUYTJB6HNNWC49` was found with the
-app **uninstalled** and `svc power stayon` already cleared, and it now runs `1.2-preview.37` (Handset walk
-6). Its text scale is 1.35 in the `system` namespace — `settings get global font_scale` answers `null` and
-means nothing there — and its Accessibility Menu is the owner's own setting, left alone. What walk 6 found
-is a rounding bug, fixed in `fitNavLabels`, whose re-measurement on hardware waits on the next build: the
-provider nav should read `10.38px` written and **at least 14px** rendered rather than the 13.9995px this
-walk measured.
+app **uninstalled** and `svc power stayon` already cleared. Handset walk 6 installed `1.2-preview.37`,
+found the nav floor rendering at 13.9995px, and the same device then took `1.2-preview.38` with the fix
+and measured `10.38px` written / **14.013px** rendered (§89). Its text scale is 1.35 in the `system`
+namespace — `settings get global font_scale` answers `null` and means nothing there — and its Accessibility
+Menu is the owner's own setting, left alone.
 
 **Decided 2026-10-21 and closed** —
 - `color-scheme: only light` is declared in `:root`, with `--measure --dark` re-run afterwards across all
