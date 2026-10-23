@@ -1694,10 +1694,12 @@ Menu is the owner's own setting, left alone.
 - Promotion. `Sukinnect.html` is still `origin/main` and untouched (proved with
   `git diff --quiet origin/main -- Sukinnect.html`), so the floors the rebuild earned are proven for
   `Sukinnect-next.html` and unproven for the file a reviewer opens today. The owner's ruling is to
-  **refresh PR #9 rather than merge it** — done 2026-10-22 (70 commits) and refreshed again 2026-10-23
-  (83 commits, gate 562, 45 families / 228 mutants, 42 probes with 3 reporting a findings count), so the
-  pull request describes the rebuild it actually carries and what merging would ship
-  unverified, and stays OPEN. The merge button is still a human's, and the handset legs above are the
+  **refresh PR #9 rather than merge it** — done 2026-10-22 (70 commits then) and refreshed again 2026-10-23.
+  The totals are deliberately *not* repeated here: `gh pr view 9 --json body -q .body` is the live table, and
+  the four numbers this bullet hand-carried had all moved by the time the sentence was re-written — the same
+  drift §90 and §91 are about. The pull request
+  describes the rebuild it actually carries and what merging would ship unverified, and stays OPEN. The merge
+  button is still a human's, and the handset legs above are the
   reason it should stay that way for now.
 
 

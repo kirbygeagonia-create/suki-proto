@@ -2751,8 +2751,10 @@ hazard and repairing it are different acts. The second row exists because the fi
 copied `count-labes` out of this runner's own header, which matches nothing: the nested pass ran zero
 families and exited 0, and only the positive control refused to credit its own baseline. A hand-kept count
 in a tool's header is the same drift this runner was written to catch in prose — that line now states the
-tree's 45 families and the last pass's 44/221/~35 minutes, and says why an advertised runtime that is too
-long gets a run abandoned early.
+tree's 46 families and the last pass's 232 mutants in ~53 minutes, the measured wall clock rather than the
+~35 minutes the previous revision remembered, and it had to be re-written again on the day it was first
+re-written because §91 added a family. It says why an advertised runtime that is too long gets a run
+abandoned early.
 
 A PROBE'S ANSWER IS PRINTED TWO WAYS, AND A READER THAT KNOWS ONLY ONE SEES A DEFECT AS CLEAN. The
 runner now reads a defect count instead of only asking whether an instrument answered: a page probe names
