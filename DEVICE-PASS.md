@@ -1644,7 +1644,11 @@ open. Nothing here is a defect the bench can close.
    been tried**: `input keyevent` with `KEYCODE_DPAD_DOWN` / `KEYCODE_TAB` to move focus and
    `KEYCODE_DPAD_CENTER` to activate is a different input route from the ones refused, and this same
    walk already had to fall back to `KEYCODE_ENTER` to submit the sign-in form once the keyboard moved
-   the page out from under the coordinates. Try the key route before treating this as a thumb-only leg.
+   the page out from under the coordinates. **The flag for that attempt already exists**: open the picker
+   with `--tap` on the concierge's button, then
+   `node tools/device-probe.cjs --keys=TAB,TAB,DPAD_DOWN,DPAD_CENTER '1'` and read whether our page came
+   back holding a file name. It ships untested on hardware and its header says so; if the key route also
+   refuses, the thumb-only conclusion finally has the evidence the taps alone did not supply.
 2. **Install `1.2-preview.38` on the vivo `80d20768`** and read the provider nav there — written size and
    computed size — because the nav-floor fix (§89) is confirmed on the OPPO's 320px panel and on no other.
    The vivo currently runs `.37`.

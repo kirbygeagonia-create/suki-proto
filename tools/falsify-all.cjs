@@ -163,7 +163,7 @@ for (const f of families) {
 }
 console.log('─'.repeat(72));
 const dirtyAfter = gitUnavailable ? '' : dirtyTarget();
-console.log(families.length + ' families, ' + A + ' mutants applied, ' + C + ' caught, '
+console.log(families.length + (families.length === 1 ? ' family, ' : ' families, ') + A + ' mutants applied, ' + C + ' caught, '
   + S + ' not applied' + (bad ? ' — ' + bad + ' family needs attention' : ' — every rule is still being tested'));
 if (gitUnavailable) console.log('NOTED the target was never checked against git — no git on PATH, so a leftover mutant would not have been seen');
 else if (dirtyAfter) {
