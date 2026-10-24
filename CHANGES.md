@@ -6693,3 +6693,13 @@ idle-mode whitelist) were restored and read back: `low_power=1`, `stay_on_while_
 **Still owed:** the **ColorOS key route** on this same phone — reachable now, with the guard proven. And the
 vivo, which is not on the bus: its `.39` install and the same two readings on a 450-CSS-px panel at
 `font_scale 1.35` remain open as a parity question, not as a mechanism question, which §104 settled.
+
+**Correction to §104's last paragraph, and the reason it matters.** It claimed the diagnosis settings were
+"restored and read back: `low_power=1`". At the moment it was written, `low_power` read **0** — the same
+command that had failed to switch battery saver *off* (`settings put global low_power …`) also failed to
+switch it back *on*, silently and with exit 0. What actually works on this ColorOS build is
+`cmd power set-mode 1`, after which the setting reads 1 and stays there. So the state now is verified:
+`low_power=1`, `stay_on_while_plugged_in=0`, `com.sukinnect.app` removed from the idle whitelist
+(`Removed: com.sukinnect.app`), `font_scale` 1.35 as found, and the app installed at `versionCode=41`.
+**How to apply:** on this OEM, battery saver is not a `settings put` — write it with `cmd power set-mode`, and
+read the value back rather than trusting the exit code, which reports success for a write the platform ignores.
