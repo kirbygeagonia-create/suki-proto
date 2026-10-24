@@ -56,6 +56,34 @@ function requireJson(label, expr) {
   console.log(label + ': NOT MEASURED — the page did not answer with an object. Raw: ' + String(raw).slice(0, 110));
   return null;
 }
+/* Reaching a screen on a cold-booted app is not a single assignment. The AVD run showed why: the splash
+   hands over to `login` on a timer that fires *after* `state.view='app'; render()` runs, so the assignment
+   is silently overwritten and every reading that follows happens on the wrong page — which is how the walk
+   came to print a PIN-field measurement it had never taken. So: wait for the app to settle, assign, and
+   verify the `<h1>` the assignment is supposed to produce, retrying up to four times. Same rule the
+   camera's SCREENS table encodes by calling the app's own entry points. */
+function waitSettled() {
+  for (let i = 0; i < 12; i++) {
+    const o = (() => { try { return JSON.parse(ask('JSON.stringify({view:state.view})')); } catch (e) { return null; } })();
+    if (o && o.view === 'login') { console.log('  the app settled at view=login after ' + (i + 1) + ' poll(s)'); return true; }
+    sleep(2500);
+  }
+  return false;
+}
+function gotoScreen(label, setup, expectRe) {
+  for (let i = 0; i < 4; i++) {
+    ask('state.sheet=null; state.adminAccountModal=null; ' + setup);
+    sleep(1200);
+    const o = requireJson(label + ' reached?', 'JSON.stringify({view:state.view,tab:state.tab,sheet:state.sheet,' +
+      'h1:(document.querySelector("#screen h1")||{}).textContent||""})');
+    if (o && expectRe.test(o.h1)) { console.log(label + ': on screen — h1="' + o.h1 + '"'); readings.ok = readings.ok.filter(x => x !== label + ' reached?'); return o; }
+    console.log('  retry ' + (i + 1) + ': h1="' + (o ? o.h1 : '(no answer)') + '" view=' + (o ? o.view : '?'));
+    if (i === 0) waitSettled();
+    sleep(1500);
+  }
+  readings.bad.push(label + ' (never reached)');
+  return null;
+}
 function liveness() {
   for (let i = 0; i < 10; i++) {
     const pid = adb('shell', 'pidof', PKG).trim();
@@ -220,8 +248,7 @@ say('multiplier', '(function(){var s=document.createElement("span");' +
   'rootFont:getComputedStyle(document.documentElement).fontSize})})()');
 
 /* ---------- 3. the admin lock field ---------- */
-say('admin hub', "state.view='app'; state.role='admin'; state.tab='profile'; render();" +
-  "JSON.stringify({h1:(document.querySelector('#screen h1')||{}).textContent})");
+const hub = gotoScreen('admin hub', "state.view='app'; state.role='admin'; state.tab='profile'; render();", /Admin account/);
 tapPainted('Lock Admin Session', "/adminAccountAction\\('lock'\\)/", 'Lock Admin Session');
 say('dialog', 'JSON.stringify({title:(document.querySelector(".modal-layer b")||{}).textContent||"NO DIALOG PAINTED",' +
   'copy:(document.querySelector(".modal-layer")||{}).textContent.replace(/\\s+/g," ").trim().slice(0,150)})');
@@ -304,9 +331,7 @@ if (scaleFlag) {
 }
 
 /* ---------- 4. the resident filter rows ---------- */
-say('results', "state.view='app'; state.role='resident'; startDiscovery('leak');" +
-  "JSON.stringify({tab:state.tab,h1:(document.querySelector('#screen h1')||{}).textContent," +
-  "filterBtn:!!document.getElementById('provider-filter-btn')})");
+const res = gotoScreen('results', "state.view='app'; state.role='resident'; startDiscovery('leak');", /Find Services/);
 tapPainted('Filter providers', "/openSheet\\('providerFilters'\\)/", '#provider-filter-btn');
 say('sheet', 'JSON.stringify({sheet:state.sheet,title:(document.querySelector(".sheet-title")||{}).textContent||"NO SHEET",' +
   'rows:document.querySelectorAll(".filter-option").length})');
@@ -326,8 +351,7 @@ say('last row reach', '(function(){var rows=[].slice.call(document.querySelector
 say('close sheet', "state.sheet=null; render(); JSON.stringify({sheet:state.sheet,h1:(document.querySelector('#screen h1')||{}).textContent})");
 
 /* ---------- 5. leave it signed out, and read the platform back ---------- */
-say('resident profile', "state.view='app'; state.role='resident'; state.tab='profile'; render();" +
-  "JSON.stringify({h1:(document.querySelector('#screen h1')||{}).textContent})");
+gotoScreen('resident hub', "state.view='app'; state.role='resident'; state.tab='profile'; render();", /Profile/);
 say('tap Log Out row', "(function(){var b=[].slice.call(document.querySelectorAll('#screen *,[data-layer] *'))" +
   ".filter(function(e){return typeof e.onclick==='function'&&/logout/i.test(String(e.onclick))});" +
   "if(!b.length)return 'NO LOGOUT CONTROL';b[0].click();return 'clicked '+b.length})()");
