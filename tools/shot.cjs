@@ -1082,6 +1082,37 @@ const SCREENS = [
   ['admin-security-modal', `state.view='app'; state.role='admin'; state.tab='profile'; render();
                           openProfileSection('admin','security','Security & Sign-in','What this device keeps');
                           clickPainted(/AccountAction\\(.pin.\\)/, 'the security-PIN button');`],
+  /* Four more dialogs on the same shelf, found by measuring rather than by noticing. `node
+     tools/audit-camera-dialog-coverage.cjs` asks which profile controls the app paints that raise a
+     layer, and which of those names any row of this table clicks: the difference is a destination the
+     walk does not have. Three of the same card's buttons — Password, Two-factor, View Sessions — and
+     the provider's Enable Dispatch had each been *proved* to paint a dialog by the gate (which calls
+     the handler) and photographed by nothing (which is the only way to measure a dialog's tap targets,
+     contrast and dialog semantics). This is the fourth time the class was found by a person happening
+     to look — `admin-account`, the audit log, the verification review, the logout confirm — and the
+     first time an instrument asked the question on its own. */
+  ['admin-password-modal', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+                          openProfileSection('admin','security','Security & Sign-in','What this device keeps');
+                          clickPainted(/adminAccountAction\\('password'\\)/, 'the Password button');`],
+  ['admin-twofa-modal', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+                          openProfileSection('admin','security','Security & Sign-in','What this device keeps');
+                          clickPainted(/adminAccountAction\\('twofa'\\)/, 'the Two-factor button');`],
+  ['admin-sessions-modal', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+                          openProfileSection('admin','security','Security & Sign-in','What this device keeps');
+                          clickPainted(/adminAccountAction\\('sessions'\\)/, 'the View Sessions button');`],
+  ['provider-dispatch-modal', `state.view='app'; state.role='provider'; state.tab='profile'; render();
+                          openProfileSection('provider','dispatch','Emergency Dispatch','Urgent requests');
+                          clickPainted(/providerProfileAction\\('dispatch'\\)/, 'the Enable Dispatch button');`],
+  /* Three more, from widening the audit's own population. Its first scan read only the section cards,
+     so a control painted by the hub itself — Log Out on two roles, Lock Admin Session — was never
+     enumerated, and the tool reported complete coverage for a dialog it had not looked for. Once the
+     hub markup was read too, these three surfaced on the same run that added the four above. */
+  ['provider-logout-modal', `state.view='app'; state.role='provider'; state.tab='profile'; render();
+                          clickPainted(/providerProfileAction\\('logout'\\)/, 'the Log Out button under the account rail');`],
+  ['admin-logout-modal', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+                          clickPainted(/adminAccountAction\\('logout'\\)/, 'the Log Out button under the account rail');`],
+  ['admin-lock-modal', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+                          clickPainted(/adminAccountAction\\('lock'\\)/, 'the Lock Admin Session button');`],
   /* The six forms where a person types the app's most sensitive facts — a name, a phone, a home
      address, a household item, a service price, a portfolio entry. Three dialog screens already
      sat in this table (a payment picker, a payout field, a PIN note), and these had never been
@@ -1090,6 +1121,13 @@ const SCREENS = [
      themselves had been checked by nothing. */
   ['resident-edit-form', `state.view='app'; state.role='resident'; state.tab='profile'; render();
                           clickPainted(/residentProfileAction\\('edit'\\)/, 'the Edit Profile button');`],
+  /* Reached on a handset first: walk 8 opened this confirm on the vivo and the caret stayed on `<body>`,
+     which is the §77 guarantee failing on a device while every bench reading passed — because no bench
+     screen opened this dialog. A destination behind a row is still a destination, and `clickPainted` is
+     how the walk reaches one with a real input event rather than a page-side `click()`, which is the one
+     difference between the two readings worth controlling for. */
+  ['resident-logout-modal', `state.view='app'; state.role='resident'; state.tab='profile'; render();
+                          clickPainted(/residentProfileAction\\('logout'\\)/, 'the Log Out button in the account rail');`],
   ['resident-household-form', `state.view='app'; state.role='resident'; state.tab='profile'; render();
                           openProfileSection('resident','home','Home & Maintenance Profile','Items you add on this device');
                           clickPainted(/residentProfileAction\\('add_item'\\)/, 'the add-household-item button');`],

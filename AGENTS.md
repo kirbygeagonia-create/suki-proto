@@ -1265,7 +1265,7 @@ official mark is a PNG, not an icon, and it is still the only brand image on the
 The rebuild also added a real verification surface, because reading the file cannot
 see a layout: `node tools/shot.cjs` drives the machine's own Chrome headless over the
 DevTools Protocol with no npm packages, and `--measure` runs an in-page instrument
-across every screen in the walk (73 as of §81; `node tools/shot.cjs --list` is the count) for tap
+across every screen in the walk (81 as of §97; `node tools/shot.cjs --list` is the count) for tap
 targets, WCAG contrast (sampling gradients at the text's
 own position), clipped text, off-scale fonts, content trapped under the nav, unnamed
 controls, form fields a screen reader cannot name, images that asked for a file and got no
@@ -2380,11 +2380,15 @@ forgives. Result, same probe: **9 of 9** now report `role=dialog modal=true name
 The tally `layers that opened without dialog semantics or the caret inside them` runs on every screen
 of every sweep corner — `sweep-text-scale.cjs` treats an unregistered tally as must-be-zero, so a new
 sensor cannot be silently informational — and `node tools/falsify-dialog-focus.cjs` proves the four
-reasons are separately observable: removing the call reads `count=8 reasons=[focus,modal,name,role]`,
-refusing only the caret reads `count=8 reasons=[focus]`, and never naming the dialog reads `count=6
-reasons=[name]`. Its fourth break blinds the tally's own selector with the application defect still in
-place and requires the tally to print 0, which is the evidence that a clean sweep is the sensor
-answering rather than the sensor deaf — 4 breaks, 4 caught, 0 not applied.
+reasons are separately observable: removing the call read `count=8 reasons=[focus,modal,name,role]` when the
+walk held 73 screens, `count=9` after §96 added the logout confirm and **`count=16`** since §97 put seven
+more dialogs in the walk; refusing only the caret reads the same count with `reasons=[focus]`, and never
+naming the dialog reads `count=14 reasons=[name]`. Its fourth break blinds
+the tally's own selector with the application defect still in place and requires the tally to print 0, which is
+the evidence that a clean sweep is the sensor answering rather than the sensor deaf. Its fifth, added by §96,
+does not go through the tally at all: it refuses the caret and requires `tools/probe-dialog-focus-settled.js`,
+which re-reads the caret at one and three seconds, to report `findings=2` — because a guarantee undone by a later
+render is invisible to a sensor that asks once. 5 breaks, 5 caught, 0 not applied.
 
 Two instrument lessons from the same pass, both about the reader rather than the app. The probe first
 looked only at the outer `[data-layer]` wrapper and printed `role=-` everywhere, which would have been
@@ -2521,7 +2525,7 @@ it was added: the word `insights` occurred nowhere in `tools/shot.cjs`. It typed
 96, Credentials 75, Capacity 68), a service breakdown naming four trades where the roster holds
 seven, a sentence asserting which trade has the highest cancellation rate, and one named provider
 "needing attention" two lines below a count derived from the records. `admin-insights` is in the
-walk now (73 screens) and measures clean — which is the point: geometry cannot see a typed number, so
+walk when it joined it, and measures clean at today's `--list` count — which is the point: geometry cannot see a typed number, so
 a screen can pass every tally in the camera and still be §76's decorative statistic. That was written
 as found-not-fixed, and the pass after it de-typed the screen (`CHANGES.md` §82): the three bars the
 records can answer are divisions of them, the capacity bar and the cancellation verdict are gone
@@ -2733,8 +2737,9 @@ tail that explains a count never reaches the page, and a runner with no vocabula
 either print shape — an object answer and a `JSON.stringify` answer arrive differently, and reading only
 one of them is what let a planted `findings:1` look clean — promotes a positive count from `ok` to `XX`,
 and prints the number ahead of the answer so the truncation cannot swallow it.
-`grep -l findings tools/probe-*` answers three files, and they agree on the key. Last full instrument
-pass: **44 probes, 0 needing attention — 3 of them report a findings count the runner reads**.
+`grep -l findings tools/probe-*` answers four files — the settled-caret probe joined them with §96 — and they
+agree on the key. Last full instrument pass, 2026-10-24: **45 probes, 0 needing attention — 4 of them report a
+findings count this runner reads**, read off the line that pass printed rather than added up in prose.
 
 A MUTANT RUN THAT IS KILLED LEAVES ITS OWN DEFECT IN THE TREE, AND ONLY `git status` CAN SEE IT. The
 runner's header has always warned that abandoning a pass early "is the one way to leave a mutant in the
@@ -2900,6 +2905,126 @@ three duplicates but 95 commits instead of 88, so it is the count that sees it. 
 the refusal break printed MISSED because I asserted the mutated tool must *refuse*, when the mutation's whole
 point is that it stops refusing. A break that removes a guard is caught when the guarded behaviour appears.
 Read a first MISSED before deleting it — that is how the missing empty-range control was found.
+
+A MEASUREMENT TAKEN WITH THE THING SWITCHED OFF PROVES NOTHING ABOUT THE THING, AND ASKING ABOUT IT COST
+ONE SENTENCE. Handset walk 5 answered "does TalkBack speak an opened dialog" from `dumpsys audio`, and the
+whole project then carried that answer; walk 8 opened the same log and found the owner's standing rule had
+been obeyed every time — `enabled_accessibility_services` was `null` and `accessibility_enabled` 0 on every
+earlier run, so the channel was being read while nobody was speaking on it. The fix was not an instrument, it
+was a question: the owner approved enabling TalkBack for the measurement and restoring it, and the answer,
+now taken with `dumpsys accessibility` reporting the service **bound**, is the same one the file carried — but
+earned. Opening the resident **Log out?** confirm produced one new audio line and it was an
+`abandonAudioFocus()`, a teardown of an older hold rather than a request; a cleared `logcat` window over the
+open showed 5 lines, **0** mentioning talkback/TextToSpeech/utterance and **0** containing the dialog's own
+name. Three channel facts generalise past this dialog. The `SpeechControllerImpl` block in `dumpsys audio` is
+a persistent **history** (the same six lines before force-stopping TalkBack and after), so a burst count has
+to be a set difference across the event read beside the service's bound state. With a screen reader on,
+tap 1 selects and tap 2 activates: the first walk reported "no edit button of 14" while the hub's fourteen
+painted buttons were exactly where they had always been, and every navigation had to be tapped twice. And
+asking the owner for a temporary device change is cheap — the cost of not asking was a session of conclusions
+about a service that had never been turned on.
+
+A DEVICE READING THE BENCH CANNOT REPRODUCE POINTS AT THE BENCH'S POPULATION BEFORE IT POINTS AT THE
+ENGINE. With the logout confirm open, `document.activeElement` was `<body>` while `document.hasFocus()` was
+true — with the reader on, and again with it off and one real tap. The bench, driving the same control
+through `clickPainted`, says the caret is inside and its tally reads 0. Before chasing a WebView difference,
+`grep -i logout tools/shot.cjs` was run, and it answered **nothing**: the dialog the owner reaches every time
+they leave the app was a surface no instrument had ever opened. It is `resident-logout-modal` in the walk
+(the table went 73 → 74 here, and 81 when §97 measured the class instead of spotting it), clean on all 25
+tallies, labelled by its own title. So the device reading is not a bench
+disproof — it is a state the bench never entered, and the residue is stated rather than settled: the caret
+placement on that handset after a real tap is still unexplained, and what is now pinned is that no later
+render undoes it. `tools/probe-dialog-focus-settled.js` reads the caret immediately, at one second and at
+three, because a guarantee fired and then undone by a repaint is exactly the distinction a single-shot tally
+cannot make; it reports `findings`, so `probe-all.cjs` reads it, and the fifth break in
+`node tools/falsify-dialog-focus.cjs` refuses the caret through `focusIntoLayer` and requires **that probe**
+to notice — baseline `findings=0`, mutated `findings=2`, while the tally's own count moved 8 → 9 only because
+the walk got one screen wider. 5 of 5 breaks caught, 0 not applied, 0 missed.
+
+DEVICE-SIDE RESTORATION BELONGS IN AN EXIT HOOK, NOT THE LAST LINE OF THE HAPPY PATH. The first walk-8 driver
+died on `>/dev/null` — cmd.exe cannot open it — between enabling TalkBack and restoring it, and the owner's
+screen reader stayed on until it was put back by hand. That is §88's cancelled-run-leaves-a-mutant class
+arriving with a device setting instead of a file, and the fixed drivers install `process.on('exit', restore)`
+before they enable anything. The end-of-walk check is a **read**, not a memory: `enabled_accessibility_services`
+`null`, `accessibility_enabled` 0, no talkback row in `ps -A`, `font_scale` 1.0 in the `system` namespace, the
+installed build still `versionCode=40 / 1.2-preview.38`, and the app signed out through its own Log Out row and
+the confirm dialog's own button, after which `state.view` reads `login`. One last instrument lesson from the
+same listing: `ls /sdcard/Download` filtered on `suki` answered a file name, and it was not a fixture — dated
+2026-10-11 and already recorded in walk 4 as one of the owner's files left where it was. A grep hit on a
+directory is a lead; the date is what makes it a finding.
+
+A DESTINATION BEHIND A ROW IS STILL A DESTINATION, AND NOW AN INSTRUMENT ASKS THE QUESTION. Four times this
+repository found the same hole by a person happening to look: the admin's Account tab, the audit log, the
+verification review, the resident's logout confirm — each in no camera table, each never photographed,
+each found from a screenshot or a handset reading rather than a measurement. `node
+tools/audit-camera-dialog-coverage.cjs` asks it directly: the app can say which profile controls raise a
+layer (enumerated from the PAINTED hub and the PAINTED section cards, so the set cannot go stale), the
+table says which action names a row of the walk clicks, and the difference is a destination the walk does
+not have. It found seven, and every one of them is reached the way a thumb reaches it — the hub's own
+Log Out button on two roles, the admin's Lock Admin Session, the provider's Enable Dispatch, and three
+security dialogs the gate had proved paint and the camera had never opened.
+
+THREE OF THOSE SEVEN FINDINGS WERE THE INSTRUMENT'S OWN, AND EACH TAUGHT A RULE. The camera table does
+not have one shape for a click: `residentProfileAction\\('edit'\\)` sits beside `ProfileAction\\(.add_payment.\\)`
+(three rows abbreviate the caller so one pattern serves every role) and `Action\\(.request.\\)` (the
+verification rows abbreviate further). A reader that recognised only the tidy form reported three walked
+dialogs as unwalked. Names are taken from inside each `clickPainted(/…/)` body now, with **letters as a
+hard stop** after the caller — the first tolerant version allowed four non-digits, which let a renamed
+caller still yield logout, so the tool condemned nothing while appearing to. Tightening it exposed the
+second error: the scan enumerated only section cards, and Log Out is painted by the hub itself, under the
+rail — so the audit reported complete coverage for a dialog it had never looked for. Widening the
+population surfaced three more unwalked destinations on the same run that added the first four.
+
+AND THE ROW COUNT WAS ITS OWN THIRD LIE. Counting every `["x",` in the camera read 82 where `node
+tools/shot.cjs --list` counts 78, because four setup scripts inside the rows carry nested literals of the
+same shape (`['upcoming', …]`). An over-count that still satisfies a `< 40` population guard is a control
+that lies rather than one that fails: the guard would have caught an empty scan and blessed a wrong one.
+A row is now the entry whose id is followed by the template literal that walks it, which is exactly what
+`--list` prints, and the two agree at 81. `node tools/falsify-camera-dialog-coverage.cjs` proves all four
+ways this can go quiet — 4 breaks, 4 caught, 0 not applied — and break 1 printed **MISSED twice** on the
+way to that, once for the loose gap and once for the narrow population. Both times the reading was the
+tool's, not the application's, and both times the fix was to the tool: **a break that prints MISSED is
+read, not deleted** — this repository has now written that down five times.
+
+THE COVERAGE AUDIT PAID FOR ITSELF ON ITS FIRST SWEEP, AND THE DEFECT WAS IN THE APP. Once the seven
+dialogs became screens the camera walks, the sweep reported one control under the 44px tap floor and one
+text under the 14px type floor **at every corner**: the admin lock dialog's PIN field, hand-rolled with
+`padding:9px` and no class, so it drew at the user-agent's 13.3px inside a 37px box. The file already
+records this exact defect for the two inputs that used to hand-roll their geometry — the class was known,
+the *screen* was new. It now takes `.form-input` inside a `<label class="form-label">`,
+like every other writable field in the file, and both tallies read 0.
+
+Its body copy was the second finding, and it is the §63 class rather than a typography one: the dialog
+said **"Enter PIN to continue"** above an Unlock button that only closes the dialog, on a screen whose
+three sibling dialogs already state that no authentication state is kept. A label that promises a check
+nothing performs is the same defect as a button labelled "Analyze the text and photo" on a build that
+cannot read pictures (§75). The line now says what is true — no PIN is checked, Unlock closes this
+screen and leaves the app signed in — and the placeholder repeats it, because the field is the thing a
+person is about to type into.
+
+A CHECK THAT READS PROSE FAILS A GOOD BUILD, WHICH IS THE OTHER DIRECTION OF §85. With those screens
+walked, the bundle check for the Android build started reporting `48 of 49 resolved` and exiting 1: the
+page explains its own measurements in comments, and one sentence names `tools/probe-long-input.js` — a
+camera probe deliberately **not** bundled, because a phone does not run tools. The path pattern accepts
+parentheses as delimiters, so the comment read as a request. Comments are stripped before scanning now.
+The proof is a pair with one filename planted twice: inside a comment it must be ignored (clean exit,
+reference count unchanged), and in markup it must be reported missing. That is what distinguishes the
+fix from a blinded scanner — `node Sukinnect-Android/tools/falsify-assets.cjs`, 5 mutants, 5 caught.
+
+AND THE PROOF ITSELF WAS VACUOUS FIRST. The falsifier's `run()` returned an empty string whenever the
+checker passed, so the pass-polarity mutant compared `-1` against `-1` and called that a population
+control. It printed CAUGHT — for the right reason in the end, but on evidence that could not have been
+otherwise. Reading stdout on success made the count real (48 before and after the comment plant), which
+is the third time this session a check that cannot fail looked exactly like one that passed.
+
+ONE CANCELLED MUTANT PASS LEFT ITS DEFECT IN THE TREE, AND THE DOCUMENTED RECOVERY IS THREE COMMANDS.
+Stopping the aggregate to fold in the fix above killed a family between its mutation and its `finally`:
+`git status` showed `adminActivityRows()` carrying a planted **"Credential reminder sent."** in its empty
+state — the fabricated audit line that `falsify-admin-profile-records` exists to condemn, sitting in the
+file the next measurement would read. Save the bytes, `git checkout -- Sukinnect-next.html`, re-run
+`node tools/verify.cjs` before quoting anything: the hash came back `a4cf6fc3…` and all 563 checks
+passed. A background chain that auto-starts the next stage is the hazard here, not the kill: **stage the
+long runs one at a time when the tree is still moving.**
 
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by
@@ -3933,10 +4058,11 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate **563** (the two new `hygiene` checks in §89 and the profile-reclaim guard in §92); whole suite **47 families, 236 mutants applied, 236 caught, 0 not applied** (`node tools/falsify-all.cjs`, re-run 2026-10-24 after `tools/shot.cjs` was edited and printing the same table in ~51 minutes with no flagged family and the tree clean after it — §91 added the `open-items` family's four breaks, §89 three count breaks to `falsify-probe-population` plus one conversion break to `falsify-nav-fit`, and §94 the `commit-subjects` family's four, so the addition before this pass said 236 and the run printed 236; the addition before the last pass said 225 and that run printed 228, which is the reason the quoted figure is read off the log rather than derived in prose). Per-family rows read off that same log, each matching the run: `falsify-pay-records` 3 of 3, `falsify-step-stamps` 4 of 4, `falsify-insights-records` 7 of 7, `falsify-split-figures` 1 of 1 with its redundant half printed as an observation, `falsify-verification-progress` 6 of 6, `falsify-verification-records` 10 of 10, `falsify-chart-collide` 5 of 5 inside the run, `falsify-seed-dates` 4 of 4, `falsify-dialog-focus` 4 of 4, `falsify-register-identity` 4 of 4, `falsify-photo-name` 2 of 2 inside the run, `falsify-preflight` 3 of 3 inside the run, `falsify-nav-fit` 5 of 5 with §89’s conversion break, and `falsify-probe-population` 6 of 6 with §89’s three count rules, `falsify-open-items` 4 of 4, and `falsify-commit-subjects` 4 of 4. Quote a total from a pass that printed one.
+Gate **563** (`node tools/verify.cjs`, re-run after §98 changed the page); whole suite **48 families on the tree** (`ls tools/falsify-*.cjs | grep -v falsify-all | wc -l`), and **the mutant total is deliberately not quoted at this moment** — §97 added `falsify-camera-dialog-coverage`'s four breaks and §96 added a fifth to `falsify-dialog-focus` after the last pass printed **47 families, 237 applied, 237 caught, 0 not applied**, so the figure below that line is the one to re-run rather than to repeat. Layout: **8 of 8 phone corners clean, 25 tallies each**, over the **81** screens `--list` counts, re-run 2026-10-24 after the seven dialogs joined the walk. Instruments: **46 probes, 0 needing attention — 4 of them report a findings count this runner reads**. Quote a total from a pass that printed one, and say which pass it was.
 Of these, the families that drive the camera rather than the gate are whatever
-`grep -l shot.cjs tools/falsify-*.cjs` names — fifteen on 2026-10-23: `blank-query`,
-`camera-surfaces`, `chart-collide`, `control-reach`, `dialog-focus`, `double-tap`, `flex-crush`,
+`grep -l shot.cjs tools/falsify-*.cjs` names — sixteen on 2026-10-24: `blank-query`,
+`camera-dialog-coverage`, `camera-surfaces`, `chart-collide`, `control-reach`, `dialog-focus`,
+`double-tap`, `flex-crush`,
 `focus-trap`, `long-input`, `nav-fit`, `notification-routes`, `photo-name`, `probe-population`,
 `split-figures` and `stale-overlay` — because a geometry rule, a real tap, or a second tap has no Node
 assertion available to it. (That sentence used to say "the ten" and name eight; the count and the list had
@@ -4720,3 +4846,4 @@ The final result should not look like disconnected demo screens.
 It should feel like ONE application.
 
 It should feel like SUKINNECT.
+

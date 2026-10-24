@@ -139,9 +139,15 @@ week guarding nothing.
 
 ```
 node tools/audit-open-items.cjs     # every "still owed" sentence the present-tense documents still make
+node tools/audit-camera-dialog-coverage.cjs   # profile dialogs the camera's walk has never opened
 ```
 
-That one is a list, not a verdict: an open item is legitimate, so it exits 0 and a person reads the rows.
+The second is coverage rather than prose: it asks the application which profile controls raise a layer, asks
+the camera which of them a row of the walk clicks, and prints the difference — the destination-behind-a-row
+class it found seven of (`CHANGES.md` §97). Both halves are population-controlled, because a scan that
+matched nothing and a walk that needed nothing answer with the same zero.
+
+The first is a list, not a verdict: an open item is legitimate, so it exits 0 and a person reads the rows.
 It exists because four sentences went stale by describing an item as owed after the pass that closed it —
 see CHANGES.md §91 — and it refuses (exit 1, `NO CONCLUSION`) if its own phrase list matches nothing,
 because a rotted vocabulary must not read as a clean document.
@@ -375,10 +381,10 @@ To swap an image, replace the file and keep the name. To add a trade, add a row 
   [`DEVICE-PASS.md`](DEVICE-PASS.md), which also says how to put the shipped file back.
 - Screens are rendered in Node, then painted and measured in a real browser at a phone size, and —
   when a phone is attached — on that phone: `tools/device-probe.cjs` drives the WebView's own Chrome
-  over the DevTools socket, and [`DEVICE-PASS.md`](DEVICE-PASS.md) records handset walks 1–7 below, on two
-  phones. Two things still need one: ColorOS's file picker has never been tried with `input keyevent`,
-  which is the route that returned a document on the vivo where four injected taps
-  were refused. What no instrument here can prove is how any of it
-  *feels*, and what TalkBack actually says aloud when a dialog opens — its burst proves an
-  announcement happens and the accessibility tree proves the name is exposed, but no channel on these
-  devices recovers the spoken words.
+  over the DevTools socket, and [`DEVICE-PASS.md`](DEVICE-PASS.md) records handset walks 1–8 below, on two
+  phones. One thing still needs one: ColorOS's file picker has never been tried with `input keyevent`,
+  which is the route that returned a document on the vivo where four injected taps were refused. The
+  TalkBack question is no longer owed: walk 8 asked it with the reader actually switched on, caught the
+  announcement on the audio channel and the dialog's name in the accessibility tree, and found nothing on
+  either phone that recovers the words themselves. What no instrument here can prove is how any of it
+  *feels*, and what a spoken announcement sounds like to the person who turned the reader on.

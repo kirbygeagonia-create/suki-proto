@@ -6141,3 +6141,160 @@ four synthetic taps on the other. That localises the picker difference to the OE
 is why the OPPO's item stays open and cannot be reasoned closed from anything the vivo did. Read beside it, and
 left exactly as found: `enabled_accessibility_services` `null`, `accessibility_enabled` `0` — TalkBack off, so
 the wording question remains the owner's to open rather than a measurement owed.
+
+
+## 96. TalkBack was switched on for one measurement, and the dialog it opened had never been opened by an instrument
+
+The last thing `DEVICE-PASS.md` owed that no bench could answer was what an opened dialog is *spoken* as.
+Every previous reading of that channel had been taken with the service off — `enabled_accessibility_services`
+`null`, `accessibility_enabled` `0` — which the owner's standing rule required, and the rule was correct: it
+is their phone. So the rule was asked rather than assumed around, and the owner approved enabling TalkBack for
+the measurement and restoring it after. That one sentence is why this section exists: with `dumpsys
+accessibility` reporting the service **bound**, the project's answer is the same one it has carried since
+walk 5 — the announcement happens, the name is exposed, and the words are unrecoverable from here — but it is
+now resting on a run where the thing being measured was actually switched on. **A measurement taken with the
+instrument's subject powered down does not answer the question it appears to answer, and asking takes one
+line.**
+
+Three readings came out of that enablement, none of them about TalkBack's wording. `dumpsys audio`'s
+`SpeechControllerImpl` block is a persistent **history**: the same six lines were there before force-stopping
+the service and the same six after, and the set only grew as the walk tapped things — so a burst count has to
+be a set difference across the event, read beside the service's bound state, and a "no new line" silence is
+not a silence. Opening the resident **Log out?** confirm produced exactly one new line, and it was an
+`abandonAudioFocus()` — a teardown of an older hold, not a request — while a cleared `logcat` window over the
+open held 5 lines, 0 mentioning talkback/TextToSpeech/utterance and 0 containing the dialog's own name. And
+**with a screen reader on, the first tap selects and the second activates**: the first attempt reported "no
+edit button of 14" while the hub's fourteen painted buttons were exactly where they had always been, and every
+navigation in the walk had to be tapped twice. That is a permanent fact about driving a phone, not a quirk of
+this dialog.
+
+The divergence that started the leg did not resolve, and the reason is a hole in the bench rather than in the
+engine. On the handset `document.activeElement` was `<body>` with `document.hasFocus()` **true**, with the
+reader on and again with it off and a single real tap; the bench, driving the same control through
+`clickPainted` (a real CDP input event), reports the caret inside and its tally reads 0. Before arguing a
+WebView difference, `grep -i logout tools/shot.cjs` was run and answered **nothing**: the confirmation the
+owner meets every time they leave the app was a dialog no instrument had ever opened. It is
+`resident-logout-modal` in the walk now (**74** screens), clean on all 25 tallies and labelled by its own
+title — and the honest residue is stated rather than closed: the caret placement on that handset after a real
+tap remains unexplained, and what the suite now pins is that no later render undoes the placement.
+
+That last clause is the second instrument of this pass. `tools/probe-dialog-focus-settled.js` reads the caret
+immediately, at one second and at three, because a guarantee that fires and is then undone by a repaint is
+exactly the distinction a single-shot tally cannot make, and it reports `findings` so `probe-all.cjs` reads it
+rather than only asking whether it answered. The fifth break in `node tools/falsify-dialog-focus.cjs` refuses
+the caret through `focusIntoLayer` and requires **that probe** to notice: baseline `findings=0`, mutated
+`findings=2` — **5 of 5 breaks caught, 0 not applied, 0 missed**. The same family's tally count moved 8 → 9,
+purely because the walk gained a screen, which is a sensor reporting the wider walk rather than a new defect.
+
+**The part that belongs to the owner's device, not to the repository.** The first driver died on `>/dev/null`
+— cmd.exe cannot open it — between enabling TalkBack and restoring it, so the owner's screen reader stayed on
+until it was put back by hand. That is the cancelled-mutant-run class of §88 arriving with a device setting
+instead of a file: cleanup cannot live at the end of the happy path, and the fixed drivers install
+`process.on('exit', restore)` before they enable anything. The end-of-walk check is a read, not a memory: the
+two accessibility settings `null` and 0, no talkback row in `ps -A`, `font_scale` 1.0 in the `system`
+namespace, installed build still `versionCode=40 / 1.2-preview.38`, and the app back on its sign-in screen
+after its own Log Out row and the confirm dialog's own button were clicked (`state.view` reads `login`). One
+of those reads nearly produced a false deletion: `ls /sdcard/Download` filtered on `suki` answered
+`suki-test-photo.png`, which is not this session's fixture — it is dated 2026-10-11 and already recorded in
+walk 4 as one of the owner's files left where it was. **A grep hit on a directory listing is a lead; the date
+is what makes it a finding.**
+
+Supersedes the closing sentence of §95, which correctly described the state on its own day: the wording
+question was the owner's to open, and on 2026-10-24 they opened it.
+
+
+## 97. An instrument asked the "has anyone walked this dialog?" question, and it found seven
+
+Handset walk 8 met the class face to face: the resident's logout confirmation is a modal the app builds,
+the gate proves it paints, and **no row of the camera's table had ever opened it** — which is why the phone's
+caret reading had nothing on the bench to compare against. That is the fourth time this repository found the
+same hole by a person happening to look (the admin's Account tab, the audit log, the verification review), so
+the fourth time it got a measurement instead of a note.
+
+`node tools/audit-camera-dialog-coverage.cjs` compares two populations the application and the tool each own:
+the profile controls that **raise a layer**, enumerated from the painted hub and the painted section cards, and
+the action names any row of the walk **clicks**. The difference is a destination the walk does not have. It
+printed **seven**: the provider's Enable Dispatch, three admin security dialogs whose honest "not configured"
+bodies had never been photographed, the admin's View Sessions, and — after the population was widened — the
+Log Out button of two roles and the admin's Lock Admin Session, which are painted by the hub itself rather
+than inside a section. All seven are in the table now: the walk went **74 → 81 screens**, each new screen
+labelled by its own dialog title and clean on all 25 tallies, and the audit answers `findings: 0`.
+
+Three of the first run's seven findings were the instrument's own errors, and each is a rule rather than an
+embarrassment. **The camera table does not have one shape for a click:** `residentProfileAction\\('edit'\\)`
+sits beside `ProfileAction\\(.add_payment.\\)` and `Action\\(.request.\\)`, because three rows abbreviate the
+caller so one pattern serves every role — a reader that recognised only the tidy form called three walked
+dialogs unwalked. Names are taken from inside each `clickPainted(/…/)` body now, with letters as a hard stop
+after the caller; the first tolerant version allowed four non-digits, so a *renamed* caller still yielded
+"logout" and the tool condemned nothing while appearing to work. **The population was too narrow:** reading
+only section cards missed the hub's own buttons, and a scan that never looks for a control reports complete
+coverage for it. **And the row count lied:** counting every `["x",` read 82 where `--list` counts 78, because
+four setup scripts carry nested literals of the same shape — an over-count that satisfies a `< 40` guard is a
+population control that blesses a wrong scan instead of condemning an empty one. A row is now the entry whose
+id is followed by the template literal that walks it, which is what `--list` prints, and the two agree.
+
+`node tools/falsify-camera-dialog-coverage.cjs` proves the audit can fail: **4 breaks, 4 caught, 0 not
+applied** — a walked dialog that stops clicking its control (caught twice on the second attempt: break 1
+printed **MISSED** for the loose gap, then **MISSED** again for the narrow population, and both readings
+condemned the tool rather than being deleted), a table scan that matches nothing, an app scan that raises no
+layer, and a table that is not being read at all, each of which has to answer `NO CONCLUSION` with exit 1
+rather than `findings: 0`. `node tools/falsify-dialog-focus.cjs` re-run over the wider dialog list is **5 of
+5**, with the tally's mutated count moving 8 → 9 → **16** as the walk gained seven dialogs — a sensor
+reporting the wider walk rather than a new defect.
+
+**The rule:** when the same class has to be spotted by a human four times, the human is the instrument's
+weak link. And when an instrument's own defect is what produces a clean answer, the fix belongs to the
+instrument — a guard whose threshold the bug can satisfy is not a guard.
+
+
+## 98. The new screens found a real defect, and the bundle checker found its own
+
+Seven dialogs went into the camera's table in §97 and the sweep came back with a finding at **every one of
+the eight corners**: one control under the 44px tap floor, one text under the 14px type floor. Both were the
+same element — the admin **Lock Admin Session** dialog's PIN field, written as
+`<input type="password" placeholder="PIN" style="width:100%; padding:9px">`. No class, so no
+`min-height:var(--field-h)` and no `font-size:var(--t-input)`: it drew at the user-agent's 13.3px inside a
+37px box, which is precisely the defect this file already records for the two edit inputs that used to
+hand-roll their geometry. Nothing in `tools/verify.cjs` could see it, because the gate calls handlers and a
+font size is not a handler; the only reason it was visible at all is that the field's dialog had become a
+screen the camera walks. It takes `.form-input` inside a `<label class="form-label">` now, like every other
+writable field, and both tallies read 0.
+
+The dialog's copy was the second finding and belongs to a different class. It said **"Enter PIN to
+continue"** above an Unlock button that only calls `render()` — on a card whose three sibling dialogs already
+state that the prototype keeps no authentication state. A label promising a check that nothing performs is
+the §63/§75 defect (a button reading "Analyze the text and photo" on a build that cannot read pictures),
+arriving from the security shelf. The line now says what is true: no PIN is checked, Unlock closes this
+screen and leaves the app signed in.
+
+**Then the bundle checker failed a good build.** `node Sukinnect-Android/tools/check-assets.cjs` started
+reporting `48 of 49 resolved` and exiting 1. The 49th was `tools/probe-long-input.js` — not a request at all
+but a sentence inside a CSS comment in the page, explaining how a wrapping rule was measured. The path
+pattern accepts parentheses as delimiters, so `(tools/probe-long-input.js)` read as an asset the phone needs,
+and the fix would have been to bundle a camera probe into the APK. Comments are stripped before scanning now,
+because §85 already learned that a needle matching prose is a needle matching the wrong evidence — this is
+the same defect pointed the other way, condemning rather than blessing.
+
+The proof planted **one filename twice**: in a comment it must be ignored (clean exit, reference count
+unchanged at 48), in markup it must be reported missing. Without the second half the fix could have been
+achieved by blinding the scanner to every path. `node Sukinnect-Android/tools/falsify-assets.cjs` — 5 mutants,
+5 caught — and its own first version was vacuous: `run()` returned an empty `out` whenever the checker
+passed, so the pass-polarity case compared `-1` against `-1` and printed CAUGHT on evidence that could not
+have been otherwise. Reading stdout on success made the population real. Third time this session that a
+check which cannot fail looked exactly like one that passes.
+
+**One cancelled pass left its defect in the tree, and the documented recovery is what got it back.**
+Stopping the aggregate to fold in the fix above killed a family between its mutation and its `finally`:
+`git status` showed `adminActivityRows()` returning `'Credential reminder sent. No job has moved on this
+device…'` — the fabricated audit line that `falsify-admin-profile-records` exists to condemn, planted by no
+edit of mine. Save the bytes, `git checkout -- Sukinnect-next.html`, re-run `node tools/verify.cjs`: hash back
+to `a4cf6fc3…`, 563 checks passing. The hazard was the *self-chaining* background command — the next stage
+started while the tree still had work pending, so the stages are run one at a time from here.
+
+Consequences to keep: the page bytes are now `badf8cd7…` in the source, `dist/` (rebuilt: 60 files, 48
+referenced paths all resolving), the staged Android asset and `1.2-preview.39-debug.apk` (2,153,734 bytes,
+`versionCode 41`) — while the vivo still runs `.38` at `a4cf6fc3…`, because the phone left the bus between
+the build and the walk. The device reading of a `rem`-sized field is owed, and `rem` is exactly where a phone
+can disagree with the bench (§68 multiplies used sizes after CSS resolves), so it is a real leg, recorded in
+`DEVICE-PASS.md`'s owed list as item 2.
+

@@ -31,7 +31,8 @@ const APP = path.join(ROOT, 'Sukinnect-next.html');
 const CAM = path.join(ROOT, 'tools', 'shot.cjs');
 const PRISTINE = fs.readFileSync(APP, 'utf8');
 const TALLY = 'layers that opened without dialog semantics or the caret inside them: ';
-const SCREENS = 'booking-sheet,resident-payment-modal,resident-edit-form,provider-edit-form,admin-edit-form,admin-security-modal,case-sheet,offer-sheet,admin-review-approve';
+const SCREENS = 'booking-sheet,resident-payment-modal,resident-edit-form,resident-logout-modal,admin-password-modal,admin-twofa-modal,admin-sessions-modal,admin-lock-modal,admin-logout-modal,provider-dispatch-modal,provider-logout-modal,provider-edit-form,admin-edit-form,admin-security-modal,case-sheet,offer-sheet,admin-review-approve';
+const SETTLED = 'tools/probe-dialog-focus-settled.js';
 
 const NEEDLES = {
   call: '  setInertOutside(topLayerEl());\n  labelTopLayer(topLayerEl());',
@@ -73,6 +74,27 @@ function mutate(file, from, to) {
   return { ok: true, p, pristine: src };
 }
 
+/* The settled-caret probe, run the way the camera runs a page probe. It exists because walk 8 read
+   `document.activeElement === body` with the dialog open **on a handset** while every bench tally said 0 —
+   so the tally alone cannot distinguish "the caret never moved" from "the caret moved and something put it
+   back", and the surface it read was not in any walk at the time. */
+function runSettled() {
+  let out = '';
+  try { out = execFileSync(process.execPath, [CAM, '--probe=@' + SETTLED, '--only=resident-profile'],
+    { encoding: 'utf8', cwd: ROOT, maxBuffer: 64 * 1024 * 1024, timeout: 600000 }); }
+  catch (err) { out = (err.stdout || '') + (err.stderr || ''); }
+  const line = (out.match(/probe → (\S[^\n]*)/g) || []).pop() || '';
+  let findings = null, refused = false;
+  try {
+    let v = line.replace(/^probe → /, '');
+    let p = JSON.parse(v);
+    if (typeof p === 'string') p = JSON.parse(p);
+    findings = p && typeof p.findings === 'number' ? p.findings : null;
+    refused = /NO CONCLUSION/.test(v);
+  } catch (bad) { /* an answer that is not JSON has no findings count */ }
+  return { findings, refused, printed: !!line };
+}
+
 const BREAKS = [
   { name: 'the render pass stops labelling and focusing the top layer',
     file: 'app', from: NEEDLES.call, to: '  setInertOutside(topLayerEl());',
@@ -87,6 +109,12 @@ const BREAKS = [
     file: 'cam', from: NEEDLES.selector,
     to: "document.querySelectorAll('[data-layer=\"nothing-matches-this\"]')",
     expect: { count: 0, blinded: true } },
+  /* Same defect as break 2, judged by the other instrument — the settled probe. The tally says "a layer
+     opened with no caret in it"; the probe says whether the caret ever arrived and left, which is the
+     question the handset raised. Two sensors, one defect, both must see it. */
+  { name: 'the caret is refused and the settled probe is the one that notices',
+    via: 'probe', file: 'app', from: NEEDLES.focus, to: 'function focusIntoLayer(box, layer){\n  return;\n  const sig =',
+    expect: { min: 1 } },
 ];
 
 let applied = 0, caught = 0, missed = 0, notPlanted = 0;
@@ -94,7 +122,11 @@ const restore = [];
 try {
   const base = runCamera();
   console.log('control  unmutated app, unblinded tally: count=' + base.count + ' reasons=[' + base.reasons + ']');
+  const baseP = runSettled();
+  console.log('control  unmutated app, settled probe: findings=' + baseP.findings + ' printed=' + baseP.printed);
   if (!base.printed) { console.log('ABORT — the camera never printed the tally line. NO CONCLUSION.'); process.exitCode = 1; }
+  else if (!baseP.printed || baseP.findings === null) { console.log('ABORT — the settled probe printed no readable findings count; a probe that answers nothing cannot condemn a mutation.'); process.exitCode = 1; }
+  else if (baseP.findings !== 0) { console.log('ABORT — the settled probe already reports ' + baseP.findings + ' on the unmutated app; nothing below isolates a cause.'); process.exitCode = 1; }
   else if (base.count !== 0) { console.log('ABORT — the tally is already firing at count ' + base.count + '; nothing below isolates a cause.'); process.exitCode = 1; }
   else {
     for (const b of BREAKS) {
@@ -106,6 +138,14 @@ try {
       if (!m.ok) { notPlanted++; console.log('NOT PLANTED  ' + b.name + '  (' + m.why + ')'); continue; }
       restore.push({ p: m.p, s: m.pristine });
       applied++;
+      if (b.via === 'probe') {
+        const p = runSettled();
+        const okP = p.printed && p.findings !== null && p.findings >= b.expect.min;
+        if (okP) { caught++; console.log('CAUGHT   ' + b.name + '\n         -> settled probe findings=' + p.findings); }
+        else { missed++; console.log('MISSED   ' + b.name + '  (settled probe findings=' + p.findings + ', wanted >= ' + b.expect.min + ')'); }
+        while (restore.length) { const it = restore.pop(); fs.writeFileSync(it.p, it.s); }
+        continue;
+      }
       const r = runCamera();
       let ok;
       if (b.expect.blinded) ok = r.printed && r.count === 0 && !r.reasons;

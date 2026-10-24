@@ -2,16 +2,18 @@
 
 The rebuild in `Sukinnect-next.html` is rendered in Node (`node tools/verify.cjs` prints the count),
 painted and measured in real
-Chrome across 73 screens at seven corners (`node tools/sweep-text-scale.cjs`: 320 CSS px at 200% text,
+Chrome across 81 screens at eight corners (`node tools/sweep-text-scale.cjs`: 320 CSS px at 200% text,
 the default panel at 200%, 450 px at 135%, the OPPO's own 320×638 at 135%, 320×480 at 200%, 320×300 at
-100% as the keyboard proxy, and the 100% anchor — and separately in the desktop shell at 1280×900, with
+100% as the keyboard proxy, the vivo's own 450×889 at 200%, and the 100% anchor — and separately in the desktop shell at 1280×900, with
 `prefers-reduced-motion` emulated and under `prefers-color-scheme: dark`). When a phone is attached,
 the same page questions are asked again inside the device's own WebView by
-`node tools/device-probe.cjs` driving Chrome over the DevTools socket. Handset walks 1–7 below, and the
+`node tools/device-probe.cjs` driving Chrome over the DevTools socket. Handset walks 1–8 below, and the
 earlier `.17`–`.28` passes above, all on two phones, mean this file is
 not a list of things a browser cannot do. It is the record of what only a phone showed, and of the
-three things that still outrun every instrument here: how the app *feels* under a thumb, whether a slow
-device keeps up with it, and what TalkBack actually says aloud when a dialog opens.
+two things that still outrun every instrument here: how the app *feels* under a thumb, and whether a slow
+device keeps up with it. The third — what TalkBack says aloud when a dialog opens — was asked properly on
+2026-10-24 with the reader actually running (Handset walk 8): an announcement happens, the accessibility
+tree carries the dialog's name, and no channel on this device recovers the words.
 
 **The Android assets copy is a third file, and `git status` cannot see it.**
 `Sukinnect-Android/app/src/main/assets/Sukinnect.html` is gitignored, so no working-tree check
@@ -1720,12 +1722,83 @@ because it asks whether an *ancestor* scrolls.
 narrow panels with large text because that is where clipping was found. It is in `DEFAULT_CASES` now, and the
 eight-corner run is the figure quoted afterwards.
 
+## Handset walk 8 — TalkBack actually running, the two-tap rule, and a dialog no walk had ever visited
+
+`2026-10-24`. The vivo 1906 came back attached and authorised, so the one device-side question left — does
+an opened dialog get **spoken**, not merely exposed — could be asked properly. The owner approved enabling
+TalkBack for the measurement and restoring it after, which matters because every earlier reading of this
+channel was taken with the service **off**: `settings get secure enabled_accessibility_services` answered
+`null` and `accessibility_enabled` `0` both before and after this walk, and that is exactly what walk 5's
+own note says — so its conclusion about what TalkBack does or does not say was read from a channel nobody was
+speaking on. The package is present (`com.google.android.marvin.talkback`, base + `arm64_v8a` split), and
+after enabling, `dumpsys accessibility` reports the service **bound**.
+
+**The engine, re-read.** `dumpsys webviewupdate` → `com.google.android.webview 155.0.8059.43`, identical to
+what walk 5 captured, and the phone is **Android 11 / API 30** (`RP1A.200720.012`, vivo OS 11.5, build dated
+2025-07-11) — which corrects that walk's header line and, with it, two sentences in `AGENTS.md` that
+reasoned from "Android 10". The two handsets are therefore **one patch apart on the same Chromium build**
+(.43 here, .45 on the OPPO), and yet one returns a document to `input keyevent` while the other refused four
+synthetic taps — so the picker difference is the OEM shell, not the WebView, and cannot be argued across.
+
+**Four instrument facts, each one learned by being wrong first.**
+
+1. **The audio log is a history, not a state.** Six `SpeechControllerImpl` lines were there before
+   force-stopping TalkBack and the same six after; the set grew to 10 and then 13 as the walk tapped things.
+   A `dumpsys audio` silence therefore says nothing about whether anything is speaking *now*, and a burst
+   count has to be a **difference across the event**, read beside the service's own bound state.
+2. **With a screen reader on, the first tap selects and the second activates.** Every single-tap
+   navigation in the first attempt silently focused instead of firing, which is why it reported "no edit
+   button of 14" while the hub's fourteen painted buttons were exactly where they had always been. Tapping
+   each control twice fixed the walk.
+3. **A dialog's words reach no channel on this device — now measured with the reader running.** Opening
+   the resident **Log out?** confirm (`role=dialog`, `aria-modal=true`, `aria-labelledby` naming it
+   "Log out?") produced one new audio line, and it was an **`abandonAudioFocus()`** — a teardown of an older
+   hold, not a request. A cleared `logcat` window over the open showed 5 lines in total, **0** mentioning
+   talkback/TextToSpeech/utterance, and **0** containing the dialog's own name. So: the burst proves an
+   announcement happens and §77's tree proves the name is exposed; with the service verifiably on, nothing
+   here recovers the wording. That is the same conclusion the project has carried, but it now rests on a run
+   where the thing being measured was actually switched on.
+4. **The caret reading that started all this is a device divergence, and the bench's real failure was
+   population.** With the dialog open, `document.activeElement` was `<body>` while `document.hasFocus()` was
+   true — with TalkBack **on**, and again with it **off** and a single real tap, so it was not the reader
+   owning focus. The bench, driving the *same* control through `clickPainted` (a real CDP input event, not a
+   page-side `click()`), reports the caret inside and the tally reads 0. What was actually wrong is that
+   `grep -i logout tools/shot.cjs` returned nothing: **the logout confirm was a dialog no instrument had
+   ever opened.** It is `resident-logout-modal` in the walk now, and it measures clean on all 25 tallies,
+   labelled by its own dialog title — and because that reading was a person noticing rather than a sensor
+   asking, §97 turned the question into `node tools/audit-camera-dialog-coverage.cjs`, which found seven such
+   destinations in total and grew the table to **81** screens.
+
+**Three instruments added, and proved.** `tools/probe-dialog-focus-settled.js` reads the caret immediately,
+at one second and at three — because a guarantee that fires then is undone by a later render is precisely the
+distinction the single-shot tally cannot make. It reports `findings`, so `probe-all.cjs` reads it. The fifth
+break in `node tools/falsify-dialog-focus.cjs` refuses the caret through `focusIntoLayer` and requires **that
+probe** to notice: baseline `findings=0`, mutated `findings=2`, with the tally's own break reporting
+`count=9` — one more than the `count=8` it printed before this screen existed, which is the walk getting
+wider doing its job. **5 of 5 breaks caught, 0 not applied, 0 missed.**
+
+**Restoration, which belongs in an exit hook rather than the last line of a happy path.** The first driver
+died on `>/dev/null` — cmd.exe cannot open it — between enabling TalkBack and restoring it, and the owner's
+screen reader stayed on until it was put back by hand. That is §88's cancelled-run-leaves-a-mutant class
+arriving with a device setting instead of a file, and the fixed drivers now install
+`process.on('exit', restore)` before they enable anything. Verified at the end of this walk, each reading
+taken after the sign-out rather than remembered from it: `enabled_accessibility_services` `null`,
+`accessibility_enabled` `0`, no talkback process at all in `ps -A`, `font_scale` `1.0` in the **system**
+namespace (and `null` in `global`, which is the table that has no entry for it), installed build still
+`versionCode=40 / 1.2-preview.38`, and the app back on its sign-in screen — reached the way a thumb reaches
+it, the profile rail's **Log Out** row and then the confirm dialog's own **Log Out** button, after which
+`state.view` reads `login` and the painted body text is the login form. The walk's own pushed fixture
+(`/sdcard/Pictures/suki-leg6-test.png`) is gone and `Pictures/` holds only `Messenger`. One `suki-*` file does
+remain, `/sdcard/Download/suki-test-photo.png`, dated **2026-10-11** and already recorded in the walk-4 exit
+notes as one of the owner's files left where it was: a `grep -i suki` on a directory listing is a lead, not a
+finding, and the date is what tells them apart.
+
 ## Owed, in order — a pointer list, not an explanation
 
 Everything below is written out where it belongs; this is only the list of what the next person finds
 open. Nothing here is a defect the bench can close.
 
-**On the handset** — one item, and it belongs to the other phone:
+**On the handset** — two open items, one per phone, plus one closed note a later walk reopened:
 1. **The OPPO's ColorOS picker has never been tried with keys.** Handset walk 7 settled this leg on the
    vivo: `node tools/device-probe.cjs --keys=TAB,TAB,DPAD_DOWN,DPAD_CENTER '<reader>'` closed the picker
    and our page came back holding a file, which retires "a thumb is owed" for that DocumentsUI. ColorOS
@@ -1734,21 +1807,32 @@ open. Nothing here is a defect the bench can close.
    owner's photograph by accident:** a key route selects the focused row, so run it against a folder that
    is empty except for the test file and entered by name — never against a recents grid holding real
    photographs.
-2. **Closed 2026-10-24, and the item itself was the defect.** Walk 7 wrote that the vivo's WebView version
+2. **`1.2-preview.39` is built and bundle-verified but not installed.** §98 changed the page (the
+   admin lock field and its copy), so the tree, `dist/`, the staged asset and the APK all read
+   `badf8cd7…` while the vivo still runs `.38` at `a4cf6fc3…`. The bench measured the fix; the device
+   reading of it is owed, because the phone left the bus between the build and the walk. A field sized in
+   `rem` is exactly the case where a phone can disagree with the bench (§68 multiplies used sizes after CSS
+   resolves), so this is a real leg rather than a formality: install `.39`, open Lock Admin Session on the
+   hub, and read the PIN field's computed size and its box height on the device.
+3. **Closed 2026-10-24, and the item itself was the defect.** Walk 7 wrote that the vivo's WebView version
    "was never captured"; opening the log showed walk 5 had captured it, and `dumpsys webviewupdate` today
    answers the same `com.google.android.webview 155.0.8059.43`. What the earlier walk had got wrong was the
    release above. The parity is worth keeping for its own sake: the two handsets sit **one patch apart on the
    same Chromium build line** (.43 here, .45 on the OPPO), yet the key route selects a document on one while
    ColorOS refused four synthetic taps on the other — which locates that difference in the OEM shell, not in
    the WebView, and is the reason item 1 above stays open rather than being folded into "Android refuses
-   this". Read and left alone: `enabled_accessibility_services` is `null` and `accessibility_enabled` is 0, so
-   TalkBack is off; measuring what it *says* would mean turning the owner's accessibility service on, which
-   they have ruled to leave as documented. Device otherwise as walk 7 left it: `.38` installed, `font_scale`
-   1.0, no fixture file on disk.
+   this". Read and left alone at the time: `enabled_accessibility_services` is `null` and
+   `accessibility_enabled` is 0, so TalkBack was off, and measuring what it *says* would mean turning the
+   owner's accessibility service on — which they had ruled to leave as documented. **Changed 2026-10-24:**
+   the owner then approved enabling it for the measurement and restoring it, Handset walk 8 did that, and the
+   same two settings were read back at `null` and 0 afterwards. Device otherwise as walk 8 left it: `.38`
+   installed (`versionCode=40`), `font_scale` 1.0 in the `system` namespace, signed out on the login screen,
+   and the pushed fixture gone — the one `suki-*` file still in `Download/` is the owner's, dated 2026-10-11.
 
-Everything else the `.37` list owed was put to a phone and is written up in *Handset walk 5* and
-*Handset walk 6* above — the caption, the Insights figures, the `1039`, the second provider's own header,
-the dialog tree, whether TalkBack speaks an opened dialog, the five-item nav at the OPPO's own text scale,
+Everything else the `.37` list owed was put to a phone and is written up in *Handset walk 5*,
+*Handset walk 6* and *Handset walk 8* above — the caption, the Insights figures, the `1039`, the second
+provider's own header, the dialog tree, whether TalkBack speaks an opened dialog, the five-item nav at the
+OPPO's own text scale,
 and the sign-out confirmation as a second modal surface. What those walks could not automate with injected pointers is ColorOS
 refusing a document row to a synthetic tap — four taps and one held press across two layouts, with the two controls that show
 the injected input reaching that same window. The app's half of the promise was measured in a browser and
@@ -1757,11 +1841,13 @@ holds: a real `File` arrives, the screen paints only its name, no `blob:` or `da
 no-bytes reading was repeated there against the real chooser rather than only in a browser. ColorOS on the
 OPPO is the remaining refusal, and it has never been tried with keys.)*
 
-Two more device-shaped things stay open because they are owner questions, not bench work: whether
-TalkBack's *wording* names the dialog (no channel here recovers spoken text — the tree proves the name
-is exposed, the burst proves an announcement happens), and whether either provider or admin reaches a
-notification surface at all in this build (§27 is untestable for the other two roles, as
-`tools/probe-notification-targets.js` reports).
+One device-shaped thing stays open because it is an owner question, not bench work: whether either
+provider or admin reaches a notification surface at all in this build (§27 is untestable for the other two
+roles, as `tools/probe-notification-targets.js` reports). TalkBack's *wording* is no longer on this list in
+the same shape. Handset walk 8 turned the reader on, verified the service bound, opened a dialog that
+`role=dialog` and `aria-labelledby` name, and found the announcement on the audio channel and nothing
+anywhere that carries the words — so the remaining question is not *whether* it is spoken but whether it
+sounds right, and that answer lives in a person's ears rather than in any log this machine can read.
 
 And one flag that this file used to owe and no longer does: the OPPO `S4CUYTJB6HNNWC49` was found with the
 app **uninstalled** and `svc power stayon` already cleared. Handset walk 6 installed `1.2-preview.37`,
@@ -1791,7 +1877,4 @@ Menu is the owner's own setting, left alone.
   describes the rebuild it actually carries and what merging would ship unverified, and stays OPEN. The merge
   button is still a human's, and the handset legs above are the
   reason it should stay that way for now.
-
-
-
 
