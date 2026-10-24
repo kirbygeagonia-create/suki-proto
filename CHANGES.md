@@ -6725,3 +6725,32 @@ The phone was left as found, verified by reading it rather than by memory: `suki
 MediaStore rows naming the fixture **0**, no `window_dump.xml`, **all adb forwards removed**, battery saver
 back on (`low_power=1`), stay-awake `0`, app removed from the idle whitelist, `font_scale` **1.35** as found,
 `1.2-preview.39` installed, and the app signed out (`view: login`) by leg A's own final check.
+
+## 105. Leg B got much further than §104b, and the answer is a dialog, not a key
+
+The page channel came back once the *process* was restarted rather than relaunched on top of itself: the old
+instance had **7 stale DevTools targets on one socket** and every evaluate timed out, while a clean
+force-stop → start gave `targets: 1`, a real `101` upgrade and an answer — `{"v":"login"}` in milliseconds.
+So the §104b mystery ("the app stopped answering") is a lifecycle fact about WebView's inspector, not a
+device quirk: **attach to a fresh process, not to a resumed one.** Two more of my own bugs were cleared on
+the way — `--open` passed statements into an `(${expr})` wrapper, and it navigated to `tab='home'` when the
+photo control lives on `tab='concierge'`, which is why the control read MISSING twice and the tool correctly
+refused to tap a rect it could not obtain.
+
+Then the route went further than it ever had: a real tap on the concierge's own photo button raised
+**`com.android.internal.app.ChooserActivity`**, its tree named exactly one target (**"Files"**,
+`[59,1165][174,1280]`), and tapping it produced **a ColorOS permission dialog** — `USE APP FOR 5 MINUTES`
+and `OK`. A tap at that button's own centre **did nothing**, and `uiautomator` answered
+`ERROR: null root node returned by UiTestAutomationBridge`. **That is leg B's answer for today**: ColorOS
+interposes a permission dialog that refuses synthetic input and hides its own tree, so the key route never
+reached DocumentsUI at all. The claim "ColorOS refuses keys on document rows" is neither confirmed nor
+refuted — it is still one step away, behind a decision that belongs to the person holding the phone.
+
+Backed out with hardware keys (the dialog took `KEYCODE_BACK` even though it ignored `input tap`, which is
+itself a small answer: this window refuses pointer injection and accepts key injection). Verified as found:
+app foreground at `view: app` with `conciergePhotoAttached: false`, **0** fixture files, **0** MediaStore
+rows, no dumps on the device, all forwards removed, `low_power=1`, `font_scale` 1.35, `1.2-preview.39`.
+
+Also on the record, because it cost four empty dumps: `uiautomator dump /sdcard/x.xml` issued from this
+shell gets its path rewritten by MSYS into a Windows directory — the dump "succeeds" and the file is not on
+the phone. Use the tool (`--dump`, which passes argv directly) or set `MSYS_NO_PATHCONV=1`.

@@ -84,12 +84,23 @@ function parseTree(xml) {
     focusableRows: picker.filter(n => n.focusable && n.clickable && (n.text || n.desc)),
     rows: rows,
     named: named,
+    anyRows: nodes.filter(n => n.clickable && (n.text || n.desc)),
     fixture: picker.filter(n => (n.text + ' ' + n.desc).indexOf(FIXTURE_NAME) > -1)
   };
 }
 function reportTree(t, source) {
   console.log('tree: ' + source + ' — ' + t.total + ' nodes, ' + t.pickerNodes + ' inside the picker');
-  if (!t.pickerNodes) { console.log('  NO PICKER IN THIS TREE: nothing from com.google.android.documentsui — the dump is of some other window, so no key verdict is available.'); return; }
+  if (!t.pickerNodes) {
+    console.log('  NO PICKER IN THIS TREE: nothing from com.google.android.documentsui — the dump is of some other window, so no key verdict is available.');
+    /* But the other window is usually the app chooser that comes BEFORE the picker, and the honest next
+       action depends on what it offers. List its named clickable rows with device-pixel bounds, so a
+       deliberate `input tap` can be chosen from evidence rather than guessed at. (Earlier drafts of this
+       line printed nothing, which turned "we are one step short" into an unhelpful dead end.) */
+    const others = (t.anyRows && t.anyRows.length) ? t.anyRows : (t.rows.length ? t.rows : t.named);
+    console.log('  named clickable rows in this window: ' + others.length);
+    others.slice(0, 10).forEach(n => console.log('    "' + (n.text || n.desc).slice(0, 34) + '" [' + n.cls.replace('android.widget.', '') + '] ' + n.bounds));
+    return;
+  }
   console.log('  focused: ' + (t.focused.length ? t.focused.map(n => (n.text || n.desc || n.cls) + ' @ ' + n.bounds).join(' ; ') : 'NOTHING FOCUSED'));
   console.log('  clickable named rows: ' + t.rows.length);
   console.log('  nodes the platform marks focusable: ' + t.focusable.length +
@@ -259,10 +270,13 @@ if (process.argv.indexOf('--fixture') > -1) {
 if (process.argv.indexOf('--open') > -1) {
   /* Raise the chooser the way a thumb does: the concierge's own painted button, tapped at the rect the
      page reports. element.click() carries no user activation and Chrome refuses a chooser without one. */
-  ask("state.view='app';state.role='resident';state.tab='home';render();" +
-    "(function(){var s=document.getElementById('screen');s.style.scrollBehavior='auto';" +
+  /* Statements have to live inside a function: device-probe wraps its argument as (${expr}), so a bare list
+     of assignments raised a SyntaxError that nothing read, the app stayed on `login`, and the photo control
+     was legitimately "MISSING". Same defect, second instrument. */
+  ask("(function(){state.view='app';state.role='resident';state.tab='concierge';render();" +
+    "var s=document.getElementById('screen');if(s){s.style.scrollBehavior='auto';" +
     "var b=[].slice.call(document.querySelectorAll('#screen [onclick]')).find(function(e){return /hidden-file-input/.test(e.getAttribute('onclick')||'')});" +
-    "if(b){var q=b.getBoundingClientRect();s.scrollTop=Math.max(0,s.scrollTop+q.top-300);}return 1})()");
+    "if(b){var q=b.getBoundingClientRect();s.scrollTop=Math.max(0,s.scrollTop+q.top-300);}}return 1;})()");
   const rect = ask("(function(){var b=[].slice.call(document.querySelectorAll('#screen [onclick]')).find(function(e){return /hidden-file-input/.test(e.getAttribute('onclick')||'')});" +
     "if(!b)return 'MISSING';var q=b.getBoundingClientRect();if(!q.height)return 'ZERO';return Math.round(q.left+q.width/2)+','+Math.round(q.top+q.height/2)})()");
   if (!/^ *\d+,\d+ *$/.test(rect)) { console.log('photo control rect: ' + rect + ' — refusing to tap a guess.'); process.exit(1); }
