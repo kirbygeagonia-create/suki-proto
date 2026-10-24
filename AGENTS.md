@@ -2282,7 +2282,8 @@ Whether the six undeployed fixes reached the public site is then a command, not 
 
 **Executed: PR #9 merged 2026-10-24 03:08:08Z into `main` as `a14c4fa`.** Read back after the fact rather than
 remembered: `main`'s `Sukinnect-next.html` is byte-identical to the branch's and `main` carries 144 files under
-`tools/`, while `Sukinnect.html` is **untouched — still 4,706 lines**, so the merge put the rebuild and the shipped
+`tools/`, while `Sukinnect.html` is **untouched — 4,707 lines by `node tools/measure.cjs Sukinnect.html`, the
+same figure §31 quotes**, so the merge put the rebuild and the shipped
 prototype side by side on `main` and promoted nothing, exactly as the paragraph above says a merge does. The
 deployment did not follow within the next 8 minutes, which leaves two live possibilities and no way here to choose
 between them: a queued build, or production not tracking `main`. Ask the command, not the clock:

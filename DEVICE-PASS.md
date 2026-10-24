@@ -2135,7 +2135,8 @@ Menu is the owner's own setting, left alone.
   **That sentence is superseded: the owner merged PR #9 on 2026-10-24 at 03:08:08Z**, once the handset legs above
   were closed, and the merge commit is `a14c4fa` on `main`. What the merge did and did not do is measured rather
   than asserted: `main`'s `Sukinnect-next.html` is byte-identical to this branch's (853,782 bytes, `3c78fdd…`) and
-  `main` carries 144 files under `tools/`, while **`Sukinnect.html` is untouched — still 4,706 lines and identical
+  `main` carries 144 files under `tools/`, while **`Sukinnect.html` is untouched — 4,707 lines by
+  `node tools/measure.cjs Sukinnect.html`, and identical
   to what `origin/main` held before the merge**, proved by `git diff --quiet origin/main -- Sukinnect.html`. So
   `main` now holds the rebuild *and* the shipped prototype side by side, which is the state every floor claim in
   this file describes. The one thing the merge did not achieve is on the deployment side: as of 03:16:23Z

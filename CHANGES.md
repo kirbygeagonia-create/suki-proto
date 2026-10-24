@@ -7075,7 +7075,13 @@ because a claim about what a repository holds is worth exactly the command that 
 - `git diff --quiet origin/main HEAD -- Sukinnect-next.html` → **identical**. `main` now carries the rebuild at
   853,782 bytes, hash `3c78fdd…`, and `git ls-tree -r --name-only origin/main -- tools | wc -l` → **144** files:
   the gate, the camera, the sweep, the mutant families, the handset drivers.
-- `git diff --quiet origin/main -- Sukinnect.html` → **clean, and the file is still 4,706 lines**. **Merging is not
+- `git diff --quiet origin/main -- Sukinnect.html` → **clean**. And the file is unchanged in the instrument's own
+  units: **4,707 lines by `node tools/measure.cjs Sukinnect.html`**, the figure §31 has always quoted. (This
+  sentence first said 4,706, because it was read off `wc -l`, which counts newline *characters* and so reports one
+  fewer for a file whose last line is unterminated — the same quantity §31 names as "4,706 CRLF pairs". Two
+  conventions, one digit apart, and only one of them is what `measure.cjs` prints. **Quote the instrument, not the
+  shell builtin**, which is this file's oldest rule arriving from the smallest possible place.)
+  **Merging is not
   promoting.** `main` now holds the rebuild and the shipped prototype side by side, which is precisely the state
   every floor claim in AGENTS.md has been describing — proven for one file, unproven for the other, and the merge
   changed which file a reviewer must deliberately choose, not what either one is.
@@ -7102,3 +7108,43 @@ No application bytes changed in this pass, so the gate stays **all 566 checks pa
 it and the four on-disk copies remain identical at `3c78fdd…`. The next person to touch the deployment question
 should start from `node tools/deploy-check.cjs` rather than from anything written here: it exits 1 until the live
 bytes match, names the missing fixes, and refuses with `NO CONCLUSION` when the host does not answer.
+
+## 113. `main` was checked out separately for the first time, and it both passed and exposed a defect in my own tool
+
+Every instrument in this repository has only ever run against the working directory it was written in. Nothing had
+tested the proposition that a reviewer following the README — `git lfs install`, clone, open the file — receives a
+tree that is self-contained. So `git worktree add --detach .scratch/wt-main origin/main` made a real second
+checkout of the merged commit, and the same commands were run from inside it.
+
+**It passed, and the interesting part is what had to be true for it to pass.** `node tools/verify.cjs` in that
+directory printed **all 566 checks passed**, which is only possible if the Git LFS fonts actually smudged: the
+typography checks read `fonts/fonts.css` from disk and assert that every `url()` resolves to a file that exists
+**and is not a placeholder stub**, and an un-smudged checkout hands back 130-byte pointer text. The fresh tree
+carries 25,928 / 25,828 / 24,896 / 25,736-byte Atkinson WOFF2 files (plus the Fraunces and Plus Jakarta faces the
+shipped file still needs) and `head -c 60` on one returns binary, not `version https://git-lfs...`. The camera
+listed the same **82 screens**, and `node tools/measure.cjs` reported the shape §31 quotes — 11,851 lines, one
+`:root`, 95 tokens with three never reached (`--s-1 --s-8 --info`). Then `git worktree remove` and `git worktree
+list` answering one row: the scratch checkout is gone, not left beside the tree.
+
+**The test found a defect in tools, in the only place it could: a second directory.** Three instruments pinned
+`C:/Users/ADMIN/OneDrive/Desktop/Sukinnect/Suki-proto/` into a constant — `deploy-check.cjs` (**written by me an
+hour earlier**), `device-legs.cjs` and `device-picker-keys.cjs`. A tool with the author's home directory inside it
+cannot be run by anyone else, which is a sharp irony for the one whose whole job is to report what other people
+receive. All three now derive their root from `path.join(__dirname, '..')`, the way `harness.cjs` has always
+done it — and `harness.cjs` is the reason the gate worked from the worktree at all. Proven rather than asserted:
+`deploy-check.cjs --selftest` still passes its 8 cases, `device-legs.cjs --selftest` its 5 install-proof cases
+including both `dumpsys` spellings, and `device-picker-keys.cjs --guard-real` still reads the 18 saved picker
+trees and answers **allows 1, edit-box refusals 5, other refusals 13, findings: 0** — a guard whose fixture name
+comes from a file path is only as portable as that path.
+
+**And my own number in §112 was wrong, by one, for a reason worth writing down.** I wrote that `Sukinnect.html` on
+`main` is "still 4,706 lines", read off `git show … | wc -l`. `wc -l` counts newline *characters*, so a file whose
+last line is unterminated reports one fewer line than the file has. The instrument —
+`node tools/measure.cjs Sukinnect.html` — says **4,707**, which is what §31 has always quoted, and §31's other
+sentence about "4,706 CRLF pairs" is a *different* quantity that happens to land on the same digit. Three places
+carried my figure; all three are corrected to the instrument and its command. The rule is the one this file keeps
+rediscovering — **quote the tool, not the shell builtin** — and the trap is sharpest when the wrong answer and the
+right one differ by exactly one, because nothing looks broken.
+
+No application bytes changed. Gate **all 566 checks passed** in both trees; four on-disk copies identical at
+`3c78fdd…`; `Sukinnect.html` identical to `origin/main`.
