@@ -7920,5 +7920,15 @@ verdict, while a child that produced neither its page nor that refusal is still 
 now, `node tools/falsify-commit-subjects.cjs` returns **15 of 15, 0 not applied, 0 missed** on the merged tree, gate
 **567**, and the rule went back into AGENTS.md beside the first expiry: when a premise lives in the distance between
 two refs, don't chase it with a fresh needle every merge — make the verdict read the tool's own account of why it
-stopped. Two PR #13 commits, then this follow-up: the lane closes with a measurement taken after the last edit, not
-before it.
+stopped. **PR #14 then merged as `2d656b4`, and the claim was re-tested rather than trusted.** The sentence above wrote "on the
+merged tree" meaning PR #13's merge; the honest question is what the same break does at the *next* merge, since that is
+the whole assertion. Re-run after #14: **15 of 15 breaks caught, 0 not applied, 0 missed**, gate **567**, and the break
+reads `set 0 vs 6, count 0/120, refused for reading NO commits — the merged premise emptied` — the second accepted shape
+firing on the second event that would otherwise have made it quiet. That is the difference between re-pointing a needle
+at today's history and making the verdict read the tool's stated reason: the first survives one merge, the second
+survives the next one. `node tools/deploy-check.cjs` still answered `findings: 7` afterwards, so #14 did not move
+production and the deliberately-stale public build stands — the tripwire reporting in the quiet direction, which is
+only worth anything if you ask it after a merge instead of assuming either outcome.
+
+Two PR #13 commits, then this follow-up, then the confirmation above: the lane closes with a measurement taken after
+the last edit, not before it.
