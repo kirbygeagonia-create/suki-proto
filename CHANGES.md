@@ -6427,7 +6427,7 @@ allow) and its tree parser is proved by running it over the saved ColorOS dump, 
 photograph rows surfaced. The phone is not the first place any of this executes.
 
 **The third caught the instrument before it could file a defect.** The walk's five page readings were run
-on the bench through `node tools/shot.cjs --probe=@.scratch/walk9-selfcheck.js
+on the bench through `node tools/shot.cjs --probe=@tools/device-leg-readers.js
 --only=admin-lock-modal,resident-filter-sheet`, where the expected figures are known: the PIN field
 computes **16px inside a 48px box** with `min-height:48px`, and the filter sheet paints **16 rows at
 exactly 44px, none below the floor, at 15px type**. The first reachability reader called the sheet's last

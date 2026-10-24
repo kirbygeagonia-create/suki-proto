@@ -1842,7 +1842,7 @@ open. Nothing here is a defect the bench can close.
    **no node with `focused="true"`**, and two clickable rows named `Preview the file IMG_20261020_1859` — the 
    owner's own photographs, at `[167,526]` and `[386,526]`. So the open question is narrower than "does 
    ColorOS accept keys": with nothing focused, the first key *establishes* focus and a centre key then 
-   activates whatever it landed on. The leg is `node .scratch/walk9-picker-leg.cjs`, which sends **one key 
+   activates whatever it landed on. The leg is `node tools/device-picker-keys.cjs`, which sends **one key 
    at a time**, re-reads the platform tree after it, and refuses `DPAD_CENTER` unless the focused row is 
    named for the fixture it pushed — proved without a phone by `--guard-test` (3 of 3: nothing focused 
    refused, that photograph refused, the fixture allowed) and its parser proved by running it over that 
@@ -1860,7 +1860,7 @@ open. Nothing here is a defect the bench can close.
    bar and read the sixteen option rows — they are 44px on the bench and the phone is the place a px floor
    is not what it looks like.
    **Armed 2026-10-24, with its readers run on the bench first.** The leg is `node 
-   .scratch/walk9-device-leg.cjs`: it enters the two screens exactly as `tools/shot.cjs` enters 
+   tools/device-legs.cjs`: it enters the two screens exactly as `tools/shot.cjs` enters 
    `admin-lock-modal` and `resident-filter-sheet`, then opens each with a **real input event** at the rect 
    the page reports, and it installs by the `applicationId` and version read out of 
    `app/build/outputs/apk/debug/output-metadata.json` rather than constants typed into the driver — which is 

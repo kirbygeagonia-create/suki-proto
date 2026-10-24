@@ -1,0 +1,215 @@
+/* Handset walk 9 — the two measurements DEVICE-PASS owes on 1.2-preview.39, and nothing else.
+     1. install `.39`, proved by reading the package back rather than by the file name,
+     2. read the admin PIN field's RENDERED size and box height, because §98 sized it in `rem` and
+        §68 multiplies used sizes after CSS resolves — a bench cannot see that multiplication,
+     3. read the filter option rows' RENDERED heights against the 44px floor §99 set,
+     4. leave the app signed out through its own controls and read the platform back as it was found.
+
+   The two screens are entered exactly as tools/shot.cjs enters them (`admin-lock-modal` and
+   `resident-filter-sheet` in the SCREENS table), and then the painted control is opened with a REAL
+   input event rather than a click(): the row under measurement has to be the row a thumb raises.
+   --tap takes page CSS px, so every coordinate here is read off the page's own rect first.
+
+   Run:  node tools/device-legs.cjs
+   Refuses with NO DEVICE when adb sees no handset. Changes no accessibility or font_scale setting. */
+'use strict';
+const { execFileSync } = require('child_process');
+const fs = require('fs');
+const ADB = process.env.ADB || 'C:/Users/ADMIN/AppData/Local/Android/Sdk/platform-tools/adb.exe';
+const ROOT = 'C:/Users/ADMIN/OneDrive/Desktop/Sukinnect/Suki-proto/';
+const APK = ROOT + 'Sukinnect-Android/app/build/outputs/apk/debug/Sukinnect-1.2-preview.39-debug.apk';
+/* Never type the package or the version: read them from the build's own metadata, so the walk asks
+   about whatever was actually produced. This driver originally hard-coded `com.sukinnect.proto` and the
+   real applicationId is `com.sukinnect.app` — a wrong constant would only have shown up as a refusal. */
+const META = JSON.parse(fs.readFileSync(ROOT + 'Sukinnect-Android/app/build/outputs/apk/debug/output-metadata.json', 'utf8'));
+const PKG = META.applicationId;
+const WANT_CODE = String(META.elements[0].versionCode);
+const WANT_NAME = META.elements[0].versionName;
+
+function adb() {
+  try { return execFileSync(ADB, Array.prototype.slice.call(arguments), { encoding: 'utf8' }).replace(/\r/g, ''); }
+  catch (e) { return 'ADB ERROR: ' + String((e.stdout || '') + (e.stderr || '')).replace(/\r/g, ''); }
+}
+function sleep(ms) { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); }
+function probe(args) {
+  try {
+    return execFileSync(process.execPath, [ROOT + 'tools/device-probe.cjs'].concat(args),
+      { encoding: 'utf8', cwd: ROOT, env: Object.assign({}, process.env, { ADB }) }).replace(/\r/g, '');
+  } catch (e) { return 'PROBE ERROR: ' + String((e.stdout || '') + (e.stderr || '')).split('\n').slice(-2).join(' ').trim(); }
+}
+function lastLine(out) { const l = String(out).trim().split('\n'); return (l[l.length - 1] || '(no answer)').trim(); }
+function ask(expr) { return lastLine(probe([expr])); }
+function say(label, expr) { const out = ask(expr); console.log(label + ': ' + out); return out; }
+/* The install proof, as pure functions, so it can be tested without a handset. dumpsys has printed the
+   same two facts in two shapes across releases, and a proof that matches only one of them refuses a
+   good install — the walk would then be reporting on its own instrument, not on a phone. */
+function buildLines(txt) {
+  return txt.split('\n').filter(l => /versionName|versionCode/i.test(l)).map(s => s.trim()).join(' | ');
+}
+function readBuild(txt) {
+  return {
+    name: (txt.match(/versionName[:=]\s*([^\s|]+)/) || [])[1] || '(none)',
+    code: (txt.match(/versionCode[:=]\s*(\d+)/i) || [])[1] || '(none)'
+  };
+}
+function installProven(txt, wantName, wantCode) {
+  const got = readBuild(txt);
+  return got.name === wantName && got.code === String(wantCode);
+}
+if (process.argv.indexOf('--selftest') > -1) {
+  const cases = [
+    ['colon form', 'VersionCode: 41 minSdk=24\n    versionName: 1.2-preview.39', true],
+    ['equals form', '    versionCode=41 targetSdk=36\n    versionName=1.2-preview.39', true],
+    ['stale code', '    versionCode=40\n    versionName=1.2-preview.39', false],
+    ['stale name', '    versionCode=41\n    versionName=1.2-preview.38', false],
+    ['not installed', 'Not installed', false]
+  ];
+  let bad = 0;
+  for (const c of cases) {
+    const got = installProven(c[1], WANT_NAME, WANT_CODE);
+    if (got !== c[2]) bad++;
+    console.log((got === c[2] ? 'ok   ' : 'WRONG') + ' ' + c[0] + ' — proven=' + got +
+      ' want=' + c[2] + ' read=' + JSON.stringify(readBuild(c[1])));
+  }
+  console.log(bad ? 'SELFTEST FAILED: ' + bad + ' of ' + cases.length + ' proof cases wrong.'
+    : 'SELFTEST PASSED: ' + cases.length + ' cases — both dumpsys spellings accepted, three refusals refused, on ' +
+      PKG + ' / ' + WANT_NAME + ' / code ' + WANT_CODE + '.');
+  process.exit(bad ? 1 : 0);
+}
+/* A real tap at the centre of the node the page paints for this matcher, reported back. */
+function tapPainted(label, matcherExpr) {
+  const rect = ask('(function(){var re=' + matcherExpr + ';var b=[].slice.call(document.querySelectorAll("[onclick]"))' +
+    '.filter(function(e){return re.test(e.getAttribute("onclick")||"")});' +
+    'if(!b.length)return "MISSING:"+re;' +
+    'var q=b[0].getBoundingClientRect();if(!q.width||!q.height)return "ZERO:"+re;' +
+    'return JSON.stringify({t:Math.round(q.left+q.width/2),l:Math.round(q.top+q.height/2),' +
+    'w:Math.round(q.width*10)/10,h:Math.round(q.height*10)/10,text:(b[0].textContent||"").trim().slice(0,28)})})()');
+  let o = null; try { o = JSON.parse(rect); } catch (e) { /* MISSING / ZERO / PROBE ERROR */ }
+  if (!o) { console.log('tap ' + label + ': ' + rect); return null; }
+  if (o.h < 44) console.log('NOTE control below the 44px floor before the tap: ' + label + ' h=' + o.h);
+  probe(['--tap=' + o.t + ',' + o.l, '1']);
+  sleep(2400);
+  console.log('tapped ' + label + ' at page ' + o.t + ',' + o.l + ' (box ' + o.w + 'x' + o.h + ' "' + o.text + '")');
+  return o;
+}
+
+/* ---------- 0. is there a handset on the bus at all, and can it be used? ---------- */
+let row = '';
+for (let i = 0; i < 10; i++) {
+  const rows = adb('devices').split('\n').slice(1).filter(l => /\t(device|unauthorized|offline)/.test(l));
+  if (rows.length) { row = rows[0]; break; }
+  sleep(5000);
+}
+if (!row) { console.log('NO DEVICE — adb sees no handset. The two legs stay owed.'); process.exit(1); }
+const serial = row.split('\t')[0];
+const state = (row.split('\t')[1] || '').trim();
+const model = adb('shell', 'getprop', 'ro.product.model').trim();
+if (state !== 'device') {
+  /* An unauthorized serial is not a failure to work around: nothing is installed, tapped or read
+     until the owner has accepted the dialog on the phone, and the walk record would otherwise be
+     written against a page the instrument never actually reached. */
+  console.log('DEVICE PRESENT BUT ' + state.toUpperCase() + ' — ' + serial + ' ' + model);
+  console.log('unauthorized: accept "Allow USB debugging" on the phone, then re-run.');
+  console.log('offline:      replug, or adb kill-server && adb start-server, then re-run.');
+  console.log('Nothing installed, nothing tapped. The two legs stay owed.');
+  process.exit(1);
+}
+console.log('device: ' + serial + ' | ' + model + ' | android ' + adb('shell', 'getprop', 'ro.build.version.release').trim());
+console.log('webview: ' + (adb('shell', 'dumpsys', 'webview_update').split('\n').filter(l => /current webview package/i.test(l))[0] ||
+  adb('shell', 'dumpsys', 'package', 'com.google.android.webview').split('\n').filter(l => /versionName/.test(l))[0] || 'unknown').trim());
+/* Only mWakefulness is trusted here. `dumpsys power` also prints history and per-display lines that
+   can read mScreenOn=false while the phone is wide awake, and an instrument that refuses a good walk
+   on a stale line is worse than one that does not check. */
+const wake = (adb('shell', 'dumpsys', 'power').split('\n').filter(l => /^\s*mWakefulness=/.test(l))[0] || '').trim();
+console.log('screen: ' + (wake || 'unreadable — proceeding'));
+if (/Asleep|Dozing/.test(wake)) {
+  console.log('THE SCREEN IS ASLEEP — a reading of a painted field needs the page on screen. Unlock the phone and re-run; nothing has been installed.');
+  process.exit(1);
+}
+
+/* ---------- 1. the build before and after the install ---------- */
+const buildOf = buildLines;
+console.log('before: ' + buildOf(adb('shell', 'dumpsys', 'package', PKG)));
+if (!fs.existsSync(APK)) { console.log('NO APK at ' + APK); process.exit(1); }
+console.log('apk bytes: ' + fs.statSync(APK).size);
+console.log('install: ' + adb('install', '-r', '-t', APK).trim().split('\n').pop());
+const after = buildOf(adb('shell', 'dumpsys', 'package', PKG));
+console.log('after:  ' + after);
+console.log('want:   versionCode ' + WANT_CODE + ' / versionName ' + WANT_NAME + ' on ' + PKG);
+const got = readBuild(after);
+console.log('read:   versionName=' + got.name + '  versionCode=' + got.code);
+/* Both halves have to move: a versionName match on a stale versionCode is an install that did not take,
+   and reading only the file name would call that a success. */
+if (!installProven(after, WANT_NAME, WANT_CODE)) {
+  console.log('INSTALL NOT PROVEN — the package does not read both the version name and the version code this build carries.');
+  process.exit(1);
+}
+
+/* ---------- 2. cold start, then the platform's own text multiplier ---------- */
+adb('shell', 'am', 'force-stop', PKG); sleep(900);
+adb('shell', 'monkey', '-p', PKG, '-c', 'android.intent.category.LAUNCHER', '1'); sleep(6500);
+say('booted', 'JSON.stringify({view:state.view,role:state.role,innerWidth:innerWidth,innerHeight:innerHeight,devicePixelRatio:devicePixelRatio})');
+console.log('font_scale (system) = ' + adb('shell', 'settings', 'get', 'system', 'font_scale').trim());
+say('multiplier', '(function(){var s=document.createElement("span");' +
+  's.style.cssText="position:absolute;left:0;top:0;font-size:100px;line-height:1;white-space:pre";' +
+  's.textContent="H";document.body.appendChild(s);var q=s.getBoundingClientRect();s.remove();' +
+  'return JSON.stringify({renderedOverSpecified:Math.round((q.height/100)*1e4)/1e4,' +
+  'rootFont:getComputedStyle(document.documentElement).fontSize})})()');
+
+/* ---------- 3. the admin lock field ---------- */
+say('admin hub', "state.view='app'; state.role='admin'; state.tab='profile'; render();" +
+  "JSON.stringify({h1:(document.querySelector('#screen h1')||{}).textContent})");
+tapPainted('Lock Admin Session', "/adminAccountAction\\('lock'\\)/");
+say('dialog', 'JSON.stringify({title:(document.querySelector(".modal-layer b")||{}).textContent||"NO DIALOG PAINTED",' +
+  'copy:(document.querySelector(".modal-layer")||{}).textContent.replace(/\\s+/g," ").trim().slice(0,150)})');
+say('PIN field', '(function(){var i=document.querySelector(".modal-layer input[type=password]");' +
+  'if(!i)return "NO PIN FIELD PAINTED";var cs=getComputedStyle(i),q=i.getBoundingClientRect();' +
+  'var lab=i.closest("label");var root=getComputedStyle(document.documentElement).fontSize;' +
+  'return JSON.stringify({placeholder:i.placeholder,computedFontSize:cs.fontSize,rootFont:root,' +
+  'tokenOfDeclaration:"--t-body per .form-input",rectH:Math.round(q.height*10)/10,rectW:Math.round(q.width*10)/10,' +
+  'minHeight:cs.minHeight,boxSizing:cs.boxSizing,tapFloorOk:q.height>=44,' +
+  'labelText:lab?lab.firstChild.textContent.replace(/\\s+/g," ").trim():"NO LABEL"})})()');
+tapPainted('Unlock', "/state\\.adminAccountModal=null/");
+say('after Unlock', "JSON.stringify({modal:state.adminAccountModal,view:state.view," +
+  "h1:(document.querySelector('#screen h1')||{}).textContent})");
+
+/* ---------- 4. the resident filter rows ---------- */
+say('results', "state.view='app'; state.role='resident'; startDiscovery('leak');" +
+  "JSON.stringify({tab:state.tab,h1:(document.querySelector('#screen h1')||{}).textContent," +
+  "filterBtn:!!document.getElementById('provider-filter-btn')})");
+tapPainted('Filter providers', "/openSheet\\('providerFilters'\\)/");
+say('sheet', 'JSON.stringify({sheet:state.sheet,title:(document.querySelector(".sheet-title")||{}).textContent||"NO SHEET",' +
+  'rows:document.querySelectorAll(".filter-option").length})');
+say('rows', '(function(){var rows=[].slice.call(document.querySelectorAll(".filter-option"));if(!rows.length)return "NO ROWS PAINTED";' +
+  'var hs=rows.map(function(r){return Math.round(r.getBoundingClientRect().height*10)/10});' +
+  'var fs=[...new Set(rows.map(function(r){return getComputedStyle(r).fontSize}))];' +
+  'return JSON.stringify({n:rows.length,minH:Math.min.apply(null,hs),maxH:Math.max.apply(null,hs),' +
+  'below44:hs.filter(function(h){return h<44}).length,fontSizes:fs,' +
+  'first3:rows.slice(0,3).map(function(r){return r.textContent.replace(/\\s+/g," ").trim().slice(0,26)})})})()');
+say('last row reach', '(function(){var rows=[].slice.call(document.querySelectorAll(".filter-option"));if(!rows.length)return "NO ROWS";' +
+  'var el=rows[rows.length-1],q=el.getBoundingClientRect();' +
+  'var sc=null,p=el.parentElement;while(p){if(p.scrollHeight>p.clientHeight+4&&/auto|scroll/.test(getComputedStyle(p).overflowY)){sc=p;break;}p=p.parentElement;}' +
+  'return JSON.stringify({lastTop:Math.round(q.top),lastBottom:Math.round(q.bottom),viewportH:Math.round(innerHeight),' +
+  'inViewportNow:q.top>=0&&q.bottom<=innerHeight,scroller:sc?(sc.className||sc.tagName):"none",' +
+  'scrollerSeesMore:sc?Math.round(sc.scrollHeight)+" in "+Math.round(sc.clientHeight):"n/a",' +
+  'reachable:q.bottom<=innerHeight||!!sc})})()');
+say('close sheet', "state.sheet=null; render(); JSON.stringify({sheet:state.sheet,h1:(document.querySelector('#screen h1')||{}).textContent})");
+
+/* ---------- 5. leave it signed out, and read the platform back ---------- */
+say('resident profile', "state.view='app'; state.role='resident'; state.tab='profile'; render();" +
+  "JSON.stringify({h1:(document.querySelector('#screen h1')||{}).textContent})");
+say('tap Log Out row', "(function(){var b=[].slice.call(document.querySelectorAll('#screen *,[data-layer] *'))" +
+  ".filter(function(e){return typeof e.onclick==='function'&&/logout/i.test(String(e.onclick))});" +
+  "if(!b.length)return 'NO LOGOUT CONTROL';b[0].click();return 'clicked '+b.length})()");
+say('confirm', "(function(){var m=document.querySelector('.modal-layer');if(!m)return 'NO MODAL';" +
+  "var b=[].slice.call(m.querySelectorAll('button')).filter(function(x){return /log out/i.test(x.textContent)});" +
+  "if(!b.length)return 'NO CONFIRM BUTTON';b[b.length-1].click();return 'confirmed: '+b[b.length-1].textContent.trim()})()");
+say('signed out', 'JSON.stringify({view:state.view,h1:(document.querySelector("h1,h2")||{}).textContent})');
+
+console.log('--- the platform as found (this walk sets none of these) ---');
+console.log('enabled_accessibility_services = ' + adb('shell', 'settings', 'get', 'secure', 'enabled_accessibility_services').trim());
+console.log('accessibility_enabled          = ' + adb('shell', 'settings', 'get', 'secure', 'accessibility_enabled').trim());
+console.log('talkback process               = ' + (adb('shell', 'ps', '-A').split('\n').filter(l => /talkback/i.test(l)).length || 'none'));
+console.log('font_scale (system)            = ' + adb('shell', 'settings', 'get', 'system', 'font_scale').trim());
+console.log('suki* in Download              = ' + (adb('shell', 'ls', '/sdcard/Download/').split('\n').filter(n => /suki/i.test(n)).join(', ') || 'none'));
+console.log('installed build                = ' + after);
