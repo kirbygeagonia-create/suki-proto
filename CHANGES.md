@@ -6972,3 +6972,60 @@ bytes changed: `git diff --quiet -- Sukinnect-next.html` answers clean, so the g
 **The handset pass has now run eleven times, across two physical phones and an emulated frame, and owes
 nothing.** What remains on this branch is a person's decision, not a measurement: PR #9 stays OPEN and the merge
 button is a human's.
+
+## 110. The deployment is a fifth copy of the page, and it had never been read from outside
+
+`tools/audit-build-bytes.cjs` proves four copies agree — source, `dist/`, the staged Android asset, the bundle
+inside the APK. All four are on this machine, so the invariant stops at the edge of this machine, and nothing in
+`tools/` had ever asked what a reviewer receives. Asked today, it turned out that the four can agree perfectly
+**while the live site runs a different build.**
+
+`node tools/deploy-check.cjs` fetched the public page and searched the repository for its bytes. The live `/` is
+791,713 bytes as served, 791,504 after Netlify's injected HUD script is stripped, and it **matches commit
+`3c73bfef` — "fix: count days as calendar days, after running all 62 screens in another timezone", dated
+2026-10-15**. That commit is on `feat/domain-kernel` and is **not an ancestor of `origin/main`**; this branch's
+tip is 131 commits later and the local page is 853,782 bytes. So the public URL has been frozen for nine days
+while the pass that closed eleven handset walks, §82's Insights rewrite, §83's clock, the seed-date conversion,
+§73's nav fit and §96's dialog labelling all landed.
+
+Six markers say so individually — each one is a string only the shipped code carries, and each is asserted to
+exist in the *local* artifact before it is allowed to accuse the deployment:
+`networkAttentionList` (§82), `STEP_STAMPS` (§83), `isoDayAgo` (the seed-date convention), `fitNavLabels` and
+`navFontScale` (§73's rendered-px lesson), `labelTopLayer` (§96). Verdict: `findings: 7` — six fixes not
+deployed plus the byte disagreement — exit 1.
+
+**What did not change is the thing that motivated the built subset in the first place.** Every repository path a
+stranger could guess still answers 404 on the live host: `/AGENTS.md`, `/CHANGES.md`, `/README.md`,
+`/netlify.toml`, `/.gitignore`, `/schema/sukinnect.reference.sql`, `/tools/verify.cjs`. Under the old
+`publish = "."` those were all readable; the claim that the build fixes it is now **verified against a deploy**
+rather than inferred from the build script, and `/` returning 200 through the redirect to `/Sukinnect-next.html`
+shows the redirect rule is live too.
+
+**The tool's own first run produced seven fabricated leaks, and that is the lesson to keep.** Its status checks
+went through `curl -o /dev/null`, and `/dev/null` does not resolve when `curl.exe` is spawned outside MSYS — every
+request returned status `0`. The code treated "not 404" as a leak, so seven unanswered paths printed as seven
+leaks and `findings: 15` appeared on a deployment answering 404 to all of them. This repository has written the
+same sentence many times in one direction — *a silent instrument must not report a clean result* — and this is
+the mirror image, which is worse: **silence read as a defect manufactures findings that do not exist**, and a
+false alarm about a privacy claim is the fastest way to teach a reader to distrust the check that would have
+caught a real one. Fixed twice over: status `0` now means *not answered*, and the network calls use Node's own
+`fetch` rather than a shell binary whose path handling depends on which POSIX layer invoked it. A partial scan
+refuses — `NO CONCLUSION … the leak verdict is not computed from a partial scan` — and `--file=` states its own
+blind spot instead of printing a zero leak count.
+
+Proven offline before any network was trusted: `node tools/deploy-check.cjs --selftest` runs 8 cases — the HUD
+line is stripped, an untouched page is byte-for-byte unchanged, 404/410 are clean and 200/301 are not, status 0
+is neither clean nor a leak, a real 5xx is judged rather than refused, **every marker exists in the local
+artifact** (the positive control: a marker that matches nothing locally can accuse nothing), and a synthetic
+partial artifact reports 10 of 14 fixes missing by name. The refusal path was then exercised for real against a
+non-existent host: `NO CONCLUSION … An unreachable host must never print a clean line`, exit 1.
+
+Named `deploy-check.cjs` on purpose, not `probe-*`/`audit-*`: `tools/probe-all.cjs` discovers those prefixes by
+filename, and an instrument that needs the network cannot live inside the total that every offline run quotes —
+one outage would move the probe count. The device tools set that precedent, and `node tools/probe-all.cjs` still
+discovers no `deploy-*` file, so the quoted 47-probe and 49-family totals are untouched by this pass.
+
+Nothing was deployed and no setting was changed: reading a public URL is not an action against it. **What moves
+the live site is a deploy, and which branch production tracks is a Netlify setting nobody here has read** — the
+live bytes say a feature-branch commit, so "production = main" is now known to be false rather than merely
+untested. That is the owner's to decide, and it is stated as an open question rather than quietly fixed.

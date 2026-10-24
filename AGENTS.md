@@ -2239,6 +2239,35 @@ build command, so a deploy cannot publish the stale copy — but anything read *
 `dist/`*, including a count quoted here, can be. Rebuild before quoting the folder, and `md5sum
 Sukinnect-next.html dist/Sukinnect-next.html` answering one hash is the whole check.
 
+**Measured from outside on 2026-10-24, and the fourth copy was the stale one.** The site is live at
+`sukinnecct.netlify.app`, PR #9's deploy preview built and passed, so the build really does run on their
+image — the earlier sentence saying Netlify had never been contacted was written from this machine's own
+silence and is retired. `node tools/deploy-check.cjs` now reads the deployment instead of reasoning about it,
+and it found something `audit-build-bytes.cjs` structurally cannot: those four copies (source, `dist/`, staged
+asset, APK bundle) all agree at `3c78fdd…` **while the bytes a reviewer receives are a different build
+entirely**. The live `/` is 791,713 bytes as served — 791,504 after the platform's injected HUD line is
+stripped — and its provenance is a *search*: the repository is asked which revision matches, and the answer is
+**commit `3c73bfe` (2026-10-15, "fix: count days as calendar days…"), which is on `feat/domain-kernel` and is
+NOT an ancestor of `origin/main`**, 131 commits behind this branch's tip. Six documented fixes are therefore
+absent from the public page — `networkAttentionList` (§82), `STEP_STAMPS` (§83), `isoDayAgo` (the seed-date
+conversion), `fitNavLabels` and `navFontScale` (§73's handset-px lesson), and `labelTopLayer` (§96's dialog
+semantics) — and the tool prints them by name and exits 1. What did *not* change: every repository path a
+stranger could guess still answers 404 (`AGENTS.md`, `CHANGES.md`, `README.md`, `netlify.toml`, `.gitignore`,
+`schema/sukinnect.reference.sql`, `tools/verify.cjs`), so the built-subset decision is verified against a live
+deploy for the first time rather than asserted from the build script.
+
+Two things follow, and the second is the owner's, not an agent's. **A merge or a redeploy is what moves the
+public site**, and which branch production tracks is a setting nobody in this repository has read — the live
+bytes say a feature-branch commit, so the assumption "production = main" is now known to be false rather than
+merely untested. And the instrument lesson from the tool's own first run: it issued its status checks through
+`curl`, which could not resolve `-o /dev/null` when spawned outside MSYS, so every path returned status `0` and
+the tool **counted seven unanswered requests as seven leaks** and printed `findings: 15` about a deployment
+that was answering 404 to all of them. This repository has written down many times that a silent instrument
+must not report a clean result; this is the same bug pointed the other way — **silence read as a defect
+manufactures findings that do not exist**, and a false alarm on a privacy claim is worse than a miss, because
+it teaches the reader that the claim was never checked. Status `0` now means "not answered", and a partial scan
+refuses with `NO CONCLUSION` and exit 1 instead of printing a leak count over the paths that did answer.
+
 A FIGURE KEPT BY HAND IN PROSE IS THE NEXT FIGURE THAT IS WRONG. `node tools/falsify-all.cjs`
 now runs every mutant family in one sequential pass and prints, per family, how many breaks were
 applied, how many the named check caught, and how many never matched the file. It exists because
