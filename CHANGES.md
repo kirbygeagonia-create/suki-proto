@@ -6879,3 +6879,39 @@ off, and `enabled_accessibility_services` still names a TalkBack/`AccessibilityM
 **What the handset pass still owes is one item, and it is a phone, not a question:** the same two readings
 (leg A's PIN field and filter rows; leg B's key route) on the vivo 1906's ~450-CSS-px panel. The mechanism is
 measured on real Android and on ColorOS; what is unmeasured is that particular panel.
+
+## 108. A hand-numbered document is a shape, so the gate now checks the shape
+
+Two mistakes in the same file inside one day, and the second one was only caught because the diff did not
+balance. §107 was appended by anchoring on the closing sentence of §105 — a string that had been the end of the
+file when §106 was written, and was not any more, because §106 had been appended there first. The result read
+105, 107, 106. Moving §107 back to the end then produced a second defect: the splice ate the blank line above
+the §106 heading, and a markdown heading with no blank line above it is not a heading — it renders as the tail
+of the previous paragraph. That one was visible only because the diff reported **54 insertions against 55
+deletions** for what was supposed to be a pure move. A move that loses a line is not a move.
+
+So the gate checks it, in `hygiene`: three checks, **563 → 566**.
+`the change log really has sections to judge` is the population floor (at least 60 numbered sections — a scan
+that matched none would report both rules below it satisfied, which is this repository's named class of a check
+that cannot fail looking exactly like one that passed);
+`the change log numbers its sections in ascending order` names the pair that broke
+(`§108 then §107 at line 6812`);
+`every change-log section heading opens on a blank line` names the line and the section (`line 6757 (§108)`).
+
+Proven by mutation on the real file, not by reading the green line: eat the blank line above one heading and
+rename a section so the order descends, and both checks FAIL with those two reasons while the floor still
+passes (107 sections are still there) and the gate exits 1. Restored with `git checkout -- CHANGES.md` and
+re-run: **all 566 checks passed**, `git status` showing only the intended `tools/verify.cjs` edit.
+
+The aggregate was not re-run, and the reason is a read rather than an argument:
+`for f in $(grep -l "verify\.cjs" tools/falsify-*.cjs); do grep -qE "readFileSync\([^)]*verify" $f; done`
+matches **no** family — every one of them *executes* the gate and prints its total, none reads its bytes. A
+family that parses `all (\d+) checks passed` for a baseline therefore reports a bigger number rather than a
+failure, which was confirmed on the one family that uses the total as its own control:
+`node tools/falsify-register-identity.cjs` → **4 of 4 breaks caught, 0 not applied, 0 missed**, `control
+unmutated gate: 566 checks passed`, `cleanup app restored: true`.
+
+The rule for the next append to a numbered document: anchor at the end of the file, or anchor on the thing you
+are appending after — never on a sentence that a previous append may have moved. And after any block move, ask
+the diff whether insertions and deletions balance; a pure relocation that does not balance is a pure relocation
+that deleted something.

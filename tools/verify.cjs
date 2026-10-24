@@ -1693,6 +1693,36 @@ suite('hygiene', async () => {
   }
   c.check('the collision tally only reports text that is actually painted on painted text',
     collideWhy.length === 0, collideWhy.join('; ') || 'ok');
+
+  /* The change log numbers its own sections by hand, and on 2026-10-24 two appends used the same anchor
+     sentence — the closing line of §105 — so the file read 105, 107, 106. The splice that moved the block back
+     then ate the blank line above a heading, which markdown renders as part of the previous paragraph rather
+     than as a heading. Neither is an application defect and neither is falsifiable by arithmetic, so the shape
+     is asserted here. Both rules carry a population floor, because a scan that matched no heading would report
+     both satisfied: that is this repository's named class of a check that cannot fail looking exactly like one
+     that passed, and the guard is the only thing that tells the two apart. */
+  const logPath = require('path').join(appDir, 'CHANGES.md');
+  const logLines = fsx.existsSync(logPath) ? fsx.readFileSync(logPath, 'utf8').split(/\r?\n/) : [];
+  const logNums = [];
+  const welded = [];
+  for (let i = 0; i < logLines.length; i++) {
+    const m = logLines[i].match(/^## (\d+)\./);
+    if (!m) continue;
+    logNums.push({ n: +m[1], line: i + 1 });
+    if (i > 0 && logLines[i - 1].trim() !== '') welded.push('line ' + (i + 1) + ' (§' + m[1] + ')');
+  }
+  const outOfOrder = [];
+  for (let i = 1; i < logNums.length; i++) {
+    if (logNums[i].n <= logNums[i - 1].n) outOfOrder.push('§' + logNums[i - 1].n + ' then §' + logNums[i].n + ' at line ' + logNums[i].line);
+  }
+  c.check('the change log really has sections to judge (a scan that matches none is not clean)',
+    logNums.length >= 60, 'numbered sections found: ' + logNums.length + ' — the floor is 60');
+  c.check('the change log numbers its sections in ascending order',
+    logNums.length >= 60 && outOfOrder.length === 0, outOfOrder.join('; ') ||
+      'ascending across ' + logNums.length + ' sections, last §' + logNums[logNums.length - 1].n);
+  c.check('every change-log section heading opens on a blank line',
+    logNums.length >= 60 && welded.length === 0, welded.join(', ') ||
+      'no heading welded to the line above it across ' + logNums.length + ' sections');
   return c;
 });
 
