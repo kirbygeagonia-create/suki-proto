@@ -2740,10 +2740,12 @@ either print shape — an object answer and a `JSON.stringify` answer arrive dif
 one of them is what let a planted `findings:1` look clean — promotes a positive count from `ok` to `XX`,
 and prints the number ahead of the answer so the truncation cannot swallow it.
 `grep -l findings tools/probe-*` answers four files — the settled-caret probe joined them with §96 — and they
-agree on the key. Last full instrument pass, 2026-10-24: **46 probes, 0 needing attention — 4 of them report a
-findings count this runner reads**, read off the line that pass printed rather than added up in prose. The
-previous sentence in this file said 45, which was true of the pass before §99's sheet work added a screen;
-the totals line near §31 and this one disagreed by one until the census of them was re-run.
+agree on the key. **The instrument count is not repeated here.** The number is the last line
+`node tools/probe-all.cjs` prints, and the sentence in this
+paragraph has already been wrong twice in an hour: it said 45 after a pass that printed 46, and the
+totals line a few sections above said 46 while this one still read 45. Two places carrying one number is
+the drift, not the number, so the second copy is gone and the totals line near §31 keeps the single
+quotation with the run that printed it.
 
 A MUTANT RUN THAT IS KILLED LEAVES ITS OWN DEFECT IN THE TREE, AND ONLY `git status` CAN SEE IT. The
 runner's header has always warned that abandoning a pass early "is the one way to leave a mutant in the
@@ -4134,7 +4136,7 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate **563** (`node tools/verify.cjs`, re-run after §99 changed the page); whole suite **48 families, 243 mutants applied, 243 caught, 0 not applied** (`node tools/falsify-all.cjs`, the pass of 2026-10-24 finishing in ~58 minutes with no flagged row and the target hash unchanged after it — §99 added two breaks to `falsify-camera-dialog-coverage` for the sheet population, which is where 241 became 243). Per-family rows read off that same log, each matching the run: `falsify-identity-fallbacks` 24 of 24, `falsify-profile-honesty` 11 of 11, `falsify-saved-claims` 10 of 10, `falsify-verification-records` 10 of 10, `falsify-insights-records` 7 of 7, `falsify-layer-modality` 7 of 7, `falsify-camera-dialog-coverage` 6 of 6, `falsify-dialog-focus` 5 of 5, `falsify-chart-collide` 5 of 5, `falsify-nav-fit` 5 of 5, `falsify-flex-crush` 5 of 5, `falsify-probe-population` 6 of 6, `falsify-split-figures` 1 of 1, `falsify-photo-name` 2 of 2, `falsify-preflight` 3 of 3, `falsify-open-items` 4 of 4, `falsify-commit-subjects` 4 of 4, `falsify-pay-records` 3 of 3, `falsify-step-stamps` 4 of 4, `falsify-seed-dates` 4 of 4. Layout: **8 of 8 phone corners clean, 25 tallies each**, over the **82** screens `--list` counts. Instruments: **46 probes, 0 needing attention — 4 of them report a findings count this runner reads**. Quote a total from a pass that printed one, and say which pass it was.
+Gate **563** (`node tools/verify.cjs`, run again to produce this number); whole suite **49 families, 247 mutants applied, 247 caught, 0 not applied** (`node tools/falsify-all.cjs`, the pass of 2026-10-24, its own log file measuring 52 minutes between its first write and its summary line, no flagged row, and the target hash back to `3c78fdd…` afterwards — §99 added two sheet-population breaks to `falsify-camera-dialog-coverage` and §100 added the four of `falsify-build-bytes`, which is how 241 became 247). Per-family rows read off that same log, each matching the run: `falsify-identity-fallbacks` 24 of 24, `falsify-profile-honesty` 11 of 11, `falsify-saved-claims` 10 of 10, `falsify-verification-records` 10 of 10, `falsify-insights-records` 7 of 7, `falsify-layer-modality` 7 of 7, `falsify-camera-dialog-coverage` 6 of 6, `falsify-build-bytes` 4 of 4, `falsify-dialog-focus` 5 of 5, `falsify-chart-collide` 5 of 5, `falsify-nav-fit` 5 of 5, `falsify-flex-crush` 5 of 5, `falsify-probe-population` 6 of 6, `falsify-split-figures` 1 of 1, `falsify-photo-name` 2 of 2, `falsify-preflight` 3 of 3, `falsify-open-items` 4 of 4, `falsify-commit-subjects` 4 of 4, `falsify-pay-records` 3 of 3, `falsify-step-stamps` 4 of 4, `falsify-seed-dates` 4 of 4. Layout: **8 of 8 phone corners clean, 25 tallies each**, over the **82** screens `--list` counts. Instruments: **47 probes, 0 needing attention — 4 of them report a findings count this runner reads**. Quote a total from a pass that printed one, and say which pass it was.
 Of these, the families that drive the camera rather than the gate are whatever
 `grep -l shot.cjs tools/falsify-*.cjs` names — sixteen on 2026-10-24: `blank-query`,
 `camera-dialog-coverage`, `camera-surfaces`, `chart-collide`, `control-reach`, `dialog-focus`,
