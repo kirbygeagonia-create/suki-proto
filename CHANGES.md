@@ -7172,3 +7172,44 @@ section arrives on a branch with a PR of its own rather than as a push.
 No application bytes changed and no deploy was triggered for this section. Gate **all 566 checks passed**; four
 on-disk copies identical at `3c78fdd…`; `Sukinnect.html` identical to `origin/main` at 4,707 lines by
 `node tools/measure.cjs Sukinnect.html`.
+
+## 115. I reused a merged commit's subject, the audit called that unique, and the check was the defect
+
+§114's commit (**`560bf66`**) carries the same subject as `c32f845` — "docs: two deployment rulings, and the
+sentence that was almost wrong — merging is not promoting" — which is the fourth time this session's author has
+written a message while the previous one was still on screen, and the first time it happened against a commit that
+had already merged. The body describes §114 correctly; the subject describes §111. That is the worse variant this
+file has already named: **a reader scanning `git log` is handed a true sentence about the wrong commit.**
+
+**The audit gave a green line, and the green line was the defect.** `node tools/audit-commit-subjects.cjs` printed
+"0 duplicated subjects over 3 distinct ones — every subject in this range is unique" minutes after the merge. Its
+default population was `origin/main..HEAD` — literally *"what is not yet on main"* — so a collision with a commit
+that had just entered `main` was outside its scope by construction. The check existed precisely for this failure
+mode, ran, and could not see it. Widening the default to the branch's recent history (`-n 120 HEAD`, merged commits
+included) finds **four** duplicated subjects over 116 distinct ones, including mine, and an explicit range is still
+accepted for anyone who wants the narrow question.
+
+**Then its own falsifier refused, which is the part that worked.** `tools/falsify-commit-subjects.cjs` recomputed
+the expected set over `origin/main..HEAD` (3 commits, 0 duplicates) while the widened tool read 120 and reported 4,
+and the family hit its control condition and printed **ABORT — the unbroken audit does not agree with the shell, so
+nothing below this line measures anything**. That abort is the family doing its job: it would not grade a rule
+against a population it no longer shared with the tool. Fixing the family to derive its comparison from the scope
+the tool *declares* ("N commits read") rather than a range hard-coded a second time makes the two independent
+methods on one population; a floor of 60 commits then condemns a scope that shrinks, because a family that mirrors
+a shrunk population would forgive exactly the bug being planted. Two breaks came out of that:
+
+- re-rooting the default history onto `origin/main` → **CAUGHT**, set 3 vs 4;
+- shrinking the default count to 3 → **CAUGHT**, set 0 vs 4, count 3/120, the floor condemning it.
+
+`node tools/falsify-commit-subjects.cjs` now reads **5 of 5 breaks caught, 0 not applied, 0 missed**, control
+line "scope 120 commits (floor 60): ok, set matches shell: yes, duplicates seen: 4", and
+`cleanup audit restored byte-for-byte: true`. The older three breaks (dedup never-true, predicate widened to
+everything, empty-range refusal forced dead) still catch, so nothing was traded away for the two new ones.
+
+**Left as it is, on purpose.** `560bf66` is already pushed, and the fix would be an amend plus a force-push over a
+commit that is on a shared branch — history rewriting is the owner's call and was not taken. The duplicate stands
+in the log with both bodies describing their own diffs, which is the honest residue; what changed is that the next
+one is visible to a command rather than to a reader who happens to notice.
+
+Gate **all 566 checks passed**; no application bytes changed; four on-disk copies identical at `3c78fdd…`;
+`Sukinnect.html` identical to `origin/main` at 4,707 lines by `node tools/measure.cjs Sukinnect.html`.
