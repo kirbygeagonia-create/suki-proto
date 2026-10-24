@@ -2733,7 +2733,7 @@ either print shape — an object answer and a `JSON.stringify` answer arrive dif
 one of them is what let a planted `findings:1` look clean — promotes a positive count from `ok` to `XX`,
 and prints the number ahead of the answer so the truncation cannot swallow it.
 `grep -l findings tools/probe-*` answers three files, and they agree on the key. Last full instrument
-pass: **43 probes, 0 needing attention — 3 of them report a findings count the runner reads**.
+pass: **44 probes, 0 needing attention — 3 of them report a findings count the runner reads**.
 
 A MUTANT RUN THAT IS KILLED LEAVES ITS OWN DEFECT IN THE TREE, AND ONLY `git status` CAN SEE IT. The
 runner's header has always warned that abandoning a pass early "is the one way to leave a mutant in the
