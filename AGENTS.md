@@ -2280,6 +2280,32 @@ shipped prototype byte-for-byte as `origin/main` holds it (`git diff --quiet ori
 Whether the six undeployed fixes reached the public site is then a command, not a memory:
 `node tools/deploy-check.cjs` exits 1 until they do.
 
+**Executed: PR #9 merged 2026-10-24 03:08:08Z into `main` as `a14c4fa`.** Read back after the fact rather than
+remembered: `main`'s `Sukinnect-next.html` is byte-identical to the branch's and `main` carries 144 files under
+`tools/`, while `Sukinnect.html` is **untouched — 4,707 lines by `node tools/measure.cjs Sukinnect.html`, the
+same figure §31 quotes**, so the merge put the rebuild and the shipped
+prototype side by side on `main` and promoted nothing, exactly as the paragraph above says a merge does. The
+deployment did not follow within the next 8 minutes, which leaves two live possibilities and no way here to choose
+between them: a queued build, or production not tracking `main`. Ask the command, not the clock:
+`node tools/deploy-check.cjs`.
+
+**And a clock warning that nearly produced a false conclusion in this very session.** The local shell's `date -u`
+is ~19 hours ahead of the servers on this machine, so the first post-merge check appeared to show production
+unchanged **19 hours** after a merge that had actually happened 2.5 minutes earlier — and the sentence about to be
+written was "production does not auto-deploy on push to main". The Netlify `Date:` response header and GitHub's
+`mergedAt` both said otherwise. **Any claim about elapsed time needs a server-authoritative clock** (a response
+header, the API's own timestamp), not this machine's: on a Windows box in an Asian timezone the local UTC offset
+lies, and it lies in whichever direction makes a too-recent deploy look too old. Related to the seed-date and
+Manila-midnight defects — the same class arriving from the machine clock instead of the application's.
+
+**Ruled by the owner on 2026-10-24: the public build is deliberately left stale.** Production keeps serving the
+2026-10-15 artifact for now, so `findings: 7` from `node tools/deploy-check.cjs` is an **accepted standing state and
+a tripwire, not a task** — it is not to be "fixed" by a redeploy nobody asked for, and it is not to be described as
+an open defect. What the tripwire is for: if the live page ever drifts in a way nobody chose — a partial build, an
+asset that stopped resolving, a repo path suddenly answering 200 — the same command goes red and names what moved.
+The Netlify branch/auto-deploy setting remains unread from this repository, and that is now a known and accepted
+blind spot rather than an oversight.
+
 A FIGURE KEPT BY HAND IN PROSE IS THE NEXT FIGURE THAT IS WRONG. `node tools/falsify-all.cjs`
 now runs every mutant family in one sequential pass and prints, per family, how many breaks were
 applied, how many the named check caught, and how many never matched the file. It exists because
@@ -4290,7 +4316,17 @@ zero) rather than the numbers 4/3/2.
 
 Gate **566** (`node tools/verify.cjs`, run again to produce this number — the three added since 563 are the
 change log's own shape: sections numbered in ascending order, every heading opening on a blank line, and a
-population floor so neither can pass by matching nothing); whole suite **49 families, 247 mutants applied, 247 caught, 0 not applied** (`node tools/falsify-all.cjs`, the pass of 2026-10-24, its own log file measuring 52 minutes between its first write and its summary line, no flagged row, and the target hash back to `3c78fdd…` afterwards — §99 added two sheet-population breaks to `falsify-camera-dialog-coverage` and §100 added the four of `falsify-build-bytes`, which is how 241 became 247). Per-family rows read off that same log, each matching the run: `falsify-identity-fallbacks` 24 of 24, `falsify-profile-honesty` 11 of 11, `falsify-saved-claims` 10 of 10, `falsify-verification-records` 10 of 10, `falsify-insights-records` 7 of 7, `falsify-layer-modality` 7 of 7, `falsify-camera-dialog-coverage` 6 of 6, `falsify-build-bytes` 4 of 4, `falsify-dialog-focus` 5 of 5, `falsify-chart-collide` 5 of 5, `falsify-nav-fit` 5 of 5, `falsify-flex-crush` 5 of 5, `falsify-probe-population` 6 of 6, `falsify-split-figures` 1 of 1, `falsify-photo-name` 2 of 2, `falsify-preflight` 3 of 3, `falsify-open-items` 4 of 4, `falsify-commit-subjects` 4 of 4, `falsify-pay-records` 3 of 3, `falsify-step-stamps` 4 of 4, `falsify-seed-dates` 4 of 4. Layout: **8 of 8 phone corners clean, 25 tallies each**, over the **82** screens `--list` counts. Instruments: **47 probes, 0 needing attention — 4 of them report a findings count this runner reads**. Quote a total from a pass that printed one, and say which pass it was.
+population floor so neither can pass by matching nothing); whole suite **49 families, 248 mutants applied, 248 caught, 0 not applied, 0 missed** (`node tools/falsify-all.cjs`, the pass of 2026-10-24 that closed the 247/248 gap §115 left open: `falsify-commit-subjects` had grown from 4 breaks to 5 when the audit's population was widened, and rather than edit the remembered total the aggregate was re-run. Its rows were then summed a **second, independent way** — `awk` over the log, not the runner's own arithmetic — giving rows=49 applied=248 caught=248 not_applied=0 missed=0, and `comm` against `ls tools/falsify-*.cjs` answered that **no family is missing from the pass**. The app hash came back `3c78fdd…` and `git status` empty, so the pass restored everything it mutated). **The
+per-family rows are not listed here any more.** The first draft of this sentence typed 46 of the 49 families from
+memory and was wrong twice (`camera-surfaces` is 3 breaks, not 5; `control-reach` is 3, not 4) and silently
+dropped the other three (`credential-pair`, `empty-queue`, `modal-stacking`, 3 breaks each) — the same drift this
+document has named a dozen times, reproduced inside the paragraph whose whole subject is that drift, and caught
+only by diffing the claim list against the log with `comm`. The largest are worth naming because
+they carry the class: `identity-fallbacks` 24, `profile-honesty` 11, `saved-claims` 10, `verification-records` 10,
+`insights-records` 7, `layer-modality` 7. Everything else is one command away, and it is the command that is
+authoritative: `node tools/falsify-all.cjs` prints a row per family with applied / caught / not-applied / missed,
+and `awk` over its log sums them independently of its summary line. Quote a total from a pass that printed one,
+say which pass it was, and never carry a per-family table in prose.
 Of these, the families that drive the camera rather than the gate are whatever
 `grep -l shot.cjs tools/falsify-*.cjs` names — sixteen on 2026-10-24: `blank-query`,
 `camera-dialog-coverage`, `camera-surfaces`, `chart-collide`, `control-reach`, `dialog-focus`,

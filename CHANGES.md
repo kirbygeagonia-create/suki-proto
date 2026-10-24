@@ -7065,3 +7065,398 @@ One note for whoever reads this next: `gh pr diff 9 --name-only` failed with a f
 printed a single line, which a careless reader would have taken for "one file changed". **The repository is the
 authority on its own contents; a hosted API is a convenience** — the same rule that says to read an installed build
 off the device rather than off a note.
+
+## 112. PR #9 is merged; the shipped file is still untouched; and the local clock nearly wrote a false history
+
+The owner merged at **2026-10-24T03:08:08Z**; `main` moved to the merge commit **`a14c4fa`** and `git merge-base
+--is-ancestor HEAD origin/main` confirms this branch's tip is inside it. Everything below was read after the click,
+because a claim about what a repository holds is worth exactly the command that printed it.
+
+- `git diff --quiet origin/main HEAD -- Sukinnect-next.html` → **identical**. `main` now carries the rebuild at
+  853,782 bytes, hash `3c78fdd…`, and `git ls-tree -r --name-only origin/main -- tools | wc -l` → **144** files:
+  the gate, the camera, the sweep, the mutant families, the handset drivers.
+- `git diff --quiet origin/main -- Sukinnect.html` → **clean**. And the file is unchanged in the instrument's own
+  units: **4,707 lines by `node tools/measure.cjs Sukinnect.html`**, the figure §31 has always quoted. (This
+  sentence first said 4,706, because it was read off `wc -l`, which counts newline *characters* and so reports one
+  fewer for a file whose last line is unterminated — the same quantity §31 names as "4,706 CRLF pairs". Two
+  conventions, one digit apart, and only one of them is what `measure.cjs` prints. **Quote the instrument, not the
+  shell builtin**, which is this file's oldest rule arriving from the smallest possible place.)
+  **Merging is not
+  promoting.** `main` now holds the rebuild and the shipped prototype side by side, which is precisely the state
+  every floor claim in AGENTS.md has been describing — proven for one file, unproven for the other, and the merge
+  changed which file a reviewer must deliberately choose, not what either one is.
+- Census: several present-tense sentences were falsified the moment the button was pressed — DEVICE-PASS's "the
+  owner's ruling is to **refresh** PR #9 rather than merge it … and stays OPEN" and AGENTS's "**Merging PR #9 is
+  theirs to click**". Both are corrected with dated notes rather than rewritten, per the house rule for a superseded
+  row: the ruling was real when it was written, and what changed is its date.
+
+**The deployment did not follow, and the clock nearly turned that into a false history.** `node
+tools/deploy-check.cjs` still reports the public `/` matching commit `3c73bfef` (2026-10-15), six fixes undeployed,
+`findings: 7`. The first reading looked like a **19-hour** gap between the merge and an unchanged site, and the
+sentence about to be written was "production does not auto-deploy on push to main". It was the machine: this
+shell's `date -u` is ~19 hours ahead of the servers, while the Netlify `Date:` header (`03:10:43`, `03:13:21`,
+`03:16:23` across three checks) and GitHub's own `mergedAt` said only 2–8 minutes had passed. So the honest
+statement is narrower than the one nearly recorded: **eight minutes after a merge, production had not refreshed —
+which is consistent with a queued build and equally consistent with production not tracking `main`, and this
+repository cannot read the difference.** The rule generalises: **any elapsed-time claim needs a
+server-authoritative clock** — a response header or an API timestamp, never this box's — because a wrong local
+offset can make a five-minute-old event look a day old, and this machine sits in exactly the timezone where that
+happens. It is the same family as the seed-date and Manila-midnight defects, arriving from the operator's clock
+rather than the application's.
+
+No application bytes changed in this pass, so the gate stays **all 566 checks passed** from the run that printed
+it and the four on-disk copies remain identical at `3c78fdd…`. The next person to touch the deployment question
+should start from `node tools/deploy-check.cjs` rather than from anything written here: it exits 1 until the live
+bytes match, names the missing fixes, and refuses with `NO CONCLUSION` when the host does not answer.
+
+## 113. `main` was checked out separately for the first time, and it both passed and exposed a defect in my own tool
+
+Every instrument in this repository has only ever run against the working directory it was written in. Nothing had
+tested the proposition that a reviewer following the README — `git lfs install`, clone, open the file — receives a
+tree that is self-contained. So `git worktree add --detach .scratch/wt-main origin/main` made a real second
+checkout of the merged commit, and the same commands were run from inside it.
+
+**It passed, and the interesting part is what had to be true for it to pass.** `node tools/verify.cjs` in that
+directory printed **all 566 checks passed**, which is only possible if the Git LFS fonts actually smudged: the
+typography checks read `fonts/fonts.css` from disk and assert that every `url()` resolves to a file that exists
+**and is not a placeholder stub**, and an un-smudged checkout hands back 130-byte pointer text. The fresh tree
+carries 25,928 / 25,828 / 24,896 / 25,736-byte Atkinson WOFF2 files (plus the Fraunces and Plus Jakarta faces the
+shipped file still needs) and `head -c 60` on one returns binary, not `version https://git-lfs...`. The camera
+listed the same **82 screens**, and `node tools/measure.cjs` reported the shape §31 quotes — 11,851 lines, one
+`:root`, 95 tokens with three never reached (`--s-1 --s-8 --info`). Then `git worktree remove` and `git worktree
+list` answering one row: the scratch checkout is gone, not left beside the tree.
+
+**The test found a defect in tools, in the only place it could: a second directory.** Three instruments pinned
+`C:/Users/ADMIN/OneDrive/Desktop/Sukinnect/Suki-proto/` into a constant — `deploy-check.cjs` (**written by me an
+hour earlier**), `device-legs.cjs` and `device-picker-keys.cjs`. A tool with the author's home directory inside it
+cannot be run by anyone else, which is a sharp irony for the one whose whole job is to report what other people
+receive. All three now derive their root from `path.join(__dirname, '..')`, the way `harness.cjs` has always
+done it — and `harness.cjs` is the reason the gate worked from the worktree at all. Proven rather than asserted:
+`deploy-check.cjs --selftest` still passes its 8 cases, `device-legs.cjs --selftest` its 5 install-proof cases
+including both `dumpsys` spellings, and `device-picker-keys.cjs --guard-real` still reads the 18 saved picker
+trees and answers **allows 1, edit-box refusals 5, other refusals 13, findings: 0** — a guard whose fixture name
+comes from a file path is only as portable as that path.
+
+**And my own number in §112 was wrong, by one, for a reason worth writing down.** I wrote that `Sukinnect.html` on
+`main` is "still 4,706 lines", read off `git show … | wc -l`. `wc -l` counts newline *characters*, so a file whose
+last line is unterminated reports one fewer line than the file has. The instrument —
+`node tools/measure.cjs Sukinnect.html` — says **4,707**, which is what §31 has always quoted, and §31's other
+sentence about "4,706 CRLF pairs" is a *different* quantity that happens to land on the same digit. Three places
+carried my figure; all three are corrected to the instrument and its command. The rule is the one this file keeps
+rediscovering — **quote the tool, not the shell builtin** — and the trap is sharpest when the wrong answer and the
+right one differ by exactly one, because nothing looks broken.
+
+No application bytes changed. Gate **all 566 checks passed** in both trees; four on-disk copies identical at
+`3c78fdd…`; `Sukinnect.html` identical to `origin/main`.
+
+## 114. A ruling, recorded so the tripwire is not mistaken for a task
+
+Asked what to do about production still serving the 2026-10-15 build fifteen minutes after the merge, the owner
+ruled: **leave it stale.** So §113's and §112's `findings: 7` from `node tools/deploy-check.cjs` is now an
+**accepted standing state**, not an open defect, and it must not be "fixed" by a redeploy nobody asked for. AGENTS.md
+carries the ruling next to the section that found the drift.
+
+What that changes in practice is the meaning of the red line, not the line itself. `deploy-check` keeps exiting 1
+and keeps naming the six undeployed fixes, because its value is now **drift detection**: if the live page ever moves
+in a way nobody chose — a partial build, an asset that stops resolving, a repo path that suddenly answers 200 — the
+same command goes red over a change that was not made on purpose, and that is the difference between a stale site
+and a broken one. The Netlify branch and auto-deploy settings stay unread from this repository, which is now a
+**known and accepted blind spot** rather than an oversight; the nine-day drift happened precisely because nobody had
+written down that nobody knew.
+
+Two companion rulings from the same exchange, so the record is complete: **the public root serving
+`Sukinnect-next.html` is intended** (a decision about what a reviewer is shown, not `netlify.toml` drift), and
+**post-merge work lands through its own pull request** rather than being swept onto `main` — which is why this
+section arrives on a branch with a PR of its own rather than as a push.
+
+No application bytes changed and no deploy was triggered for this section. Gate **all 566 checks passed**; four
+on-disk copies identical at `3c78fdd…`; `Sukinnect.html` identical to `origin/main` at 4,707 lines by
+`node tools/measure.cjs Sukinnect.html`.
+
+## 115. I reused a merged commit's subject, the audit called that unique, and the check was the defect
+
+§114's commit (**`560bf66`**) carries the same subject as `c32f845` — "docs: two deployment rulings, and the
+sentence that was almost wrong — merging is not promoting" — which is the fourth time this session's author has
+written a message while the previous one was still on screen, and the first time it happened against a commit that
+had already merged. The body describes §114 correctly; the subject describes §111. That is the worse variant this
+file has already named: **a reader scanning `git log` is handed a true sentence about the wrong commit.**
+
+**The audit gave a green line, and the green line was the defect.** `node tools/audit-commit-subjects.cjs` printed
+"0 duplicated subjects over 3 distinct ones — every subject in this range is unique" minutes after the merge. Its
+default population was `origin/main..HEAD` — literally *"what is not yet on main"* — so a collision with a commit
+that had just entered `main` was outside its scope by construction. The check existed precisely for this failure
+mode, ran, and could not see it. Widening the default to the branch's recent history (`-n 120 HEAD`, merged commits
+included) finds **four** duplicated subjects over 116 distinct ones, including mine, and an explicit range is still
+accepted for anyone who wants the narrow question.
+
+**Then its own falsifier refused, which is the part that worked.** `tools/falsify-commit-subjects.cjs` recomputed
+the expected set over `origin/main..HEAD` (3 commits, 0 duplicates) while the widened tool read 120 and reported 4,
+and the family hit its control condition and printed **ABORT — the unbroken audit does not agree with the shell, so
+nothing below this line measures anything**. That abort is the family doing its job: it would not grade a rule
+against a population it no longer shared with the tool. Fixing the family to derive its comparison from the scope
+the tool *declares* ("N commits read") rather than a range hard-coded a second time makes the two independent
+methods on one population; a floor of 60 commits then condemns a scope that shrinks, because a family that mirrors
+a shrunk population would forgive exactly the bug being planted. Two breaks came out of that:
+
+- re-rooting the default history onto `origin/main` → **CAUGHT**, set 3 vs 4;
+- shrinking the default count to 3 → **CAUGHT**, set 0 vs 4, count 3/120, the floor condemning it.
+
+`node tools/falsify-commit-subjects.cjs` now reads **5 of 5 breaks caught, 0 not applied, 0 missed**, control
+line "scope 120 commits (floor 60): ok, set matches shell: yes, duplicates seen: 4", and
+`cleanup audit restored byte-for-byte: true`. The older three breaks (dedup never-true, predicate widened to
+everything, empty-range refusal forced dead) still catch, so nothing was traded away for the two new ones.
+
+**Left as it is, on purpose.** `560bf66` is already pushed, and the fix would be an amend plus a force-push over a
+commit that is on a shared branch — history rewriting is the owner's call and was not taken. The duplicate stands
+in the log with both bodies describing their own diffs, which is the honest residue; what changed is that the next
+one is visible to a command rather than to a reader who happens to notice.
+
+Gate **all 566 checks passed**; no application bytes changed; four on-disk copies identical at `3c78fdd…`;
+`Sukinnect.html` identical to `origin/main` at 4,707 lines by `node tools/measure.cjs Sukinnect.html`.
+
+## 116. 248 mutants caught, and the paragraph that proved its own rule while writing itself
+
+`node tools/falsify-all.cjs` was re-run to close the gap §115 left open — the tree held 248 breaks while the
+last full pass had printed 247, because `falsify-commit-subjects` grew from 4 to 5 when its audit's population was
+widened. The run finished **49 families, 248 applied, 248 caught, 0 not applied, 0 missed**, no flagged row, the
+app hash back to `3c78fdd…` and `git status` empty afterwards, so every family restored what it mutated.
+
+The total was not taken on the runner's word. Its log was summed a second time with `awk` over the printed rows —
+**rows=49 applied=248 caught=248 not_applied=0 missed=0** — and the family set was cross-checked against the tree
+with `comm` between `ls tools/falsify-*.cjs` and the names the log printed, which answered that **no family is
+missing from the pass**. A summary line and a sum of its own rows are two different measurements; only agreeing
+with both makes the number a fact. That is the same discipline §115 used on the audit, arriving one level up.
+
+**Then the paragraph wrote itself badly, in exactly the way it exists to forbid.** Re-deriving the totals meant
+re-typing the per-family table, and the draft listed 46 of 49 families from memory: two numbers wrong
+(`camera-surfaces` is 3 breaks, not 5; `control-reach` is 3, not 4) and three families silently dropped
+(`credential-pair`, `empty-queue`, `modal-stacking`, 3 breaks each). Diffing the claim list against the log with
+`comm` is what found it — the same tool-and-second-derivation trick, now aimed at my own sentence. The table has
+been **deleted** rather than corrected: AGENTS.md now names the six families large enough to carry a class
+(`identity-fallbacks` 24, `profile-honesty` 11, `saved-claims` 10, `verification-records` 10,
+`insights-records` 7, `layer-modality` 7) and points at the command for everything else. A table that must be
+re-typed to stay true will be false the next time someone is careful and the time after that; the log is the
+artifact, and this file's oldest rule — a figure kept by hand in prose is the next figure that is wrong — applies
+to a paragraph *about* figures too.
+
+Nothing in the application changed: gate **all 566 checks passed**, four on-disk copies identical at `3c78fdd…`,
+`Sukinnect.html` identical to `origin/main` at 4,707 lines. One lane remains measurable and it is armed but
+unwalked: the edge-to-edge check on the android-36 frame (task #68), which could not start while the aggregate held
+the machine and now can.
+
+## 117. The edge-to-edge leg was walked on the only API 35+ target here, and that target cannot answer
+
+Everything else the handset pass owed is closed, so the last open measurement was the one DEVICE-PASS:362 says
+stays open **on both phones** — and it says so for the right reason: `targetSdk 36` forces edge-to-edge only at
+**API 35+**, while the OPPO is API 29 and the vivo API 30, where the shell takes its deprecated
+`getSystemWindowInset*` fallback. Measuring there would have described a path the shipped build no longer uses.
+The android-36 AVD `suki_leg9` is the only target on this machine at or above 35, so the leg was armed
+(`tools/device-edge-leg.cjs`, §113/§116 lineage), its judge proven by 16 offline cases, and then walked.
+
+**It did not reach a verdict, and it never claimed one.** The frame is too starved to service a WebView
+inspector: boot took 90–110 s, and `dumpsys window` came back dominated by ANR reports for
+`com.google.android.inputmethod.latin`, `com.google.android.gms` and `com.android.systemui`, with PSI
+`some avg10=93.34` on CPU and a per-process breakdown of `100% TOTAL: 15% user + 82% kernel`. Every
+`Runtime.evaluate` timed out across four retries, and the probe's own relaunches re-created the stale-target
+pile (2 → 5 targets on one socket) that §105 diagnosed on the OPPO. So the leg printed
+`findings: 2` — "the WebView surface height was never read" and "the page never answered with geometry" — and
+exited 1. **That is the guard earning its keep on a real target: the arithmetic would have been trivially
+satisfiable with a zero, and the instrument refused to produce one.**
+
+Three things the attempt did establish, none of them from the app:
+- `output-metadata.json` names its key **`outputFile`**, not `outputFileName`; the first version built a path
+  ending `/debug/undefined` and was caught by its own existence check rather than installing something wrong.
+- **API 36's `dumpsys window` does not print the rectangles this parser expected.** It says
+  `mStatusBar=Window{… StatusBar}`, `mNavigationBar=Window{… Taskbar}` and `mHasBottomNavigationBar=true`, so
+  a regex looking for a status-bar line followed by two bracketed coordinate pairs silently yields "no bars" —
+  the false clean in the exact shape §116 warns about. The tool now asserts bar *presence* from window
+  references and refuses when it can read none, rather than guessing sizes.
+- **`uiautomator dump` on this AVD answers `ERROR: null root node returned by UiTestAutomationBridge` even with
+  our own activity foreground** — the same bridge that refused the owner-only pause dialog on the OPPO, refusing
+  here for a different reason, and both are reader limits, not statements about the app. It is also the likely
+  cause of the first run's `Application Not Responding: system` that swallowed focus and would not accept
+  `KEYCODE_BACK`, which needed a cold frame restart. The rewritten leg does not call `uiautomator` at all.
+
+**What would close this lane, stated as an ask rather than pretended away:** a handset at API 35 or above —
+neither phone that has been attached qualifies — or the same AVD on a machine that is not also running a desktop
+session (`-gpu host`, dedicated cores). Until then the claim in the operating docs is **stated, not measured**:
+`MainActivity.applySystemBarInsets()` is the code that would pad the WebView, and no API 35+ target has ever
+confirmed it does. That is the same treatment the owner chose for the shipped-file gap in §31 — name the blind
+spot, do not fabricate the reading.
+
+The frame was shut down with `adb emu kill`, forwards removed, no devices left on the bus, no node processes
+running, and the working tree carries only the intended tool edit.
+
+## 118. Three boots, two GPU backends, one answer: this machine cannot host an API 36 frame
+
+The leg was retried after the first starvation report rather than accepted on one sample, and the retry changed the flags and not the outcome. Boot two: `-gpu swift_shader_indirect`, 110 s, ANRs in `inputmethod.latin`, `gms` and `com.android.systemui`. Boot three: `-gpu host -cores 4 -accel on`, which the launcher log reported straight back as
+`GPU mode control feature flag 'ForceSwiftshader' is set` — the host backend is not actually available here — and 120 s later the ANR had moved to `com.google.android.apps.nexuslauncher`. The last run’s log carries four consecutive focus lines reading `Application Not Responding: com.google.android.apps.nexuslauncher` and no `ANR in` dump at all — the earlier run’s `dumpsys window` is where the two `ANR in` reports (inputmethod.latin, gms) were, and the systemui ANR appeared as a focus window rather than a dump. `Runtime.evaluate` timed out on every one of four retries in each of the three attempts. Quoted this way because the first draft of this paragraph said “six `ANR in` lines in that final log”, and `grep -c` answered 0: a number read off a different file than the sentence names is still a fabricated number.
+
+So the block is evidenced rather than assumed, in both directions. The instrument was fixed on the way (the View surface is now read with Node's own `fetch` over a forward the tool makes itself, after spawning `curl` from `execFileSync` produced an empty body and a
+`surface NOT READ` on a frame that had answered a moment earlier — the same defect §110 records for `deploy-check.cjs`, re-committed within an hour, which is the argument for why the fix belongs in a rule and not in memory), and the section now runs under an async
+wrapper so that refusal path is reachable at all. 16 selftest cases still pass, the tool still refuses below API 35 before installing, and it refused here rather than turning two unread inputs into a pass.
+
+**What would settle the edge-to-edge question, concretely:** any handset at API 35+ — the two that have been attached are API 29 and API 30 and take the deprecated fallback, so they cannot answer it — or this AVD on a machine that is not also running a desktop
+session. The claim stays stated and unmeasured, and it is now stated as *attempted on three boots with these numbers*, not as an unexplored gap.
+
+## 119. The starver had a name in a config file: `hw.gpu.enabled=no`, `hw.cpu.ncore=2` — and fixing both still could not answer
+
+§118 stopped at “the emulator reports `ForceSwiftshader`”, which is a symptom with a source. Asked where,
+`~/.android/avd/suki_leg9.avd/config.ini` turned out to have been created with **`hw.gpu.enabled=no`** and
+**`hw.cpu.ncore=2`**, so every `-gpu host` argument was overridden before it took effect. That is the same
+shape as every other “the platform refuses” finding in this file: a configuration nobody had read, wearing the
+costume of a policy.
+
+Changed it and re-ran. With **four cores**, boot got *faster* — 100 s against 110–120 s — and the leg failed
+identically: `com.android.systemui` ANR’d and held focus across four consecutive reads, every
+`Runtime.evaluate` timed out, and `device-edge-leg.cjs` again printed its `findings` naming the two inputs it
+never got and exited 1. So the count is now **five boots, two core counts, two requested GPU backends**, and the
+conclusion is about this machine rather than about the attempt: it cannot host an API 35+ target that answers
+while also running a desktop session.
+
+**Machine state deliberately left half-changed, and therefore written down.** `hw.cpu.ncore=4` and
+`hw.gpu.enabled=yes` stay (they are strictly better and cost nothing); `hw.gpu.mode` is reverted from `host`
+back to `auto`, because `host` was never honoured and leaving it there makes the config assert something the
+frame does not do. A device-side or machine-side edit that nobody records is what turns the next session’s
+instrument into a haunted one — the same reason `DEVICE-PASS` exists for the Android shell that git will never
+show.
+
+**What can actually close the edge-to-edge item, in order of honesty:**
+1. **A handset at API 35 or above.** Neither attached phone qualifies (OPPO API 29, vivo API 30), and both take
+   the deprecated `getSystemWindowInset*` fallback, which is not the code path shipping at `targetSdk 36`. This
+   is the only route that measures the real thing.
+2. **A lighter image on this machine** — `google_apis` instead of `google_apis_playstore`, with a bigger RAM
+   allocation. Plausibly enough to stop the system-server ANRs. It costs a ~1 GB download and a new AVD, so it
+   needs an explicit yes rather than being assumed.
+3. **Accept it as stated-not-measured**, which is where it stands now: `applySystemBarInsets()` pads the WebView
+   in code, and no API 35+ target has ever confirmed the result on screen. That is the same treatment the owner
+   ruled for the shipped-file blind spot — name it, do not fabricate the reading.
+
+No application bytes changed; gate **all 566 checks passed**; frame killed, no `qemu` process, nothing on the
+USB bus, forwards cleared.
+
+## 120. The API 36 frame finally answered, and what it answered with is a defect: the shell's inset padding delivered zero
+
+§119 closed with "five boots, two core counts, two requested GPU backends" and no reading. There is now a reading,
+and the frame was never the whole obstacle: **the leg was relaunching and re-attaching on every retry**, and each
+relaunch landed while `com.android.systemui`'s ANR dialog owned focus, so every `Runtime.evaluate` timed out. Left
+alone for sixty seconds after a cold start, the same socket answers. That is the same defect
+`reference-android-handset-automation-limits` records for the bench — a probe that relaunches per call — arriving on
+an emulator, and it was found by trying the read once instead of four times.
+
+**Measured on the android-36 AVD at its native phone skin** (`wm size` 1080x2340, `dpr 2.75` → 393x851 CSS px, the
+vivo's panel size; boot 147 s at `-memory 4096 -cores 4`):
+
+| reading | value |
+|---|---|
+| `innerHeight` / `screen.height` / `visualViewport.height` | **851 / 851 / 851.3** |
+| painted `.bottomnav` | top **777.5**, bottom **851.3**, height 73.7 |
+| `body` and `#app` `padding-bottom` | **0px**, and no `--safe-bottom` token exists |
+| status bar and gesture pill | both drawn **over** the app |
+
+The screenshot settles what the numbers imply: the clock and the status icons are painted **on top of the
+resident's greeting line** at the top, and the gesture pill sits **inside the bottom navigation row** at the bottom.
+So the two halves of the question get opposite answers, and both are now measured rather than assumed:
+
+1. **Edge-to-edge is in effect at API 36.** The WebView surface spans the whole display — `innerHeight` equals
+   `screen.height`, which is exactly what it would not do if the window were still being shortened by the bars.
+   `targetSdk 36` forcing it at API 35+ is confirmed on a framework that actually has the rule, which is the claim
+   `DEVICE-PASS` item 4 and item 6 could previously only assert from the manifest.
+2. **`applySystemBarInsets()` compensates for nothing.** `MainActivity.java:163` sets a listener on the WebView and
+   calls `v.setPadding(left, top, right, bottom)`; on this frame the padding is zero on every edge. The likely
+   cause, stated as a hypothesis and not as a finding: with the default `decorFitsSystemWindows(true)` the content
+   view consumes the insets before a child view's listener sees them, so the callback runs and hands the WebView
+   four zeros. The fix is to opt the window out (`WindowCompat.setDecorFitsSystemWindows(getWindow(), false)`) and
+   return `WindowInsets.CONSUMED` — **not applied yet**, because the shell is untracked and a rebuild, reinstall and
+   re-read is the next action. This section is written before that so the measurement survives it.
+
+**One candidate cause was tested and falsified on the same frame, twenty minutes later.** The first hypothesis was
+an ordering bug — `setOnApplyWindowInsetsListener` does not replay insets to a listener installed after the initial
+dispatch — so `view.requestApplyInsets()` was added after the listener, `:app:assembleDebug` rebuilt in 1m50s, the
+APK reinstalled (`Success`), the app cold-started, and the same read was taken. **It moved nothing**: `innerHeight
+851`, `screen.height 851`, `.bottomnav` bottom `851.3`, padding `0px` — byte-identical to the table above. The patch
+was then reverted rather than left in, because a no-op carrying a comment that names a cause is worse than no patch:
+it teaches the next reader that the cause is settled. What survives is the narrowed claim — the listener either is
+not being reached or is being handed zeros by the dispatch chain, which points at the window's
+`decorFitsSystemWindows` state rather than at the call order — and the discipline: **a fix that produces an
+identical reading is a falsified hypothesis, not a partial success.**
+
+**Three instrument facts that outlive this leg.** `adb root` is refused on a `google_apis_playstore` image
+(`adbd cannot run as root in production builds`), so a wedged `systemui` cannot be recovered from the bench at all —
+only a reboot, or a `google_apis` image. A `-skin 480x854` override makes the frame boot with the launcher focused
+and answers the same shape (311 CSS px against a 311 px screen), but a skin override is not a phone: the reading
+above was taken at the AVD's own 1080x2340 and the smaller one is kept only as the reproduction that showed the
+frame could answer. And the socket listed **five page targets for one WebView** — every reload leaves one behind —
+so the reader attaches to the newest, and the screenshot is what proves the target it read is the one being
+composited. Without that picture, "the app is on resident home with its nav at the bottom edge" was a sentence about
+a page nobody was looking at.
+
+**What this does not settle:** a physical API 35+ handset's density, its OEM bar heights, and whether a ColorOS or
+Funtouch shell reports the insets differently. This is a framework reading on Android 16, which is the thing the leg
+asked; the handset-parity caveat in `reference-avd-as-leg-target` still applies to anything about a specific phone.
+No application bytes changed. Gate: **all 566 checks passed** before this section.
+
+## 121. The listener was right and the padding was a no-op: `WebView` ignores its own padding, and the sensor called the fix "untestable"
+
+§120 left a defect with two candidate causes and a reverted patch. Both candidates have now been tested on the same
+android-36 frame, and **both were wrong about where the zeros came from** — which is why the instrument, not the
+guess, got the next edit.
+
+**The decisive reading was a log line, not another screenshot.** `android.util.Log.i("SukiInsets", …)` inside the
+listener answered in one boot: `top=136 bottom=66 left=0 right=0 sdk=36`, twenty-one dispatches. So the listener
+*runs*, and it is handed real, correct insets. The padding call it makes — `v.setPadding(0, 136, 0, 66)` on the
+WebView — is what does nothing: **a WebView lays its page out at the full view size and ignores its own padding**, so
+`innerHeight` stayed 851 CSS px = 2340 device px = the whole screen. Retargeting the same listener at the content
+view (`getWindow().getDecorView().findViewById(android.R.id.content)`) moved the numbers immediately: surface **2138px
+of 2340**, `innerHeight` **778** (was 851), slack **202px** — 136 + 66, exactly the two bars the listener had
+reported. The debug line was then removed and the build re-made without it, so the shipping shell carries the fix
+and not the probe.
+
+**The sensor read the working fix as a frame that could not answer.** With the surface inset, `judge()` took its
+existing branch — *the window is already inset by the framework, so this frame cannot test the shell padding
+question* — and printed `UNTESTABLE` with `findings: 0`. That branch was written when nothing could produce an inset
+surface except a framework that shortens the window; at API 35+ edge-to-edge is **forced**, so an inset surface can
+only have come from the shell. The rule now splits on the SDK the leg already reads: `sdk >= 35` and inset → the
+pass, naming the pixels; below 35, or with the SDK unread → the refusal, still. Four selftest cases pin it (20 run,
+0 failing), including the one that matters most: **an unread `sdk` reads as the refusal, never as the pass**, so the
+branch cannot go quiet by losing an input. The verdict sentence was also re-worded — it said "the shell padded the
+WebView", which is the mechanism this section exists to disprove.
+
+**The instrument defect behind §120 was bigger than the leg.** `device-edge-leg.cjs` asked the page through
+`tools/device-probe.cjs`, which launches the activity on every call — so each of its four retries began by bouncing
+the app off an ANR dialog (systemui's, then the launcher's), and every `Runtime.evaluate` timed out. That is what
+five boots had been reported as. The leg now makes one CDP attach of its own to the **newest** page target and
+evaluates over that socket: `cdp /json: 1 target(s), read the newest page target: true`, and the page answered on
+the first attempt. The surface height and the page geometry now come from the same target list at the same moment,
+instead of from two instruments that could disagree about which page they were looking at.
+
+**The shell change, written out because git will never show it** (`MainActivity.java`, untracked by the owner's
+standing decision — see §65 for why a fix recorded on one machine only is a fix the next rebuild re-breaks):
+
+```java
+// was: applySystemBarInsets(web);
+// A WebView ignores its own padding: the listener ran with real insets (136/66 at sdk 36) and innerHeight
+// never moved. Pad the content view, which lays the WebView out inside the bars.
+applySystemBarInsets(getWindow().getDecorView().findViewById(android.R.id.content));
+```
+
+and inside `applySystemBarInsets`, before the listener:
+
+```java
+if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+    getWindow().setDecorFitsSystemWindows(false);
+}
+view.requestApplyInsets();
+```
+
+`setDecorFitsSystemWindows(false)` and `requestApplyInsets()` each changed nothing on their own — §120 falsified the
+call-order hypothesis and this section falsifies the two together on the WebView — and they stay because the first is
+what makes the window's state honest at API 35+ and the second guarantees a dispatch after the listener is installed.
+Rebuild: `./gradlew --offline --no-daemon :app:assembleDebug` → BUILD SUCCESSFUL, installed with `adb install -r -t`,
+proved by the leg's own package read (`1.2-preview.39 / versionCode 41`).
+
+**What is still not settled:** this is a framework reading on Android 16, not a physical API 35+ handset — no such
+device has been on this bus (OPPO API 29, vivo API 30). The bar heights here are the emulator's, and a ColorOS or
+Funtouch shell may report different insets or draw its own gesture area. The claim that survives is the narrow one:
+**at an API level that forces edge-to-edge, the shell's compensation now produces a 202px inset that the page honours,
+and it does so because the padding moved from the WebView to the content view.**

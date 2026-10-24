@@ -16,9 +16,13 @@
    marker list would otherwise produce. */
 'use strict';
 const fs = require('fs');
+const path = require('path');
 const { execFileSync } = require('child_process');
-const ROOT = 'C:/Users/ADMIN/OneDrive/Desktop/Sukinnect/Suki-proto/';
-const LOCAL = ROOT + 'Sukinnect-next.html';
+/* ROOT comes from this file's own location, not from a path typed into it: the first version pinned
+   C:/Users/ADMIN/OneDrive/… which meant the one instrument that exists to check what OTHER people receive
+   could not run in another checkout of the repository. `harness.cjs` has always done it this way. */
+const ROOT = path.join(__dirname, '..') + path.sep;
+const LOCAL = path.join(__dirname, '..', 'Sukinnect-next.html');
 const BASE = process.argv.find(a => a.startsWith('--url=')) ? process.argv.find(a => a.startsWith('--url=')).slice(6) : 'https://sukinnecct.netlify.app';
 
 /* Each of these is a fix this branch documents by section number. They are chosen to be strings that only

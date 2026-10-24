@@ -22,7 +22,7 @@
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const ADB = process.env.ADB || 'C:/Users/ADMIN/AppData/Local/Android/Sdk/platform-tools/adb.exe';
-const ROOT = 'C:/Users/ADMIN/OneDrive/Desktop/Sukinnect/Suki-proto/';
+const ROOT = require('path').join(__dirname, '..') + require('path').sep;
 const PKG = JSON.parse(fs.readFileSync(ROOT + 'Sukinnect-Android/app/build/outputs/apk/debug/output-metadata.json', 'utf8')).applicationId;
 const FIXTURE_NAME = 'suki-leg9-test.png';
 const FIXTURE_PATH = '/sdcard/Download/' + FIXTURE_NAME;

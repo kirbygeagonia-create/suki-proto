@@ -360,6 +360,18 @@ palette; the bench could only measure the media-query half of that and rule the 
 
 **Android 10 does not unlock the edge-to-edge question.** `targetSdk 36` forces edge-to-edge at
 API 35+, and this device is API 29 — so that item stays open on both phones, not just the vivo.
+*(Still open after a real attempt, 2026-10-24, `CHANGES.md` §117. The leg was armed as
+`node tools/device-edge-leg.cjs` — judge proven by 16 offline cases, refuses before installing below API 35 —
+and walked on the only target here at or above 35, the android-36 AVD. That frame is too CPU-starved to service
+a WebView inspector: boot 90–110 s, ANRs in `inputmethod.latin`, `gms` and `com.android.systemui`,
+PSI `some avg10=93.34`, every `Runtime.evaluate` timing out across four retries, and stale targets piling 2 → 5.
+The leg printed `findings: 2` naming its two unread inputs and exited 1 — it did not manufacture a pass from
+zeros. Also learned about the frame, not the app: `uiautomator dump` answers `null root node` there even with
+our activity foreground (and is the likely cause of the `Application Not Responding: system` window that ate
+focus and would not take `KEYCODE_BACK`), and API 36's `dumpsys window` names bar **windows** rather than
+printing rectangles. What closes this is an API 35+ handset — neither phone qualifies — or the same AVD on a
+machine that is not also running a desktop. Until then the claim is stated, not measured:
+`applySystemBarInsets()` is the code that would pad the WebView, and no API 35+ target has confirmed it does.)*
 
 **Why the pass did not run, in the order it failed.**
 
@@ -488,7 +500,13 @@ the only record.
    first record in the list for an id they do not hold.
 5. `app/src/debug/res/values/app.xml`: new, debug-only `app_name` = "Sukinnect · preview".
 6. `MainActivity.java`: `applySystemBarInsets()` added, plus the `Build` and `WindowInsets`
-   imports. This is the edge-to-edge compensation for item 4 and it is **device-unverified**.
+   imports. This is the edge-to-edge compensation for item 4 and it is **device-unverified**. *(Answered 2026-10-25 on the
+android-36 AVD at its native 1080x2340 skin, and the answer is a defect: the padding delivered zero on every edge
+while the window really is edge-to-edge — the status bar paints over the greeting and the gesture pill sits inside
+the bottom nav. `CHANGES.md` §120. **Fixed 2026-10-25 in §121**: the listener was already receiving real insets (`top=136
+bottom=66 sdk=36`, logged) and a WebView ignores its own padding — moving the padding to `android.R.id.content`
+gave a 202px inset the page honours (surface 2138 of 2340, `innerHeight` 778). Framework reading on Android 16, not
+a physical API 35+ handset.)*
 7. `gradlew`, `gradlew.bat`, `gradle/wrapper/`: new, generated 2026-10-11.
 8. `tools/check-assets.cjs`, `tools/falsify-assets.cjs`: new. Both are about the artifact rather
    than the page, which is why they live here and not in `tools/` at the repo root.
@@ -2132,4 +2150,16 @@ Menu is the owner's own setting, left alone.
   describes the rebuild it actually carries and what merging would ship unverified, and stays OPEN. The merge
   button is still a human's, and the handset legs above are the
   reason it should stay that way for now.
+  **That sentence is superseded: the owner merged PR #9 on 2026-10-24 at 03:08:08Z**, once the handset legs above
+  were closed, and the merge commit is `a14c4fa` on `main`. What the merge did and did not do is measured rather
+  than asserted: `main`'s `Sukinnect-next.html` is byte-identical to this branch's (853,782 bytes, `3c78fdd…`) and
+  `main` carries 144 files under `tools/`, while **`Sukinnect.html` is untouched — 4,707 lines by
+  `node tools/measure.cjs Sukinnect.html`, and identical
+  to what `origin/main` held before the merge**, proved by `git diff --quiet origin/main -- Sukinnect.html`. So
+  `main` now holds the rebuild *and* the shipped prototype side by side, which is the state every floor claim in
+  this file describes. The one thing the merge did not achieve is on the deployment side: as of 03:16:23Z
+  (server-authoritative, 8 minutes after the merge) the public `/` still serves commit `3c73bfef` from 2026-10-15,
+  so either a build is queued or **production does not track `main`** — a Netlify setting nobody in this
+  repository can read. `node tools/deploy-check.cjs` is the command that says which, and it exits 1 naming the six
+  undeployed fixes until it stops doing so.
 

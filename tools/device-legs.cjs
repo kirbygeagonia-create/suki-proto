@@ -16,7 +16,7 @@
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const ADB = process.env.ADB || 'C:/Users/ADMIN/AppData/Local/Android/Sdk/platform-tools/adb.exe';
-const ROOT = 'C:/Users/ADMIN/OneDrive/Desktop/Sukinnect/Suki-proto/';
+const ROOT = require('path').join(__dirname, '..') + require('path').sep;
 const APK = ROOT + 'Sukinnect-Android/app/build/outputs/apk/debug/Sukinnect-1.2-preview.39-debug.apk';
 /* Never type the package or the version: read them from the build's own metadata, so the walk asks
    about whatever was actually produced. This driver originally hard-coded `com.sukinnect.proto` and the
