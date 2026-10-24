@@ -6516,3 +6516,39 @@ this a discriminator and not a blanket no. `findings: 0`, exit 0 on that shape, 
 Nothing on this machine can read the installed bundle, so `audit-build-bytes` still stops at four copies —
 source, `dist/`, staged asset, APK — all `3c78fdd…`. The fifth copy is the phone, and reading it is what the
 two armed scripts exist to do.
+
+## 101b. The walk was executed for the first time, and its clean result was a lie
+
+No handset came onto the bus, so the legs were run against something that is genuinely an Android device:
+an AVD created from the `android-36 google_apis_playstore x86_64` image already in this SDK — **Android 16,
+WebView 133.0.6943.137**, installed with the same `1.2-preview.39` the vivo is owed. This is not the vivo and
+cannot close the vivo parity leg or the ColorOS leg; it is a real framework, so what it measures transfers.
+
+**It measured the walk, not the app.** The install proof passed by reading the package back (`versionCode=41
+/ versionName=1.2-preview.39`), and the multiplier reading came back `{"renderedOverSpecified":1,
+"rootFont":"16px"}` — a genuine device reading at `font_scale 1.0`, which is the control value: factor 1 is
+what the framework does when the user has not asked for larger text, and it is exactly the number the bench
+cannot distinguish from a bug.
+
+**Then the walk printed `findings: 0` while every one of its measurements had failed.** The app never left
+its splash: `pidof` answered nothing, `device-probe` reported *"the WebView is not exposing an inspector"*,
+and the readings that followed were fragments — `PIN field: }`, `results: SyntaxError: Unexpected token ';'`,
+`tap Log Out row: NO LOGOUT CONTROL`. The residue check at the end counted leftovers, found none, and called
+the leg clean. **A walk that measures nothing and reports nothing-wrong is worse than one that fails**, and
+this one would have written a DEVICE-PASS row saying the PIN field had been read on a device.
+
+Three fixes, each found only by executing:
+1. **A liveness gate before any claim.** `liveness()` polls until the app owns a painted page that answers
+   with a JSON object, and the walk aborts with `NO PAGE`, the foreground window, and its reading tally
+   rather than continuing.
+2. **Readings are counted, not trusted.** `requireJson` records each reading that actually parsed and marks
+   the rest `NOT MEASURED` with the raw text; the verdict now includes *"the two surfaces this leg exists to
+   measure were never measured"*. Re-run: exit **1**, `findings: 3`, `readings measured: 2` — honest.
+3. **The state assignment loses to the splash timer.** `state.view='app'; state.role='admin'; render()` reads
+   back as `view: login` on a cold-booted app, because the splash hands over to login on a timer *after* the
+   assignment. The walk must wait for `view` to settle at `login`, assign, and then verify the `h1` names the
+   screen it thinks it opened — which is the same rule the camera's SCREENS table encodes by calling the
+   app's real entry points. Recorded as the next change to this driver, not fixed blind.
+
+The AVD was created for this run and the emulator was started and stopped by this session; the owner's two
+handsets were never touched, and `findings` now says so in numbers.

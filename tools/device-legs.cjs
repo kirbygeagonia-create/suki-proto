@@ -40,6 +40,38 @@ function probe(args) {
 function lastLine(out) { const l = String(out).trim().split('\n'); return (l[l.length - 1] || '(no answer)').trim(); }
 function ask(expr) { return lastLine(probe([expr])); }
 function say(label, expr) { const out = ask(expr); console.log(label + ': ' + out); return out; }
+/* A leg has to know whether it measured anything. Executed for the first time against a real (emulated)
+   Android 16 frame, the walk printed `findings: 0` while EVERY reading had failed: the app never came to the
+   foreground, `pidof` answered nothing, device-probe reported "the WebView is not exposing an inspector", and
+   the fragment-readings that followed (`PIN field: }`, `results: SyntaxError`) were parsed by nobody. So:
+   `requireJson` counts readings that actually returned an object, `say` never trusts a line it cannot parse,
+   and the final verdict is computed from the count of real measurements, not from the absence of leftovers. */
+const readings = { ok: [], bad: [] };
+function requireJson(label, expr) {
+  const raw = ask(expr);
+  let o = null;
+  try { o = JSON.parse(raw); } catch (e) { /* not an answer */ }
+  if (o && typeof o === 'object') { readings.ok.push(label); console.log(label + ': ' + raw); return o; }
+  readings.bad.push(label);
+  console.log(label + ': NOT MEASURED — the page did not answer with an object. Raw: ' + String(raw).slice(0, 110));
+  return null;
+}
+function liveness() {
+  for (let i = 0; i < 10; i++) {
+    const pid = adb('shell', 'pidof', PKG).trim();
+    if (pid) {
+      const o = requireJson('live page', 'JSON.stringify({view:state.view,h1:(document.querySelector("h1,h2")||{}).textContent||""})');
+      if (o && /login|app/.test(String(o.view))) return o;
+    }
+    console.log('  waiting for the app to own a painted page (try ' + (i + 1) + ', pidof="' + pid + '")');
+    sleep(4000);
+  }
+  console.log('NO PAGE — the installed app never gave the probe a live WebView to answer from.');
+  console.log('foreground window: ' + adb('shell', 'dumpsys', 'window').split('\n').filter(l => /mCurrentFocus|mFocusedApp/.test(l)).map(s => s.trim()).join(' | '));
+  console.log('readings taken: ' + readings.ok.length + ', failed: ' + readings.bad.length + ' [' + readings.bad.join(',') + ']');
+  console.log('findings: 1 — the leg could not be measured, which is NOT the same as measuring nothing wrong');
+  return null;
+}
 /* The install proof, as pure functions, so it can be tested without a handset. dumpsys has printed the
    same two facts in two shapes across releases, and a proof that matches only one of them refuses a
    good install — the walk would then be reporting on its own instrument, not on a phone. */
@@ -175,6 +207,11 @@ if (!installProven(after, WANT_NAME, WANT_CODE)) {
 adb('shell', 'am', 'force-stop', PKG); sleep(900);
 adb('shell', 'monkey', '-p', PKG, '-c', 'android.intent.category.LAUNCHER', '1'); sleep(6500);
 say('booted', 'JSON.stringify({view:state.view,role:state.role,innerWidth:innerWidth,innerHeight:innerHeight,devicePixelRatio:devicePixelRatio})');
+/* Gate on liveness before anything is claimed. Every measurement that follows needs a painted page; without
+   this the walk ran to completion on a device where the app had never come up and still printed a clean
+   residue count. */
+const live = liveness();
+if (!live) process.exit(1);
 console.log('font_scale (system) = ' + adb('shell', 'settings', 'get', 'system', 'font_scale').trim());
 say('multiplier', '(function(){var s=document.createElement("span");' +
   's.style.cssText="position:absolute;left:0;top:0;font-size:100px;line-height:1;white-space:pre";' +
@@ -188,7 +225,7 @@ say('admin hub', "state.view='app'; state.role='admin'; state.tab='profile'; ren
 tapPainted('Lock Admin Session', "/adminAccountAction\\('lock'\\)/", 'Lock Admin Session');
 say('dialog', 'JSON.stringify({title:(document.querySelector(".modal-layer b")||{}).textContent||"NO DIALOG PAINTED",' +
   'copy:(document.querySelector(".modal-layer")||{}).textContent.replace(/\\s+/g," ").trim().slice(0,150)})');
-say('PIN field', '(function(){var i=document.querySelector(".modal-layer input[type=password]");' +
+requireJson('PIN field', '(function(){var i=document.querySelector(".modal-layer input[type=password]");' +
   'if(!i)return "NO PIN FIELD PAINTED";var cs=getComputedStyle(i),q=i.getBoundingClientRect();' +
   'var lab=i.closest("label");' +
   /* The specified size is not the painted one: Android multiplies the used font size after CSS resolves, ' +
@@ -273,7 +310,7 @@ say('results', "state.view='app'; state.role='resident'; startDiscovery('leak');
 tapPainted('Filter providers', "/openSheet\\('providerFilters'\\)/", '#provider-filter-btn');
 say('sheet', 'JSON.stringify({sheet:state.sheet,title:(document.querySelector(".sheet-title")||{}).textContent||"NO SHEET",' +
   'rows:document.querySelectorAll(".filter-option").length})');
-say('rows', '(function(){var rows=[].slice.call(document.querySelectorAll(".filter-option"));if(!rows.length)return "NO ROWS PAINTED";' +
+requireJson('rows', '(function(){var rows=[].slice.call(document.querySelectorAll(".filter-option"));if(!rows.length)return "NO ROWS PAINTED";' +
   'var hs=rows.map(function(r){return Math.round(r.getBoundingClientRect().height*10)/10});' +
   'var fs=[...new Set(rows.map(function(r){return getComputedStyle(r).fontSize}))];' +
   'return JSON.stringify({n:rows.length,minH:Math.min.apply(null,hs),maxH:Math.max.apply(null,hs),' +
@@ -323,11 +360,16 @@ console.log('installed build                = ' + after);
    the device is a claim about a machine somebody else owns, and a paragraph is easier to misread than a
    count that has to be zero. */
 const residue = [];
+if (readings.bad.length) residue.push('readings that did not measure: ' + readings.bad.join(','));
+if (!readings.ok.includes('PIN field') || !readings.ok.includes('rows')) {
+  residue.push('the two surfaces this leg exists to measure were never measured (ok: ' + readings.ok.join(',') + ')');
+}
 if (leftovers.length) residue.push('fixture left: ' + leftovers.join(','));
 if (dumps.length) residue.push('dump left: ' + dumps.join(','));
 if (!/login/.test(endView)) residue.push('not signed out: ' + endView);
 if (!installProven(after, WANT_NAME, WANT_CODE)) residue.push('build does not read .39: ' + after);
 if (!/^(null|0)$/i.test(a11y)) residue.push('an accessibility service is enabled: ' + a11y);
+console.log('readings measured: ' + readings.ok.length + ' [' + readings.ok.join(',') + ']');
 console.log('findings: ' + residue.length + (residue.length ? ' — ' + residue.join(' | ')
-  : ' — nothing this walk left on the device, the app signed out, the build reads .39, no reader enabled'));
+  : ' — both surfaces measured on a painted page, nothing this walk left on the device, the app signed out, the build reads .39, no reader enabled'));
 process.exit(residue.length ? 1 : 0);
