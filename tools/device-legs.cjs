@@ -70,13 +70,17 @@ function waitSettled() {
   }
   return false;
 }
+let probes = 0;
 function gotoScreen(label, setup, expectRe) {
   for (let i = 0; i < 4; i++) {
     ask('state.sheet=null; state.adminAccountModal=null; ' + setup);
     sleep(1200);
-    const o = requireJson(label + ' reached?', 'JSON.stringify({view:state.view,tab:state.tab,sheet:state.sheet,' +
+    probes++;
+    const rawNav = ask('JSON.stringify({view:state.view,tab:state.tab,sheet:state.sheet,' +
       'h1:(document.querySelector("#screen h1")||{}).textContent||""})');
-    if (o && expectRe.test(o.h1)) { console.log(label + ': on screen — h1="' + o.h1 + '"'); readings.ok = readings.ok.filter(x => x !== label + ' reached?'); return o; }
+    let o = null; try { o = JSON.parse(rawNav); } catch (e) { o = null; }
+    if (!o) console.log(label + ' reached?: NOT ANSWERED — ' + String(rawNav).slice(0, 90));
+    if (o && expectRe.test(o.h1)) { console.log(label + ': on screen — h1="' + o.h1 + '"'); return o; }
     console.log('  retry ' + (i + 1) + ': h1="' + (o ? o.h1 : '(no answer)') + '" view=' + (o ? o.view : '?'));
     if (i === 0) waitSettled();
     sleep(1500);
@@ -393,7 +397,7 @@ if (dumps.length) residue.push('dump left: ' + dumps.join(','));
 if (!/login/.test(endView)) residue.push('not signed out: ' + endView);
 if (!installProven(after, WANT_NAME, WANT_CODE)) residue.push('build does not read .39: ' + after);
 if (!/^(null|0)$/i.test(a11y)) residue.push('an accessibility service is enabled: ' + a11y);
-console.log('readings measured: ' + readings.ok.length + ' [' + readings.ok.join(',') + ']');
+console.log('readings measured: ' + readings.ok.length + ' [' + readings.ok.join(',') + '] · navigation probes: ' + probes + ' (not counted as measurements)');
 console.log('findings: ' + residue.length + (residue.length ? ' — ' + residue.join(' | ')
   : ' — both surfaces measured on a painted page, nothing this walk left on the device, the app signed out, the build reads .39, no reader enabled'));
 process.exit(residue.length ? 1 : 0);
