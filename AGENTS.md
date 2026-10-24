@@ -3060,6 +3060,16 @@ is what printed `shot resident-filter-sheet shows "Filter providers"` and the 16
 `node tools/falsify-camera-dialog-coverage.cjs` is **6 breaks, 6 caught, 0 not applied**: taking the click
 out of the row that opens the filter sheet raises the count, and blinding either scan makes the tool
 refuse with `NO CONCLUSION` instead of reporting a clean six-of-six. The walk is **82** screens.
+The same walk found a second defect, in an icon. With the filter sheet walked,
+`probe-duplicate-ids.js` reported one collision on 82 screens: the `clock` glyph is a Figma export
+carrying `clip-path="url(#clip0_17007_17133)"` plus its own `<clipPath id=…>` definition, so drawing
+that glyph three times puts three elements in the document under one id — and `getElementById` and
+`url(#…)` resolve to the first. Nothing renders wrong while every copy is byte-identical, which is
+exactly why no screenshot had ever shown it; the day one glyph's clip is edited, the others silently
+inherit it. `ic()` now suffixes every id it emits and rewrites the matching references: the probe
+answers `findings:0`, and a page check confirms `clip-path refs 3 · clipPath defs 3 · dangling 0`. The
+fix went into the helper that pastes the body — not into the glyph, of which there are 43, and not into
+the sensor, which was right and fired on a screen that did not exist in the walk an hour earlier.
 
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by

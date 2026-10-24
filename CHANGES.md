@@ -6334,12 +6334,26 @@ coverage in Node, and the behavioural proof is the camera's: `node tools/shot.cj
 sheet:providerFilters]`, 16 tap-target findings before the fix and 0 after, no console errors.
 `node tools/falsify-camera-dialog-coverage.cjs` is 6 breaks, 6 caught, 0 not applied.
 
-The page bytes moved twice today and each move was verified rather than assumed: `a4cf6fc3…` → `badf8cd7…`
-(§98) → `70ae3782…` (§99), with `dist/` rebuilt, the staged Android asset re-copied and `1.2-preview.39`
-rebuilt so that `unzip -p … assets/Sukinnect.html | md5sum` answers `70ae3782…`. It is still not installed:
+The page bytes moved three times today and each move was verified rather than assumed: `a4cf6fc3…` →
+`badf8cd7…` (§98) → `70ae3782…` (§99's filter rows) → `3c78fdd…` (§99's icon ids), with `dist/` rebuilt,
+the staged Android asset re-copied and `1.2-preview.39` rebuilt so that
+`unzip -p … assets/Sukinnect.html | md5sum` answers the same hash as the source. It is still not installed:
 `adb devices` is empty and Windows enumerates no handset node, so the phone is physically away — which makes
 the two device legs in `DEVICE-PASS.md` (this build's install plus the ColorOS key route) genuinely owed
 rather than merely unattempted. Both sheets' readings — the lock dialog's `rem`-sized PIN field and the
 filter rows' 44px floor — are bench numbers until a handset confirms them, which is the standing rule about
 pixels a phone multiplies.
+
+
+**The widened walk found a second defect in the same sheet: a duplicated icon id.**
+`probe-duplicate-ids.js` — the instrument written for the "`getElementById` answers with the first
+match" class — reported one collision over 82 screens: `clip0_17007_17133` three times, inside the
+`clock` glyph, a Figma export whose body carries both `clip-path="url(#…)"` and the definition. The
+probe marked it `(unpainted)` because a `<clipPath>` paints nothing itself, and `formCollisions` was
+empty, so no save could read the wrong field — but the document did hold three elements under one id,
+which is the definition of the class. It had never surfaced because no walked screen drew the same
+glyph three times until this sheet existed. `ic()` now gives each emission its own suffix and rewrites
+the references, so the glyph keeps its clip and the ids stay unique; the collision count is 0 and a
+page check answers `refs 3 · defs 3 · dangling 0`. The fix went into the helper that pastes the body,
+not into the glyph (there are 43 of them) and not into the sensor, which was right.
 
