@@ -1471,6 +1471,10 @@ Insights figures, the `1039`, the second provider's own header, the dialog tree,
 the five-item nav at the OPPO's text scale and the sign-out confirmation. The only leg this order owed
 and did not close is ColorOS refusing a synthetic tap on a document row, and Handset walk 7 retired even
 that as a platform conclusion by returning a document on the vivo through the key route.)*
+*(Retired on the second phone too, 2026-10-24 — Handset walk 10 pressed one `TAB` and one guarded
+`DPAD_CENTER` inside ColorOS's own `PickActivity` and a document came back, twice, after the owner lifted
+the app pause that had been blocking the picker. See item 1's closure and `CHANGES.md` §107. The refusal
+that stands is the narrow one: four injected *taps* on a document row on that shell.)*
 
 `preview.33` remains what is installed on `S4CUYTJB6HNNWC49`; `svc power stayon true` is still set.
 
@@ -1828,8 +1832,12 @@ finding, and the date is what tells them apart.
 Everything below is written out where it belongs; this is only the list of what the next person finds
 open. Nothing here is a defect the bench can close.
 
-**On the handset** — two open items, one per phone, plus one closed note a later walk reopened:
-1. **The OPPO's ColorOS picker has never been tried with keys.** Handset walk 7 settled this leg on the
+**On the handset** — one open item (item 2, the vivo panel), plus one closed note a later walk reopened.
+Item 1 was **CLOSED on 2026-10-24 by Handset walk 10** (`CHANGES.md` §107): ColorOS's picker does accept
+`input keyevent`, a document came back twice, and §75's name-only claim held on a real pick with the store
+actually present.
+1. **The OPPO's ColorOS picker has never been tried with keys.** *(Closed the same day — see the walk-10
+   closure at the end of this item.)* Handset walk 7 settled this leg on the
    vivo: `node tools/device-probe.cjs --keys=TAB,TAB,DPAD_DOWN,DPAD_CENTER '<reader>'` closed the picker
    and our page came back holding a file, which retires "a thumb is owed" for that DocumentsUI. ColorOS
    refused four injected taps on a document row while accepting one on its own chrome, so the open
@@ -1920,6 +1928,45 @@ open. Nothing here is a defect the bench can close.
    named for the fixture it pushed — proved without a phone by `--guard-test` (3 of 3: nothing focused 
    refused, that photograph refused, the fixture allowed) and its parser proved by running it over that 
    saved tree, which is where the two photograph rows came to light.
+   **CLOSED 2026-10-24 by Handset walk 10 — ColorOS's picker does accept `input keyevent`.** The owner lifted
+   Focus Mode first, and the phone confirmed it before anything was attempted: `suspended=false` on
+   `com.google.android.documentsui` and **0** packages suspended, against 35 an hour earlier. The fixture pushed
+   and indexed (`_id=37821`); one real tap on the concierge's own photo button raised `ChooserActivity`; one tap
+   on its only named row ("Files") raised **`com.android.documentsui/.picker.PickActivity`** with **177 nodes,
+   177 inside the picker, 42 the platform marks focusable, 21 clickable and named** — the structural half of the
+   question answered yes before any key was pressed. **One `TAB`** moved focus to
+   `suki-leg9-test.png, 70 B, 8:25 AM @ [54,750][246,942]`; the guard allowed the press by name; `DPAD_CENTER`
+   closed the picker and the page answered `{"attached":true,"name":"suki-leg9-test.png","blobSrcs":0}`. **A
+   thumb is no longer owed on either phone.** What survives, narrower and still true: four injected *taps* across
+   two layouts refused a document row on this shell while accepting a tap on its own chrome — pointer and key are
+   different routes here, and the key route works.
+   **Then the leg failed to reproduce, and that reading is the more useful one.** Second attempt: `TAB` landed on
+   a *different node for the same file* — `Preview the file suki-leg9-test.png @ [138,750][246,858]`, the grid
+   tile's preview icon. The guard allowed it (its name contains the fixture), the press was sent, and **nothing
+   came back**: the picker stayed foreground, `attached:false`. `DPAD_UP` moved focus from the icon to the row,
+   and the same press returned the file. So a row and its preview icon carry **two different centre semantics**,
+   and "the focused node's name is my fixture" is necessary but **not** sufficient — the guard would do well to
+   prefer the larger box, and no verdict here rests on that node choice, because both attempts were re-read.
+   This is exactly why the tool sends one key at a time: the blind `TAB,TAB,DPAD_DOWN,DPAD_CENTER` sequence that
+   worked on the vivo would have reported a pick on whichever node the grid happened to focus.
+   **§75's claim is measured on a genuine pick, both halves.** `node tools/device-picker-keys.cjs --verify-pick`
+   → `nameOnScreen:true, imgCount:0, bytesBearingImgSrcs:0, bytesInPaintedMarkup:0`; and after `persist()` was
+   called *while the photo was attached*, the snapshot itself reads
+   `snapshotBytes 47774, fixtureNamedInSnapshot:false, blobOrDataInSnapshot:0`. A real photograph came off the
+   phone's own storage into a person's session and left as a name in memory. Removal ran through the screen's own
+   control (`{"clicked":true,"found":1,"label":"Remove photo"}`) and re-read as `attached:false`. The stage's
+   first run printed `findings: 0` against an **empty store**, which is a check that cannot fail looking like one
+   that passed; it now prints a `LIMIT` line whenever `localStorage` holds no key, and its refusal is proven —
+   with nothing attached it prints `FINDING the fixture name is not painted on the screen…` and exits **1**.
+   DOM storage was separately confirmed to work on the shell (`persist()` → `true`, writes
+   `sukinnect.snapshot.v1`), so the empty store was a real state rather than a disabled capability.
+   One tool bug cost a dead end on the way: the usage line and `reportTree`'s advice both say `--key=NAME` while
+   the parser only read `--key NAME`, so a reader obeying the printed instruction fell through to the footer;
+   both forms work now. Device verified as left, by reading: **0** fixture files, **0** MediaStore rows naming
+   the fixture, no `window_dump.xml`, **0** forwards, app foreground and signed out through its own controls
+   (`view: login`), `font_scale` 1.35, `low_power=1`, `stay_on_while_plugged_in=0`, `versionCode=41`. The Focus
+   Mode the owner turned off was left off, and the TalkBack/`AccessibilityMenuService` found on this phone was
+   left alone.
 2. **`1.2-preview.39` is installed and read on the OPPO CPH2179 (2026-10-24); the vivo still runs `.38`.**
    Handset walk 9 proved the install by reading `versionCode=41 / versionName=1.2-preview.39` back off the
    package and closed both readings with `findings: 0`: the admin PIN field at the phone's own

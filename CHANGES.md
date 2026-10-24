@@ -6755,6 +6755,76 @@ Also on the record, because it cost four empty dumps: `uiautomator dump /sdcard/
 shell gets its path rewritten by MSYS into a Windows directory — the dump "succeeds" and the file is not on
 the phone. Use the tool (`--dump`, which passes argv directly) or set `MSYS_NO_PATHCONV=1`.
 
+## 107. Handset walk 10: ColorOS's picker does accept the key route, and leg B closes with the reading reproduced
+
+The owner lifted Focus Mode, and the phone confirmed it before anything was attempted: `suspended=false` on
+`com.google.android.documentsui` and **0** packages suspended, against 35 an hour earlier. Then the leg ran.
+
+`--fixture` pushed and indexed the one-pixel PNG (`MediaStore _id=37821`, `date_modified` stamped by the
+device). One real tap on the concierge's own photo button raised the chooser; its tree named the single target
+("Files", `[59,1165][174,1280]`); one tap there raised **`com.android.documentsui/picker.PickActivity`** — the
+first ColorOS picker tree this project has ever held, since `--dump` reported **177 nodes, 177 inside the
+picker, 42 the platform marks focusable, 21 of those clickable and named**. That count is the structural half
+of the owed question: a key route *can* reach a document row on this shell.
+
+**One `TAB` answered the leg.** Focus moved to `suki-leg9-test.png, 70 B, 8:25 AM @ [54,750][246,942]` — the
+fixture row, pushed seconds earlier. The guard read the live tree, allowed the press by name
+(`centre allowed: focus is on the fixture row`), `DPAD_CENTER` was sent, the picker disappeared from the tree,
+and the app's page answered `{"attached":true,"name":"suki-leg9-test.png","blobSrcs":0}`. **So ColorOS accepts
+`input keyevent` on a document row, and "a thumb is still owed" is retired for the second phone.** The claim
+that survived is narrower and still true: four injected *taps* across two layouts refused a document row on
+this shell while accepting a tap on its own chrome. Pointer and key are different routes here, and the key
+route works.
+
+**Then the leg failed to reproduce, and that reading is the more useful one.** Second attempt: `TAB` landed
+focus on a *different* node for the same file — `Preview the file suki-leg9-test.png @ [138,750][246,858]`, the
+grid tile's preview icon — the guard allowed the press (its name contains the fixture), `DPAD_CENTER` was sent,
+the picker stayed foreground, and the page answered `attached:false`. **A row and its preview icon are two
+focusable nodes with two centre semantics: the row returns the document, the icon does not.** "The focused
+node's name is my fixture" is therefore necessary but not sufficient. `DPAD_UP` moved focus from the icon to
+the row, the press returned the file again, and the route is reproduced twice with the difference named rather
+than smoothed over. This is what the one-key-at-a-time design was for: a blind `TAB,TAB,DPAD_DOWN,DPAD_CENTER`
+sequence would have landed on whichever node the grid happened to focus and reported a pick that did not occur.
+
+**§75's privacy claim is now measured on a real pick, both halves.** A new stage,
+`node tools/device-picker-keys.cjs --verify-pick`, reads the painted screen, every `img` source, the painted
+markup and the stored snapshot together: `nameOnScreen:true`, `imgCount:0`, `bytesBearingImgSrcs:0`,
+`bytesInPaintedMarkup:0` — and then, after `persist()` was called *while the photo was attached*, the snapshot
+itself was read: `snapshotBytes 47774`, `fixtureNamedInSnapshot:false`, `blobOrDataInSnapshot:0`. The picture
+came off the phone's own storage into a person's session and left as a name in memory. Removal was done
+through the screen's own control (`{"clicked":true,"found":1,"label":"Remove photo"}`) and re-read as
+`attached:false, nameOnScreen:false`.
+
+**The first `findings: 0` from that stage was half-vacuous, and the stage now says so.** On the first run
+`storageKeys` was `[]`: no snapshot existed, because nothing had been written since the cold start. The check
+read `storedMentionsFixture:false` and called it clean — but that field is false both when the snapshot holds
+no mention **and when there is no snapshot**, which is a check that cannot fail looking exactly like one that
+passed. The stage now prints a `LIMIT` line whenever the store is empty, and the storage half of the claim is
+only quoted from the run where `sukinnect.snapshot.v1` existed (47 KB) and did not name the file. The DOM
+storage itself was proven to work on the shell — `persist()` returned `true` and wrote the key — so the empty
+store was a real state, not a disabled capability, which is the difference between a finding and an absence.
+
+**The stage proves its own refusal.** Run with nothing attached it reports
+`FINDING the fixture name is not painted on the screen, so this run measured no pick` and exits **1** (read
+with `code=$?` immediately after the command, because `echo -n "…"` in between reports the *echo's* status —
+the trap this file already records for pipes).
+
+One tool bug cost a dead end and is fixed: the usage line and `reportTree`'s own advice both say `--key=NAME`
+while the parser only accepted `--key NAME`, so a reader who obeyed the printed instruction fell through to
+the usage footer. Both forms are accepted now. `probe-all.cjs` discovers no `device-*` file and no falsifier
+family needles any device tool (`grep -l "device-picker\|device-legs\|device-probe" tools/falsify-*.cjs`
+answers nothing), so the quoted probe and family totals are unchanged by this pass.
+
+Device verified as left, by reading: **0** fixture files in `/sdcard/Download`, **0** MediaStore rows naming the
+fixture, no `window_dump.xml`, **0** forwards, app foreground at `MainActivity` signed out through its own
+controls (`view: login`), `font_scale` 1.35, `low_power=1`, `stay_on_while_plugged_in=0`, build
+`versionCode=41 / 1.2-preview.39`. Left as found and *not* touched: the Focus Mode the owner turned off stays
+off, and `enabled_accessibility_services` still names a TalkBack/`AccessibilityMenuService`.
+
+**What the handset pass still owes is one item, and it is a phone, not a question:** the same two readings
+(leg A's PIN field and filter rows; leg B's key route) on the vivo 1906's ~450-CSS-px panel. The mechanism is
+measured on real Android and on ColorOS; what is unmeasured is that particular panel.
+
 ## 106. The window §105 called a ColorOS permission dialog is Android's App Pause, and the phone says so
 
 Later the same day, leg B was walked again on the same OPPO (`S4CUYTJB6HNNWC49`, `1.2-preview.39`, a fresh

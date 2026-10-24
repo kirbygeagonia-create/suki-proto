@@ -2706,6 +2706,35 @@ blocker in one line and was deliberately not run, because undoing a wellbeing se
 project's decision to make (`CHANGES.md` §106). The picker's own refusal readings above are untouched; the
 picker is simply unreachable while the pause holds.
 
+**The key route works on ColorOS as well, and which node holds focus decides whether a press returns a
+document.** With the pause lifted by the owner, one `TAB` inside `com.android.documentsui/.picker.PickActivity`
+(177 nodes, 42 the platform marks focusable, 21 of those clickable and named) focused the fixture row and a
+guarded `DPAD_CENTER` closed the picker with the page holding
+`{"attached":true,"name":"suki-leg9-test.png","blobSrcs":0}`. **"A thumb is owed" is therefore retired on both
+phones**, and the claim that survives is the narrow one: four injected *taps* on a document row on that shell,
+while `input keyevent` reaches it. Then the same sequence did not reproduce. Second attempt: `TAB` landed on a
+*different node for the same file* — `Preview the file suki-leg9-test.png @ [138,750][246,858]`, the grid tile's
+preview icon rather than its row at `[54,750][246,942]`. The guard allowed the press, because its rule reads the
+focused node's **name** and that name contains the fixture; the press was sent; **nothing came back** — the
+picker stayed foreground and the page held `attached:false`. `DPAD_UP` moved focus to the row and the identical
+press returned the file. So a row and its preview icon are two focusable nodes with **two different centre
+semantics**, and a name-only guard is necessary but not sufficient. This is what one-key-at-a-time with a tree
+re-read after each press buys: the blind `TAB,TAB,DPAD_DOWN,DPAD_CENTER` sequence that worked on the vivo would
+have reported a pick on whichever node the grid happened to focus (`CHANGES.md` §107).
+
+**§75's name-only claim is now measured against a genuine pick, and the run that could not fail says so.**
+`node tools/device-picker-keys.cjs --verify-pick` reads four things together — the painted screen, every `img`
+source, the painted markup, and the stored snapshot — and answered `nameOnScreen:true, imgCount:0,
+bytesBearingImgSrcs:0, bytesInPaintedMarkup:0`; after `persist()` was called *while the photo was attached*, the
+snapshot read `47774` bytes with `fixtureNamedInSnapshot:false`. The picture came off the phone's own storage
+into a person's session and left as a name in memory. The stage's **first** run printed `findings: 0` against an
+**empty** `localStorage` — nothing had been written since the cold start — so the storage half of its own
+predicate could not have failed, which is this file's named class of a check that passes by being blind. It now
+prints a `LIMIT` row whenever the store holds no key and refuses (exit 1) when the fixture name is not painted,
+both read from the device. And `persist()` returning `true` on the shell is what separates "no snapshot yet"
+from "DOM storage disabled" — the difference between a finding and an absence, and the reason the empty store
+was recorded rather than trusted.
+
 §75's "the provider sees the name you gave it, not the photo" is now backed by pixels, and in a browser
 rather than on the phone that refuses the pick: a `File` handed to `#hidden-file-input` through
 `DataTransfer` — the mechanism the browser itself uses when a picker returns a document, so this is a state

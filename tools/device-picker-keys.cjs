@@ -231,8 +231,79 @@ if (process.argv.indexOf('--dump') > -1) {
   process.exit(0);
 }
 
-if (process.argv.indexOf('--key') > -1) {
-  const name = process.argv[process.argv.indexOf('--key') + 1] || '';
+/* ---------- what a REAL picker return leaves on the page ---------- */
+/* §75's claim ("the provider sees the name you gave it, not the photo") has been measured twice through the
+   browser's own mechanism — a `File` handed to the input with `DataTransfer` — and once on the vivo where the
+   key route returned a document. ColorOS had never returned one at all, so this reading exists to be run
+   against the state no bench can imitate: a picture chosen by a person from the phone's own storage. It prints
+   the painted screen's text match, every `img` source on the page, the bytes-bearing strings in the painted
+   markup, and what the stored snapshot actually holds about the file — with the storage keys named, because a
+   claim about "nothing stored" that reads one guessed key is the same class of error this file keeps recording.
+   A zero here is only evidence if the reading could have been non-zero, so `nameOnScreen` is the positive
+   control: if the name is not painted, nothing below it was measured either. */
+const PICK_READ = '(function(){' +
+  'var imgs=[].slice.call(document.querySelectorAll("img"));' +
+  'var srcs=imgs.map(function(i){return i.src||""});' +
+  'var keys=Object.keys(localStorage);' +
+  'var stored=keys.map(function(k){return String(localStorage.getItem(k)||"")}).join("");' +
+  'var sc=document.getElementById("screen");' +
+  'var txt=sc?(sc.innerText||sc.textContent||""):"";' +
+  'return JSON.stringify({' +
+  'attached:state.conciergePhotoAttached,name:state.conciergePhotoName,error:state.conciergePhotoError,' +
+  'view:state.view,tab:state.tab,' +
+  'nameOnScreen:txt.indexOf("suki-leg9")>-1,' +
+  'imgCount:imgs.length,' +
+  'bytesBearingImgSrcs:srcs.filter(function(s){return /^blob:|^data:/.test(s)}).length,' +
+  'bytesInPaintedMarkup:(document.body.innerHTML.match(/data:image|blob:/g)||[]).length,' +
+  'storageKeys:keys,' +
+  'storedKb:Math.round(stored.length/1024),' +
+  'storedMentionsFixture:stored.indexOf("suki-leg9")>-1' +
+  '})})()';
+
+if (process.argv.indexOf('--verify-pick') > -1) {
+  const r = ask(PICK_READ);
+  console.log('page after a real picker return: ' + r);
+  let j = null; try { j = JSON.parse(r); } catch (e) { /* printed above; the verdict below refuses */ }
+  if (!j) { console.log('NO CONCLUSION — the page did not answer this reading, so nothing below it was measured.'); process.exit(1); }
+  const findings = [];
+  if (!j.nameOnScreen) findings.push('the fixture name is not painted on the screen, so this run measured no pick');
+  if (j.bytesBearingImgSrcs) findings.push(j.bytesBearingImgSrcs + ' img element(s) carry blob:/data: bytes');
+  if (j.bytesInPaintedMarkup) findings.push(j.bytesInPaintedMarkup + ' bytes-bearing string(s) in the painted markup');
+  if (j.storedMentionsFixture) findings.push('the stored snapshot mentions the fixture file');
+  /* A half of the claim that cannot fail is not a passing half. `storedMentionsFixture` is false both when the
+     snapshot holds no mention AND when there is no snapshot at all — so with zero keys this run proved nothing
+     about storage, and saying `findings: 0` without naming that is the exact defect this repository records as
+     "a check that cannot fail looks exactly like a check that passes". Reported as a limit, not a finding,
+     because it is the instrument's state rather than the application's. */
+  const limits = [];
+  if (!j.storageKeys || !j.storageKeys.length) limits.push('storage holds 0 key(s) on this page right now, so the nothing-stored half of this claim was NOT measured — only the painted half is evidence this run');
+  console.log('findings: ' + findings.length);
+  findings.forEach(f => console.log('  FINDING ' + f));
+  limits.forEach(l => console.log('  LIMIT ' + l));
+  if (!findings.length && !limits.length) console.log('  the picked photo reaches the page as a NAME only: no preview bytes painted, no bytes in the markup, and a snapshot that exists and does not name the file.');
+  if (!findings.length && limits.length) console.log('  the painted half holds: ' + j.imgCount + ' img element(s), ' + j.bytesInPaintedMarkup + ' bytes-bearing string(s) in the markup, name painted = ' + j.nameOnScreen + '.');
+  process.exit(findings.length ? 1 : 0);
+}
+
+if (process.argv.indexOf('--remove-photo') > -1) {
+  /* Cleared through the screen's own control, the way a thumb does it, then re-read — so the removal claim is
+     a measurement of the app's handler rather than an assertion about state written from outside. */
+  const REMOVE = '(function(){var b=[].slice.call(document.querySelectorAll("#screen button,#screen [onclick]"))' +
+    '.filter(function(e){return /remove/i.test(e.textContent||"")});' +
+    'if(!b.length)return JSON.stringify({clicked:false,found:0});' +
+    'b[0].click();return JSON.stringify({clicked:true,found:b.length,label:(b[0].textContent||"").trim().slice(0,28)})})()';
+  console.log('remove: ' + ask(REMOVE));
+  console.log('page after remove: ' + ask(PICK_READ));
+  process.exit(0);
+}
+
+/* Both forms are accepted, because this tool's own usage line and the advice printed inside reportTree both
+   say `--key=NAME` while the original parser only read `--key NAME`. A reader that obeyed the printed advice
+   fell straight through to the usage footer — which is how a leg gets abandoned rather than refused. */
+const keyArg = process.argv.find(a => a === '--key' || a.startsWith('--key='));
+if (keyArg) {
+  const name = keyArg.indexOf('=') > -1 ? keyArg.slice(keyArg.indexOf('=') + 1)
+    : (process.argv[process.argv.indexOf('--key') + 1] || '');
   const CODES = { BACK: 4, DPAD_UP: 19, DPAD_DOWN: 20, DPAD_LEFT: 21, DPAD_RIGHT: 22, DPAD_CENTER: 23, ENTER: 66, TAB: 61, MENU: 82 };
   if (!(name in CODES)) { console.log('NO KEY — this tool sends one named key at a time: --key=TAB. Refusing to guess.'); process.exit(1); }
   const before = ask(PAGE_STATE);
@@ -302,7 +373,7 @@ if (process.argv.indexOf('--teardown') > -1) {
   process.exit(0);
 }
 
-console.log('usage: --tree=FILE | --dump | --key=NAME | --fixture | --open | --search | --teardown | --guard-test | --guard-real');
+console.log('usage: --tree=FILE | --dump | --key=NAME | --fixture | --open | --search | --verify-pick | --remove-photo | --teardown | --guard-test | --guard-real');
 console.log('a leg runs as: --fixture, --open, --dump, then --search, then --key=DPAD_DOWN until the report names the');
 console.log('fixture row as FOCUSED, then --key=DPAD_CENTER (the guard refuses any press focused on a search box),');
 console.log('then --dump to read what the page holds, then --teardown. Add --connect=IP:PORT to reach the phone over Wi-Fi.');
