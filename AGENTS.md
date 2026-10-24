@@ -3072,6 +3072,19 @@ inherit it. `ic()` now suffixes every id it emits and rewrites the matching refe
 answers `findings:0`, and a page check confirms `clip-path refs 3 · clipPath defs 3 · dangling 0`. The
 fix went into the helper that pastes the body — not into the glyph, of which there are 43, and not into
 the sensor, which was right and fired on a screen that did not exist in the walk an hour earlier.
+THE SAME DERIVATION WAS TRIED FOR SCREENS AND REJECTED, AND THE REASON IS WORTH THE ROW. Applying
+§99's trick one level up — enumerate what the app can navigate to and ask whether a row reaches each —
+gives `state.view` (3 values), `state.tab` (18) and `state.adminScreen` (5). Two of those twenty-six
+looked unwalked: `provider_detail` and `verification_review`. Both were the scanner, again: the first is
+reached by `openProviderDetail()`, five times over, because assigning the tab skips the map mount the
+handler performs; the second by the seven `admin-review*` rows. So no screens section goes into the audit
+— a widening whose first output is two phantom findings is not a net, it is noise, and building its
+opener-mapping honestly would cost more than the coverage it would add, since every branch the walk can
+name is already reached by the thing that actually mounts it. **Recorded rather than built**, which is the
+same sentence §75 wrote about the mechanism it chose not to implement, and it is here because the failure
+mode it names (testing for a name's presence rather than for the thing that produces it) is the third one
+this session caught in its own tooling: after `Action\D{1,4}` matching through a renamed caller, the
+`["x",` count matching nested literals, and `aria-invalid="true"` read as an element `id`.
 
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by

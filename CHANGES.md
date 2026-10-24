@@ -6357,3 +6357,9 @@ the references, so the glyph keeps its clip and the ids stay unique; the collisi
 page check answers `refs 3 · defs 3 · dangling 0`. The fix went into the helper that pastes the body,
 not into the glyph (there are 43 of them) and not into the sensor, which was right.
 
+The same derivation was tried for screens — every value of `state.view`, `state.tab` and
+`state.adminScreen` — and is **recorded rather than built**: the two apparent gaps were both the
+scanner asking for a name instead of the thing that produces it (`provider_detail` is reached five
+times by `openProviderDetail()`, which also mounts the map; `verification_review` by the seven
+`admin-review*` rows). A widening whose first output is two phantom findings is noise, not a net.
+
