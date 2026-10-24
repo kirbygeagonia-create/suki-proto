@@ -6754,3 +6754,58 @@ rows, no dumps on the device, all forwards removed, `low_power=1`, `font_scale` 
 Also on the record, because it cost four empty dumps: `uiautomator dump /sdcard/x.xml` issued from this
 shell gets its path rewritten by MSYS into a Windows directory — the dump "succeeds" and the file is not on
 the phone. Use the tool (`--dump`, which passes argv directly) or set `MSYS_NO_PATHCONV=1`.
+
+## 106. The window §105 called a ColorOS permission dialog is Android's App Pause, and the phone says so
+
+Later the same day, leg B was walked again on the same OPPO (`S4CUYTJB6HNNWC49`, `1.2-preview.39`, a fresh
+app process, `targets: 1`, every page read answering in milliseconds — the lifecycle fix from §105 holding).
+The fixture pushed and indexed (`MediaStore _id=37820`), one real tap on the concierge's own photo button
+raised `ChooserActivity`, its tree again named exactly one target ("Files", `[59,1165][174,1280]`), one tap on
+that row raised the same refusing window, the same `null root node`, the same dead `input tap`. §105 recorded
+that as "a ColorOS permission dialog" and drew the conclusion "behind a decision that belongs to the person
+holding the phone". Both halves deserve better than a screenshot: the window was asked directly.
+
+`dumpsys window` names it `android/com.android.internal.app.SuspendedAppActivity`. `dumpsys activity
+activities` shows it resumed with `mCallingUid=1000`. And `dumpsys package packages` answers the question the
+dialog itself was hiding:
+
+```
+Package [com.google.android.documentsui]:
+  suspended=true  suspendingPackage=com.google.android.apps.wellbeing
+  dialogInfo=SuspendDialogInfo: { mDialogMessage = "‎%1$s and other distracting apps are paused right now" }
+```
+
+`grep -c "suspended=true"` over that dump returns **35**. This is **Digital Wellbeing Focus Mode**, a stock
+Android 10 feature, switched on across 35 packages on the owner's phone. It is not ColorOS, not a permission
+prompt, and not a refusal to hand a document to a synthetic pointer.
+
+**The mechanism explains both symptoms at once, which is why it was worth chasing.** `dumpsys window windows`
+for that window reads `mOwnerUid=1000 mShowToOwnerOnly=true`. `uiautomator` runs as `shell` (uid 2000), and an
+owner-only window is not in its view — hence `ERROR: null root node returned by UiTestAutomationBridge`.
+`input tap` is injected as `shell` too and is not delivered to it — hence the dead button at the correct
+centre. `KEYCODE_BACK` still dismissed it, because Back is routed to the *focused* window by the input
+dispatcher and is not an injected gesture to a specific widget; §105 read that pair as "this OEM treats
+pointer injection and key injection as different permissions", when the real rule is simpler and general:
+**a window marked `mShowToOwnerOnly=true` owned by another UID is invisible to every shell-side reader and
+deaf to shell-side pointers, on any Android.** The right move when a dump comes back null is `dumpsys window`
+and `dumpsys package packages`, not a smaller tap.
+
+**Consequence for the leg, stated narrowly.** No key route can reach DocumentsUI while Focus Mode is on, so
+whether ColorOS's picker accepts `input keyevent` on a document row remains untested — the residual is
+exactly what §105 said, but the blocker is now named at the right layer. `pm unsuspend
+com.google.android.documentsui` is a real command on this device and would have cleared it in one line; it
+was deliberately **not** run, because it undoes a wellbeing choice the owner made and re-suspending from adb
+cannot restore the Focus Mode schedule that suspended all 35. What unblocks the leg is one deliberate action
+on the phone (turn Focus Mode off, or the dialog's own five-minute option), which is the owner's call, not a
+step to be automated from a bench. What was *not* retracted: the four synthetic-tap refusals measured on the
+picker's own rows in earlier walks, when the picker was reachable on this device. This pass settled only why
+it is not reachable today.
+
+Backed out with two `KEYCODE_BACK` presses (dialog → chooser → app). Verified as found, by reading: app
+foreground at `com.sukinnect.app/com.sukinnect.app.MainActivity`, `conciergePhotoAttached: false`, **0**
+fixture files in `/sdcard/Download`, **0** MediaStore rows naming the fixture, no `window_dump.xml` left, all
+forwards removed. One device-state difference was found rather than made and is left alone:
+`enabled_accessibility_services` now names
+`com.google.android.marvin.talkback/...AccessibilityMenuService` on this phone, where the walks before it
+read `null`. No leg of this project set it, and a reader that finds an accessibility service on a handset
+should treat tap semantics as changed (select-then-activate) until proven otherwise.

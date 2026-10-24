@@ -2690,6 +2690,22 @@ the owner's real photographs — which are not the agent's to select — and the
 only after `touch` plus `MEDIA_SCANNER_SCAN_FILE` (MediaStore row 667, top of the grid,
 `suki-leg6-test.png, 9.05 kB, 6:21 AM`).
 
+**A `null root node` from `uiautomator` is a window-ownership fact, not an OEM refusing input.** The window
+that blocks the ColorOS picker leg was first recorded as "a ColorOS permission dialog that ignores
+`input tap`" from what was on screen, and re-read the same day from the platform instead: `dumpsys window`
+names it `android/com.android.internal.app.SuspendedAppActivity` with `mOwnerUid=1000` and
+**`mShowToOwnerOnly=true`**, and `dumpsys package packages` answers why — `com.google.android.documentsui`
+carries `suspended=true, suspendingPackage=com.google.android.apps.wellbeing`, with **35** packages suspended
+on the phone at the same moment, which is Digital Wellbeing Focus Mode, a stock Android 10 feature. `uiautomator`
+and `input tap` are both issued as `shell`, so a window owned by another UID and marked owner-only is neither
+visible to the one nor reachable by the other, while `KEYCODE_BACK` still lands — Back is dispatched to the
+*focused* window and is not a gesture aimed at a widget. Two rules follow: when a dump returns null, read
+`dumpsys window` and `dumpsys package packages` before saying anything about a platform's input policy, and
+note that an app pause is the owner's choice — `pm unsuspend com.google.android.documentsui` would clear the
+blocker in one line and was deliberately not run, because undoing a wellbeing setting from a bench is not this
+project's decision to make (`CHANGES.md` §106). The picker's own refusal readings above are untouched; the
+picker is simply unreachable while the pause holds.
+
 §75's "the provider sees the name you gave it, not the photo" is now backed by pixels, and in a browser
 rather than on the phone that refuses the pick: a `File` handed to `#hidden-file-input` through
 `DataTransfer` — the mechanism the browser itself uses when a picker returns a document, so this is a state

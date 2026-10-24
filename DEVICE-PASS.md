@@ -1860,6 +1860,26 @@ open. Nothing here is a defect the bench can close.
    **Next step needs you**: re-open the picker and tap that permission dialog yourself (the 5-minute option is
    the least-privilege one); once Files is allowed, `node tools/device-picker-keys.cjs --dump` will show the
    real picker and the guarded one-key-at-a-time route can be walked to a document.
+   **That dialog was mis-named, and the reason matters more than the name (re-read 2026-10-24, CHANGES §106).**
+   Re-running the same route on the same phone raised the same refusing window, and this time the platform
+   was asked directly instead of read off a screenshot. `dumpsys window` names it
+   `android/com.android.internal.app.SuspendedAppActivity`, and `dumpsys package packages` answers why:
+   **`com.google.android.documentsui` carries `suspended=true`, `suspendingPackage=com.google.android.apps.wellbeing`**,
+   with the dialog's own message string `"%1$s and other distracting apps are paused right now"`. **35 packages**
+   are suspended on this phone at the same moment, so this is Digital Wellbeing **Focus Mode**, not a permission
+   prompt and not a ColorOS invention. It also explains both halves of the behaviour that looked like an OEM
+   refusing input: the window reports `mOwnerUid=1000` with **`mShowToOwnerOnly=true`**, so `uiautomator`, which
+   runs as `shell`, is not permitted to see it (`null root node`) and `input tap` is not delivered to it — while
+   `KEYCODE_BACK` still lands, because Back is dispatched to the focused window regardless of ownership. **No
+   key route can reach DocumentsUI while Focus Mode is on**, on this or any Android 10 phone, so leg B's
+   residual is unchanged and its blocker is now named.
+   `pm unsuspend com.google.android.documentsui` exists and would clear it, and it was deliberately **not** run:
+   it fights a wellbeing setting the owner chose, and re-suspending from adb cannot restore the Focus Mode
+   schedule that put all 35 packages there. **What is needed from you is one action on the phone**: turn Focus
+   Mode off (Settings → Digital Wellbeing → Focus Mode), or use the dialog's own "use for 5 minutes" option, and
+   then `node tools/device-picker-keys.cjs --dump` will show the real picker. The four synthetic-tap refusals
+   recorded above stay as measured readings from the earlier walks, when the picker *was* reachable on this
+   device; what this re-read settles is only why it is not reachable today.
    **Attempted 2026-10-24 on this very phone and not reached**: the fixture pushed, touched, broadcast and
    indexed cleanly (MediaStore `_id=37819`), but the app's page would not answer — 2 then 3 page targets on
    one socket, every `state.view` probe timing out, `mCurrentFocus` on `StatusBar` — so `--open` refused to
