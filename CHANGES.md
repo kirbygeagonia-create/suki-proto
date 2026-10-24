@@ -6490,6 +6490,18 @@ identifies it**, and `focused="true"` counts across a whole directory take one c
 saved files; naming it `device-*` keeps it a sibling of `device-probe.cjs` and leaves the quoted **47
 probes** true of the tree. It also corrects this row's own arithmetic: the focused trees are **five**
 (`d2.xml`–`d6.xml`, 16:47–16:56), not four, which is what the tool prints.
+**The proof round closed with every lookup the legs make executed on the bench** — `chooser()` copied
+verbatim out of the driver into a camera probe, run over `admin-lock-modal`, `resident-filter-sheet`,
+`concierge` and `resident-profile`. It confirmed the ambiguity rather than arguing it: `unlock` answers
+**attrMatches=2** and chooses `by visible text Unlock`, so the walk presses the button it names instead
+of the cross beside it; `lockButton` answers 1; `filterBtn` resolves by `#provider-filter-btn` at a
+measured 44x44; and `photoControl` — the tap that raises the real picker — resolves by its visible text at
+328x46 and answers **1** inside `#screen` too, which is the scope the picker tool searches. The
+`removeControl` lookup could not be reached that way, because that button paints only once a photo is
+held: it is verified from the source line that paints it (`removeConciergePhoto()` behind
+`state.conciergePhotoAttached`) and stated as source-verified rather than measured. `resident-profile`
+answered `NO CONCLUSION`, which is the right behaviour — a screen with no target must not print a pass.
+
 Nothing on this machine can read the installed bundle, so `audit-build-bytes` still stops at four copies —
 source, `dist/`, staged asset, APK — all `3c78fdd…`. The fifth copy is the phone, and reading it is what the
 two armed scripts exist to do.

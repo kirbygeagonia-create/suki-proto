@@ -1880,7 +1880,7 @@ open. Nothing here is a defect the bench can close.
    assumed. A wrong package would only have shown up as a refusal, so the refusal is a tested function: 
    `--selftest` proves the install check on 5 cases — both `dumpsys` spellings (`versionName:` and 
    `versionName=`) accepted, and a stale code, a stale name and a missing package each refused. 
-   The five page readings were run against the bench, where the answer is known, before any phone was 
+   The five page readings and **all five node lookups** the legs make were run against the bench, where the answer is known, before any phone was 
    touched: the PIN field computes **16px** in a **48px** box with `min-height:48px`, and the filter sheet 
    paints **16 rows at exactly 44px, none below the floor, at 15px type**. That pass also caught the 
    instrument, not the app: the first reachability reading called the last row unreachable because it never 
