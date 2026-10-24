@@ -7779,3 +7779,131 @@ any future one.
 
 Device left as found: `font_scale` still 1.35 (read, never written), forwards cleared, no dumps left on the
 handset, the app sitting on its own sign-in screen unsigned-in. Gate: all 566 checks passed.
+
+## 130. Six published commit subjects repeat one another, three describe a different commit than their own diff, and the seventh is refused before it is written
+
+`node tools/audit-commit-subjects.cjs` reads the branch's last 120 commits — merged history included, because a subject
+reused from a commit that has already landed is invisible to `origin/main..HEAD` — and answers **6 duplicated subjects
+over 114 distinct ones**. The set is re-derived independently by `sort | uniq -d` over
+`git log --format=%s -n 120 HEAD`, which is the control in `tools/falsify-commit-subjects.cjs`; quote those two
+commands rather than this sentence, because a count of history kept in prose is the same drift this section is about.
+
+**Every one of the twelve commits is already on `origin/main`.** `git merge-base --is-ancestor <sha> origin/main`
+returns true for all twelve, and `git log --format=%s origin/main..HEAD | sort | uniq -d` returns **nothing**. That
+measures the thing AGENTS.md's paragraph got wrong for a whole pass: it cited the branch range as the command that
+"returns three pairs", and by the time PR #10 merged that command answers zero — the duplicates did not go away, they
+moved into published history, which is the one place a narrow range cannot look. A citation must name a command that
+reproduces its claim on the day it is read.
+
+**Each pair, and what each hash actually carried.** Read from `git show -s --format=%b` and `--stat` for all twelve,
+not from the subjects:
+
+- **`docs: the suite figure is re-derived from the pass that actually ran all 51 families`** — `916ff74` is the
+  re-derivation (AGENTS.md, 1 insertion / 5 deletions). `6cc1ad5` is CHANGES.md plus `tools/device-edge-leg.cjs`:
+  §128's correction, two temporal-dead-zone reads in the unattributed branch, and a selftest forced through that
+  branch. Its subject describes `916ff74`'s work. Distinguished already, by the follow-up commit `e4c49eb`.
+- **`tools: three instruments hardcoded this machine's path…`** — `e07a57c` is the real fix (three tools derive
+  `ROOT` from `__dirname`, plus the worktree proof that `main` is self-contained). `0269f4d` is 41 lines of
+  AGENTS.md/CHANGES.md about re-running the aggregate; nothing in its diff touches a path. `0269f4d` names its own
+  collision in its body, which is why it is disclosed rather than hidden.
+- **`docs: two deployment rulings…`** — `c32f845` records the two rulings. `560bf66` records the *later* ruling that
+  the public build stays deliberately stale, and opens with "Superseding:". Distinguishable, though the subject does
+  not say so; the body carries it.
+- **`docs: stop carrying the totals a command already prints`** — `6ce7a34` is AGENTS.md + DEVICE-PASS.md on two
+  hand-kept snapshots that went stale the moment the aggregate finished. `5ee3554` is DEVICE-PASS.md + README.md on a
+  different subject entirely: walk 7 recorded what the vivo's engine *does* but never which **build** it was, and two
+  present-tense sentences still described the picker as browser-measured. Nothing in `5ee3554` is about totals.
+- **`fix: read a probe's count through both print shapes, and convert the nav floor upward`** — `aa19fdd` is that
+  change: nine files, `Sukinnect-next.html`, `probe-all.cjs`, `falsify-probe-population`, `falsify-nav-fit`,
+  `verify.cjs`. `b7af181` is nine insertions of follow-up prose: §86's closing paragraph still quoting §85-era gate
+  and suite figures, a pluralisation fix in the runner, and an owed handset item given its exact command. **This is
+  the worst of the six** — a `fix:` prefix on a commit that fixes nothing, so a reader scanning the log for the nav
+  floor lands on a document edit and passes over the commit that changed the code.
+- **`docs: re-run the layout sweep to the day rather than carry §85's figure`** — `33639fc` is the re-run (CHANGES.md
+  only: 7 of 7 corners, 25 tallies, 73 screens). `cab1696` is AGENTS.md + DEVICE-PASS.md: the line count §89 quotes
+  moved 11,829 → 11,836, two stale obligations in DEVICE-PASS were corrected, and 25 MB of stale `.shots-*` variants
+  were deleted. It re-derives a *line count*, not a layout sweep, and its subject claims a measurement it did not
+  perform.
+
+**Not repaired in place, on the owner's ruling, and the cost is a command.** Rewriting the oldest of these re-keys
+every commit after it: `git rev-list --count 33639fc..origin/main` answers **104**. The audit's own header records
+that this also invalidates 11 of the 17 commit hashes the project's documents cite, including three PR merge commits —
+a census of every 7-hex token across AGENTS.md, CHANGES.md, README.md and DEVICE-PASS.md now answers 18, which is a
+different quantity (it counts all short hashes in prose, not only the ones a rewrite strands), and the figure to trust
+is the one the file prints when re-run. History rewriting on a shared branch is the owner's call; it was asked and
+declined, so the record is repaired *alongside* the history rather than by overwriting it. The three pairs whose bodies
+already distinguish themselves are left alone; the three that do not are distinguished above.
+
+**The door behind them is a gate, and it is asked BEFORE the commit exists.** All six were found by a reader, twice in
+one session, and the cause is mechanical — the previous subject is still on the screen when the new one is typed. A
+list cannot intervene in that; a refusal can. `node tools/audit-commit-subjects.cjs --check-message <file>` judges an
+uncommitted message against the same population the list walks: it refuses (exit 1, naming the hash) on an exact
+repeat, and refuses with `NO CONCLUSION` — never "unique" — when the file is missing, has no argument, or holds no
+subject line once comment banners are dropped. It is proved by hand and then by
+`node tools/falsify-commit-subjects.cjs`, whose fixtures are built from the shell's own recomputed duplicate set rather
+than typed in, because a pinned phrase stops being a duplicate the next time history moves and the break would then
+print CAUGHT while judging nothing. A `hygiene` check in `tools/verify.cjs` pins the shape: the population is rooted at
+HEAD with a count floor, the gate's three refusal paths exist, and the baseline that excuses these six is non-empty —
+asserted as shape, not as a count, because the count legitimately moves and a needle pinned at six would be red on a
+correct build the day one pair is repaired.
+
+**Three defects, all in the instruments, all caught by an instrument.** (1) The arg filter I wrote used
+`i !== CHECK_AT + 1` to skip the flag's value; with the flag absent that index is `0`, so a plain
+`audit-commit-subjects.cjs HEAD..HEAD` had its range silently replaced by the default population and the empty-scan
+refusal never fired. The family's *pre-existing* empty-range control caught it on the first run. (2) The mark the
+baseline prints ahead of each subject — `[recorded]` — was being captured as part of the subject, so the family
+compared `[recorded]  docs: the suite figure…` against the shell's clean `docs: the suite figure…`, reported
+"set matches shell: NO", and aborted a healthy build. A reader that captures presentation inventory compares two
+different quantities. (3) My `refuses()` helper anchored on the last line of output, but the `COLLIDES` verdict prints
+its explanation after itself, so the control reported "reused refused: NO" against a gate that had refused correctly
+in the by-hand run minutes earlier. Tail-anchored reading is the habit every earlier control here has, and it broke on
+a refusal whose second half is advice.
+
+**Two guards can cover one hazard, and then an exit code stops being a measurement.** With the empty-range refusal
+mutated away, the audit *still* exits 1, because the baseline's own loop notices that none of its six excused subjects
+collide across zero commits. So the break that asked "did it answer clean" printed MISSED while the guard it named was
+genuinely gone. Re-pointed at what that guard specifically promises — the CAUSE on the page, `NO CONCLUSION` naming the
+empty scan — because a reader whose revision walk matched nothing is told six baseline entries went stale, which sends
+them to repair history that is fine. Overlapping guards are a fact about the instrument, not a convenience.
+
+**Two writers, one file.** This session found `tools/audit-commit-subjects.cjs` and `tools/falsify-commit-subjects.cjs`
+carrying work it had not written — the baseline, the three marks (`recorded` / `NEW` / `DRIFT`), the per-kind advice, a
+generalised `plant()`, and a control it had never seen — landing between its own reads, with both files' mtimes seconds
+apart and the family's break count moving 9 → 11 → 15 under it. Nothing was overwritten and both authors' code is
+intact, but the split the owner chose is the honest one: that session owns `tools/`, this one owns the documents above.
+Consequence to keep: **no family figure from this pass is quotable.** The last run this session read printed
+`11 of 11 breaks caught, 0 not applied, 0 missed`; the next run aborted on a control the other session was still
+writing, and per the rule this repository already has about overlapping mutant passes, an abort during an overlap is
+evidence about the overlap and not about the application. Ask the family, don't copy this paragraph:
+`node tools/falsify-commit-subjects.cjs`.
+
+Gate: `node tools/verify.cjs` answered **all 567 checks passed** on the run that added the shape check
+(566 before, +1) — re-run it for the current number, since the other session may land checks in the same window.
+No application bytes changed; `Sukinnect.html` is untouched (`git diff --quiet origin/main -- Sukinnect.html`).
+
+**Two hours later the instruments came back, and both defects were in the harness.** The tools session went quiet at
+22:14 without committing and no `node.exe` was alive, so ownership of the three files returned here by the owner's
+decision. Re-running the family then aborted on a control it had never satisfied, and reading it found two things:
+
+- **The drift fixture never landed.** The control called `plant(DRIFT_FIXTURE)` — one object into a function whose
+  first parameter is the needle *string* — so `Array.isArray` was false, the needle coerced to `[object Object]`,
+  matched 0, and **the return value was discarded**. The audit then ran unmutated: zero drift findings, exit 0, and the
+  line printed `planted drift: 0`, which the control read as "the branch has no instance" and aborted over. The
+  missing instance was the family's. Planting is now checked, and a failed plant prints `FIXTURE NOT PLANTED` with the
+  reason instead of a number, because "no instance exists" and "the fixture never landed" need different fixes.
+- **A break had been crediting a crash for every run since it was written.** Its replacement string carried a closing
+  paren the needle did not have, so the mutated audit died with a SyntaxError; `verdict = r.code !== 0 || …` was true,
+  and the line printed CAUGHT while `toolFindings` returned null. Measured, not inferred: six identical runs of the
+  mutated child, each 958 bytes ending `Node.js v24.13.0`. Printing the captured byte-count and tail is what exposed
+  it, and the count is now required — a null parse cannot be credited — which took the break from a false CAUGHT to
+  `findings 6 against the control's 0`: the real behaviour, finally measured.
+
+The general rule was then applied across the family rather than left in the one branch: **no verdict may be credited
+unless the child produced its own page**, so a helper `producedSummary(out)` now guards the two branches that decided
+on an exit code, and one branch written by the other session already required it (`toolCount(r.out) !== null`) — which
+is how the two halves of a merged family ended up agreeing. The defect class is already in this document, arriving from
+the opposite side: not a mutant that fires every check except its own, but a mutant that cannot behave at all and is
+therefore recorded as guarding. Final state of the merged instruments: `node tools/falsify-commit-subjects.cjs` →
+**15 of 15 breaks caught, 0 not applied, 0 missed**, audit restored byte-for-byte, fixtures removed; gate re-run green.
+The aggregate was not owed: no family mutates `verify.cjs` (33 mutate `Sukinnect-next.html`, and no app bytes moved),
+and a family that parses the check *count* for its baseline reports a bigger number rather than a wrong one.

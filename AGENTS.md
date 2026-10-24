@@ -3029,23 +3029,57 @@ The camera is also a *target*: fifteen families needle `tools/shot.cjs`, so edit
 whole aggregate before quoting its totals, which is §82's orphaned-needle class arriving from the direction
 of "the file I changed is a test instrument".
 
-A RECURRED MISTAKE GETS A CHECK, NOT AN APOLOGY. I reused a previous commit's subject three times on this
-branch — `sort | uniq -d` over `git log --format=%s origin/main..HEAD` returns three pairs — and in two of
-them the body described the real change while the subject described a different one, which is worse than
-being vague: a reader scanning the log is handed a true sentence about the wrong commit. The cause is
-mechanical (writing a message while the previous one is still on screen), so `tools/audit-open-items.cjs`'s
-shape was reused rather than reasoned about: `node tools/audit-commit-subjects.cjs` lists every duplicated
-subject with its hashes and exits 0, because a duplicate is a record-keeping smell and the branch already
-carries three — a check that fails retroactively on history teaches a reader to ignore checks — while
-refusing with `NO CONCLUSION` and exit 1 when the range yields no commits, because a bad range and a clean
-branch must not print the same sentence. `tools/falsify-commit-subjects.cjs` proves it, 4 breaks 4 caught:
-the control recomputes the duplicate set AND the commit count independently and requires equality (a checker
-whose population is self-reported is measuring its own parser), and the breaks make the dedup never-true,
-widen it to every subject, force the refusal dead, and swap `a..b` for `a...b` — the last returns the same
-three duplicates but 95 commits instead of 88, so it is the count that sees it. One lesson about direction:
-the refusal break printed MISSED because I asserted the mutated tool must *refuse*, when the mutation's whole
-point is that it stops refusing. A break that removes a guard is caught when the guarded behaviour appears.
-Read a first MISSED before deleting it — that is how the missing empty-range control was found.
+A RECURRED MISTAKE GETS A CHECK, AND THE CHECK IS ASKED BEFORE THE COMMIT EXISTS. I reused a previous commit's
+subject six times on this branch — the number is `node tools/audit-commit-subjects.cjs`, which walks HEAD's last 120
+commits and answers six duplicated subjects over 114 distinct ones — and in three of them the body described the real
+change while the subject described a DIFFERENT one, which is worse than being vague: a reader scanning `git log` is
+handed a true sentence about the wrong commit, and one of them carries a `fix:` prefix on a commit that fixes nothing.
+WHAT THIS PARAGRAPH USED TO CITE IS NOW FALSE, AND INSTRUCTIVELY SO: it named `sort | uniq -d` over
+`git log --format=%s origin/main..HEAD` as returning three pairs. That command answers NOTHING today, not because the
+duplicates were repaired but because all twelve commits reached `origin/main` when PR #10 merged. **A population
+defined as "what is not yet merged" cannot see a collision with anything already merged**, which is precisely the case
+a reused subject produces once its branch lands — and the same failure was measured live on 2026-10-24, minutes after
+PR #9 merged, when the tool printed "every subject in this range is unique" over a real collision four entries away in
+the log. So the default is the branch's recent history, and a citation has to name a command that reproduces on the day
+it is read rather than the day it was written.
+
+Repair in place was declined by the owner, and the cost is a command rather than a feeling: rewriting from the oldest
+of the six re-keys every commit after it — `git rev-list --count 33639fc..origin/main` answers 104 — and it strands
+commit hashes this repository's own documents cite, three PR merge commits among them. So the pair-by-pair record of
+which hash carried what lives in `CHANGES.md` §130, where a reader can tell `b7af181`'s nine lines of follow-up prose
+from `aa19fdd`'s nine-file fix without touching history. And the audit now carries a **baseline** of the six:
+grandfathered, but re-verified against reality every run, so a collision that is neither in the baseline nor excused
+exits 1. That is the correction to this paragraph's earlier rule that the tool "exits 0, because a duplicate is a
+record-keeping smell" — it still exits 0 for the six that are recorded, and a check that failed retroactively on
+history would teach a reader to ignore checks; a seventh is a failure, which is the whole point.
+
+The cause is mechanical — writing a message while the previous one is still on the screen — so a list can only be read
+after the fact. `node tools/audit-commit-subjects.cjs --check-message <file>` judges a message BEFORE it is committed:
+it refuses an exact repeat and names the hash it collided with, and it answers `NO CONCLUSION` rather than "unique" for
+a missing file, a missing argument, or a file with no subject line once comment banners are stripped. Run it before the
+commit, not after — afterwards the new row is in the population and the tool correctly reports the subject is already
+in use, by that commit. `tools/audit-commit-subjects.cjs` also refuses when its walk reads no commits, because a bad
+range and a clean branch must not print the same sentence; a `hygiene` check pins the shape of both halves (the
+population rooted at HEAD, the gate's refusal paths present, the baseline non-empty) as SHAPE and not as a count, since
+a needle pinned at six would be red on a correct build the day one pair is repaired.
+
+`node tools/falsify-commit-subjects.cjs` is the authority on how many breaks there are — print it, do not copy a
+figure from here; this paragraph used to quote "4 breaks 4 caught" two revisions after the family had grown, and the
+break list it named (`swap a..b for a...b`) no longer exists, re-pointed onto a premise that cannot move. Three
+lessons from the pass that added the gate, all about instruments:
+(1) **A reader that captures presentation inventory compares two different quantities.** The baseline prints a mark
+ahead of each subject (`[recorded]`, `[NEW]`, `[DRIFT]`), the family's parser swallowed it as part of the subject, and
+the control then reported "set matches shell: NO" and aborted a healthy build over a prefix.
+(2) **A tail-anchored read misses a verdict that prints its advice afterwards.** `COLLIDES with <sha>` is followed by
+the explanation, so asking the last line for the refusal reported "reused refused: NO" against a gate that had refused
+correctly in the by-hand run minutes earlier.
+(3) **Two guards can cover one hazard, and then an exit code stops being a measurement.** With the empty-range refusal
+mutated away the tool still exits 1, because the baseline's own loop notices that none of its excused subjects collide
+across zero commits — so the break that asked "did it answer clean" printed MISSED while the guard it named was
+genuinely gone, and it was re-pointed at what that guard specifically promises: the CAUSE on the page. A reader whose
+revision walk matched nothing, told six baseline entries went stale, is sent to repair history that is fine.
+The standing rule survives unchanged: read a first MISSED before deleting it, and assert a break's direction — a break
+that removes a guard is caught when the guarded behaviour appears, not when an error is thrown.
 
 A MEASUREMENT TAKEN WITH THE THING SWITCHED OFF PROVES NOTHING ABOUT THE THING, AND ASKING ABOUT IT COST
 ONE SENTENCE. Handset walk 5 answered "does TalkBack speak an opened dialog" from `dumpsys audio`, and the
