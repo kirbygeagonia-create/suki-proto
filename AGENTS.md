@@ -3104,6 +3104,29 @@ vivo is `1.2-preview.38`, cut from `a4cf6fc3…`, while every artifact on disk i
 handset can report what it is actually running — which is the owed install in `DEVICE-PASS.md`, stated as a
 byte pair rather than as a feeling.
 
+A HANDSET LEG IS ARMED BEFORE IT IS WALKED, AND THE ARMING IS WHERE THE MEASUREMENTS ARE.
+Both legs DEVICE-PASS owes on `1.2-preview.39` are now scripts, and writing them produced three readings
+that had nothing to do with a phone. The first is the app's own identity: the driver began with
+`PKG = 'com.sukinnect.proto'` typed into it, and the real `applicationId` is **`com.sukinnect.app`** — a
+wrong constant would have surfaced only as "INSTALL NOT PROVEN" on the device, so the proof became a pure
+function tested against five synthetic `dumpsys` answers, including both spellings of the field
+(`versionName:` and `versionName=`) because a proof that matches one release's separator refuses the
+other's good install. The package and the version are now read out of `output-metadata.json` rather than
+written twice. Second: the ColorOS picker question moved forward off the phone, because the tree walk 6
+saved is still on disk — **no node in it carries `focused="true"`**, while two clickable rows are named
+`Preview the file IMG_20261020_1859`, the owner's own photographs. "Does ColorOS accept keys" is therefore
+the wrong shape of the question: with nothing focused the first key *establishes* focus and a centre key
+activates whatever it lands on, which is exactly how walk 7 selected a real photograph. So the picker tool
+sends one key, re-reads the platform tree, and refuses `DPAD_CENTER` unless the focused row is named for
+the fixture it pushed (`--guard-test`: 3 of 3, one of them that very photograph name). Third: the walk's
+five page readings were run on the **bench** first, where the figures are already known, and that is where
+a reachability reader turned out to be wrong — it called the sheet's last row unreachable without asking
+whether an ancestor scrolls, and corrected it answers `reachable:true` through `sheet-body` at 833px of
+content in a 660px box. Bench readings for the leg to be compared against: PIN field 16px computed in a
+48px box, filter sheet 16 rows at exactly 44px and 15px type. The rule is the one this file keeps
+rediscovering — **prove the instrument on a surface where the answer is known**, because a device leg that
+begins on the device reports its own errors as findings, and a phone is the scarcest instrument here.
+
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by
 the 479-byte `ATKINSON-AUTHORS.txt` that sits beside it, a `--font-ui` opening with a family

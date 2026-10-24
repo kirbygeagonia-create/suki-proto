@@ -1837,6 +1837,16 @@ open. Nothing here is a defect the bench can close.
    owner's photograph by accident:** a key route selects the focused row, so run it against a folder that
    is empty except for the test file and entered by name — never against a recents grid holding real
    photographs.
+   **Armed 2026-10-24, and the arming answered part of the question off the phone.** The tree walk 6 left 
+   behind (`.scratch/docui.xml`, 177 nodes, every one of them `com.google.android.documentsui`) carries 
+   **no node with `focused="true"`**, and two clickable rows named `Preview the file IMG_20261020_1859` — the 
+   owner's own photographs, at `[167,526]` and `[386,526]`. So the open question is narrower than "does 
+   ColorOS accept keys": with nothing focused, the first key *establishes* focus and a centre key then 
+   activates whatever it landed on. The leg is `node .scratch/walk9-picker-leg.cjs`, which sends **one key 
+   at a time**, re-reads the platform tree after it, and refuses `DPAD_CENTER` unless the focused row is 
+   named for the fixture it pushed — proved without a phone by `--guard-test` (3 of 3: nothing focused 
+   refused, that photograph refused, the fixture allowed) and its parser proved by running it over that 
+   saved tree, which is where the two photograph rows came to light.
 2. **`1.2-preview.39` is built and bundle-verified but not installed.** §98 changed the page (the
    admin lock field and its copy), so the tree, `dist/`, the staged asset and the APK all read
    `3c78fdd…` (three page changes since `.38`: the §98 lock field, §99's filter rows, and §99's
@@ -1849,6 +1859,22 @@ open. Nothing here is a defect the bench can close.
    hub and read the PIN field's computed size and box height, then open **Filter providers** on the results
    bar and read the sixteen option rows — they are 44px on the bench and the phone is the place a px floor
    is not what it looks like.
+   **Armed 2026-10-24, with its readers run on the bench first.** The leg is `node 
+   .scratch/walk9-device-leg.cjs`: it enters the two screens exactly as `tools/shot.cjs` enters 
+   `admin-lock-modal` and `resident-filter-sheet`, then opens each with a **real input event** at the rect 
+   the page reports, and it installs by the `applicationId` and version read out of 
+   `app/build/outputs/apk/debug/output-metadata.json` rather than constants typed into the driver — which is 
+   how it found that this app's id is **`com.sukinnect.app`**, not the `com.sukinnect.proto` the first draft 
+   assumed. A wrong package would only have shown up as a refusal, so the refusal is a tested function: 
+   `--selftest` proves the install check on 5 cases — both `dumpsys` spellings (`versionName:` and 
+   `versionName=`) accepted, and a stale code, a stale name and a missing package each refused. 
+   The five page readings were run against the bench, where the answer is known, before any phone was 
+   touched: the PIN field computes **16px** in a **48px** box with `min-height:48px`, and the filter sheet 
+   paints **16 rows at exactly 44px, none below the floor, at 15px type**. That pass also caught the 
+   instrument, not the app: the first reachability reading called the last row unreachable because it never 
+   consulted a scrolling ancestor, and corrected, the row is reachable through `sheet-body` (833px of content 
+   in a 660px box) — which the eight-corner sweep had already implied, since it reports 0 unreachable 
+   controls. A walk that began on the phone would have filed that as a defect in the application.
 3. **Closed 2026-10-24, and the item itself was the defect.** Walk 7 wrote that the vivo's WebView version
    "was never captured"; opening the log showed walk 5 had captured it, and `dumpsys webviewupdate` today
    answers the same `com.google.android.webview 155.0.8059.43`. What the earlier walk had got wrong was the

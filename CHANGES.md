@@ -6397,3 +6397,58 @@ checkable by a handset — which is why `DEVICE-PASS.md`'s owed item is now stat
 and reading the lock dialog's field and the filter sheet's rows are the two things left on this thread
 that no instrument on this machine can do.
 
+## 101. Both handset legs got armed, and the arming measured three things with no phone attached
+
+The thread's two remaining items are hardware, and the machine still enumerates no handset: `adb devices`
+answers nothing across a cold server start and eight samples over 45 seconds, `adb mdns services` answers
+nothing, Windows has **no PnP change in the last 24 hours**, no Android/WPD/MTP node, and no error or
+unknown node — which is the trio that distinguishes "not plugged in" from "waiting for authorisation". A
+missing driver or a refused RSA key would still enumerate a device. So the legs were armed instead of
+skipped: each became a script whose instrument runs against a surface where the answer is already known.
+
+**The first finding was the app's own identity, and it was the driver that was wrong.** The walk-9 driver
+began with `PKG = 'com.sukinnect.proto'` typed into it. The real `applicationId` is `com.sukinnect.app` —
+`app/build.gradle:12` and the build's own `output-metadata.json` both say so. A wrong package is not loud:
+`dumpsys package com.sukinnect.proto` answers nothing, so the walk would have reached "INSTALL NOT PROVEN"
+on a phone that had installed perfectly. The proof is now read from the metadata rather than written twice
+(`versionCode 41 / versionName 1.2-preview.39`), it accepts **both** `dumpsys` spellings of each field
+(`versionName:` and `versionName=`), and `--selftest` runs it against five synthetic answers — two good,
+plus a stale code, a stale name and a missing package, each of which must be refused. 5 of 5.
+
+**The second came out of a tree walk 6 left on disk.** `.scratch/docui.xml` is 177 nodes, every one of them
+`com.google.android.documentsui`, and **not one carries `focused="true"`** — while two clickable rows are
+named `Preview the file IMG_20261020_1859`, the owner's own photographs, at `[167,526]` and `[386,526]`.
+That reframes the owed ColorOS question. It is not only "do keys work there": with nothing focused, the
+first key *establishes* focus and a centre key activates whatever it lands on, which is exactly how walk 7
+selected a real photograph on the other phone. The picker tool therefore sends **one key**, re-reads the
+platform tree, and refuses `DPAD_CENTER` unless the focused row's name is the fixture it pushed —
+`--guard-test` proves all three verdicts (nothing focused → refuse, that photograph → refuse, the fixture →
+allow) and its tree parser is proved by running it over the saved ColorOS dump, which is where the two
+photograph rows surfaced. The phone is not the first place any of this executes.
+
+**The third caught the instrument before it could file a defect.** The walk's five page readings were run
+on the bench through `node tools/shot.cjs --probe=@.scratch/walk9-selfcheck.js
+--only=admin-lock-modal,resident-filter-sheet`, where the expected figures are known: the PIN field
+computes **16px inside a 48px box** with `min-height:48px`, and the filter sheet paints **16 rows at
+exactly 44px, none below the floor, at 15px type**. The first reachability reader called the sheet's last
+row unreachable — it asked only whether the rect met the viewport and never whether an ancestor scrolls.
+Corrected, the row answers `reachable:true` through `sheet-body` (833px of content in a 660px box), which is
+what the eight-corner sweep had already implied by reporting 0 unreachable controls. On the phone that
+wrong reader would have been recorded as an application defect on a screen the bench had already cleared.
+
+
+**One more instrument lesson from the same minute, and it is the grep.** Two checks disagreed about these
+files: `grep -c $'\r$' AGENTS.md` answers 4,950 and `grep -vc` then answers 0 — every line ends in CR, it
+claims — while counting bytes over the same file answers **CRLF=0, LF-only=4,950**. Under Git Bash the pattern
+or the file is translated, so grep cannot be used to ask a line-ending question here at all. The byte walk in
+`.scratch/eol-bytes.cjs` is the instrument that answers it, and it says `AGENTS.md`, `CHANGES.md` and
+`DEVICE-PASS.md` are LF while `README.md` and `Sukinnect-next.html` are CRLF. Worth naming because the damage
+it could have done is exactly the one §"A SEED DATE IS A COUNTDOWN" records: a patcher that believed grep
+would have written LF into a CRLF file, or, as here, believed the opposite and been *right by accident* —
+both patchers chose their ending by looking for `\r\n` in the bytes themselves and so preserved each file's
+convention. The check that is load-bearing is the one that reads bytes; the one that printed the confident
+wrong answer is the one a future session would copy into a script.
+
+Nothing on this machine can read the installed bundle, so `audit-build-bytes` still stops at four copies —
+source, `dist/`, staged asset, APK — all `3c78fdd…`. The fifth copy is the phone, and reading it is what the
+two armed scripts exist to do.
