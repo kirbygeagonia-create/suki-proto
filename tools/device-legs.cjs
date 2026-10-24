@@ -111,6 +111,15 @@ function tapPainted(label, matcherExpr, selectBy) {
 }
 
 /* ---------- 0. is there a handset on the bus at all, and can it be used? ---------- */
+/* A cable is not the only way in: Android 11+ can be reached over the network its own wireless-debugging
+   screen prints. `--connect=192.168.1.20:37123` runs `adb connect` first, so a phone that is on the same
+   Wi-Fi as this machine can carry a leg even while every USB cable here is charge-only. */
+const connectFlag = process.argv.find(a => a.startsWith('--connect='));
+if (connectFlag) {
+  const target = connectFlag.slice(10);
+  console.log('adb connect ' + target + ' → ' + adb('connect', target).trim());
+  sleep(2000);
+}
 let row = '';
 for (let i = 0; i < 10; i++) {
   const rows = adb('devices').split('\n').slice(1).filter(l => /\t(device|unauthorized|offline)/.test(l));

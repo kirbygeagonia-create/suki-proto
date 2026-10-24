@@ -28,6 +28,8 @@ const FIXTURE_NAME = 'suki-leg9-test.png';
 const FIXTURE_PATH = '/sdcard/Download/' + FIXTURE_NAME;
 
 function adb() {
+  const cf = process.argv.find(a => a.startsWith('--connect='));
+  if (cf && !adb.done && Array.prototype.slice.call(arguments).join(' ') !== 'connect') { adb.done = true; execFileSync(ADB, ['connect', cf.slice(10)], { encoding: 'utf8' }); }
   try { return execFileSync(ADB, Array.prototype.slice.call(arguments), { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).replace(/\r/g, ''); }
   catch (e) { return 'ADB ERROR: ' + String((e.stdout || '') + (e.stderr || '')).replace(/\r/g, ''); }
 }
