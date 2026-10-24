@@ -74,10 +74,15 @@ function adb(...args) {
 }
 
 /* ------------------------------------------------------------------ WebSocket, by hand */
-function wsConnect(socket, path, onMessage) {
+function wsConnect(socket, path, onMessage, port) {
   const key = crypto.randomBytes(16).toString('base64');
-  const req = `GET ${path} HTTP/1.1\r\nHost: localhost\r\nUpgrade: websocket\r\n` +
-    `Connection: Upgrade\r\nSec-WebSocket-Key: ${key}\r\nSec-WebSocket-Version: 13\r\n\r\n`;
+  /* NO Origin header. Sending one is what Chromium's DevTools endpoint rejects — measured immediately: with
+     `Origin: http://localhost:<port>` the upgrade answers **HTTP 403** and every later evaluate times out,
+     while the same socket with no Origin returns 101 and replies to `1` in milliseconds. The status line is
+     now logged either way, which is how this was caught in one look instead of another hour of blaming the
+     phone: a discarded handshake status turns a refused upgrade into "the app never answers". */
+  const req = `GET ${path} HTTP/1.1\r\nHost: localhost:${port || 9222}\r\n` +
+    `Upgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: ${key}\r\nSec-WebSocket-Version: 13\r\n\r\n`;
   let buf = Buffer.alloc(0), haveHeader = false;
   socket.on('data', chunk => {
     buf = Buffer.concat([buf, chunk]);
@@ -85,6 +90,15 @@ function wsConnect(socket, path, onMessage) {
       const end = buf.indexOf('\r\n\r\n');
       if (end < 0) return;
       haveHeader = true;
+      const head = buf.slice(0, end).toString('latin1');
+      const status = (head.match(/^HTTP\/[0-9.]+ (\d+)/) || [])[1];
+      if (status && status !== '101') {
+        console.error(`DevTools WebSocket upgrade refused: HTTP ${status}` +
+          ` — ${head.split('\r\n').slice(1, 3).join(' | ')}`);
+        onMessage({ id: 0, error: { message: 'handshake refused with HTTP ' + status } });
+      } else {
+        console.error(`DevTools WebSocket open (${path})`);
+      }
       buf = buf.slice(end + 4);
     }
     while (buf.length >= 2) {
@@ -208,17 +222,17 @@ function httpGet(port, path) {
      answers and nothing about the behaviour changes; if NOTHING answers, the old path is taken loudly rather
      than silently, so a walk can still report what it saw. */
   const pagePath = t => (t.webSocketDebuggerUrl || '').replace(/^ws:\/\/[^/]+/, '') || '/devtools/page/' + t.id;
-  const openTo = async p => {
+  const openTo = async (p, timeoutMs) => {
     const s = net.connect(port, '127.0.0.1');
     let id = 0;
     const pending = new Map();
     const w = wsConnect(s, p, msg => {
       if (msg.id && pending.has(msg.id)) { const { resolve } = pending.get(msg.id); pending.delete(msg.id); resolve(msg); }
-    });
+    }, port);
     await new Promise(r => { if (s.connecting) s.once('connect', r); else r(); });
     const sd = (method, params) => new Promise(resolve => {
       const my = ++id; pending.set(my, { resolve }); w.send({ id: my, method, params: params || {} });
-      setTimeout(() => { if (pending.has(my)) { pending.delete(my); resolve({ error: { message: method + ' timed out' } }); } }, 15000);
+      setTimeout(() => { if (pending.has(my)) { pending.delete(my); resolve({ error: { message: method + ' timed out' } }); } }, timeoutMs || 15000);
     });
     return { sock: s, ws: w, send: sd };
   };
@@ -227,8 +241,18 @@ function httpGet(port, path) {
   let active = null;
   let inconclusive = null;
   const tried = [];
-  for (const cand of ordered.slice(0, 6)) {
-    const c = await openTo(pagePath(cand));
+  /* One page target is the normal handset case — attach to it and stop. Probing it first costs a
+     connection, and this instrument's own validation loop (added minutes earlier, with a 15-second
+     evaluate timeout per candidate) was what made a fully responsive phone look dead: raw CDP on a single
+     connection answered `1` and `state.view` in milliseconds while every wrapper call timed out. So the
+     validation is skipped when there is nothing to choose between, and when there is, it asks with a short
+     timeout instead of a long one. */
+  if (ordered.length === 1) {
+    active = await openTo(pagePath(ordered[0]));
+    console.error('single page target, attaching directly: ' + String(ordered[0].title || ordered[0].url).slice(0, 40));
+  }
+  for (const cand of active ? [] : ordered.slice(0, 4)) {
+    const c = await openTo(pagePath(cand), 3000);
     let v = 'NO-STATE';
     try {
       const r = await c.send('Runtime.evaluate', {
@@ -240,15 +264,10 @@ function httpGet(port, path) {
     } catch (e) { v = 'ERR ' + e.message; }
     tried.push(String(cand.title || cand.url || '?').slice(0, 24) + '=' + v);
     if (v !== 'NO-STATE' && !/^ERR/.test(v)) {
-      console.error(`live target found after ${tried.length} of ${Math.min(6, ordered.length)} candidate(s): ` + tried.join(' | '));
+      console.error(`live target found after ${tried.length} candidate(s): ` + tried.join(' | '));
       active = c;
       break;
     }
-    /* A validation that TIMES OUT is not a dead page. Proven the hard way: on a saturated frame this check
-       answered `ERR Runtime.evaluate timed out` for a target that then served the real reading perfectly a
-       second later — so treating inconclusive as dead made the instrument announce "NO LIVE TARGET" about
-       the only live page it had, which is this repository's oldest error in a new costume. Keep the first
-       inconclusive candidate as a fallback and adopt it, saying so, instead of destroying it. */
     if (/timed out/.test(v) && !inconclusive) { inconclusive = c; continue; }
     try { c.sock.destroy(); } catch (e) { /* already gone */ }
   }

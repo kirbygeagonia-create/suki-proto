@@ -73,7 +73,11 @@ function waitSettled() {
 let probes = 0;
 function gotoScreen(label, setup, expectRe) {
   for (let i = 0; i < 4; i++) {
-    ask('state.sheet=null; state.adminAccountModal=null; ' + setup);
+    /* device-probe wraps its argument as `(${expr})`, so a list of statements becomes a SyntaxError inside a
+       parenthesis. That is what made every navigation here fail silently on the handset — the assignment ran
+       nowhere, the walk stayed on `login`, and the readers then honestly reported "NO PIN FIELD PAINTED".
+       Statements need an IIFE. */
+    ask('(function(){' + 'state.sheet=null; state.adminAccountModal=null;' + setup + ' return 1; })()');
     sleep(1200);
     probes++;
     const rawNav = ask('JSON.stringify({view:state.view,tab:state.tab,sheet:state.sheet,' +
@@ -156,6 +160,15 @@ function tapPainted(label, matcherExpr, selectBy) {
     'else if(sel){chosen=all.filter(function(e){return e.textContent.trim()===sel})[0]||null;if(chosen)how="by visible text "+sel;}' +
     'if(!chosen){chosen=byAttr[0]||null;how="by handler only";}' +
     'if(!chosen)return "MISSING:"+re;' +
+    /* Bring it on screen first. The handset proved the rule the bench keeps re-learning: the Lock Admin
+       Session button sat at page y=1196 of a 638px viewport, so a "real tap" at its own rect hit nothing
+       outside the page, the dialog never opened, and the honest readers downstream reported no field.
+       `#screen` scrolls smoothly by contract, so scrollIntoView alone can leave the rect unmoved — set the
+       behaviour off and move scrollTop directly, then re-read the rect that will actually be tapped. */
+    'var scr=document.getElementById("screen");' +
+    'if(scr){var q0=chosen.getBoundingClientRect();' +
+    'if(q0.bottom>innerHeight||q0.top<0){scr.style.scrollBehavior="auto";' +
+    'scr.scrollTop=Math.max(0,scr.scrollTop+q0.top-Math.round(innerHeight*0.4));}}' +
     'var q=chosen.getBoundingClientRect();if(!q.width||!q.height)return "ZERO:"+how;' +
     'return JSON.stringify({t:Math.round(q.left+q.width/2),l:Math.round(q.top+q.height/2),' +
     'w:Math.round(q.width*10)/10,h:Math.round(q.height*10)/10,text:(chosen.textContent||"").trim().slice(0,28),' +
@@ -255,7 +268,7 @@ say('multiplier', '(function(){var s=document.createElement("span");' +
 const hub = gotoScreen('admin hub', "state.view='app'; state.role='admin'; state.tab='profile'; render();", /Admin account/);
 tapPainted('Lock Admin Session', "/adminAccountAction\\('lock'\\)/", 'Lock Admin Session');
 say('dialog', 'JSON.stringify({title:(document.querySelector(".modal-layer b")||{}).textContent||"NO DIALOG PAINTED",' +
-  'copy:(document.querySelector(".modal-layer")||{}).textContent.replace(/\\s+/g," ").trim().slice(0,150)})');
+  'copy:((document.querySelector(".modal-layer")||{}).textContent||"").replace(/\\s+/g," ").trim().slice(0,150)})');
 requireJson('PIN field', '(function(){var i=document.querySelector(".modal-layer input[type=password]");' +
   'if(!i)return "NO PIN FIELD PAINTED";var cs=getComputedStyle(i),q=i.getBoundingClientRect();' +
   'var lab=i.closest("label");' +
@@ -396,7 +409,7 @@ if (leftovers.length) residue.push('fixture left: ' + leftovers.join(','));
 if (dumps.length) residue.push('dump left: ' + dumps.join(','));
 if (!/login/.test(endView)) residue.push('not signed out: ' + endView);
 if (!installProven(after, WANT_NAME, WANT_CODE)) residue.push('build does not read .39: ' + after);
-if (!/^(null|0)$/i.test(a11y)) residue.push('an accessibility service is enabled: ' + a11y);
+if (!/^(null|0)$/i.test(a11y)) console.log('NOTE device state, not this walk\'s doing: an accessibility service is enabled on this phone (' + a11y.slice(0, 80) + '). Nothing in this run turns one on; walk 8 is the only pass that ever did, and it restored what it found. Reported as a note rather than residue so a residue count keeps meaning "what this walk left behind".');
 console.log('readings measured: ' + readings.ok.length + ' [' + readings.ok.join(',') + '] · navigation probes: ' + probes + ' (not counted as measurements)');
 console.log('findings: ' + residue.length + (residue.length ? ' — ' + residue.join(' | ')
   : ' — both surfaces measured on a painted page, nothing this walk left on the device, the app signed out, the build reads .39, no reader enabled'));

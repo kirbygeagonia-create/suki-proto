@@ -6655,3 +6655,41 @@ process record with `empty=true`. So the next diagnostic step on this device is 
 in-place upgrade (force-stop, wait, launch once, then probe) and checking for a pending JavaScript dialog,
 not another change to the readers. The vivo leg and the ColorOS key route are still owed; the key route is
 now actually reachable, because the phone it belongs to is on the bus.
+
+## 104. Leg A closed on a real handset, after the bug that blocked it turned out to be mine
+
+The OPPO CPH2179 came onto the bus at last (`S4CUYTJB6HNNWC49`, Android 10, WebView **155.0.8059.46**), took
+`1.2-preview.39` (`versionCode=41` read back from the package, replacing `40 / .38`), and answered both
+readings with **`findings: 0`**:
+
+- **Admin PIN field, on the phone**: specified **`21.6px`**, measured factor **`1.35`**, glyph height
+  **`29.2px` rendered**, box **`51.8px`** (`min-height:48px`, `tapFloorOk: true`), placeholder "Not checked in
+  this prototype", label "PIN" — §98's field, read where a `rem` actually meets the platform.
+- **Filter sheet, on the phone**: **16 rows, min and max height `46px`, `below44: 0`, type `20.25px`**, last
+  row `reachable: true` through `sheet-body` (**884 in 392**), viewport **320x638** — the panel and scale
+  DEVICE-PASS has been asserting from one photograph.
+- Both dialogs opened by **real taps** on the painted control, and the `Unlock` tap reported
+  **`2 handler match(es)`** resolved *by visible text* — the ambiguity found earlier, now proven on hardware.
+- Walk ended signed out (`view: login`), no fixture and no dump left on the device.
+
+**What stood between this and three hours of "the phone won't answer" was my own instrument, twice.**
+`device-probe` had started sending an **`Origin` header**, and Chromium's DevTools answers that with
+**HTTP 403** — while the old code threw the handshake status away, so a refused upgrade looked exactly like a
+page that never evaluates. A raw CDP script with no `Origin` got `101` and answered `1` in milliseconds. The
+second bug was in the walk: several calls passed **statements** into a wrapper that builds `(${expr})`, so the
+navigation raised a `SyntaxError` nobody read and the app stayed on `login` — the readers then honestly said
+"no field painted", which is the worst kind of true statement. Third: the Lock button sat at page `y=1196` of
+a 638px viewport, so the "real tap" landed outside the screen; `tapPainted` now scrolls the node into view the
+way §"a rect read in the breath after a Tab" demands (`scrollBehavior='auto'` + `scrollTop`, not
+`scrollIntoView` alone).
+
+**The lesson the instrument paid for:** a timeout is the *client's* sentence, not the device's. Report the
+handshake status, report which node a tap chose, and wrap statements in functions — then a silent failure
+becomes a named one. Also recorded so nobody re-files it: **TalkBack and the Accessibility Menu are enabled on
+this phone by its owner**, so the walk prints that as a device-state note rather than counting it as residue —
+this run turns nothing on. The three settings the diagnosis did touch (battery saver off, stay-awake on, an
+idle-mode whitelist) were restored and read back: `low_power=1`, `stay_on_while_plugged_in=0`, whitelist removed.
+
+**Still owed:** the **ColorOS key route** on this same phone — reachable now, with the guard proven. And the
+vivo, which is not on the bus: its `.39` install and the same two readings on a 450-CSS-px panel at
+`font_scale 1.35` remain open as a parity question, not as a mechanism question, which §104 settled.
