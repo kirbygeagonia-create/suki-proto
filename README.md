@@ -140,7 +140,24 @@ week guarding nothing.
 ```
 node tools/audit-open-items.cjs     # every "still owed" sentence the present-tense documents still make
 node tools/audit-camera-dialog-coverage.cjs   # profile dialogs the camera's walk has never opened
+node tools/audit-compat-floor.cjs   # the oldest WebView that can render this page, and which feature decides
+node tools/deploy-check.cjs         # what the live site actually serves, read from outside the repository
+node tools/device-dump-insets.cjs --file=<dump.xml> --screen=WxH --statusbar=N --navbar=N
+                                    # does any app content sit under a bar, judged from a uiautomator dump
 ```
+
+The last one is a device-artifact reader rather than a page probe, so `probe-all` deliberately does not auto-run it:
+a `uiautomator` dump of a WebView contains only the page's virtual hierarchy — zero foreign nodes — so it can never
+derive a bar band on its own, and the bands come from `dumpsys window`. It also excludes the window's own scaffolding
+(`android:id/statusBarBackground` and the decor exist to span the bars), and refuses rather than reporting zero when
+the dump, the screen size, or a band is missing.
+
+The third prints **two numbers on purpose**, because the one people repeat is the wrong one: the *raw* floor is the
+newest Chromium-version requirement anywhere in the file (today 108, from `dvh`), and the *breaking* floor is the same
+figure restricted to features whose absence removes geometry rather than cosmetics (today none). A 191-use `gap` at
+84 means items touch on an old engine; a 6-use `inset:0` at 87 meant a full-screen scrim with no box, which is why
+those six are now explicit offsets and why the exit code gates only the second number. Exceptions are declared in the
+page beside the rule that needs one, so the audit refuses a stale excuse rather than keeping a list nobody maintains.
 
 The second is coverage rather than prose: it asks the application which profile controls raise a layer, asks
 the camera which of them a row of the walk clicks, and prints the difference — the destination-behind-a-row

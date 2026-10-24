@@ -15,14 +15,14 @@ const original = fs.readFileSync(TARGET, 'utf8');
    matches and the mutant reports itself as SKIP while looking like a pass. */
 const MUTANTS = [
   { name: 'the modal drops under the sheet again',
-    apply: s => s.replace('inset:0; background:var(--scrim); z-index:70;',
-                         'inset:0; background:var(--scrim); z-index:50;') },
+    apply: s => s.replace('top:0; right:0; bottom:0; left:0; background:var(--scrim); z-index:70;',
+                         'top:0; right:0; bottom:0; left:0; background:var(--scrim); z-index:50;') },
   { name: 'the sheet is raised over the modal',
-    apply: s => s.replace('position:absolute; inset:0; z-index:60;',
-                         'position:absolute; inset:0; z-index:80;') },
+    apply: s => s.replace('position:absolute; top:0; right:0; bottom:0; left:0; z-index:60;',
+                         'position:absolute; top:0; right:0; bottom:0; left:0; z-index:80;') },
   { name: 'the modal loses its z-index entirely',
-    apply: s => s.replace('inset:0; background:var(--scrim); z-index:70;',
-                         'inset:0; background:var(--scrim);') },
+    apply: s => s.replace('top:0; right:0; bottom:0; left:0; background:var(--scrim); z-index:70;',
+                         'top:0; right:0; bottom:0; left:0; background:var(--scrim);') },
 ];
 
 const LABEL = 'a modal opened from a sheet sits above the sheet';
@@ -53,4 +53,12 @@ try {
   fs.writeFileSync(TARGET, original);
 }
 console.log('\n' + caught + ' of ' + applied + ' mutants caught; file restored.');
+/* `caught === applied` is satisfied by 0 === 0, so an empty run used to exit 0 — which is how this family applied
+   no mutants at all for a whole pass after a CSS rewrite orphaned its three needles, and printed a healthy-looking
+   summary line while it did. A family that broke nothing has measured nothing. */
+if (applied === 0) {
+  console.log('NO CONCLUSION: no needle matched the file, so nothing was tested. The needles are stale or the file '
+    + 'moved under them — read the SKIP lines above and re-point them.');
+  process.exit(1);
+}
 process.exit(caught === applied ? 0 : 1);

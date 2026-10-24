@@ -156,7 +156,9 @@ for (const f of families) {
     + String(r.applied).padStart(6) + String(r.caught).padStart(9)
     + String(r.skipped).padStart(13) + String(r.missed).padStart(8)
     + (r.silent ? '   <<< printed no summary — nothing was proven' : '')
-    + (!r.silent && r.caught !== r.applied ? '   <<< MUTANT SURVIVED' : '')
+    + (!r.silent && r.applied === 0 ? '   <<< NOTHING APPLIED — every needle missed, so this family tested nothing'
+      : '')
+    + (!r.silent && r.caught !== r.applied && r.applied > 0 ? '   <<< MUTANT SURVIVED' : '')
     + (r.crashed ? '   <<< exited on a signal: ' + String(r.crashed).slice(0, 40) : ''));
   if (trouble) (r.notes || []).forEach(n => console.log('      | ' + n));
 }

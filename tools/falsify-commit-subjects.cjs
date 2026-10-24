@@ -100,8 +100,14 @@ const BREAKS = [
   { name: 'the refusal on an empty range is forced dead',
     from: 'if (rows.length === 0) {', to: 'if (false) {', emptyRange: true },
   { name: 'the default scope is quietly re-rooted onto origin/main, so post-merge history stops being read',
-    from: "['-n', String(DEFAULT_COUNT), 'HEAD']",
-    to: "['-n', String(DEFAULT_COUNT), 'origin/main']" },
+    /* Re-pointed 2026-10-25. This used to mutate the rev in `['-n', N, 'HEAD']` to `'origin/main'`, which was a real
+       shrink when the branch ran far ahead of main. Two merges later, origin/main sits four commits behind HEAD, so
+       walking 120 back from either rev lands on nearly the same 120 commits — the mutant became EQUIVALENT and the
+       break printed MISSED while the guard it represents was still needed. The faithful form is the one the audit's
+       own header records as the original defect: defaulting the RANGE to `origin/main..HEAD`, which is four commits
+       and is condemned by SCOPE_FLOOR. */
+    from: "const RANGE = process.argv[2] || '';",
+    to: "const RANGE = process.argv[2] || 'origin/main..HEAD';" },
   { name: 'the default scope shrinks to three commits, which is the population defect that let a reused subject through',
     from: 'const DEFAULT_COUNT = 120;', to: 'const DEFAULT_COUNT = 3;' },
 ];

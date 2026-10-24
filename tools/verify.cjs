@@ -4542,7 +4542,7 @@ suite('back', async () => {
        fourth surface added tomorrow would be silently walkable by Tab while every existing screen
        reported clean. So the check counts the roots and requires the marker on each, rather than
        trusting that the three known ones still carry it. */
-    const tags = (app._source.match(/<div [^>]*(?:modal-layer|sheet-layer|position:fixed; inset:0)[^>]*>/g) || [])
+    const tags = (app._source.match(/<div [^>]*(?:modal-layer|sheet-layer|position:fixed[^>]*(?:inset:0|top:0; right:0; bottom:0; left:0))[^>]*>/g) || [])
       /* The CSS rule and a comment are not markup; every match here must be a real root. */
       .filter(t => /^<div /.test(t));
     return tags.length >= 5 && tags.every(t => /data-layer=/.test(t));

@@ -87,9 +87,31 @@ function judge(m) {
           + ' forces edge-to-edge at API ' + m.sdk + ' — that inset is the shell padding, and the page fills the'
           + ' padded box with ' + Math.round(cssH * dpr) + 'px of content' };
     }
-    return { ok: true, refusal: true, reasons: [], slack: inset, contentPx: Math.round(cssH * dpr),
-      note: 'the window is already inset by the framework (' + m.viewH + ' of ' + m.screenH + 'px), so this frame'
-        + ' cannot test the shell padding question' };
+    if (typeof m.sdk === 'number') {
+      /* Below API 35 the framework may have shortened the window itself, so the inset cannot be credited to the
+         shell. Keep going and ask the question that holds at any API level instead: does the page fill the surface
+         it was handed while the platform reports bars? That is a legibility and reachability defect wherever it is
+         true, and it is the only one a low-end handset can be asked about. */
+      m.unattributedInset = inset;
+      /* In this regime the surface is already shorter than the screen — by the framework, the shell, or both, which
+         is exactly what cannot be told apart here — so the question is not "does the page fill its surface" (it
+         should, and that is what a healthy inset box looks like) but "does it draw BEYOND the inset box". Comparing
+         content against the surface with the full-bleed rule flagged a correct page as painted under a bar. */
+      const over = cssH * dpr - m.viewH;
+      const unReasons = [];
+      if (over > 2) unReasons.push('the page measures ' + Math.round(over) + 'px beyond its own ' + m.viewH
+        + 'px surface, so it is drawn outside the inset box');
+      if (m.navBottomCss != null && m.bottomNavBottom != null && m.bottomNavBottom > m.navBottomCss + 1) {
+        unReasons.push('the bottom navigation row ends at ' + m.bottomNavBottom + ' CSS px, below the content edge '
+          + m.navBottomCss + ' — a thumb target off the reduced viewport');
+      }
+      return { ok: unReasons.length === 0, reasons: unReasons, slack: m.viewH - cssH * dpr,
+        contentPx: Math.round(cssH * dpr), unattributedInset: inset };
+    } else {
+      return { ok: true, refusal: true, reasons: [], slack: inset, contentPx: Math.round(cssH * dpr),
+        note: 'the window is already inset by the framework (' + m.viewH + ' of ' + m.screenH + 'px) and no API level'
+          + ' was read, so neither the shell-padding question nor the low-end one can be attributed' };
+    }
   }
   const contentPx = cssH * dpr;
   const slack = m.viewH - contentPx;
@@ -105,7 +127,8 @@ function judge(m) {
   if (m.navBottomCss != null && m.bottomNavBottom != null && m.bottomNavBottom > m.navBottomCss + 1) {
     reasons.push('the bottom navigation row ends at ' + m.bottomNavBottom + ' CSS px, below the content edge ' + m.navBottomCss + ' — a thumb target off the reduced viewport');
   }
-  return { ok: reasons.length === 0, reasons, slack, contentPx: Math.round(contentPx) };
+  return { ok: reasons.length === 0, reasons, slack, contentPx: Math.round(contentPx),
+    unattributedInset: m.unattributedInset || 0 };
 }
 
 if (process.argv.indexOf('--selftest') > -1) {
@@ -122,7 +145,10 @@ if (process.argv.indexOf('--selftest') > -1) {
   t('an inset surface at API 36 is the shell padding, not an untestable frame', shellInset.ok && !shellInset.refusal && shellInset.insetByShell === true, true);
   t('…and its note names the 202px it measured', /202px shorter/.test(shellInset.note), true);
   const oldRefusal = judge({ sdk: 30, viewH: 2138, screenH: 2340, innerHeight: 778, dpr: 2.75, bars: BARS, navBottomCss: 778, bottomNavBottom: 774 });
-  t('below API 35 the same surface is still a refusal, not a pass', oldRefusal.refusal === true, true);
+  /* Rewritten 2026-10-25, not deleted: this case asserted "below API 35 an inset surface is a refusal", which is the
+     behaviour the owner asked to replace with a low-end measurement. The rule that survives is narrower and still
+     worth pinning — below API 35 the inset may be the framework's, so it must never be credited to the shell. */
+  t('below API 35 an inset surface is never credited to the shell', oldRefusal.insetByShell === undefined, true);
   const noSdk = judge({ viewH: 2138, screenH: 2340, innerHeight: 778, dpr: 2.75, bars: BARS, navBottomCss: 778, bottomNavBottom: 774 });
   t('an unread sdk reads as the refusal, never as the pass', noSdk.refusal === true, true);
   t('a gesture-nav frame with a padded top still passes', judge({ viewH: 2340, screenH: 2340, innerHeight: 1138, dpr: 2, bars: { top: true, bottom: false, read: true, source: 'test' }, navBottomCss: 1138, bottomNavBottom: 1132 }).ok, true);
@@ -130,7 +156,38 @@ if (process.argv.indexOf('--selftest') > -1) {
   t('a frame reporting no status bar refuses as a reader limit', judge({ viewH: 2340, screenH: 2340, innerHeight: 1170, dpr: 2, bars: { top: false, bottom: true, read: true } }).ok, false);
   const inset = judge({ viewH: 2277, screenH: 2340, innerHeight: 1138, dpr: 2, bars: BARS, navBottomCss: 1138, bottomNavBottom: 1130 });
   t('a framework-inset window is declared untestable, not clean', inset.refusal === true && inset.ok === true, true);
+  /* The low-end half of the same question. Below API 35 the framework may inset the window itself, so the inset is
+     never credited to the shell — but "does the page paint under a bar" is answerable on a 2016 handset, and that is
+     the reading the two phones on this bus can give. */
+  const lowEnd = judge({ sdk: 30, viewH: 2277, screenH: 2340, innerHeight: 1138, dpr: 2, bars: BARS,
+    navBottomCss: 1138, bottomNavBottom: 1130 });
+  t('an API 30 frame is judged, not refused', lowEnd.refusal === undefined && lowEnd.ok === true, true);
+  t('…and the 63px it lost is reported as unattributed', lowEnd.unattributedInset === 63, true);
+  /* Rewritten 2026-10-25 rather than deleted. This asserted that an innerHeight one CSS px past the surface is
+     condemned, which was the right bar while the unattributed path reused the full-bleed rule. It is not the right
+     bar for the rule that replaced it: a dpr of 2.75 turns 778 CSS px into 2139.5 device px against a 2138 px
+     surface, so a sub-2px overflow is viewport rounding and the healthy shipping reading IS one. The case now
+     straddles the boundary from both sides so the tolerance is pinned, not assumed. */
+  const lowEndOver = judge({ sdk: 29, viewH: 2277, screenH: 2340, innerHeight: 1200, dpr: 2, bars: BARS,
+    navBottomCss: 1200, bottomNavBottom: 1200 });
+  t('an API 29 page drawing well beyond its inset surface is condemned', lowEndOver.ok === false, true);
+  t('…and the reason names the 123px', /123px beyond its own 2277px surface/.test(lowEndOver.reasons.join(' ')), true);
+  const lowEndRound = judge({ sdk: 29, viewH: 2277, screenH: 2340, innerHeight: 1139, dpr: 2, bars: BARS,
+    navBottomCss: 1139, bottomNavBottom: 1139 });
+  t('a sub-2px overflow is rounding, not an intrusion', lowEndRound.ok === true, true);
   t('a nav row below the content edge is condemned', judge({ viewH: 2340, screenH: 2340, innerHeight: 1105, dpr: 2, bars: BARS, navBottomCss: 1105, bottomNavBottom: 1118 }).ok, false);
+  /* A branch that THROWS looks exactly like a passing selftest on the four cases that ran before it — the crash
+   banner lands on stderr, an earlier grep for the summary line still finds the cases that printed, and the exit
+   code was not read. This case forces the unattributed path, which is where the reference-before-declaration
+   defect lived, and the file ends with a summary line that only prints if every case ran. */
+  const unattr = judge({ sdk: 34, viewH: 2138, screenH: 2340, innerHeight: 778, dpr: 2.75, bars: BARS,
+    navBottomCss: 778, bottomNavBottom: 774 });
+  t('the unattributed path runs and reports its own slack', unattr.ok === true && unattr.unattributedInset === 202
+    && unattr.slack === 2138 - 778 * 2.75, true);
+  const unattrOver = judge({ sdk: 30, viewH: 2000, screenH: 2340, innerHeight: 1100, dpr: 2, bars: BARS,
+    navBottomCss: 1100, bottomNavBottom: 1100 });
+  t('a page drawing beyond its inset box is condemned', unattrOver.ok === false, true);
+  t('…and the reason names the overflow', /beyond its own 2000px surface/.test(unattrOver.reasons.join(' ')), true);
   t('a null measurement refuses', judge(null).ok, false);
   t('a missing dpr refuses', judge({ viewH: 2340, screenH: 2340, innerHeight: 1105, bars: BARS }).ok, false);
   t('wm size parsed', screenHeightPx('Physical size: 1080x2340'), 2340);
@@ -162,9 +219,14 @@ const sdk = parseInt(String(adb('-s', SERIAL, 'shell', 'getprop', 'ro.build.vers
 console.log('ro.build.version.sdk = ' + (isNaN(sdk) ? 'unreadable' : sdk));
 if (isNaN(sdk)) { console.log('NO CONCLUSION — the API level could not be read, so the frame is not even classifiable.'); process.exit(1); }
 if (sdk < 35) {
-  console.log('WRONG TARGET — edge-to-edge is only FORCED at API 35+ (this is ' + sdk + '), where the shell uses the deprecated' +
-    ' getSystemWindowInset* fallback instead. A clean reading here would not answer the open question, so nothing is installed.');
-  process.exit(1);
+  /* Used to refuse here, which made the leg unable to answer the one question a low-end handset CAN answer: is any
+     part of this app painted underneath a system bar? Edge-to-edge is not FORCED below API 35, so a shortened
+     surface cannot be attributed to the shell's padding — but content filling whatever surface it was given, while
+     the platform reports bars, is a defect on any API level. So the scope is printed and the reading is taken.
+     The pass/fail arithmetic lives in judge(), which splits on the same number. */
+  console.log('SCOPE — API ' + sdk + ' is below 35, where edge-to-edge is not forced and the framework may inset the'
+    + ' window itself. The shell-padding question is therefore NOT answered here; what is measured is whether the'
+    + ' page paints under a system bar, which is the user-visible half and holds at every API level.');
 }
 
 const screenH = screenHeightPx(adb('-s', SERIAL, 'shell', 'wm', 'size'));
@@ -253,12 +315,28 @@ if (!viewH) findings.push('the WebView surface height was never read, so the pad
 if (!page) findings.push('the page never answered with geometry, so nothing about the padding was observed');
 let v = null;
 if (viewH && page) {
-  v = judge({ sdk: +sdk || 0, viewH: viewH, screenH: screenH, bars: bars, innerHeight: page.innerHeight, dpr: page.dpr,
+  /* Edge-to-edge is forced only when BOTH the platform and the app's targetSdk clear 35. Reading the device SDK alone
+     let a targetSdk-34 build on an API-36 frame credit the shell with the insetting, when in that regime the
+     framework insets the window by default — measured 2026-10-25 by building the identical page against targetSdk 34
+     and reading the same 202px. So the regime is the min of the two numbers. */
+  const appTarget = Number((String(pkgDump).match(/targetSdk=(\d+)/) || [])[1] || 0);
+  v = judge({ sdk: Math.min(+sdk || 0, appTarget), viewH: viewH, screenH: screenH, bars: bars, innerHeight: page.innerHeight, dpr: page.dpr,
     navBottomCss: page.navBottomCss, bottomNavBottom: page.bottomNavBottom });
   console.log('measurement: view=' + page.view + ' innerHeight=' + page.innerHeight + ' dpr=' + page.dpr +
     ' → content ' + v.contentPx + 'px inside a ' + viewH + 'px surface, slack ' + (v.slack === undefined ? '?' : Math.round(v.slack * 10) / 10) + 'px');
   if (v.refusal) console.log('  UNTESTABLE: ' + v.note);
-  else if (v.ok) console.log('  verdict: the shell inset the page from the bars — the page\'s content box is ' + Math.round(v.slack) + 'px shorter than a surface spanning the ' + screenH + 'px screen, and the platform reports system bars');
+  else if (v.ok && v.unattributedInset) console.log('  LIMIT: API ' + sdk + ' does not force edge-to-edge, so the '
+    + v.unattributedInset + 'px the window lost cannot be credited to the shell. What was judged is the question'
+    + ' that holds at any level: does the page paint under a system bar.');
+  else if (v.ok) console.log(v.insetByShell
+    /* slack here is screen minus surface — the inset the shell applied. On the other ok path slack is surface
+       minus content, which is a different measurement wearing the same field name, so the two sentences are
+       printed by branch rather than by one template that is true in only one of them. */
+    ? '  verdict: the shell inset the page from the bars — the WebView surface is ' + v.slack + 'px shorter than the '
+      + screenH + 'px screen on a frame that forces edge-to-edge, and the page fills that inset box with '
+      + v.contentPx + 'px of content'
+    : '  verdict: the page leaves ' + Math.round(v.slack) + 'px of its ' + viewH + 'px surface clear of the bars'
+      + ' (content ' + v.contentPx + 'px inside a ' + viewH + 'px surface on a ' + screenH + 'px screen)');
   else v.reasons.forEach(r => findings.push(r));
 }
 console.log('findings: ' + findings.length);

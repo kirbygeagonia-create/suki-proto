@@ -64,6 +64,17 @@ function markerReport(html) {
    `NO CONCLUSION`: reporting a defect from your own outage is worse than reporting nothing. */
 function isLeakClean(status) { return status === 404 || status === 410; }
 function isAnswered(status) { return status >= 200 && status <= 599; }
+/* A page read that returns null says only "I could not use this response", which is not the same statement as
+   "the host did not answer". The status is kept so the refusal can name it: PR #11's deploy preview answers 401
+   because Netlify protects previews, and reporting that as offline sends a reader to debug their network.
+   Pure, so the selftest can drive it without a socket. */
+let pageStatus = 0;
+function readOutcome(status) {
+  if (status === 0) return 'no answer at all — offline, DNS, or a TLS failure';
+  if (status === 401 || status === 403) return 'PROTECTED — it answered ' + status + ' — the deployment is there and locked, not missing';
+  if (status >= 400) return 'answered ' + status + ' — an error, but an answer';
+  return 'answered ' + status;
+}
 
 async function fetchStatus(url) {
   try {
@@ -75,7 +86,7 @@ async function fetchStatus(url) {
 async function fetchBody(url) {
   try {
     const r = await fetch(url, { method: 'GET', redirect: 'manual' });
-    if (!r.ok && r.status !== 200) return null;
+    if (!r.ok && r.status !== 200) { pageStatus = r.status; return null; }
     return await r.text();
   } catch (e) { return null; }
 }
@@ -91,6 +102,9 @@ if (process.argv.indexOf('--selftest') > -1) {
   /* The rule that the first live run got wrong: a request that never got an answer is not a status code. */
   t('an unanswered request is not a clean answer either', !isAnswered(0) && !isLeakClean(0));
   t('a real 5xx is answered, so it is judged rather than refused', isAnswered(503));
+  t('a 401 is never called a silence', /PROTECTED/.test(readOutcome(401)) && !/offline/.test(readOutcome(401)), true);
+  t('only status 0 is reported as no answer', /^no answer/.test(readOutcome(0)), true);
+  t('a 500 is an error but still an answer', /answered 500/.test(readOutcome(500)) && !/PROTECTED/.test(readOutcome(500)), true);
   const local = fs.readFileSync(LOCAL, 'utf8');
   const mr = markerReport(local);
   /* The positive control: every marker must exist in the file the deployment is supposed to carry. A marker
@@ -119,7 +133,7 @@ async function main() {
   if (fileArg) deployed = fs.readFileSync(fileArg.slice(7), 'utf8');
   else deployed = await fetchBody(BASE + '/');
   if (deployed === null || deployed.length < 1000) {
-    console.log('NO CONCLUSION — the deployed page could not be read (offline, or ' + BASE + ' answered nothing). ' +
+    console.log('NO CONCLUSION — the deployed page could not be read from ' + BASE + ': ' + readOutcome(pageStatus) + '. ' +
       'An unreachable host must never print a clean line.');
     process.exit(1);
   }

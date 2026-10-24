@@ -7460,3 +7460,322 @@ device has been on this bus (OPPO API 29, vivo API 30). The bar heights here are
 Funtouch shell may report different insets or draw its own gesture area. The claim that survives is the narrow one:
 **at an API level that forces edge-to-edge, the shell's compensation now produces a 202px inset that the page honours,
 and it does so because the padding moved from the WebView to the content view.**
+
+## 122. The compatibility floor is a WebView, not a `minSdkVersion` — and the only breaking feature above it was `inset:0`
+
+Asked to make the app hold on both low-end and high-end Android, with no API 35+ device on the bus, the tempting
+answer is the number in `app/build.gradle`: **`minSdk 24`**, Android 7 from 2016. That number describes the *shell*.
+This application is a page inside a WebView, and the WebView updates through Play independently of the OS — so an
+Android 7 handset with a 2024 WebView is fine, and a 2020 Go handset whose WebView froze at 77 is not, and
+`minSdk` says nothing about either. The real floor is a property of the CSS and JS the file actually uses, so it is
+now read from there.
+
+`node tools/audit-compat-floor.cjs` carries a table of 17 features with the Chromium version that first honoured
+each, and prints **two numbers, because the one people quote is the wrong one**:
+
+- **raw floor — Chromium 108**, from the dynamic viewport units. Harmless: both uses are written
+  `min-height:100vh; min-height:100dvh;`, so an old engine drops the second line and keeps the first.
+- **breaking floor — none** (it was **88** before this section). Restricted to features whose drop removes geometry
+  rather than cosmetics, which is the distinction that decides whether a device can be below the number.
+
+What it found, and what was done:
+
+| feature | version | uses | verdict |
+|---|---|---|---|
+| `inset` shorthand | 87 | 6 | **breaking** — a scrim with only `inset:0` has no box, so it cannot dim or catch the tap-to-close |
+| `:where()` focus ring | 88 | 1 | breaking by shape, benign in fact — the UA ring still paints |
+| flexbox `gap` | 84 | 191 | benign — items touch, padding still spaces |
+| `min()/max()/clamp()` | 79 | 5 | benign — `:root font-size` falls back to the UA default |
+| `dvh/svh/lvh` | 108 | 2 | benign **only** because a `vh` fallback precedes each |
+
+All six `inset:0` uses became explicit `top/right/bottom/left`, which is what took the breaking floor from 88 to
+none. The `:where()` rule was not rewritten — zero specificity is the reason it exists — and is instead excused
+**in the application, beside the rule**, as `/* compat-exception: :is() / :where() — … */`. The audit reads its
+exceptions from the source rather than maintaining a list beside it, refuses an exception naming a feature that is
+absent (the excuse outliving the rule), and refuses one whose reason is too short to say what degrades and where
+that is checked. Comments are stripped before the feature scan, so a sentence *about* `:has()` is not a use of it;
+the exception text itself is read from the raw source, because the declaration **is** a comment.
+
+**`node tools/falsify-compat-floor.cjs` — 7 breaks, 7 caught, 0 not applied**, and three of the seven were the
+family's own bugs before they were evidence:
+
+- The fallback probe tested for the string `vh`, which occurs inside `dvh`. Every use therefore read `guarded` and
+  the tool could not have observed an unguarded one at any cost. Caught only because the break that deletes the
+  fallback printed MISSED — a check that cannot fail looks exactly like a check that passes, and this is the fourth
+  time that sentence has had to be written.
+- One break shortened "a reason" by replacing one sentence of a three-line comment, so the reason stayed long and the
+  tool was right to stay quiet. The break was wrong, not the rule.
+- And a multi-line anchor written with `\n` matched **0×** in this CRLF checkout, which the family now normalises
+  before it counts — otherwise a future break reports NOT APPLIED while the summary still prints healthy.
+
+**The same CSS rewrite orphaned a needle in a family that was not being run.** Re-running the four families whose
+target is the check I had to widen, `falsify-modal-stacking` printed `0 of 0 mutants caught; file restored.` and
+**exited 0** — its three needles all contained `inset:0`, so every one missed and the family tested nothing while
+looking like a pass. The aggregate would have caught it, because `falsify-all.cjs` already treats `applied === 0` as
+trouble, but the aggregate costs ~53 minutes and a family run alone is what a person actually does after editing one
+check. So the refusal now lives in the family too (`NO CONCLUSION: no needle matched the file`), the needles are
+re-pointed at the new spelling, and it reads **3 of 3** again. The general shape: `process.exit(caught === applied ?
+0 : 1)` is satisfied by `0 === 0`, and any summary line that compares two counts must say what an empty pair of
+counts means — this is the fifth time this repository has written down "a check that cannot fail looks exactly like a
+check that passes", and the first time it was a *count of checks*.
+
+**The gate caught the conversion, not just the code.** `every full-screen layer root carries the convention the
+keyboard walk reads` finds layer roots by matching the CSS spelling `position:fixed; inset:0`; converting the inline
+one dropped its population from 5 roots to 4 and the floor refused. The detector, not the application, was stale —
+and a root-finder that quietly under-counts is the exact failure that check exists to prevent, so it now matches
+either spelling. Verified both ways on the file as it stands: old pattern 4, new pattern 5, all five carrying
+`data-layer`.
+
+**The low-end leg is armed rather than owed.** `tools/device-edge-leg.cjs` used to exit before installing on
+anything below API 35, which made the question unanswerable on both handsets that exist here. It now prints the
+scope — below API 35 the framework may inset the window itself, so an inset cannot be credited to the shell — and
+judges the half that holds at every level: **does the page paint under a system bar**. Selftests 20 → 23, including
+one case from §121 **rewritten rather than deleted**, because the owner's decision changed the rule it encoded and a
+silently-dropped assertion is how coverage disappears.
+
+Measured after all of it: **8 of 8 phone corners clean** over the 82 screens the walk counts, and **all 566 gate
+checks passed**. Because the page changed, its four copies were re-made rather than left to drift — `dist/`, the
+staged Android asset and the APK bundle all read `bac09020…` now, which is what
+`node tools/audit-build-bytes.cjs` prints as `findings: 0` after a rebuild; the `3c78fdd…` quoted in §119–§121 is
+the same file at those dates, not a disagreement. What is still owed is one reading, not a decision: attach the vivo
+or the OPPO and `node tools/device-edge-leg.cjs` answers the API 29/30 branch that today's shell change touched and no
+instrument has yet seen run.
+
+## 123. A break can decay into an equivalent one without any code changing — the repository's history moved under it
+
+The aggregate was re-run for §122 (the page, `verify.cjs`, `falsify-all.cjs` and `falsify-modal-stacking.cjs` had all
+changed, and a family that is not re-run after its target moves is the failure this file has named repeatedly). It
+found a survivor nobody had touched today: **`commit-subjects` applied 5, caught 4, missed 1** — the break that
+re-roots the audit's default walk onto `origin/main`.
+
+Read before being deleted, as usual, and the reading was surprising: the mutation still applies, the guard it
+represents is still needed, and the break is still *correct as written* — it simply no longer shrinks anything. Its
+needle was `['-n', N, 'HEAD']` → `['-n', N, 'origin/main']`, written when the branch ran far ahead of `main` and
+`origin/main..HEAD` was the three-commit population that let a reused subject through. **PR #10 has since been
+merged**, so `origin/main` is now one commit behind `HEAD`, and walking 120 commits back from either rev lands on
+essentially the same 120. The mutant became equivalent by history, not by edit, and the only durable thing that
+decays a mutation test is a merge.
+
+So the break was re-pointed at the defect the audit's own header records rather than at a rev: it now defaults
+`RANGE` to `'origin/main..HEAD'`, which is the actual narrow population, and `SCOPE_FLOOR` condemns it —
+`5 of 5 breaks caught, 0 not applied, 0 missed`, audit restored byte-for-byte, the failing row reading
+`set 0 vs 5, count 1/120`. The equivalent-mutant column already exists in this file's vocabulary (§"identity
+fallbacks", "reputation"), and every one of those was a mutation the *code* had absorbed. This is the first one the
+*branch* absorbed, and it generalises to every break whose premise is a distance in history: **a mutation test that
+depends on how far the branch is from `main` is a test that expires the next time someone merges.**
+
+Consequence for the aggregate's own numbers: the run in progress reports `commit-subjects 5 / 4 / 0 / 1`, and that
+row is the **pre-fix** reading. Re-run alone after the re-point it is 5 of 5, so the suite figure quoted for this
+pass carries one survivor that is known-stale in exactly this sense — stated here rather than smoothed over, because
+"re-run until green is not a fix" is the rule this section is standing on.
+
+## 124. Re-measured on the bytes that shipped: the same 202px, and a verdict line that named the wrong box
+
+§122 changed the page after §121 measured it, so the inset reading was, by this file's own standard, a measurement
+taken before the file's last edit — not wrong, just old, which is the one failure mode an assertion cannot express.
+Re-taken on `bac09020…` (the bytes in all four copies): `innerHeight 778`, `dpr 2.75`, surface **2138 of 2340**,
+slack **202px**, `findings: 0`, exit 0 — identical to §121. The scrim conversion did not disturb the compensation,
+and that is now a reading rather than an argument. Two runs, same numbers.
+
+**The frame still starves, and the leg still refuses correctly.** The first attempt after boot printed
+`NO CONCLUSION — no webview_devtools_remote socket appeared`, with `dumpsys meminfo` timing out and the device at
+96% CPU (75% kernel) 185 s after `Boot completed`. Waiting ~150 s and re-running produced the reading above. So the
+settle rule from §120 is not "60 s", it is "until the frame stops doing what it does after boot", and the refusal is
+the instrument being useful rather than precious: it named the input it never got instead of emitting a zero.
+
+**A printed verdict that misdescribes which quantity it holds is a defect, even when the number is right.** The pass
+line read "the page's content box is 202px shorter than **a surface spanning the 2340px screen**" — but after §121
+the surface is *not* spanning the screen; that is the whole finding. The cause is a field named `slack` carrying two
+different measurements on two branches (screen minus surface on the forced-edge-to-edge path, surface minus content
+on the normal one), and one template trying to be true for both. It now prints per branch, with a comment saying why
+the two are not the same quantity. Selftests still 23 of 23.
+
+## 125. An accessibility dump contains the window's own scaffolding, and a reader that walks every node reports three false findings
+
+The remaining device item (§122, task #70) needs a handset, and none is on this bus — Windows enumerates no Android
+device at all, and the USB list is only the laptop's own cameras, keyboard and fingerprint reader, with no device in
+an error state. So the honest move was not to wait but to make the reader provable without one, and the recorded
+handset dumps in `.scratch/` turned out to be able to do that.
+
+**`node tools/device-dump-insets.cjs`** answers the low-end question from the platform side: given a `uiautomator` dump
+and a `--screen=WxH`, does any of the app's own content sit under a bar band? It refuses rather than reporting zero —
+no file, no screen size, no nodes with bounds (the null-root case), no node belonging to the package, and no band to
+test against are each a separate `NO CONCLUSION`. That last one fired on the real artifact first, and correctly: **a
+WebView's dump holds only the page's virtual hierarchy — zero foreign nodes — so it can never derive a bar band.**
+The bands must be supplied from `dumpsys window`, which still prints rects below API 35.
+
+Then the second lesson, which is the one worth keeping. Run with the true bands, the reader first reported
+**three findings on a correctly-inset app**: a `FrameLayout`, a `LinearLayout`, and `android:id/statusBarBackground`,
+all at `top 0`. All three are the window's own scaffolding — the decor wraps the whole window by definition, and
+`statusBarBackground` exists precisely to paint behind the status bar. The same dump already contained the refutation:
+the content node starts at `y=54`. So the judged population is now content, not nodes, and both controls pass on the
+recorded dump: true bands → `findings: 0`, with the content box named as **top 54, bottom 1423 of a 1544 px screen**
+(54 px and 121 px of bar space respected); a band planted 6 px too deep → 21 findings naming `android:id/content` and
+the WebView, which is what makes the clean line a measurement rather than a silence.
+
+**What this does and does not close.** The dump is from 2026-10-15, so it shows the app inset correctly on a handset
+*before* §121 moved the padding onto `android.R.id.content` — it validates the reader, not the current build. The
+reading still owed is two commands on a live device, and it is now a calibration rather than an expedition:
+
+```
+adb -s <serial> shell uiautomator dump /sdcard/wd.xml && adb -s <serial> pull /sdcard/wd.xml .scratch/wd.xml
+node tools/device-dump-insets.cjs --file=.scratch/wd.xml --screen=<wm size> --statusbar=<rect> --navbar=<rect>
+```
+
+with `node tools/device-edge-leg.cjs` still answering the renderer-side question in the same sitting. The OPPO (API 29)
+is the device that exercises the legacy `getSystemWindowInset*` branch; the vivo (API 30) takes the modern path.
+
+**Corrected twenty minutes later by its own falsifier — do not trust the paragraph above's use of the recorded dump.**
+Writing `tools/falsify-dump-insets.cjs` to prove the reader broke it twice, and both breaks were real:
+
+- A **bottom**-anchored `android:id/navigationBarBackground` is not excluded by a test that only rejects nodes
+  spanning from the top, and its presence also poisons the "how far down does the app reach" figure the exclusion
+  depended on. The population is now taken from Android's own definition — the `android:id/content` root, plus
+  everything after it in the dump's depth-first order — and the reader prints which rule it used.
+- Then the reader's verdict on the recorded handset dump flipped from `findings: 0` to `findings: 1` under the corrected
+  rule, and **neither number meant anything**: a dump whose every node belongs to the app is a *page-level* dump, and a
+  WebView publishes bounds relative to its own surface, which already begins below the bars. Comparing them against
+  window bands is a category error. The reader now refuses that case outright, so the "both controls pass on the
+  recorded dump" claim above is retired — the recorded dump cannot validate this instrument at all, and the calibration
+  lives in the falsifier's own window-level fixtures instead.
+
+`node tools/falsify-dump-insets.cjs` is **7 breaks, 7 caught, 0 not applied**, fixtures embedded (`.scratch/` is
+gitignored, so a control that depends on it is not re-runnable): a correct window-level dump reads 0 and a band
+planted 6px deep reads 2; excluding scaffolding, the status comparison, the `--file=` slice that was today's actual
+bug, the no-band refusal, the wrong-package refusal, the null-root refusal, and the page-level refusal each get
+removed in turn and each is caught. Two of those breaks had to be written as *"the wrong diagnosis fires"* — a null-root
+dump and a foreign dump both refuse with exit 1, so the only way to show the two guards are separately live is to
+require the specific message that must appear when one is disabled.
+
+**Scope, stated plainly:** `uiautomator dump` captures the active window, so a full-screen app's dump may never contain
+the bars as foreign nodes. That makes this reader a secondary instrument — useful on split-screen, overlays and
+pickers — and `tools/device-edge-leg.cjs` the primary path for task #70. Gate: all 566 checks passed.
+
+## 126. A 401 is an answer, and the deploy checker reported it as a silence
+
+PR #11's checks came back with a live deploy preview, which is the first chance this repository has had to read a
+**deployment of the PR itself** rather than production. Pointing `tools/deploy-check.cjs` at
+`deploy-preview-11--sukinnecct.netlify.app` printed
+`NO CONCLUSION — the deployed page could not be read (offline, or https://… answered nothing).`
+
+It had not answered nothing. It answered **401** — Netlify protects deploy previews behind site auth — and the reader
+had thrown that number away at `if (!r.ok && r.status !== 200) return null;`. This is §110's defect pointing the other
+way: that pass fixed a tool for reading a silence (`status 0`) as a finding; this one was reading an **answer** as a
+silence, which sends a reader to debug their network instead of asking the site owner for the preview password. A
+refusal is only useful if it names the state that produced it.
+
+`readOutcome(status)` is now a pure function the selftest drives without a socket, and the refusal prints its verdict:
+`PROTECTED — it answered 401 — the deployment is there and locked, not missing`. Three selftest cases pin the
+distinctions that matter — 401/403 is never called offline, **only** status `0` counts as no answer, and a 500 is an
+error but still an answer — so the classifier cannot quietly collapse "locked" back into "missing" the next time
+someone tidies the message.
+
+**The same run demonstrated the other guard on real flakiness.** Production answered, but two of the seven leak paths
+came back `0`, and the tool refused outright: `NO CONCLUSION — 2 path(s) were not answered (/CHANGES.md -> 0,
+/README.md -> 0); 5 of 7 leak paths answered. The leak verdict is not computed from a partial scan.` That is the rule
+§110 installed after its first run counted seven unanswered requests as seven leaks, firing within the hour — which is
+the only way a guard like that earns its keep. Gate: all 566 checks passed; `deploy-check --selftest` all cases pass.
+
+**What stays true about the deployment surface:** production is still the deliberately-stale `3c73bfe` artifact by the
+owner's ruling, and PR #11's preview builds but is not readable from this machine without auth. So "does this branch
+deploy correctly" is verified only as far as Netlify's own build status, not as a byte comparison from here.
+
+## 127. The low-end regime was reproduced without a handset, and it turned up two defects in the reader
+
+Only the OPPO can exercise the legacy `getSystemWindowInset*` getters, and no device is on this bus — but the thing §121
+actually risked on low-end Android is a **window-regime** question: does padding `android.R.id.content` double-count
+when the framework is already insetting the window? That is reproducible on the API 36 frame by building the identical
+page against **`targetSdk 34`**, at which point edge-to-edge is no longer forced. Built, installed, read:
+`innerHeight 778`, surface **2138 of 2340**, `findings: 0` — the same numbers as the shipping build. So the content box
+is inset by the bars exactly once, whether the framework or the shell is responsible. The regime half of task #70 is
+measured; the legacy-getters half still needs the handset, and that is stated rather than folded into a pass.
+
+**Getting there found two defects in `judge()`, both fixed.** It keyed the "forces edge-to-edge" decision on the
+*device* SDK, so a `targetSdk 34` build on an API 36 frame was credited with "the shell inset the page on a frame that
+forces edge-to-edge" — a sentence that was false in that configuration; the regime is `min(deviceSdk, targetSdk)`.
+And the new `LIMIT` branch sat in the chain *before* the reasons reporting, so an actual intrusion in the unattributed
+regime would have printed `LIMIT` and `findings: 0`: a note that suppresses the evidence it stands next to. It now
+fires only when the measurement passed, and the unattributed path asks its own question — does the page draw **beyond**
+its inset box — instead of reusing the full-bleed rule, where "content fills the surface" is what health looks like.
+
+Machine state: `targetSdk` reverted to 36, the APK rebuilt and reinstalled, the AVD killed and forwards cleared.
+Selftests 23 of 23; gate: all 566 checks passed.
+
+## 128. The commit before this one claimed a selftest count from a run that was crashing
+
+§127 ends with `Selftests 23 of 23`. It was false when written. The command printed a Node crash banner, and the
+pipeline that ran it ended in `tail -1`, so what reached the log was the last line of a stack trace — which I read as
+the summary because I was looking for the number, not for the exit code. The tool still worked on the shipping
+configuration, so nothing downstream complained, and the commit went out claiming coverage that had died 20 lines
+earlier.
+
+**Two `ReferenceError`s, both mine, both from the §127 edit.** The unattributed branch returned
+`slack: m.viewH - contentPx` and `contentPx: Math.round(contentPx)` in a scope where `contentPx` is a `const`
+declared *after* that branch — a temporal-dead-zone read, so `node --check` passed happily and only executing the
+branch found it. That is the reason a syntax check is not a test: the file was valid and broken at the same time.
+
+**Three cases added, and one expectation rewritten rather than deleted.** The selftest now forces the unattributed
+path (28 cases, 0 failing, exit 0 read from the process, not from a grep). One §122-era case asserted that a 1px
+overflow is condemned; under the rule §127 introduced that assertion is wrong, because a `dpr` of 2.75 turns 778 CSS
+px into 2139.5 device px against a 2138 px surface — the healthy shipping reading *is* a 1.5px rounding overflow. So
+the case now straddles the boundary from both sides: 123px beyond the surface is condemned and named, sub-2px is
+rounding and passes. Deleting the failing case would have been the other option and is the one that loses coverage.
+
+**Standing rule this adds to the file:** a selftest or check whose summary line is grepped out of a pipeline must have
+its exit code read too, because a crash leaves the earlier `ok` lines on stdout and a count can be assembled from a
+run that never finished. The last live leg run in this session was on the shipping `targetSdk 36` build and exited 0
+with the shell-inset verdict; the edits since then touch only the unattributed branch, which that run did not take,
+and that is stated instead of implying a fresh device reading. Gate: all 566 checks passed.
+
+## 129. Handset walk 12: the legacy inset branch ran on real hardware for the first time, and the page clears both bars
+
+The OPPO CPH2179 came onto the bus — `S4CUYTJB6HNNWC49`, **API 29**, WebView `155.0.8059.46`, `wm size` 720x1600,
+`dpr 2.25` → 320 CSS px, and the owner text scale at **1.35**, which was read and left exactly where it was.
+
+This is the reading task #70 existed for, and the reason it is the OPPO that matters: `Build.VERSION.SDK_INT` on that
+device is 29 and `Build.VERSION_CODES.R` is 30, so `applySystemBarInsets()` takes its **else** branch —
+`getSystemWindowInsetLeft/Top/Right/Bottom` — the path §121 moved onto `android.R.id.content` and that no instrument
+had ever seen execute. The vivo is API 30, which is `R`, so it uses the modern `getInsets` branch; the android-36 AVD
+does too. Every inset reading in this repository up to this minute was therefore made on the *new* API.
+
+`node tools/device-edge-leg.cjs --serial=S4CUYTJB6HNNWC49` → **exit 0, findings: 0**:
+
+| reading | value |
+|---|---|
+| screen (from `wm size`) | **1600 px** |
+| WebView surface (CDP target) | **1437 px** → 163 px of the screen belongs to the bars |
+| `innerHeight` × `dpr` | 638 × 2.25 = **1436 px**, so slack 1.5px — the page fills its own surface, it does not exceed it |
+| bars present per `dumpsys window` | status **true**, navigation **true** |
+| installed build proved from the package | `1.2-preview.39` / versionCode 41 |
+
+The verdict line reads `LIMIT: API 29 does not force edge-to-edge, so the 163px the window lost cannot be credited to
+the shell`, and that is the honest shape of it: below API 35 the framework insets the window whether or not the shell
+also pads, so attribution is not available. What *is* available, and is what a thumb experiences, is the thing that
+came back clean — **no part of the page is drawn under a system bar.**
+
+**Confirmed with pixels, because that is the half the numbers cannot carry.** The screenshot shows the status band
+(clock, notification icons, battery) with the app card starting well below it, and the three-button navigation band
+with the card ending above it. The sign-in renders correctly at 1.35: role segmented control, Email prefilled,
+masked password, Log in, New here? — no clipping, no overlap, controls at comfortable size. So §121 is verified on
+the legacy branch, on a 2020 mid-range handset, which is the low end this project actually ships into.
+
+**One instrument limit found while writing this up.** The leg proves the installed build by `versionName` and
+`versionCode`, and both were already 1.2-preview.39 / 41 from walk 11 — so the proof cannot distinguish the APK
+containing the old page from the one containing `bac09020`. The install itself was `Success` from the current file on
+disk and `audit-build-bytes` proves that file matches the source, so the reading is valid; but a versionName bump or
+a hash comparison of the bundled asset is what would make it provable from the device side. Recorded as a gap, not
+papered over.
+**Closed the same hour, by doing the hash comparison instead of deferring it.** `pm path com.sukinnect.app` gave
+`/data/app/com.sukinnect.app-wajZyvh0Fb0to8T9SPBCCA==/base.apk`; pulling it needed `MSYS_NO_PATHCONV=1`, because Git
+Bash rewrites a leading `/data/...` into a Windows path and `adb` then reports the remote object as missing — the same
+conversion that already bites `avdmanager.bat`, arrived at from a different direction. `unzip -p` of
+`assets/Sukinnect.html` out of the APK **on the phone** hashes to `bac09020e78cb1518a809985e38fc355`, and so do the
+repo source, `dist/`, and the staged asset — 854,247 bytes each. So walk 12's inset reading is **proved** to have been
+taken on the current page rather than inferred from the build log, and the fifth copy of the page now has a reader.
+
+What the versionCode proof still cannot do is tell apart two different builds that share a version string. That gap is
+real and stays open; it simply does not apply to this reading, and the device-side hash is the check that closes it for
+any future one.
+
+Device left as found: `font_scale` still 1.35 (read, never written), forwards cleared, no dumps left on the
+handset, the app sitting on its own sign-in screen unsigned-in. Gate: all 566 checks passed.

@@ -3317,6 +3317,49 @@ booking when the provider accepts.
 
 Do not scatter raw color codes throughout the file.
 
+THE COMPATIBILITY FLOOR IS A WEBVIEW, NOT `minSdkVersion`. `Sukinnect-Android/app/build.gradle` says
+`minSdk 24 / targetSdk 36`, and that pair describes the *shell*. The application is a page inside a WebView, and the
+WebView updates through Play independently of the OS, so an Android 7 handset with a 2024 engine is fine and a 2020
+Go handset frozen at WebView 77 is not — `minSdk` answers neither case. The real floor is a property of the CSS and JS
+this file uses, so it is read from there: **`node tools/audit-compat-floor.cjs`** scans 17 features against the
+Chromium version that first honoured each, strips comments so prose about `:has()` is not a use of it, and prints
+**two numbers, because the one people quote is the wrong one** — the *raw* floor (today Chromium 108, from `dvh`) and
+the **breaking** floor (features whose drop removes geometry rather than cosmetics). Flex `gap` at 84 is the raw
+floor's neighbour and degrades to items touching; `inset:0` at 87 left a scrim with no box, which is not a cosmetic
+loss, and all six of those are now explicit `top/right/bottom/left`. Exceptions are declared **in the application,
+beside the rule** — `/* compat-exception: <feature> — <reason> */` — and read from the raw source, because the
+declaration is itself a comment; a stale exception, an absent feature, or a reason too short to say what degrades and
+where that is checked is a finding, not a silence. Proven by `node tools/falsify-compat-floor.cjs` (7 breaks, 7
+caught). The exit code gates the breaking floor only, because the raw floor is information about a graceful
+degradation, not a defect.
+
+A WEBVIEW IGNORES ITS OWN PADDING. `MainActivity.applySystemBarInsets()` set a listener on the WebView and called
+`v.setPadding(...)`, and the listener ran with real insets (`top=136 bottom=66` at API 36, logged) while
+`innerHeight` never moved — a WebView lays its page out at the full view size. Padding `android.R.id.content` instead
+and the page is inset by exactly the bars (202px on the android-36 frame). This cost two falsified hypotheses before a
+log line settled it, so the standing rule beside it is: **a fix that produces an identical reading is a falsified
+hypothesis, not a partial success**, and the patch that did nothing was reverted rather than left in with a comment
+naming a cause.
+
+A MUTATION TEST WHOSE PREMISE IS A DISTANCE IN HISTORY EXPIRES THE NEXT TIME SOMEONE MERGES.
+`tools/falsify-commit-subjects.cjs` broke the audit's default by re-rooting its walk from `HEAD` onto `origin/main`,
+which was a real population shrink while the branch ran ahead of `main`. After PR #10 merged, `origin/main` sits one
+commit behind HEAD, walking 120 back from either rev lands on nearly the same 120, and the break became **equivalent
+by history rather than by edit** — it printed MISSED while the guard it represents was still needed. Every other
+equivalent mutant recorded here was absorbed by the code; this is the first absorbed by the branch. It was re-pointed
+at the defect the audit's own header records (defaulting the range to `origin/main..HEAD`, which really is narrow and
+is condemned by `SCOPE_FLOOR`). The rule to apply to any future break: if it depends on how far the branch is from
+another ref, it needs a premise that cannot move.
+
+THE EMULATOR SETTLES API-LEVEL QUESTIONS, NOT A SPECIFIC PHONE'S, AND IT NEEDS A MINUTE AFTER BOOT. The android-36
+AVD answers `targetSdk 36` forced edge-to-edge, inset arithmetic, and font multiplication — framework behaviour. It
+cannot answer a real handset's density, bar heights, or OEM shell quirks, and no reading from it closes a
+hardware-parity leg. It also starves for ~150 s after `Boot completed` (96% CPU, `dumpsys meminfo` timing out), during
+which `tools/device-edge-leg.cjs` correctly prints `NO CONCLUSION` rather than a zero — so the settle rule is "until
+the frame stops doing what it does after boot", not a fixed nap. And the leg no longer refuses below API 35: it prints
+its scope and judges the question that holds at every level, whether the page paints under a system bar, which is what
+the two handsets here (OPPO API 29, vivo API 30) can actually answer.
+
 ---
 
 # 32. GRADIENT USAGE
@@ -4316,7 +4359,7 @@ zero) rather than the numbers 4/3/2.
 
 Gate **566** (`node tools/verify.cjs`, run again to produce this number — the three added since 563 are the
 change log's own shape: sections numbered in ascending order, every heading opening on a blank line, and a
-population floor so neither can pass by matching nothing); whole suite **49 families, 248 mutants applied, 248 caught, 0 not applied, 0 missed** (`node tools/falsify-all.cjs`, the pass of 2026-10-24 that closed the 247/248 gap §115 left open: `falsify-commit-subjects` had grown from 4 breaks to 5 when the audit's population was widened, and rather than edit the remembered total the aggregate was re-run. Its rows were then summed a **second, independent way** — `awk` over the log, not the runner's own arithmetic — giving rows=49 applied=248 caught=248 not_applied=0 missed=0, and `comm` against `ls tools/falsify-*.cjs` answered that **no family is missing from the pass**. The app hash came back `3c78fdd…` and `git status` empty, so the pass restored everything it mutated). **The
+population floor so neither can pass by matching nothing); whole suite **51 families, 262 mutants applied, 262 caught, 0 not applied, 0 missed** (`node tools/falsify-all.cjs`, the pass of 2026-10-25 that ran AFTER §122 and §125 added `falsify-compat-floor` and `falsify-dump-insets`; the rows were summed a second way with `awk` over the log rather than trusting the totals the runner itself prints — rows=51 applied=262 caught=262 not_applied=0 missed=0 — and 51 rows matches the 51 `tools/falsify-*.cjs` files minus `falsify-all.cjs` itself. The page came back `bac09020…` with `audit-build-bytes` reporting all four copies identical, so the pass restored everything it mutated. The earlier pass on the same day printed 50 families, 255 applied, 254 caught and **1 missed**; that survivor is §123 — a break that had decayed into an equivalent one because PR #10 had been merged in the meantime, and it reads 5 of 5 since being re-pointed at a premise that cannot move). The previous pass, 2026-10-24, reported **49 families, 248 applied, 248 caught** and closed the 247/248 gap §115 left open: `falsify-commit-subjects` had grown from 4 breaks to 5 when the audit's population was widened, and rather than edit the remembered total the aggregate was re-run. Its rows were then summed a **second, independent way** — `awk` over the log, not the runner's own arithmetic — giving rows=49 applied=248 caught=248 not_applied=0 missed=0, and `comm` against `ls tools/falsify-*.cjs` answered that **no family is missing from the pass**. The app hash came back `3c78fdd…` and `git status` empty, so that pass restored everything it mutated. **The
 per-family rows are not listed here any more.** The first draft of this sentence typed 46 of the 49 families from
 memory and was wrong twice (`camera-surfaces` is 3 breaks, not 5; `control-reach` is 3, not 4) and silently
 dropped the other three (`credential-pair`, `empty-queue`, `modal-stacking`, 3 breaks each) — the same drift this
