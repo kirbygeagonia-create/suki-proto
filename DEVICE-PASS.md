@@ -2062,7 +2062,16 @@ actually present.
    same day, it timed out again on a fresh boot even at the default scale**, so the field's `rem` reading at
    1.35 has never been taken on any Android target — bench only. None of this reads the vivo: a framework answers
    mechanism questions, not one handset's density or WebView build, so items 1 and 2 stay owed on the
-   physical phones. Two instrument facts came with it: every reading was blocked by a **stale `tcp:9222`
+   physical phones.
+   *(Stale in both of its halves, and the staleness was fixed by the very next paragraph rather than by anyone
+   noticing: the reading was taken on handsets the same day this sentence was written — **walk 9 on this OPPO**,
+   specified `21.6px`, factor `1.35`, glyphs `29.2px`, box `51.8px`, `min-height:48px`, `tapFloorOk: true`, and
+   **walk 11 on the vivo**, the same field at box `51.4px`, the two agreeing to 0.4px. So "never been taken on any
+   Android target" is retired, and so is "None of this reads the vivo", and of the two items this sentence defers,
+   item 1 was closed by walk 10 and item 2 by walks 9 and 11.* **What survives is instrument-shaped, not
+   app-shaped:** the android-36 AVD still cannot produce this read — `tools/device-leg-pin.js:3` records it refusing
+   three times running, on a fresh boot and at the default scale — and the rule sitting beside it stands as the
+   file's own: a framework answers mechanism questions, never one handset's density or WebView build.* Two instrument facts came with it: every reading was blocked by a **stale `tcp:9222`
    forward** that made the probe blame the app for a WebView that was exposing an inspector all along
    (`/proc/net/unix` showed `webview_devtools_remote_1831`; `adb forward --remove-all` cleared it), and the
    combined reader had to be split into one surface per evaluation (`tools/device-leg-pin.js`,
