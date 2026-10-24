@@ -2,7 +2,7 @@
 
 The rebuild in `Sukinnect-next.html` is rendered in Node (`node tools/verify.cjs` prints the count),
 painted and measured in real
-Chrome across 81 screens at eight corners (`node tools/sweep-text-scale.cjs`: 320 CSS px at 200% text,
+Chrome across 82 screens at eight corners (`node tools/sweep-text-scale.cjs`: 320 CSS px at 200% text,
 the default panel at 200%, 450 px at 135%, the OPPO's own 320×638 at 135%, 320×480 at 200%, 320×300 at
 100% as the keyboard proxy, the vivo's own 450×889 at 200%, and the 100% anchor — and separately in the desktop shell at 1280×900, with
 `prefers-reduced-motion` emulated and under `prefers-color-scheme: dark`). When a phone is attached,
@@ -1839,11 +1839,15 @@ open. Nothing here is a defect the bench can close.
    photographs.
 2. **`1.2-preview.39` is built and bundle-verified but not installed.** §98 changed the page (the
    admin lock field and its copy), so the tree, `dist/`, the staged asset and the APK all read
-   `badf8cd7…` while the vivo still runs `.38` at `a4cf6fc3…`. The bench measured the fix; the device
-   reading of it is owed, because the phone left the bus between the build and the walk. A field sized in
-   `rem` is exactly the case where a phone can disagree with the bench (§68 multiplies used sizes after CSS
+   `70ae3782…` (the §98 lock field and §99's filter rows both changed the page, and the APK was rebuilt so
+   the bundle still matches) while the vivo still runs `.38` at `a4cf6fc3…`. The bench measured both fixes;
+   the device reading of them is owed, because the phone left the bus between the build and the walk — and
+   Windows enumerates no handset at all now, so this is not an authorisation wait. A field sized in `rem` is
+   exactly the case where a phone can disagree with the bench (§68 multiplies used sizes after CSS
    resolves), so this is a real leg rather than a formality: install `.39`, open Lock Admin Session on the
-   hub, and read the PIN field's computed size and its box height on the device.
+   hub and read the PIN field's computed size and box height, then open **Filter providers** on the results
+   bar and read the sixteen option rows — they are 44px on the bench and the phone is the place a px floor
+   is not what it looks like.
 3. **Closed 2026-10-24, and the item itself was the defect.** Walk 7 wrote that the vivo's WebView version
    "was never captured"; opening the log showed walk 5 had captured it, and `dumpsys webviewupdate` today
    answers the same `com.google.android.webview 155.0.8059.43`. What the earlier walk had got wrong was the

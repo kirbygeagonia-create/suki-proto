@@ -993,6 +993,13 @@ const SCREENS = [
   ['splash',           `state.view='splash'; render();`],
   ['resident-home',    `state.view='app'; state.role='resident'; state.tab='home'; render();`],
   ['resident-results', `state.view='app'; state.role='resident'; startDiscovery('leak');`],
+  /* The Filter providers button is painted on the results bar with `aria-pressed` and opens a sheet of
+     form controls — the same kind of surface §64 found every text sensor skipping, and the same
+     destination-behind-a-row class §97 turned into a measurement. It surfaced as soon as the audit's
+     population widened from the three profile hubs to every branch of `state.sheet`: five of the six
+     sheets the app can raise were already walked, this one was not. */
+  ['resident-filter-sheet', `state.view='app'; state.role='resident'; startDiscovery('leak');
+                        clickPainted(/openSheet\\('providerFilters'\\)/, 'the Filter providers button on the results bar');`],
   /* Reached the way a tap reaches it. openProviderDetail() is what mounts the
      map; assigning state.tab skips that and photographs an empty frame. */
   ['provider-detail',  `state.view='app'; state.role='resident'; state.tab='results'; render();

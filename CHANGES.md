@@ -6298,3 +6298,48 @@ the build and the walk. The device reading of a `rem`-sized field is owed, and `
 can disagree with the bench (§68 multiplies used sizes after CSS resolves), so it is a real leg, recorded in
 `DEVICE-PASS.md`'s owed list as item 2.
 
+
+## 99. Sheets are destinations too: the widened net found the filter sheet, and it held sixteen small controls
+
+§97's audit enumerated the three profile hubs, which is where the four earlier instances of the class
+happened to live. The app raises six **sheets**, and a sheet is the same kind of destination — `sheetHTML()`
+answers `state.sheet === '<name>'` for each, so the population can be derived from the code the way
+`layerKeys()` derives the modal fields from `state`, rather than listed beside it. Widening the audit to
+that list showed five of the six sheets already have a row (reached through named handlers —
+`openCaseSheet`, `openMakeOffer`, `openFinalise`, `openBookingRequest`) and one does not: the resident's
+**Filter providers** sheet, opened by the `aria-pressed` button on the results bar. `resident-filter-sheet`
+is in the walk now (**82** screens), and the camera found the defect on the first look: **sixteen controls
+at 354×40px**, every option row in the sheet — a `<button type="button">` per row, so no wrapper-label
+excuse applies — under §39's 44px tap floor. One declaration fixes a screen nobody had measured:
+`.filter-option{ … min-height:var(--tap); }`, and the tally reads 0.
+
+Getting the coverage rule right took two of this repository's own known mistakes, both inside the code that
+records them. The first version asked the camera file for `openSheet('providerFilters')` with **one**
+backslash — the runtime string — while the bytes are `openSheet\\('providerFilters'\\)` because the pattern is
+written inside a template literal; the row that opens the sheet was therefore reported as not opening it.
+The second half was delimiters: matching only `'name'` missed the app's own
+``openSheet(`profileSection`)``, so the profile sections looked unwalked as well and the tool printed five
+"missing" sheets that were all covered. Coverage is now decided by two tolerant rules — any run of non-word
+characters between the call and the quoted name, and each branch mapped to the functions that raise it, so a
+row may reach a sheet through `openCaseSheet()` instead of the literal call. Both directions are pinned: a
+break that removes the filter row's click raises the count, and a break that blinds either scan makes the
+tool answer `NO CONCLUSION` rather than a comfortable six-of-six.
+
+One limit is written down rather than worked around. The Node harness cannot paint a sheet at all:
+`renderSheet()` mounts into `#sheet-root`, outside the `#screen` fragment the harness assembles, so setting
+`state.sheet` and rendering answers "nothing painted" for **every** sheet, walked or not — a check built on
+that answer would fail on a correct application. So the sheet half of the audit asserts population and
+coverage in Node, and the behavioural proof is the camera's: `node tools/shot.cjs --measure
+--only=resident-filter-sheet` prints `shows "Filter providers" [app/resident:results
+sheet:providerFilters]`, 16 tap-target findings before the fix and 0 after, no console errors.
+`node tools/falsify-camera-dialog-coverage.cjs` is 6 breaks, 6 caught, 0 not applied.
+
+The page bytes moved twice today and each move was verified rather than assumed: `a4cf6fc3…` → `badf8cd7…`
+(§98) → `70ae3782…` (§99), with `dist/` rebuilt, the staged Android asset re-copied and `1.2-preview.39`
+rebuilt so that `unzip -p … assets/Sukinnect.html | md5sum` answers `70ae3782…`. It is still not installed:
+`adb devices` is empty and Windows enumerates no handset node, so the phone is physically away — which makes
+the two device legs in `DEVICE-PASS.md` (this build's install plus the ColorOS key route) genuinely owed
+rather than merely unattempted. Both sheets' readings — the lock dialog's `rem`-sized PIN field and the
+filter rows' 44px floor — are bench numbers until a handset confirms them, which is the standing rule about
+pixels a phone multiplies.
+

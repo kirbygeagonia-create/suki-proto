@@ -1265,7 +1265,7 @@ official mark is a PNG, not an icon, and it is still the only brand image on the
 The rebuild also added a real verification surface, because reading the file cannot
 see a layout: `node tools/shot.cjs` drives the machine's own Chrome headless over the
 DevTools Protocol with no npm packages, and `--measure` runs an in-page instrument
-across every screen in the walk (81 as of §97; `node tools/shot.cjs --list` is the count) for tap
+across every screen in the walk (82 as of §99; `node tools/shot.cjs --list` is the count) for tap
 targets, WCAG contrast (sampling gradients at the text's
 own position), clipped text, off-scale fonts, content trapped under the nav, unnamed
 controls, form fields a screen reader cannot name, images that asked for a file and got no
@@ -3027,6 +3027,39 @@ file the next measurement would read. Save the bytes, `git checkout -- Sukinnect
 `node tools/verify.cjs` before quoting anything: the hash came back `a4cf6fc3…` and all 563 checks
 passed. A background chain that auto-starts the next stage is the hazard here, not the kill: **stage the
 long runs one at a time when the tree is still moving.**
+
+A SHEET IS A DESTINATION TOO, AND THE AUDIT THAT KNEW ONLY MODALS COULD NOT SEE IT. §97's population
+was the three profile hubs, which is where the four earlier instances of this class happened to live.
+Widening it to the app's own list of sheets — `sheetHTML()` asks `state.sheet === '<name>'` for each one,
+so the set is derived from the code rather than maintained beside it, the way `layerKeys()` derives the
+modal fields from `state` — found that five of the six were opened by a row of the walk and one was not:
+the resident's **Filter providers** sheet, reached by the `aria-pressed` button on the results bar. Once
+the camera painted it, it reported **sixteen controls at 354×40px** — every option row in the sheet, a
+button per row with `aria-pressed`, under §39's 44px floor. The fix is §62's remedy in one declaration,
+`min-height:var(--tap)` on `.filter-option`, and the tally reads 0. Sixteen violations sat in a sheet for
+as long as this build has had filters, and no instrument was wrong about them: no instrument looked.
+
+TWO SHAPE ERRORS IN MY OWN COVERAGE TEST, THE SAME LESSON ARRIVING INSIDE THE CODE THAT RECORDS IT. The
+first version asked whether the table contains `openSheet('providerFilters')` with **one** backslash,
+which is the runtime string; the bytes in `tools/shot.cjs` are `openSheet\\('providerFilters'\\)`, because
+the pattern lives inside a template literal. It therefore reported the row that opens the sheet as not
+opening it. Separately, matching only quoted literals missed `openSheet(\`profileSection\`)`, so the
+profile sections looked unwalked too — five of six "missing", all of them the test. Coverage is decided
+now by two tolerant rules: any run of non-word characters between the call and the quoted name, and each
+branch mapped to **the functions that raise it** (`openCaseSheet`, `openMakeOffer`, `openFinalise`,
+`openProfileSection`, `openBookingRequest`), because a row legitimately reaches a sheet through a named
+handler rather than the literal call. A row of the walk that clicks the real control also counts, which is
+the case that first version failed.
+
+AND THE LIMIT IS STATED RATHER THAN PAPERED OVER. The Node harness cannot paint a sheet at all:
+`renderSheet()` mounts into `#sheet-root`, outside the `#screen` fragment the harness assembles, so
+setting `state.sheet` and rendering answers "nothing painted" for every sheet, walked or not. The sheet
+half of the audit therefore verifies *population* (branches parsed, with a refusal if none are) and
+*coverage* (a row names an opener or clicks the call), and the behavioural proof is the camera's — which
+is what printed `shot resident-filter-sheet shows "Filter providers"` and the 16→0 reading after the fix.
+`node tools/falsify-camera-dialog-coverage.cjs` is **6 breaks, 6 caught, 0 not applied**: taking the click
+out of the row that opens the filter sheet raises the count, and blinding either scan makes the tool
+refuse with `NO CONCLUSION` instead of reporting a clean six-of-six. The walk is **82** screens.
 
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by

@@ -112,6 +112,68 @@ const table = tableActions();
 const raisers = acts.filter(x => x.raisesLayer);
 const missing = raisers.filter(x => !table.names.has(x.role + ':' + x.name));
 
+/* Second population: the sheets, which the profile hubs cannot see at all.
+
+   The authoritative set is the app's own branch list — `sheetHTML()` asks `state.sheet === '<name>'` for
+   every sheet it can raise — so the list is derived from the code rather than maintained beside it, the
+   same way `layerKeys()` derives the modal fields from `state`. This section exists because the resident's
+   Filter providers sheet is one of those six branches and no row of the walk had ever opened it: widening
+   the population found it on the first run, and the sheet held sixteen controls under the 44px tap floor
+   (§99).
+
+   What this section cannot do is *prove* a sheet paints, the way the hub section proves a modal paints:
+   `renderSheet()` mounts into `#sheet-root`, which is outside the `#screen` fragment the Node harness
+   assembles, so setting `state.sheet` and rendering answers "nothing painted" for every sheet, walked or
+   not. That is recorded rather than papered over — the behavioural half of this claim belongs to the
+   camera, which paints the sheet and prints its title in the shot line. So: population from the app,
+   coverage from the table, and the sentence tells a reader which command settles the rest. */
+const appSrc = fs.readFileSync(require('./harness.cjs').APP, 'utf8').replace(/\r\n/g, '\n');
+const sheetNames = [...new Set((appSrc.match(/state\.sheet\s*===\s*'([A-Za-z_]+)'/g) || [])
+  .map(s => /'([A-Za-z_]+)'$/.exec(s)[1]))];
+const sheetBlock = (/const SCREENS = \[([\s\S]*?)\n\];/.exec(CAM) || [])[1] || '';
+
+/* Which function raises a sheet, so coverage is tested by opener rather than by one spelling of the call.
+   The first version asked only whether the table contains `openSheet('name')`, and it reported five
+   "unopened" sheets — including the booking, offer, case and finalise sheets, each of which has an obvious
+   row — because the app raises them through named handlers (`openCaseSheet`, `openMakeOffer`, …) and, for
+   the profile sections, through `openSheet(`profileSection`)` with a **backtick**. A coverage test that
+   recognises one spelling of a call is a coverage test that reports the shape of its own regex. */
+function sheetOpeners(name) {
+  const out = [];
+  const re = /\nfunction ([A-Za-z_]+)\(/g;
+  let m;
+  while ((m = re.exec(appSrc)) !== null) {
+    let depth = 0, i = appSrc.indexOf('{', m.index);
+    for (; i < appSrc.length; i++) {
+      const c = appSrc[i];
+      if (c === '{') depth++;
+      else if (c === '}') { depth--; if (!depth) break; }
+    }
+    const body = appSrc.slice(m.index, i);
+    if (new RegExp("openSheet\\(\\s*['`\"]" + name + "['`\"]\\)|state\\.sheet\\s*=\\s*['`\"]" + name + "['`\"]").test(body)) out.push(m[1]);
+  }
+  return out;
+}
+const sheetRows = sheetNames.map(n => {
+  const openers = sheetOpeners(n);
+  /* The table's patterns live inside template literals, so the bytes are `openSheet\\('name'\\)` while the
+     runtime string is `openSheet\('name'\)`. Asking for one backslash reported the filter sheet as unopened
+     on the row that opens it — §97's shape lesson again, arrived at from the other side of the same file.
+     Match on "non-word characters between the call and the quoted name" instead of a spelling. */
+  const clicked = new RegExp("openSheet[^A-Za-z0-9]{0,6}'" + n + "'").test(sheetBlock) ||
+    new RegExp("state\\.sheet\\s*=\\s*'" + n + "'").test(sheetBlock);
+  const byOpener = openers.some(f => sheetBlock.includes(f + '('));
+  return { name: n, openers, covered: clicked || byOpener };
+});
+const unopenedSheets = sheetRows.filter(r => !r.covered);
+
+console.log('sheets the app can raise: ' + sheetNames.length +
+  '  · opened by a row of the walk: ' + (sheetNames.length - unopenedSheets.length));
+if (sheetNames.length === 0) { console.log('NO CONCLUSION: no `state.sheet ===` branch parsed — the sheet scan matched nothing.'); process.exit(1); }
+if (sheetBlock.length < 2000) { console.log('NO CONCLUSION: the SCREENS block is ' + sheetBlock.length + ' chars — the table is not being read.'); process.exit(1); }
+for (const r of unopenedSheets) console.log('  unopened    sheet:' + r.name +
+  '  (raised by [' + r.openers.join(', ') + '] — no row of the table names them or clicks them)');
+
 console.log('profile controls that raise a layer: ' + raisers.length +
   '  · clicked by the camera: ' + (raisers.length - missing.length) +
   '  · table rows: ' + table.rows);
@@ -119,6 +181,7 @@ if (raisers.length === 0) { console.log('NO CONCLUSION: the hubs enumerated no l
 if (table.names.size === 0) { console.log('NO CONCLUSION: the camera table yielded no clicked action name — the tool-side scan matched nothing.'); process.exit(1); }
 if (table.rows < 40) { console.log('NO CONCLUSION: only ' + table.rows + ' SCREENS rows parsed; the table is not being read.'); process.exit(1); }
 for (const x of missing) console.log('  uncovered  ' + x.role + ':' + x.name + '  (paints "' + x.titled + '")');
-console.log('findings: ' + missing.length);
-console.log(missing.length ? 'UNWALKED DESTINATIONS — a control raises a layer and no screen of the walk opens it.'
-  : 'every layer-raising profile control is opened by a screen of the walk.');
+const findings = missing.length + unopenedSheets.length;
+console.log('findings: ' + findings);
+console.log(findings ? 'UNWALKED DESTINATIONS — a control raises a layer, or a sheet branch exists, and no screen of the walk opens it.'
+  : 'every layer-raising profile control and every sheet the app can raise is opened by a screen of the walk.');

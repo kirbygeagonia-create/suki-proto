@@ -47,6 +47,21 @@ const BREAKS = [
     file: 'audit',
     from: "block.matchAll(/\\n *\\['([a-z0-9-]+)',\\s*`/g)",
     to: "block.matchAll(/\\n *\\['([a-z0-9-]+)ZZZ',\\s*`/g)",
+    expect: 'refuse' },
+  /* The sheet half of the population, added by §99. A sheet is a destination exactly as a modal is, and the
+     profile-shelf audit could not see any of them — widening the net to `state.sheet === '<name>'` found
+     the resident's Filter providers sheet, which held sixteen controls under the tap floor. These two breaks
+     keep that half honest: one takes the click out of the row that opens it, the other blinds the branch
+     scan so an empty sheet population has to refuse rather than report a clean six-of-six. */
+  { name: 'the row that opens the filter sheet stops clicking it',
+    file: 'cam',
+    from: "clickPainted(/openSheet\\\\('providerFilters'\\\\)/, 'the Filter providers button on the results bar')",
+    to: 'void 0',
+    expect: 'more' },
+  { name: 'the sheet branch scan matches nothing, so the sheet population is silently empty',
+    file: 'audit',
+    from: "appSrc.match(/state\\.sheet\\s*===\\s*'([A-Za-z_]+)'/g)",
+    to: "appSrc.match(/state\\.sheetZZZ\\s*===\\s*'([A-Za-z_]+)'/g)",
     expect: 'refuse' }
 ];
 
