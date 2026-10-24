@@ -74,6 +74,12 @@ function parseTree(xml) {
     total: nodes.length,
     pickerNodes: picker.length,
     focused: picker.filter(n => n.focused),
+    /* The owed question is "does ColorOS accept the key route", and the platform answers the first half of
+       it from a saved tree: a key event can only land on a node the platform marks focusable. If that count
+       were zero, no sequence of TAB and DPAD could ever reach a document row and the answer would be
+       structural rather than a matter of which key to press. */
+    focusable: picker.filter(n => n.focusable),
+    focusableRows: picker.filter(n => n.focusable && n.clickable && (n.text || n.desc)),
     rows: rows,
     named: named,
     fixture: picker.filter(n => (n.text + ' ' + n.desc).indexOf(FIXTURE_NAME) > -1)
@@ -84,6 +90,8 @@ function reportTree(t, source) {
   if (!t.pickerNodes) { console.log('  NO PICKER IN THIS TREE: nothing from com.google.android.documentsui — the dump is of some other window, so no key verdict is available.'); return; }
   console.log('  focused: ' + (t.focused.length ? t.focused.map(n => (n.text || n.desc || n.cls) + ' @ ' + n.bounds).join(' ; ') : 'NOTHING FOCUSED'));
   console.log('  clickable named rows: ' + t.rows.length);
+  console.log('  nodes the platform marks focusable: ' + t.focusable.length +
+    ' (of which ' + t.focusableRows.length + ' are also clickable and named)');
   t.rows.slice(0, 8).forEach(n => console.log('    ' + (n.text || n.desc).slice(0, 34) + '  [' + n.cls.replace('android.widget.', '') + '] ' + n.bounds + (n.focused ? ' FOCUSED' : '')));
   console.log('  fixture visible: ' + (t.fixture.length ? 'YES — ' + t.fixture.map(n => n.bounds).join(',') : 'no'));
   if (t.focused.length === 0) console.log('  CONSEQUENCE: a DPAD_CENTER now activates nothing knowable. Send TAB or DPAD_DOWN and re-read before pressing centre.');

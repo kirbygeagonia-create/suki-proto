@@ -181,10 +181,25 @@ say('dialog', 'JSON.stringify({title:(document.querySelector(".modal-layer b")||
   'copy:(document.querySelector(".modal-layer")||{}).textContent.replace(/\\s+/g," ").trim().slice(0,150)})');
 say('PIN field', '(function(){var i=document.querySelector(".modal-layer input[type=password]");' +
   'if(!i)return "NO PIN FIELD PAINTED";var cs=getComputedStyle(i),q=i.getBoundingClientRect();' +
-  'var lab=i.closest("label");var root=getComputedStyle(document.documentElement).fontSize;' +
-  'return JSON.stringify({placeholder:i.placeholder,computedFontSize:cs.fontSize,rootFont:root,' +
-  'tokenOfDeclaration:"--t-body per .form-input",rectH:Math.round(q.height*10)/10,rectW:Math.round(q.width*10)/10,' +
-  'minHeight:cs.minHeight,boxSizing:cs.boxSizing,tapFloorOk:q.height>=44,' +
+  'var lab=i.closest("label");' +
+  /* The specified size is not the painted one: Android multiplies the used font size after CSS resolves, ' +
+  'so getComputedStyle still answers 16px while the glyphs are taller. The factor is MEASURED here with a ' +
+  'throwaway span carrying the field\'s own font-size, exactly as navFontScale() does for the nav — ' +
+  'assuming it is what a bench reading cannot see. */
+  'var probe=document.createElement("span");' +
+  'probe.style.cssText="position:absolute;left:-9999px;top:0;font-size:"+cs.fontSize+"!important;line-height:1;white-space:pre";' +
+  'probe.textContent="Hgs";document.body.appendChild(probe);' +
+  'var pg=probe.getBoundingClientRect();' +
+  'var probe2=document.createElement("span");' +
+  'probe2.style.cssText="position:absolute;left:-9999px;top:0;font-size:100px;line-height:1;white-space:pre";' +
+  'probe2.textContent="Hgs";document.body.appendChild(probe2);' +
+  'var factor=probe2.getBoundingClientRect().height/100;' +
+  'probe.remove();probe2.remove();' +
+  'return JSON.stringify({placeholder:i.placeholder,specifiedFontSize:cs.fontSize,' +
+  'measuredFactor:Math.round(factor*1e4)/1e4,renderedGlyphHeightPx:Math.round(pg.height*10)/10,' +
+  'renderedSizeIsSpecified:Math.abs(factor-1)<0.005,' +
+  'rectH:Math.round(q.height*10)/10,rectW:Math.round(q.width*10)/10,minHeight:cs.minHeight,' +
+  'boxSizing:cs.boxSizing,tapFloorOk:q.height>=44,' +
   'labelText:lab?lab.firstChild.textContent.replace(/\\s+/g," ").trim():"NO LABEL"})})()');
 tapPainted('Unlock', "/state\\.adminAccountModal=null/", 'Unlock');
 say('after Unlock', "JSON.stringify({modal:state.adminAccountModal,view:state.view," +

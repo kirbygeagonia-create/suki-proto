@@ -6463,6 +6463,15 @@ runner already reads — `findings: N`, where a fixture left behind, a dump left
 signed out or an enabled reader each raise the number — and scoped that search to this walk's own names,
 because the owner's `suki-*` file in `Download/` dated 2026-10-11 is not residue and a cleanup that
 greps `/suki/` would delete something no instrument here is entitled to touch.
+
+**Leg B got narrower without a phone, and the narrowing is the finding.** The same saved tree marks
+**45 of its 177 nodes `focusable="true"`**, 21 of them clickable and named. So ColorOS's picker is not
+structurally deaf to key events — a "this OEM refuses synthetic input" reading would have had nothing
+focusable to land on, and it has plenty. What is still untested is the narrower claim: whether
+`input keyevent` moves focus among those rows on that shell, and whether a centre key then activates a
+document row rather than only the picker's chrome. Naming the residual precisely is what makes the leg
+one reading rather than an afternoon of guessing: `node tools/device-picker-keys.cjs --dump` answers it
+once the phone is on the bus.
 Nothing on this machine can read the installed bundle, so `audit-build-bytes` still stops at four copies —
 source, `dist/`, staged asset, APK — all `3c78fdd…`. The fifth copy is the phone, and reading it is what the
 two armed scripts exist to do.

@@ -16,10 +16,27 @@
 
   if (pin) {
     var cs = getComputedStyle(pin), q = pin.getBoundingClientRect(), lab = pin.closest('label');
+    /* The same measured factor the driver uses. On the bench it is exactly 1 — which is the point: a
+       reading that cannot distinguish 1 from 1.35 would have reported the vivo's 18.9px as a 16px field
+       in a taller box. Proof of the technique is that it answers a number here at all. */
+    var p1 = document.createElement('span');
+    p1.style.cssText = 'position:absolute;left:-9999px;top:0;font-size:' + cs.fontSize + '!important;line-height:1;white-space:pre';
+    p1.textContent = 'Hgs';
+    document.body.appendChild(p1);
+    var glyph = p1.getBoundingClientRect();
+    var p2 = document.createElement('span');
+    p2.style.cssText = 'position:absolute;left:-9999px;top:0;font-size:100px;line-height:1;white-space:pre';
+    p2.textContent = 'Hgs';
+    document.body.appendChild(p2);
+    var factor = p2.getBoundingClientRect().height / 100;
+    p1.remove(); p2.remove();
     out.pin = {
       dialog: title.trim(),
       placeholder: pin.placeholder,
-      computedFontSize: cs.fontSize,
+      specifiedFontSize: cs.fontSize,
+      measuredFactor: Math.round(factor * 1e4) / 1e4,
+      renderedGlyphHeightPx: Math.round(glyph.height * 10) / 10,
+      renderedSizeIsSpecified: Math.abs(factor - 1) < 0.005,
       rootFont: getComputedStyle(document.documentElement).fontSize,
       rectH: Math.round(q.height * 10) / 10,
       minHeight: cs.minHeight,
