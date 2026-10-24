@@ -8,8 +8,8 @@
    sentence about the wrong commit, and one of the two was already disclosed in an earlier commit's body
    as a known defect rather than fixed.
 
-   The list form is not a gate: a duplicate subject is a record-keeping smell, not a build failure, and the last 120
-   commits carry more than one — how many is this tool's answer, not this header's, because a count kept in prose here
+   The list form is not a gate: a duplicate subject is a record-keeping smell, not a build failure, and the reachable
+   history carries more than one — how many is this tool's answer, not this header's, because a count kept in prose here
    is the exact drift the tool exists to catch. Refusing to push would be refusing history rather than protecting it.
    The `--check-message` form IS a gate, and the difference is its scope: one message about to be written, not the
    history already published. It refuses instead when it read NO commits or could not read the message, because a bad
@@ -25,8 +25,8 @@
    once the branch it was reused on has landed. The population was narrower than the claim, and the green line is
    what made that invisible.
 
-     node tools/audit-commit-subjects.cjs                       # HEAD, last 120 commits (merged ones included)
-     node tools/audit-commit-subjects.cjs origin/main..HEAD     # only what is not yet on main
+     node tools/audit-commit-subjects.cjs                       # every commit reachable from HEAD
+     node tools/audit-commit-subjects.cjs origin/main..HEAD     # only what is not yet on main (narrow by design)
      node tools/audit-commit-subjects.cjs HEAD~10..HEAD
      node tools/audit-commit-subjects.cjs --check-message .git/COMMIT_EDITMSG   # judge a message BEFORE committing
 
@@ -50,9 +50,15 @@ const ROOT = path.join(__dirname, '..');
    minutes after PR #9 merged, this tool read the 3 unmerged commits and printed "every subject in this range is
    unique" while the new commit's subject duplicated one already sitting in `main`, four commits apart in
    `git log`. A check that cannot see the case it exists for is worse than no check, because its green line is
-   what stops a reader looking. So the default is now the branch's recent history (`-n 120 HEAD`), merged commits
-   included; pass a range explicitly to judge something narrower. */
-const DEFAULT_COUNT = 120;
+   what stops a reader looking. So the default became the branch's recent history.
+
+   The recent-history default then failed the SAME way one level up, and that is what widened it to everything.
+   Measured 2026-10-25: over all reachable commits the branch carries SEVEN duplicated subjects, not six — the
+   seventh pair, `f830bd9` and `6f9bf45`, both dated 2026-10-10, sits at position 233 of 337 in `git log HEAD`, so
+   a 120-commit window simply never reads it, and `--check-message` would have let a new subject reuse it.
+   **Any fixed count is a bet about how much history the branch has written since the mistake happened**, which is
+   exactly the premise this file keeps recording as expiring. The population is therefore all of `HEAD`; pass a
+   range explicitly to judge something narrower. */
 /* The flag and its value must come out of the positional slot that holds the range. Reading `process.argv[2]`
    straight meant `--check-message` was itself handed to `git log` as a revision, and the file argument meant a path
    was handed to it as a second one — which fails, but fails as NO CONCLUSION about a bad range rather than as a
@@ -66,7 +72,10 @@ const MSG_FILE = CHECK_AT < 0 ? '' : (ARGV[CHECK_AT + 1] || '');
    and instead it answered "every subject in this range is unique" over 120 commits. Only exclude a value slot when
    there is a flag to be a value OF. */
 const RANGE = ARGV.filter((a, i) => !a.startsWith('--') && !(CHECK_AT >= 0 && i === CHECK_AT + 1))[0] || '';
-const ARGS = ['log', '--format=%h\x1f%s'].concat(RANGE ? [RANGE] : ['-n', String(DEFAULT_COUNT), 'HEAD']).concat(['--']);
+/* Declared AFTER RANGE on purpose: this line used to sit above it, and `node --check` passed on the file anyway
+   while running it threw `Cannot access 'RANGE' before initialization` — a temporal dead zone is valid syntax, so
+   the only instrument that sees it is the one that executes the branch. */
+const ARGS = ['log', '--format=%h\x1f%s'].concat(RANGE ? [RANGE] : ['HEAD']).concat(['--']);
 
 let raw;
 try {
@@ -83,7 +92,7 @@ const rows = raw.split('\n').filter(Boolean).map(l => {
   return { sha: l.slice(0, i), subject: l.slice(i + 1) };
 });
 
-const SCOPE = RANGE ? RANGE : ('HEAD, last ' + DEFAULT_COUNT + ' commits');
+const SCOPE = RANGE ? RANGE : 'all commits reachable from HEAD';
 console.log('duplicate commit subjects across ' + SCOPE + ' — ' + rows.length + ' commits read');
 if (rows.length === 0) {
   console.log('NO CONCLUSION: the range matched no commits, so "no duplicates" would be a lie about '
@@ -150,6 +159,12 @@ const BASELINE = [
   { subject: 'docs: stop carrying the totals a command already prints', shas: ['5ee3554', '6ce7a34'] },
   { subject: "fix: read a probe's count through both print shapes, and convert the nav floor upward", shas: ['b7af181', 'aa19fdd'] },
   { subject: "docs: re-run the layout sweep to the day rather than carry §85's figure", shas: ['cab1696', '33639fc'] },
+  /* The seventh pair, and the reason the default population is no longer a fixed count. Both commits are dated
+     2026-10-10 — two weeks before this gate existed — and they sit at position 233 of 337 in `git log HEAD`, so the
+     120-commit window never read them and reported six. Measured 2026-10-25 by `node tools/audit-commit-subjects.cjs
+     HEAD`, which is the command that answers seven. Excused, not repaired: like the other six this is published
+     history, and the repair cost is a force-push over every commit after it. */
+  { subject: 'docs: the captures were reviewed and cleared, so the plan says so and names the command', shas: ['f830bd9', '6f9bf45'] },
 ];
 
 const findings = [];

@@ -24,7 +24,7 @@
      5. default history re-rooted onto origin/main → the walk loses merged commits; since PR #13 merged, main holds
         them all, so today the mutant empties the population and the refusal is what proves it
      6. default count shrinks to 3                 → the floor condemns a scope too small to find anything
-     7. the baseline stops matching                → six excused collisions become six findings
+     7. the baseline stops excusing                 → every recorded collision becomes a finding
 
    Breaks 8-10 judge the gate half, `--check-message`, which is what turned a list a reader consults after the commit
    into a refusal at the moment the message is written. All six duplicates on this branch were found by a person, twice
@@ -110,14 +110,31 @@ function shellCount(n) {
    about an empty-ish scan. Without this line a break that reduces the default count survives, because the
    shell would mirror the shrunk scope. */
 const SCOPE_FLOOR = 60;
-/* Two extra populations, chosen by measurement rather than by taste, because each of the audit's three finding kinds
-   needs a different world to exist in. `HEAD` reads every commit the branch can reach (318 as of 2026-10-25) and is
-   the only scope in which the SEVENTH duplicate pair — 213 and 219 commits back — is visible at all; the default
-   120-commit window cannot see it, which is what made the NEW branch unproveable until the scope was widened.
-   NARROW is the reverse: a window so short that five of the six baseline pairs fall outside it, which is the only
-   way the orphan branch produces a sentence. Both are asserted to hold their instance before any mutant runs. */
+/* Two extra populations, because each of the audit's three finding kinds needs a different world to exist in.
+   Rebuilt 2026-10-25, because BOTH of the previous ones were premises about the shape of history and both expired:
+
+   - `HEAD~20..HEAD` is not twenty commits. `~20` walks FIRST parents, and this branch's first-parent chain now runs
+     through nine merge commits, so the reachable difference is 320 commits, every baseline pair sits inside it, the
+     orphan kind lost its instance, and the control aborted a healthy audit. A narrow window is therefore derived by
+     REACHABILITY — the newest N commits `git rev-list --max-count=N HEAD` names, cut at the last of them — so the
+     range means exactly N commits whatever the merge structure is.
+   - The NEW-collision kind lost its instance for the opposite reason: the seventh pair is now IN the baseline, so
+     nothing in this repository's history is an unrecorded collision. Baselining the mistake consumed the evidence
+     that the guard against it works. That kind is therefore given a fixture, exactly as the drift kind already is —
+     one baseline entry temporarily renamed, which turns the real pair back into a live, unexcused collision.
+
+   Every instance is asserted to EXIST before any mutant is credited with deleting it. */
 const WIDE = ['HEAD'];
-const NARROW = ['HEAD~20..HEAD'];
+function narrowWindow(n) {
+  const list = git(['rev-list', '--max-count=' + n, 'HEAD', '--']).trim().split('\n').filter(Boolean);
+  const cut = list[list.length - 1] || '';
+  return cut ? [cut + '..HEAD'] : [];
+}
+let NARROW = [];
+const NEW_FIXTURE = {
+  from: "subject: 'docs: the captures were reviewed and cleared, so the plan says so and names the command'",
+  to: "subject: 'docs: a baseline entry no commit in this repository carries'",
+};
 /* A baseline entry whose hash pair no longer matches reality. There is no such entry in the branch as it stands —
    history has not moved — so the drift branch has to be given a fixture, planted in the audit's own source and
    restored in the `finally`, exactly as the check-mode fixtures are planted in temp. */
@@ -128,7 +145,7 @@ const DRIFT_FIXTURE = {
 /* The hygiene check that pins the audit's SHAPE lives in verify.cjs, so proving it is a rule rather than a comment
    means planting a hazard and asking a DIFFERENT instrument whether it noticed. The label is one constant shared by
    the control and the three breaks: typing it twice is how a check gets renamed and a family keeps passing. */
-const GATE_LABEL = 'the commit-subject audit reads merged history, and its gate refuses for a named reason';
+const GATE_LABEL = 'the commit-subject audit reads all reachable history, and its gate refuses for a named reason';
 function runVerify() {
   try {
     return { code: 0, out: execFileSync(process.execPath, [path.join(ROOT, 'tools', 'verify.cjs')],
@@ -224,10 +241,13 @@ const BREAKS = [
     from: "&& !(CHECK_AT >= 0 && i === CHECK_AT + 1))[0] || '';",
     to: "&& !(CHECK_AT >= 0 && i === CHECK_AT + 1))[0] || 'origin/main..HEAD';" },
   { name: 'the default scope shrinks to three commits, which is the population defect that let a reused subject through',
-    from: 'const DEFAULT_COUNT = 120;', to: 'const DEFAULT_COUNT = 3;' },
-  { name: 'the baseline stops excusing, so six recorded collisions become six findings',
+    /* Re-pointed the same hour the default changed shape: the needle was `const DEFAULT_COUNT = 120;`, and the
+       count-cap is gone — the default is now all of `HEAD` precisely because a cap is a bet about how much history
+       the branch writes after a mistake. The faithful mutant is therefore the population cap itself. */
+    from: "RANGE ? [RANGE] : ['HEAD']", to: "RANGE ? [RANGE] : ['-n', '3', 'HEAD']" },
+  { name: 'the baseline stops excusing, so every recorded collision becomes a finding',
     /* The grandfather list is only honest because it is verified against reality on every run. This is the one
-       baseline break with a live instance today: inverting the guard turns all six recorded collisions into findings
+       baseline break with a live instance today: inverting the guard turns every recorded collision into a finding
        and the audit exits 1. Inverted rather than deleted because the lookup now exists at TWO byte-identical sites —
        one raises findings, one picks the printed mark — and a needle naming the shared line matches 2, which plant
        rightly refuses. Only the findings site can change the exit code, so that is the one this break points at; in
@@ -266,12 +286,14 @@ const BREAKS = [
   /* The three baseline-branch breaks. Each is judged over the population where its own kind has an instance, and
      caught means that kind's SENTENCE disappears while the tool still prints a plausible-looking total — a summary
      count of 0 is what a blinded branch looks like from outside, and it is indistinguishable from cleanliness. */
-  { name: 'the new-collision report is forced dead, so a seventh pair is another line in a list',
-    from: 'if (!known) findings.push(', to: 'if (false) findings.push(',
-    over: { args: WIDE, kind: 'newCollision' } },
+  { name: 'the new-collision report is forced dead, so an unrecorded pair is another line in a list',
+    /* Two edits now, because the kind has no natural instance any more: the fixture makes a live pair unexcused, the
+       mutation kills the sentence that would have named it. */
+    pairs: [NEW_FIXTURE, { from: 'if (!known) findings.push(', to: 'if (false) findings.push(' }],
+    over: { scope: 'wide', kind: 'newCollision' } },
   { name: 'the orphaned-entry report is forced dead, so a scope that shrank answers like a repaired baseline',
     from: 'if (!dupes.some(([s]) => s === b.subject)) {', to: 'if (false) {',
-    over: { args: NARROW, kind: 'orphan' } },
+    over: { scope: 'narrow', kind: 'orphan' } },
   { name: 'the hash comparison is made always-equal over a planted drift pair, so a moved entry is excused',
     /* Two edits: the fixture that makes a drift exist, then the guard that would have named it. `else if (false)`
        keeps the `else excused++` arm valid JS, so the mutant is a dead branch rather than a syntax error — a break
@@ -279,7 +301,7 @@ const BREAKS = [
     pairs: [DRIFT_FIXTURE,
       { from: "else if (shas.slice().sort().join(' ') !== known.shas.slice().sort().join(' ')) {",
         to: 'else if (false) {' }],
-    over: { args: [], kind: 'drift' } },
+    over: { scope: 'default', kind: 'drift' } },
 ];
 
 function runArgs(args) {
@@ -363,27 +385,44 @@ try {
      wrote "no instance today, so a mutant would be equivalent" about two branches and left them unproved, and both
      instances existed the whole time — one outside the default scope, one inside a deliberately short one. A branch
      with no instance is a legitimate finding to record; a branch nobody went looking for is not. */
-  const wideRun = runArgs(WIDE), narrowRun = runArgs(NARROW);
-  const wideKinds = findingKinds(wideRun.out), narrowKinds = findingKinds(narrowRun.out);
+  /* Derive the narrow window rather than assume one: try the newest 20, 40, 80, 160 reachable commits and keep the
+     first that actually leaves a baseline pair outside. If none does, the count printed below is 0 and the reason is
+     the population's, not the mutant's — which is the difference between recording a missing instance and silently
+     accepting a window that cannot produce one. */
+  let narrowRun = { code: -1, out: '' }, narrowKinds = { orphan: 0, all: 0 };
+  for (const n of [20, 40, 80, 160]) {
+    const w = narrowWindow(n);
+    if (!w.length) continue;
+    const r = runArgs(w), k = findingKinds(r.out);
+    if (!NARROW.length) { NARROW = w; narrowRun = r; narrowKinds = k; }
+    if (k.orphan > 0) { NARROW = w; narrowRun = r; narrowKinds = k; break; }
+  }
+  /* The new-collision instance must be planted now, and that is a consequence of this session's own fix: with the
+     seventh pair excused by the baseline, nothing in this repository's history is an unrecorded collision, so the
+     guard could only be judged against a fixture. Baselining the mistake consumed the evidence. */
+  let wideRun = { code: -1, out: '' }, wideKinds = { newCollision: 0, all: 0 };
+  const newPlant = plant(NEW_FIXTURE.from, NEW_FIXTURE.to);
+  if (newPlant.ok) {
+    try { wideRun = runArgs(WIDE); wideKinds = findingKinds(wideRun.out); } finally { restore(); }
+  }
   let driftRun = { code: -1, out: '' }, driftKinds = { drift: 0, all: 0 };
-  /* Fixed 2026-10-25. This read `plant(DRIFT_FIXTURE)` — one object handed to a function whose first parameter is the
-     needle STRING — so `Array.isArray` was false, the pair became `{ from: <object>, to: undefined }`,
-     `cur.split(<object>)` coerced the needle to "[object Object]", matched 0, and the return value was DISCARDED.
-     The tool then ran unmutated: zero drift findings, exit 0, and the control read "planted drift: 0" — which is this
-     repository's oldest failure, an instrument that could not see answering like a world with nothing to see. The
-     missing instance was the family's, not the branch's. Planting is now checked, and a failed plant is printed as
-     SUCH rather than as a count, because "no instance exists" and "the fixture never landed" need different fixes. */
   const driftPlant = plant(DRIFT_FIXTURE.from, DRIFT_FIXTURE.to);
   if (driftPlant.ok) {
     try { driftRun = run(); driftKinds = findingKinds(driftRun.out); } finally { restore(); }
   }
-  const kindsOk = wideRun.code !== 0 && wideKinds.newCollision > 0
+  const kindsOk = newPlant.ok && wideRun.code !== 0 && wideKinds.newCollision > 0
     && narrowRun.code !== 0 && narrowKinds.orphan > 0
     && driftPlant.ok && driftRun.code !== 0 && driftKinds.drift > 0;
-  console.log('control  the three finding kinds have instances → all history: ' + wideKinds.newCollision
-    + ' new (exit ' + wideRun.code + ') · ' + NARROW[0] + ': ' + narrowKinds.orphan + ' orphaned (exit '
+  console.log('control  the three finding kinds have instances → planted-new over HEAD: '
+    + (newPlant.ok ? wideKinds.newCollision + ' new (exit ' + wideRun.code + ')' : 'FIXTURE NOT PLANTED — ' + newPlant.why)
+    + ' · narrow ' + (NARROW[0] || '(none)') + ': ' + narrowKinds.orphan + ' orphaned (exit '
     + narrowRun.code + ') · planted drift: '
     + (driftPlant.ok ? driftKinds.drift + ' (exit ' + driftRun.code + ')' : 'FIXTURE NOT PLANTED — ' + driftPlant.why));
+  /* Both fixtures are planted through `plant(from, to)` and BOTH return values are checked. That is the repair of a
+     bug this family shipped on 2026-10-25: the drift control called `plant(DRIFT_FIXTURE)` — one object into the
+     needle-string parameter — so the coerced needle "[object Object]" matched nothing, the return value was
+     discarded, and the tool ran unmutated. The control then read "planted drift: 0" and aborted, which is this
+     repository's oldest failure: an instrument that could not see, answering like a world with nothing to see. */
   console.log('control  unbroken audit → exit ' + base.code + ', scope ' + scopeN + ' commits (floor '
     + SCOPE_FLOOR + '): ' + (scopeBigEnough ? 'ok' : 'TOO SMALL') + ', set matches shell: '
     + (same(expectDupes, gotDupes) ? 'yes' : 'NO') + ', commits ' + gotCount + '/' + expectCount
@@ -464,7 +503,13 @@ try {
         /* Caught = this kind's sentence is GONE from the population that holds its instance. The exit code cannot
            carry this verdict: the other two kinds keep printing, so a blinded branch still refuses and still prints a
            plausible "N findings" line — for reasons that no longer include the one the deleted guard was for. */
-        const r = runArgs(b.over.args);
+        /* The scope is a NAME resolved here, not an array captured in BREAKS. `over: { args: NARROW }` evaluated at
+           module load, when NARROW was still the hard-coded string; now the window is derived inside the control, so
+           a captured reference would silently run the break over an empty population — a break judged on the wrong
+           world reads exactly like a break judged on the right one. */
+        const scopeArgs = b.over.scope === 'wide' ? WIDE
+          : b.over.scope === 'narrow' ? NARROW : [];
+        const r = runArgs(scopeArgs);
         const k = findingKinds(r.out);
         const controlKinds = b.over.kind === 'newCollision' ? wideKinds
           : b.over.kind === 'orphan' ? narrowKinds : driftKinds;
