@@ -17,11 +17,11 @@
 
      node tools/falsify-all.cjs                (48 families on the tree as of 2026-10-24, counted as
                                                 `ls tools/falsify-*.cjs | wc -l` minus this file, not
-                                                remembered. The last full pass printed 48 families, 241
-                                                mutants applied, 241 caught, 0 not applied in ~44 minutes
+                                                remembered. The last full pass printed 48 families, 243
+                                                mutants applied, 243 caught, 0 not applied in ~58 minutes
                                                 — wall clock from launch to summary line, not an estimate;
-                                                earlier revisions advertised ~35, then ~53, then ~51 minutes for
-                                                the same machine, and all three were memory.
+                                                earlier revisions advertised ~35, then ~53, then ~51, then
+                                                ~44 minutes for the same machine, and all four were memory.
                                                 An advertised cost that is wrong gets its runs abandoned
                                                 early, which is the one way to leave a mutant in the tree.)
      node tools/falsify-all.cjs count-labels    # only families whose name matches
