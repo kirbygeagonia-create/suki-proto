@@ -2460,12 +2460,19 @@ TalkBack enabled on the owner's device and was not; and §78's register path gre
 snapshot on disk still named `Ana Dela Cruz`, which is the not-persisted promise kept. The device's
 real `font_scale` is **1.35**, so the older "left clean at 1.0" line in `DEVICE-PASS.md` was stale.
 
-One leg stays open honestly: the concierge's system file picker. The photo control sits below the fold
-at that corner and three attempts to scroll it into view left the rect unmoved, so the synthetic tap
-landed on the gesture bar. The instrument failed, not the app — `controls no tap can reach` reads 0 at
-320x638 @ 1.35 across all 72 screens, which answers "can a thumb get there" — but the narrower claim
-that a real picker opens and that §75's promise about keeping only the file name holds against it is
-still unverified.
+The last leg on this device is closed, and it was the instrument again. Handset walk 7 signed in as the
+resident on a vivo 1906 running `1.2-preview.38`, brought the concierge entry on screen with §86's scroll
+fix (`scrollBehavior='auto'` and a direct `scrollTop`; `scrollIntoView` alone left `y=871` unmoved), tapped
+the photo control at its own reported rect, and `com.android.documentsui/.picker.PickActivity` resumed. The
+key route then **returned a document** — `--keys=TAB,TAB,DPAD_DOWN,DPAD_CENTER` closed the picker with
+`conciergePhotoAttached=true` — so §86's "a thumb is still owed" is retired for this phone and stands only
+for ColorOS, where the keys have never been pressed. And because the route works, it selects whatever row is
+focused, which on a real handset was one of the owner's own photographs rather than the pushed test file; the
+damage was bounded by the app's own promise, measured for the first time against a genuine pick — zero
+`blob:`, zero `data:image`, no `<img>` carrying bytes, the name in memory only, and the 51,903-byte stored
+snapshot holding nothing about it. The photo was removed through the screen's own control and re-read as
+cleared, the test file deleted, the owner's other Download entries left where they were, `font_scale` restored
+to the 1.0 it was found at, and the app signed out.
 
 A MONEY SENSOR HAS TO KNOW WHICH SIDE OF THE TRANSACTION A ROW IS ON. `tools/probe-money-sums.js` asks
 of every screen whether a card's aggregating label equals the figures beside it — the class this file
@@ -2668,7 +2675,9 @@ attempts across two layouts (grid tile centre, grid preview icon, list preview i
 as `motionevent DOWN` + 1s + `UP`) left the picker resumed and our page unchanged, while a tap at
 `(106,194)` toggled the "Large files" chip `checked="false"` → `"true"` and a swipe scrolled the very list
 whose rows refuse taps. Two controls — same window, same widget — are what turn "it did not work" into
-"this affordance does not accept synthetic activation"; the leg still owed is one thumb-tap. Before even
+"this affordance does not accept *this* synthetic activation"; the other route the platform offers is
+`input keyevent`, and handset walk 7 ran it on the vivo's DocumentsUI and a document came back, so a thumb is
+owed only where the keys have not been tried. Before even
 that, `adb push` preserved a 2026-09-20 date and indexed nothing, so the picker's RECENT IMAGES held only
 the owner's real photographs — which are not the agent's to select — and the test file appeared at all
 only after `touch` plus `MEDIA_SCANNER_SCAN_FILE` (MediaStore row 667, top of the grid,
@@ -2786,8 +2795,12 @@ because §83's lesson applies exactly here: **when the machine is too coarse to 
 shape.** A fifth break in `node tools/falsify-nav-fit.cjs` restores `Math.round` and requires the gate
 check to fail, so the guard cannot rot into a comment. Measured back on the hardware that found it, on
 `1.2-preview.38` on the same OPPO: `10.38px` written and **14.013px** rendered, with `Bookings` and
-`Messages` still cut at the floor as documented. The vivo has not carried `.38` yet, so the second panel is
-still owed that reading.
+`Messages` still cut at the floor as documented. The second panel has now carried it: on the vivo's 450 CSS px the provider nav reads
+12.15px written / **16.4025px** painted at 1.35 text, and 8.15px written / **16.3px** painted at 2.0, with no
+cuts at any size — which confirms the conversion arithmetic on that engine, and also shows that the floor
+never binds there, because five items in 84px slots stop shrinking well above 14px. The rounding direction
+stays observable only at the 320px corner, and claiming the floor holds on both phones would overstate what
+this reading demonstrated.
 
 A HANDSET CONTRADICTED THIS FILE BEFORE ANYTHING WAS MEASURED, AND BOTH CONTRADICTIONS WERE MY READER.
 Walk 6 found the OPPO `S4CUYTJB6HNNWC49` with Sukinnect **uninstalled** while `DEVICE-PASS.md` still said
@@ -3915,7 +3928,7 @@ probes that measure nothing. `falsify-probe-population` belongs to both lists: i
 the runner. `falsify-preflight` belongs to neither: it drives `falsify-all.cjs` itself, and is the only
 family whose target is the test machinery's own hygiene.
 
-Measure it with `node tools/sweep-text-scale.cjs` — seven phone corners, the camera each time: 320px
+Measure it with `node tools/sweep-text-scale.cjs` — eight phone corners, the camera each time: 320px
 @ 200% text, default width @ 200%, 450px @ 135% (a vivo panel at the OPPO's setting), **320x638 @
 135%** (the OPPO CPH2179 as measured on the device — added on 2026-10-18 from a photograph of that
 handset whose nav labels read `Booki…` and `Mess…`, and corrected the next day from the device itself:
@@ -3923,7 +3936,9 @@ handset whose nav labels read `Booki…` and `Mess…`, and corrected the next d
 CSS px**, `innerHeight` 638 with the system bars taken off. The case was labelled 360 for a day, which
 is what happens when a corner is named after a device without asking the device), 320x480 @ 200%
 (a short handset or split-screen), 320x300 @ 100% (what a keyboard leaves on a small phone, since
-nothing here emulates a keyboard), and the 100% anchor — which fails if any tally is nonzero and
+nothing here emulates a keyboard), **450x889 @ 200%** (the vivo's own panel at the device's largest text —
+handset walk 7 produced it, and the seven corners before it paired narrow panels with large text because that
+is where clipping was found), and the 100% anchor — which fails if any tally is nonzero and
 treats a tally it does not recognise as must-be-zero, so a sensor added tomorrow cannot be silently
 informational. Single corners are still runnable:
 `node tools/shot.cjs --measure --width=320 --height=638 --font-scale=1.35`. The flag

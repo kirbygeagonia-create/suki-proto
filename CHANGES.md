@@ -6012,3 +6012,61 @@ assertion can, because nothing was wrong with the old run; it was merely old). A
 as one literal is a cleanup rule with a hole shaped like history**: enumerate the names your tool has to
 collect, including the names its own retired tools used, or the residue outlives every run that could have
 cleared it.
+
+
+## 93. The two handset legs closed on a vivo, and a working picker route that can choose somebody's real file
+
+A phone was attached, so the two items the `.37` and `.38` walks owed were put to it. Both closed, one of
+them by closing a defect in what this file *believed*, and one of them producing a photograph of the owner's
+that this file must not have.
+
+**The nav floor on the second panel.** `1.2-preview.38` installed on the vivo 1906 (`versionCode 40`,
+`a4cf6fc3…` verified inside the APK by `unzip -p … | md5sum`), and the provider nav read at three text sizes
+on its 450 CSS px panel — written property, painted size, and the factor measured with a throwaway span:
+**1.0 → nothing written, 14px painted, 0 cut; 1.35 → 12.15px written, 16.4025px painted, 0 cut; 2.0 → 8.15px
+written, 16.3px painted, 0 cut.** The conversion is honoured on the second phone, which is what §89 owed it.
+What the numbers also say is that the vivo's wide panel never reaches the floor at all: five items in 84px
+slots stop shrinking at 16.3px rendered, comfortably above 14, so the rounding direction stays observable
+only at the 320px corner where it binds. Recording that boundary matters — a claim that "the floor holds on
+both phones" would have quietly overstated the second reading, which demonstrates the *arithmetic*, not the
+floor.
+
+**The picker, settled by the route that had never been run.** The `.37` walk concluded that a document row
+refuses synthetic activation and that "a thumb is still owed". The key route — `input keyevent` with
+TAB/DPAD movement and `DPAD_CENTER` — was flagged in that same write-up and never executed, and on this
+phone it **returned a document**: our activity resumed, the picker closed, `conciergePhotoAttached=true`. So
+the conclusion was wrong for the vivo's DocumentsUI, and the only place the tap refusal remains the last word
+is ColorOS on the OPPO, where the keys have not been tried. That is the shape of the mistake worth keeping:
+**an affordance refused by one input method is not refused by the platform**, and "we did not try the other
+route" must not be written as "a human must".
+
+**And the route works, so it picks real files.** A key-driven pick selects the focused row, and on a working
+phone the focused row is the newest image — one of the owner's own photographs, a camera-timed `.jpg`, not the
+test PNG pushed and re-indexed for this walk (`_id=65630`, and it did *not* land at the front of the recents
+the picker opened). The app's own promise limited the damage, and this is the first time that promise has been
+measured against a real device pick rather than a simulated one: **zero** `blob:` references, **zero**
+`data:image`, no `<img>` carrying bytes, `conciergePhotoName` in memory only, and the 51,903-byte stored
+snapshot holding no name at all — so §75's "the provider sees the name you gave it, not the photo" now has
+hardware evidence behind the words. The photo was removed through the screen's own control and re-read as
+cleared; the pushed file deleted; the owner's other Download entries left untouched; `font_scale` restored to
+the 1.0 it was found at; the app signed out. **The rule this leaves: a picker route that works can also choose
+something that is not yours. It must not be run on a device holding photographs the owner has not offered, and
+the safe fixture is a folder empty except for the test file, entered by name rather than by trusting the grid's
+focus.** The name of the owner's file is deliberately absent from this log.
+
+**Three instrument facts from the same walk, all of them the reader.** `--keys` is applied *before* the page
+expression, so focusing a field inside the reader and pressing Enter afterwards arrives too late — the sign-in
+completed only when the button's own rect was tapped, which is what a thumb does anyway. `document.hasFocus()`
+answered false for the injected focus and the keypress was swallowed silently, the same blindness §89 recorded
+for `document.activeElement`. And the auth screen's primary button sat at page `y=901` in an 889px viewport
+with `document.scrollingElement.scrollHeight` equal to the viewport: the scroll container is the auth panel,
+not the document, so a viewport-and-document-scroll test would have called a reachable control unreachable
+twice. `controls no tap can reach` had it right because it asks whether *any ancestor* scrolls.
+
+**The corner this phone produced.** The seven swept corners pair narrow panels with large text, because that
+is where clipping was found; 450 CSS px at 200% text had never been measured anywhere. It is now
+`vivo 1906 panel at the device's own largest text (450x889 @ 200%)` in `DEFAULT_CASES`, and the run that registered it printed **8 of 8 phone corners measured clean**, the new one
+among them — which also corroborates the handset reading, because the corner where the phone's own login
+button sits at page `y=901` in an 889px viewport answers `controls no tap can reach: 0`: the panel scrolls, so
+the control is below the fold rather than out of reach. Details, readings and the restore checklist are in
+*Handset walk 7* in `DEVICE-PASS.md`.

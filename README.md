@@ -375,9 +375,10 @@ To swap an image, replace the file and keep the name. To add a trade, add a row 
   [`DEVICE-PASS.md`](DEVICE-PASS.md), which also says how to put the shipped file back.
 - Screens are rendered in Node, then painted and measured in a real browser at a phone size, and —
   when a phone is attached — on that phone: `tools/device-probe.cjs` drives the WebView's own Chrome
-  over the DevTools socket, and [`DEVICE-PASS.md`](DEVICE-PASS.md) records six walks across two
-  handsets. What still owes a thumb is two legs: a document returned from the OEM file picker, and the
-  provider nav re-read on the second phone. What no instrument here can prove is how any of it
+  over the DevTools socket, and [`DEVICE-PASS.md`](DEVICE-PASS.md) records handset walks 1–7 below, on two
+  phones. One leg stays open and it needs the other phone: ColorOS's file picker has never been tried
+  with `input keyevent`, which is the route that returned a document on the vivo where four injected taps
+  were refused. What no instrument here can prove is how any of it
   *feels*, and what TalkBack actually says aloud when a dialog opens — its burst proves an
   announcement happens and the accessibility tree proves the name is exposed, but no channel on these
   devices recovers the spoken words.

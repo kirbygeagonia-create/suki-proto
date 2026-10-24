@@ -14,12 +14,20 @@
    at that leg reported "no picker appears", which was the instrument, not the application. Input events
    dispatched over CDP arrive through the browser's own input path and do count as activation.
 
-   --keys exists for the other half of the same leg, and it is added before being proven: ColorOS's
+   --keys exists for the other half of the same leg, and on 2026-10-23 it proved itself: ColorOS's
    DocumentsUI accepts an injected tap on its own chrome and refuses one on a document row, which was
-   read as "a thumb owes this" — but the key route was never tried. `input keyevent` reaches whichever
-   window is on screen, not only this WebView, so DPAD/tab focus movement plus DPAD_CENTER is the
-   attempt to make before treating the pick as unautomatable. The codes are named or numeric, applied in
-   order with 700ms between them; run it against the picker with the page expression as the reader.
+   read as "a thumb owes this" — but the key route had never been tried. Handset walk 7 ran
+   `--keys=TAB,TAB,DPAD_DOWN,DPAD_CENTER` against the vivo 1906's picker and our page came back holding a
+   file, so a refused affordance was a refused *input method*, not a refused platform. ColorOS remains
+   untried by keys. `input keyevent` reaches whichever window is on screen, not only this WebView, and
+   that is exactly the hazard: a key press activates **the focused row**, which on a phone in daily use is
+   one of the owner's own photographs — walk 7 selected one before the app's own remove control cleared it,
+   and nothing was stored because the page keeps only the name. So point this at a folder that is empty
+   except for the file you pushed, entered by name, and never at a recents grid. The codes are named or
+   numeric, applied in order with 700ms between them, **before** the reader expression runs — focusing a
+   field inside the reader and pressing Enter afterwards arrives too late; tap the control's own rect
+   instead. Reading the page needs `document.hasFocus()` true, because an injected `focus()` while the
+   window is unfocused leaves the keypress swallowed in silence.
 
    The coordinates are **page** ones (CSS px, so 0..innerWidth), not the device pixels `uiautomator`
    bounds and `adb shell input tap` speak in — on the vivo 1906 those differ by devicePixelRatio 1.6 plus

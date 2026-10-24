@@ -7,7 +7,7 @@ the default panel at 200%, 450 px at 135%, the OPPO's own 320×638 at 135%, 320�
 100% as the keyboard proxy, and the 100% anchor — and separately in the desktop shell at 1280×900, with
 `prefers-reduced-motion` emulated and under `prefers-color-scheme: dark`). When a phone is attached,
 the same page questions are asked again inside the device's own WebView by
-`node tools/device-probe.cjs` driving Chrome over the DevTools socket. Handset walks 1–6 below, and the
+`node tools/device-probe.cjs` driving Chrome over the DevTools socket. Handset walks 1–7 below, and the
 earlier `.17`–`.28` passes above, all on two phones, mean this file is
 not a list of things a browser cannot do. It is the record of what only a phone showed, and of the
 three things that still outrun every instrument here: how the app *feels* under a thumb, whether a slow
@@ -1639,26 +1639,97 @@ out with its own settings untouched. The vivo `80d20768` was not on the cable fo
 there — when it is next attached, install `.38` and read the same two numbers (written size and computed
 size) to confirm the fix on a second panel.
 
+## Handset walk 7 — `1.2-preview.38` on the vivo 1906, 2026-10-23
+
+The vivo `80d20768` came back attached, still on `1.2-preview.37` (`versionCode 39`, installed 2026-10-22),
+Android **11**, `Override density: 256` on a 720px panel, and its `system` namespace `font_scale` at **1.0**.
+The two legs the `.37` walks owed were both put to this phone and both answered; one of them answered with a
+privacy incident that belongs in this file rather than in a footnote.
+
+**`1.2-preview.38` installed:** `adb install -r -g` of the 2,153,694-byte debug APK, `dumpsys package`
+answering `versionName=1.2-preview.38`, and the page inside it is the current bytes — `unzip -p … assets/Sukinnect.html |
+md5sum` matches `a4cf6fc31df59ae2964b0d726b071534`, the same hash as the source, `dist/` and the staged asset.
+
+**Owed leg — the nav floor on the second panel, at three text sizes.** Read on the provider dashboard, whose
+five-item nav is the case that showed the unit bug on the OPPO. Each row is the property the app *writes* and
+the size the WebView *paints*, plus the platform factor measured with a throwaway 100px span:
+
+| `font_scale` | factor | `--nav-label-size` written | computed size painted | slot | cut |
+|---|---|---|---|---|---|
+| 1.0 (as found) | 1 | *nothing written* | 14px | 84px | 0 |
+| 1.35 | 1.35 | `12.15px` | **16.4025px** | 84px | 0 |
+| 2.0 | 2 | `8.15px` | **16.3px** | 84px | 0 |
+
+So the conversion holds on the vivo panel: the app writes 8.15px and the phone paints 16.3px, which is above
+the 14px floor in the only space a phone measures in. Note what the floor is *not* doing here: at 450 CSS px
+five items get 84px slots, so the loop stops as soon as the words fit — at 2.0 that is 16.3px rendered, well
+above the floor. The 320px OPPO panel is the case where the floor binds (10.38 written → 14.013 painted), and
+that corner stays the one where the rounding direction is observable. A bench sweep cannot tell these apart,
+because `navFontScale()` is 1 there and specified equals rendered.
+
+**Owed leg — the concierge's system file picker, settled by the route that had never been tried.** Signed in
+as the resident, the concierge entry sits below the fold on this panel (`y=871` of 889): `scrollIntoView` alone
+did not move it, and the §86 fix did — `scrollBehavior='auto'` plus a direct `scrollTop` on `#screen` brought it
+to 470 and the tap landed. The photo control, `Upload or take a photo`, was already on screen at 225,434; one
+`--tap` there resumed `com.google.android.documentsui/com.android.documentsui.picker.PickActivity`, so §75's
+"this phone never opened the picker" was the instrument again — the earlier attempt had been tapping the
+gesture bar. Then the key route the `.37` walk flagged and never ran:
+
+```
+node tools/device-probe.cjs --keys=TAB,TAB,DPAD_DOWN,DPAD_CENTER '<reader>'
+```
+
+and the page came back holding a file: `conciergePhotoAttached=true`, our activity resumed, the picker closed.
+**A synthetic pointer was never the only obstacle** — `input keyevent` reaches a document row on this vivo's
+DocumentsUI where four injected taps across two layouts on ColorOS refused one. The conclusion "a thumb is
+still owed" is therefore retired for this device; it stays open only for the OPPO's ColorOS picker, where the
+key route has not been tried.
+
+**The privacy problem, stated plainly.** A key-driven pick selects whatever the grid has focused, and the
+focused row on a real phone is the newest image — **one of the owner's own photographs**, a camera-timed
+`.jpg`, not the `suki-leg7-test.png` pushed for this test. Pushing and re-indexing the test file (touch +
+`MEDIA_SCANNER_SCAN_FILE`, `_id=65630`) did not put it at the front of the recents the picker opened on, so
+the route cannot be steered at a known tile without either navigating a counted number of rows or clearing the
+recents. The app's own promise limited the damage and was measured holding: **zero** `blob:` and **zero**
+`data:image` references in the painted screen, no `<img>` carrying bytes, and only `conciergePhotoAttached`
+plus the name in memory — the stored snapshot (51,903 bytes) held no name at all, so nothing about that
+photograph crossed into storage or onto a network. The photo was removed through the screen's own **Remove
+photo** control and re-read as cleared. The pushed test file was deleted; the owner's other Download entries
+(a guide PDF, a validation toolkit, a repo archive and an older `suki-test-photo.png`) were left exactly where
+they were; `font_scale` was restored to 1.0 and verified; the app was signed out through its own `signOut()` —
+a script call rather than a thumb, because this was cleanup, not measurement. **The general rule: a working
+key route makes the pick automatable and therefore makes it able to choose somebody's real file. It must not
+be run on a device holding photographs the owner has not offered; the safe fixture is a folder that is empty
+except for the test file, entered by name.**
+
+**Three instrument notes from the same walk.** `--keys` is applied *before* the reader expression, so an
+attempt to focus a field inside the reader and then press Enter arrives too late — the sign-in had to be
+completed by tapping the button's own rect, which is what a thumb does anyway. `document.hasFocus()` answered
+false for the injected `focus()`, and the Enter keypress was swallowed silently, which is the same blindness
+§89 recorded for `document.activeElement`. And the auth screen's `Log in` button sat at page `y=901` in an
+889px viewport at 2.0 text while `document.scrollingElement.scrollHeight` equalled the viewport: the scroll
+container is the auth panel, not the document, so reading `scrollTop` and concluding "unreachable" would have
+been wrong twice over. The reachability tally already answered correctly (`controls no tap can reach`: 0),
+because it asks whether an *ancestor* scrolls.
+
+**The corner this walk produced.** 450 CSS px at 200% text had never been swept — the seven corners pair
+narrow panels with large text because that is where clipping was found. It is in `DEFAULT_CASES` now, and the
+eight-corner run is the figure quoted afterwards.
+
 ## Owed, in order — a pointer list, not an explanation
 
 Everything below is written out where it belongs; this is only the list of what the next person finds
 open. Nothing here is a defect the bench can close.
 
-**On the handset** — two items, and neither is a bench task:
-1. **Return a document from the system picker** the concierge’s photo control opens. ColorOS accepts an
-   injected tap on the picker’s own chrome and refuses one on a document row — four attempts, two
-   layouts, taps and a held `motionevent`. That was read as "one finger", but **the key path has never
-   been tried**: `input keyevent` with `KEYCODE_DPAD_DOWN` / `KEYCODE_TAB` to move focus and
-   `KEYCODE_DPAD_CENTER` to activate is a different input route from the ones refused, and this same
-   walk already had to fall back to `KEYCODE_ENTER` to submit the sign-in form once the keyboard moved
-   the page out from under the coordinates. **The flag for that attempt already exists**: open the picker
-   with `--tap` on the concierge's button, then
-   `node tools/device-probe.cjs --keys=TAB,TAB,DPAD_DOWN,DPAD_CENTER '1'` and read whether our page came
-   back holding a file name. It ships untested on hardware and its header says so; if the key route also
-   refuses, the thumb-only conclusion finally has the evidence the taps alone did not supply.
-2. **Install `1.2-preview.38` on the vivo `80d20768`** and read the provider nav there — written size and
-   computed size — because the nav-floor fix (§89) is confirmed on the OPPO's 320px panel and on no other.
-   The vivo currently runs `.37`.
+**On the handset** — one item, and it needs the other phone:
+1. **The OPPO's ColorOS picker has never been tried with keys.** Handset walk 7 settled this leg on the
+   vivo: `node tools/device-probe.cjs --keys=TAB,TAB,DPAD_DOWN,DPAD_CENTER '<reader>'` closed the picker
+   and our page came back holding a file, which retires "a thumb is owed" for that DocumentsUI. ColorOS
+   refused four injected taps on a document row while accepting one on its own chrome, so the open
+   question is only whether the same key route works there. **Fixture rule from walk 7, which picked the
+   owner's photograph by accident:** a key route selects the focused row, so run it against a folder that
+   is empty except for the test file and entered by name — never against a recents grid holding real
+   photographs.
 
 Everything else the `.37` list owed was put to a phone and is written up in *Handset walk 5* and
 *Handset walk 6* above — the caption, the Insights figures, the `1039`, the second provider's own header,

@@ -62,6 +62,15 @@ const DEFAULT_CASES = [
      bench proxy is the height it leaves behind. On a 480px-tall phone a keyboard takes roughly
      half, and 300px is what a resident has left while typing into the booking sheet. */
   { why: 'a keyboard open on a short phone (300px of viewport left)', scale: '1', width: '320', height: '300' },
+  /* The vivo 1906 produced this corner by being measured, not by being guessed: `Override density: 256`
+     on a 720px panel lays out at 450 CSS px, and `window.innerHeight` on the device answers 889. Handset
+     walk 7 raised the handset's own text size to 2.0 to push the provider nav against its floor, and the
+     largest-text-widest-panel combination had never been swept — the seven corners pair narrow panels with
+     large text, because that is where clipping was found, and a wide panel at 200% is a different failure
+     shape: an auth card whose primary button sits below the fold at exactly the size a reader chose. It
+     reads clean, so the corner is kept as a regression floor rather than a finding. */
+  { why: "vivo 1906 panel at the device's own largest text (450x889 @ 200%)", scale: '2', width: '450',
+      height: '889' },
   { why: 'default width, default text — the anchor a clean run must also produce', scale: '1', width: '' },
 ];
 
