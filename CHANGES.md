@@ -6502,6 +6502,17 @@ held: it is verified from the source line that paints it (`removeConciergePhoto(
 `state.conciergePhotoAttached`) and stated as source-verified rather than measured. `resident-profile`
 answered `NO CONCLUSION`, which is the right behaviour — a screen with no target must not print a pass.
 
+
+**Running the guard on real trees found a false-allow in the guard.** Its rule was "the focused row is 
+named for the fixture". Over the 18 saved picker trees, that rule would have allowed the centre press on 
+`d2.xml`–`d6.xml`, where the single focused node is `documentsui:id/search_src_text` — an **EditText
+containing the fixture name**, because walk 7 entered the file by name into the picker's search field and 
+the document rows sat elsewhere in the tree. A press there searches; it does not select. The leg would have 
+printed a pick that never happened, and nothing in the rule as written could tell that focus was on a 
+widget rather than a row. `centerAllowed` now refuses editors and refuses when more than one node reports 
+focus. `--guard-real` proves it against the artifacts: **18 refusals (5 edit-box, 13 unfocused) and exactly 
+one ALLOW, a synthetic tree where the document row itself holds focus** — the allow-control is what keeps 
+this a discriminator and not a blanket no. `findings: 0`, exit 0 on that shape, exit 1 otherwise.
 Nothing on this machine can read the installed bundle, so `audit-build-bytes` still stops at four copies —
 source, `dist/`, staged asset, APK — all `3c78fdd…`. The fifth copy is the phone, and reading it is what the
 two armed scripts exist to do.

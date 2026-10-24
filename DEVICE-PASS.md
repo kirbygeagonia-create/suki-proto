@@ -1846,6 +1846,19 @@ open. Nothing here is a defect the bench can close.
    keyevent` moved focus. That is independent corroboration of walk 7 on the phone where keys already 
    worked. **No ColorOS picker tree exists here at all**, so this item's residual is exactly what it was: 
    whether keys move focus among the rows on that shell, answered by one `--dump` reading on that phone.
+   **A defect in the guard itself, found by running it against real trees rather than made-up ones.** The 
+   rule was "the focused row's name must be the fixture". Tested over every saved picker tree 
+   (`node tools/device-picker-keys.cjs --guard-real`), it would have **allowed** the centre press on 
+   `d2.xml`–`d6.xml` — because in those trees the one focused node is 
+   `com.google.android.documentsui:id/search_src_text`, an **EditText whose text is the fixture name**: 
+   walk 7 entered the file by name into the picker's own search field, and the rows it searched up 
+   (`suki-test-photo.png, 100 kB, Oct 11`, `Preview the file suki-test-photo.png`) are a different part of 
+   the tree. Pressing centre there re-runs the query, selects nothing, and the leg would have reported a 
+   pick that never happened. The rule now also requires that focus is not on an editor and that exactly 
+   one node reports focus. Proof, on the artifacts themselves: **18 trees → 18 refusals** (5 edit-box, 13 
+   nothing-focused) with a synthetic document-row-focus case as the **only** ALLOW — so the guard still 
+   discriminates rather than simply refusing — `findings: 0`, exit 0 when that is the shape and exit 1 
+   when it is not.
    The attribution itself is now an instrument: `node tools/device-dump-provenance.cjs` lists every saved
    tree with its timestamp, node count and focus counts, and refuses with `NO CONCLUSION` when no picker tree
    exists to attribute. It answers 18 picker trees on this machine, **all of them stamped 2026-10-22**, one

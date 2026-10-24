@@ -118,9 +118,49 @@ function dump() {
    reads the name is the fix, not a smaller key sequence. */
 function centerAllowed(t) {
   if (t.focused.length === 0) return { ok: false, why: 'NOTHING IS FOCUSED — centre would activate an unknown row' };
-  const names = t.focused.map(n => n.text + ' ' + n.desc).join(' ').trim();
-  if (names.indexOf(FIXTURE_NAME) > -1) return { ok: true, why: 'focus is on the fixture: ' + names.slice(0, 60) };
+  if (t.focused.length > 1) return { ok: false, why: t.focused.length + ' nodes report focus at once — the tree does not say which one centre would press' };
+  const f = t.focused[0];
+  const names = (f.text + ' ' + f.desc).trim();
+  /* An edit box is not a document row. Real trees proved this matters: in `d2.xml`–`d6.xml` — the walk 7
+     sequence — the ONE focused node is `com.google.android.documentsui:id/search_src_text`, an EditText whose
+     text is the fixture name, because that walk entered the file by name into the picker's own search field.
+     A rule that only compared the name would answer "centre allowed" about a search box: the press would
+     re-run the query, activate no document, and the leg would report a pick that never happened. */
+  const isEditor = /EditText$/i.test(f.cls) || /search_src_text|input/i.test(f.id);
+  if (isEditor) return { ok: false, why: 'focus is on an edit box (' + (f.id || f.cls) + ' = "' + names.slice(0, 40) + '"), not on a document row — centre would search, not select' };
+  if (names.indexOf(FIXTURE_NAME) > -1) return { ok: true, why: 'focus is on the fixture row: ' + names.slice(0, 60) };
   return { ok: false, why: 'focus is NOT on the fixture — it is on "' + names.slice(0, 60) + '"' };
+}
+
+/* Run the rule over every saved picker tree. This is the guard's only honest test: a rule that refuses on
+   real artifacts for the right reasons is proven, and one that refuses on everything is decoration — so one
+   synthetic tree where the document row itself holds focus is carried alongside as the allow-control. */
+if (process.argv.indexOf('--guard-real') > -1) {
+  const dir = process.env.DUMP_DIR || '.scratch';
+  const files = fs.readdirSync(dir).filter(f => /\.xml$/i.test(f));
+  const trees = [];
+  for (const f of files) {
+    const t = parseTree(fs.readFileSync(dir + '/' + f, 'utf8'));
+    if (!t.pickerNodes) continue;
+    trees.push({ f, t, v: centerAllowed(t) });
+  }
+  if (!trees.length) { console.log('NO CONCLUSION: no picker tree in ' + dir + ' — nothing to test the rule against.'); process.exit(1); }
+  const allowControl = { f: '(synthetic allow-control)', t: { focused: [{ text: FIXTURE_NAME, desc: '', cls: 'android.widget.FrameLayout', id: 'com.google.android.documentsui:id/item_root', bounds: '[0,0][1,1]' }] }, };
+  allowControl.v = centerAllowed(allowControl.t);
+  const rows = trees.concat([allowControl]);
+  let allows = 0, editorRefusals = 0, otherRefusals = 0;
+  for (const r of rows) {
+    if (r.v.ok) allows++;
+    else if (/edit box/.test(r.v.why)) editorRefusals++;
+    else otherRefusals++;
+    console.log((r.v.ok ? 'ALLOW ' : 'refuse') + '  ' + r.f.padEnd(24) + r.v.why.slice(0, 74));
+  }
+  console.log('trees tested: ' + trees.length + ' — allows ' + allows + ' (the allow-control must be exactly 1), ' +
+    'edit-box refusals ' + editorRefusals + ', other refusals ' + otherRefusals);
+  /* Findings: anything other than the control being the sole allowed row is a rule that stopped discriminating. */
+  const findings = (allows === 1 && allowControl.v.ok) ? 0 : 1;
+  console.log('findings: ' + findings);
+  process.exit(findings ? 1 : 0);
 }
 
 if (process.argv.indexOf('--guard-test') > -1) {
