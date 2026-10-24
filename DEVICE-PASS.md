@@ -1920,6 +1920,26 @@ open. Nothing here is a defect the bench can close.
    setting on a phone that is not there — verified: `--scale=1.35` with nothing attached prints `NO DEVICE`
    and touches nothing.
 
+   **Partly answered 2026-10-24 on an emulated frame, and the scoping matters.** No handset was on the bus, so
+   the two surfaces were read on an AVD from this SDK's own `android-36/google_apis_playstore/x86_64` image
+   (**Android 16, WebView 133.0.6943.137**) carrying this same `1.2-preview.39`, install proved by reading
+   `versionCode=41 / versionName=1.2-preview.39` back off the package. Three readings: PIN field at the
+   default **`16px` specified in a `48px` box, `min-height:48px`, `meets44: true`, root `16px`, viewport
+   393x851**; filter sheet at the default **16 rows, minH and maxH both `44px`, `below44: 0`, 15px type**;
+   filter sheet at **`font_scale 1.35`** **16 rows, both heights `46px`, `below44: 0`, type `20.25px`** —
+   15 × 1.35 exactly, so the platform multiplied the used type after CSS resolved while the `var(--tap)` floor
+   held and was in fact exceeded by content; the sheet body's room moved from **834 in 668** to **884 in
+   636**, which is why reachability asks the scroller and not the viewport. **The PIN field at 1.35 was
+   refused by the frame** (`Runtime.evaluate timed out` — that expression paints twice and software rendering
+   could not finish it), recorded as refused, not measured. None of this reads the vivo: a framework answers
+   mechanism questions, not one handset's density or WebView build, so items 1 and 2 stay owed on the
+   physical phones. Two instrument facts came with it: every reading was blocked by a **stale `tcp:9222`
+   forward** that made the probe blame the app for a WebView that was exposing an inspector all along
+   (`/proc/net/unix` showed `webview_devtools_remote_1831`; `adb forward --remove-all` cleared it), and the
+   combined reader had to be split into one surface per evaluation (`tools/device-leg-pin.js`,
+   `tools/device-leg-rows.js`). `font_scale` was set back to 1.0 and read back as 1.0 before the emulator
+   stopped.
+
 3. **Closed 2026-10-24, and the item itself was the defect.** Walk 7 wrote that the vivo's WebView version
    "was never captured"; opening the log showed walk 5 had captured it, and `dumpsys webviewupdate` today
    answers the same `com.google.android.webview 155.0.8059.43`. What the earlier walk had got wrong was the

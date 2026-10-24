@@ -6590,3 +6590,30 @@ committed document and left it reading like a record with holes in it. Nothing w
 errored), but a deleted span is worse than a wrong one because nothing looks broken. This repair was
 written with the Write tool, where no shell ever sees a backtick — the rule this repository already states
 and which I broke anyway.
+
+## 102. The first device readings the walk ever produced, and a stale port forward that hid them
+
+The frame was an AVD from this SDK's own `android-36/google_apis_playstore/x86_64` image — **Android 16, 
+WebView 133.0.6943.137** — carrying the same `1.2-preview.39`, install proved by reading the package back. 
+The first probe attempt said *"the WebView is not exposing an inspector"* while the app was running and 
+`/proc/net/unix` plainly listed `webview_devtools_remote_1831`: the cause was a **stale `tcp:9222` forward 
+left by an earlier run**, cleared by `adb forward --remove-all`. An instrument blaming the application for 
+its own dead socket is the oldest move in this file, and it nearly ended the attempt.
+
+Then the numbers, taken one surface per evaluation because the combined reader timed out: PIN field at the 
+default **16px specified in a 48px box, `min-height:48px`, `meets44: true`, root 16px, viewport 393x851**; 
+filter sheet at the default **16 rows, minH and maxH both 44px, `below44: 0`, 15px type**; filter sheet at 
+**`font_scale 1.35`** → **16 rows, both heights 46px, `below44: 0`, type `20.25px`**. That last line is the 
+one §68 has been asserting from a phone disagreeing with a bench: 15 × 1.35 = 20.25, the platform 
+multiplied the used size after CSS resolved, and the `var(--tap)` floor **held and was exceeded by 
+content** (44px became 46px) rather than being multiplied with the type — so a px floor behaves exactly as 
+§39 needs on a real frame, while the *type* inside it does what §68 says. The sheet body's own room moved 
+from **834 in 668** to **884 in 636**, which is why the row reachability check has to ask about the 
+scroller and never about the viewport.
+
+One reading the frame refused: the PIN field at 1.35 answered `Runtime.evaluate timed out` — that 
+expression paints twice and software rendering could not finish it inside the WebView's evaluation limit. 
+Recorded as refused, not as measured. **None of this is the vivo**: a framework answers mechanism questions, 
+not parity questions about one handset's density or its WebView build, so the install-and-read leg on the 
+physical phone and the ColorOS key route both stay owed. `font_scale` was set back to 1.0 and read back as 
+1.0 before the emulator was stopped.
