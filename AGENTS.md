@@ -2740,8 +2740,10 @@ either print shape — an object answer and a `JSON.stringify` answer arrive dif
 one of them is what let a planted `findings:1` look clean — promotes a positive count from `ok` to `XX`,
 and prints the number ahead of the answer so the truncation cannot swallow it.
 `grep -l findings tools/probe-*` answers four files — the settled-caret probe joined them with §96 — and they
-agree on the key. Last full instrument pass, 2026-10-24: **45 probes, 0 needing attention — 4 of them report a
-findings count this runner reads**, read off the line that pass printed rather than added up in prose.
+agree on the key. Last full instrument pass, 2026-10-24: **46 probes, 0 needing attention — 4 of them report a
+findings count this runner reads**, read off the line that pass printed rather than added up in prose. The
+previous sentence in this file said 45, which was true of the pass before §99's sheet work added a screen;
+the totals line near §31 and this one disagreed by one until the census of them was re-run.
 
 A MUTANT RUN THAT IS KILLED LEAVES ITS OWN DEFECT IN THE TREE, AND ONLY `git status` CAN SEE IT. The
 runner's header has always warned that abandoning a pass early "is the one way to leave a mutant in the
