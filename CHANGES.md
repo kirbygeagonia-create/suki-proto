@@ -6569,14 +6569,24 @@ readings DEVICE-PASS owes remain owed on real handsets**: the vivo's `.39` insta
 heights, and ColorOS's key route. An AVD settles a framework question; it cannot settle a hardware-parity
 question, and it is not recorded as if it had.
 
-**The atomic surfaces reader was written, bench-proven, and then refused by the frame — recorded
-as three separate facts rather than one success.** To stop the walk straddling an app restart, both
-surfaces are now read inside ONE page evaluation (: navigate, raise each
-layer through the app's own handler, measure, clean up, return one object). On the bench it answers
-exactly the known figures in a single call — PIN field 16px in a 48px box, 16 rows at 44px with
-, sheet title "Filter providers", last row reachable through  at 833 in 660,
- returning . Sent to the emulated frame it came back
-: that page cannot complete a multi-render read under the pressure this
-laptop puts on software-rendered Android, which is the limit written down in project memory before it
-was tested, now tested. So the two handset readings remain owed, the instrument for taking them is
-proven on a surface where the answer is known, and the emulator has been stopped.
+**The atomic surfaces reader was written, bench-proven, and then refused by the frame — recorded as
+three separate facts rather than one success.** To stop the walk straddling an app restart, both surfaces
+are now read inside ONE page evaluation (`tools/device-leg-surfaces.js`: navigate, raise each layer
+through the app's own handler, measure, clean up, return one object). On the bench it answers exactly the
+known figures in a single call — PIN field **16px in a 48px box**, filter rows **16 at exactly 44px,
+`below44: 0`, 15px type**, sheet title "Filter providers", last row reachable through `sheet-body` at
+**833px of content in a 660px box**, and `afterCleanup` returning `sheet:null modal:null` so the read
+leaves no layer open behind it. Sent to the emulated frame it came back
+**`Runtime.evaluate timed out`**: that page cannot complete a multi-render read under the pressure this
+laptop puts on software-rendered Android — the limit project memory recorded for an AVD before it was
+tested, now tested on the instrument itself. So the two handset readings remain owed; what changed is that
+the instrument for taking them is proven on a surface where the answer is known, and the emulator was
+stopped with `font_scale` read back at 1.0.
+
+One more lesson, about this very file: the first version of that paragraph was written through a
+double-quoted `node -e`, and **backticks inside it were executed as commands**, so five spans — the
+instrument path, `below44: 0`, `sheet-body`, `afterCleanup`, `Runtime.evaluate` — vanished from a
+committed document and left it reading like a record with holes in it. Nothing was injected (the commands
+errored), but a deleted span is worse than a wrong one because nothing looks broken. This repair was
+written with the Write tool, where no shell ever sees a backtick — the rule this repository already states
+and which I broke anyway.
