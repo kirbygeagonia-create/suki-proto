@@ -1931,7 +1931,9 @@ open. Nothing here is a defect the bench can close.
    held and was in fact exceeded by content; the sheet body's room moved from **834 in 668** to **884 in
    636**, which is why reachability asks the scroller and not the viewport. **The PIN field at 1.35 was
    refused by the frame** (`Runtime.evaluate timed out` — that expression paints twice and software rendering
-   could not finish it), recorded as refused, not measured. None of this reads the vivo: a framework answers
+   could not finish it), recorded as refused, not measured; **split into open + measure and re-tried later the
+   same day, it timed out again on a fresh boot even at the default scale**, so the field's `rem` reading at
+   1.35 has never been taken on any Android target — bench only. None of this reads the vivo: a framework answers
    mechanism questions, not one handset's density or WebView build, so items 1 and 2 stay owed on the
    physical phones. Two instrument facts came with it: every reading was blocked by a **stale `tcp:9222`
    forward** that made the probe blame the app for a WebView that was exposing an inspector all along

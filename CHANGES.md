@@ -6617,3 +6617,12 @@ Recorded as refused, not as measured. **None of this is the vivo**: a framework 
 not parity questions about one handset's density or its WebView build, so the install-and-read leg on the 
 physical phone and the ColorOS key route both stay owed. `font_scale` was set back to 1.0 and read back as 
 1.0 before the emulator was stopped.
+
+**Same day, re-attempted after the split.** The refused PIN reading was cut into two cheaper probes
+(`tools/device-leg-pin-open.js` navigates and paints once, `tools/device-leg-pin-measure.js` touches no
+layout at all). On a fresh boot **both halves then timed out even at the default `font_scale`**, with three
+page targets each answering `ERR Runtime.evaluate timed out`. So the split pair's status is *refused by the
+frame* — not answered, and not an application defect. The three readings recorded above stand because they
+were taken on an earlier boot that did answer; this one would not. **The admin PIN field at 1.35 has still
+never been measured on any Android target** — it exists only as a bench figure, and it stays a handset leg.
+The emulator was stopped with `font_scale` read back at 1.0.
