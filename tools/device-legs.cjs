@@ -87,6 +87,18 @@ function gotoScreen(label, setup, expectRe) {
     if (o && expectRe.test(o.h1)) { console.log(label + ': on screen — h1="' + o.h1 + '"'); return o; }
     console.log('  retry ' + (i + 1) + ': h1="' + (o ? o.h1 : '(no answer)') + '" view=' + (o ? o.view : '?'));
     if (i === 0) waitSettled();
+    /* A budget handset accumulates DevTools targets the way the OPPO did: every reload inside one WebView
+       leaves its target behind, and a resumed process will not service them — the vivo run of this walk spent
+       its whole second half reading `}` because three targets had piled up and every evaluate timed out. The
+       repair measured on the OPPO was a cold restart, and the frame answering `targets: 1` again is the proof
+       it worked. Waiting longer does not fix it, so on the third attempt the app is restarted rather than
+       polled. */
+    if (i === 2) {
+      console.log('  cold restart: the frame has not answered twice — force-stop, and the target count must fall back to 1');
+      adb('shell', 'am', 'force-stop', PKG); sleep(1200);
+      adb('shell', 'monkey', '-p', PKG, '-c', 'android.intent.category.LAUNCHER', '1'); sleep(6500);
+      waitSettled();
+    }
     sleep(1500);
   }
   readings.bad.push(label + ' (never reached)');
@@ -327,7 +339,7 @@ if (scaleFlag) {
     's.textContent="Hgs";document.body.appendChild(s);var q=s.getBoundingClientRect();s.remove();' +
     'return JSON.stringify({factor:Math.round((q.height/100)*1e4)/1e4,' +
     'rootFont:getComputedStyle(document.documentElement).fontSize})})()');
-  say('admin hub at scale', "state.view='app'; state.role='admin'; state.tab='profile'; render(); 1");
+  gotoScreen('admin hub at ' + want, "state.view='app'; state.role='admin'; state.tab='profile'; render();", /Admin account/);
   tapPainted('Lock Admin Session', "/adminAccountAction\\('lock'\\)/", 'Lock Admin Session');
   say('PIN field at ' + want, '(function(){var i=document.querySelector(".modal-layer input[type=password]");' +
     'if(!i)return "NO PIN FIELD PAINTED";var cs=getComputedStyle(i),q=i.getBoundingClientRect();' +
@@ -336,7 +348,7 @@ if (scaleFlag) {
     'return JSON.stringify({specifiedFontSize:cs.fontSize,measuredFactor:Math.round(f*1e4)/1e4,' +
     'renderedSizeApprox:Math.round(parseFloat(cs.fontSize)*f*10)/10,rectH:Math.round(q.height*10)/10,' +
     'minHeight:cs.minHeight,tapFloorOk:q.height>=44})})()');
-  say('filter rows at ' + want, "state.sheet=null;state.role='resident';startDiscovery('leak');1");
+  gotoScreen('results at ' + want, "state.sheet=null;state.role='resident';startDiscovery('leak');", /Find Services/);
   tapPainted('Filter providers', "/openSheet\\('providerFilters'\\)/", '#provider-filter-btn');
   say('rows at scale', '(function(){var r=[].slice.call(document.querySelectorAll(".filter-option"));if(!r.length)return "NO ROWS";' +
     'var h=r.map(function(x){return Math.round(x.getBoundingClientRect().height*10)/10});' +
@@ -365,7 +377,7 @@ say('last row reach', '(function(){var rows=[].slice.call(document.querySelector
   'inViewportNow:q.top>=0&&q.bottom<=innerHeight,scroller:sc?(sc.className||sc.tagName):"none",' +
   'scrollerSeesMore:sc?Math.round(sc.scrollHeight)+" in "+Math.round(sc.clientHeight):"n/a",' +
   'reachable:q.bottom<=innerHeight||!!sc})})()');
-say('close sheet', "state.sheet=null; render(); JSON.stringify({sheet:state.sheet,h1:(document.querySelector('#screen h1')||{}).textContent})");
+say('close sheet', "(function(){state.sheet=null; render(); return JSON.stringify({sheet:state.sheet,h1:(document.querySelector('#screen h1')||{}).textContent})})()");
 
 /* ---------- 5. leave it signed out, and read the platform back ---------- */
 gotoScreen('resident hub', "state.view='app'; state.role='resident'; state.tab='profile'; render();", /Profile/);

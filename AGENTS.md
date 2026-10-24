@@ -2735,6 +2735,29 @@ both read from the device. And `persist()` returning `true` on the shell is what
 from "DOM storage disabled" — the difference between a finding and an absence, and the reason the empty store
 was recorded rather than trusted.
 
+**Both phones now agree, and a stale DevTools frame is repaired by restarting it rather than waiting on it.**
+Handset walk 11 put `1.2-preview.39` on the vivo 1906 (`80d20768`, Android 11, WebView 155.0.8059.43, page
+reporting `innerWidth 450 / innerHeight 889 / devicePixelRatio 1.6`) and read the two surfaces the pass owed
+there: at the default scale the admin PIN field is `16px` specified inside a `48px` box and the filter sheet is
+**16 rows at exactly 44px, `below44: 0`**, the last row `reachable: true` through `sheet-body` (`833 in 707`) —
+the bench figures, unchanged, on a phone. At the phone's own `font_scale 1.35` the multiplier read **1.35**, the
+root computed **21.6px**, the field became **specified 21.6px / rendered ≈29.2px / box 51.4px**, and the rows
+**45.5px with type 20.25px = 15 × 1.35, `below44: 0`**. The OPPO measured `51.8px` and `46px` at the same scale,
+so the two handsets agree to under a pixel and the 44px floor survives the platform's multiplication on both —
+§68's claim, now measured rather than argued (`CHANGES.md` §109).
+
+Two failures produced that reading and both were the instrument, which is the part worth keeping. First, two
+call sites in the driver's scale stage passed **statements** into the expression wrapper the probe evaluates —
+the bug `gotoScreen` exists to avoid — so the hub never navigated, the tap truthfully reported MISSING and the
+reader truthfully reported `NO PIN FIELD PAINTED`: three clean-looking refusals stacked on one `SyntaxError`.
+A rule that lives in one helper is only a rule if every caller goes through it; duplicating the navigation
+duplicated the defect. Second, after the scale stage's restart the walk's back half degenerated to `}` answers
+against **3 page targets on one socket** — the reload-leaves-a-target-behind pattern again, on a budget handset
+this time — and `gotoScreen`'s poll-and-retry could not clear it, because polling a saturated frame does not
+make it answer. The retry loop now cold-restarts on its third attempt, and the log proves the repair fired:
+three `NOT ANSWERED` rows, then the restart line, then `results: on screen — h1="Find Services"` and every
+reading after it answering. **Waiting longer is not a recovery strategy for a dead inspector; restarting is.**
+
 §75's "the provider sees the name you gave it, not the photo" is now backed by pixels, and in a browser
 rather than on the phone that refuses the pick: a `File` handed to `#hidden-file-input` through
 `DataTransfer` — the mechanism the browser itself uses when a picker returns a document, so this is a state

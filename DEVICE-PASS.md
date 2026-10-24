@@ -1832,7 +1832,8 @@ finding, and the date is what tells them apart.
 Everything below is written out where it belongs; this is only the list of what the next person finds
 open. Nothing here is a defect the bench can close.
 
-**On the handset** — one open item (item 2, the vivo panel), plus one closed note a later walk reopened.
+**On the handset** — no open items as of 2026-10-24: item 1 closed by Handset walk 10 and item 2 by Handset
+walk 11, both on a real handset and both with `findings: 0`. Plus one closed note a later walk reopened.
 Item 1 was **CLOSED on 2026-10-24 by Handset walk 10** (`CHANGES.md` §107): ColorOS's picker does accept
 `input keyevent`, a document came back twice, and §75's name-only claim held on a real pick with the store
 actually present.
@@ -1968,6 +1969,9 @@ actually present.
    Mode the owner turned off was left off, and the TalkBack/`AccessibilityMenuService` found on this phone was
    left alone.
 2. **`1.2-preview.39` is installed and read on the OPPO CPH2179 (2026-10-24); the vivo still runs `.38`.**
+   *(Both halves closed 2026-10-24: the OPPO by Handset walk 9, the vivo by Handset walk 11, which installed
+   `.39` on it and read both surfaces at `450 CSS px` with `findings: 0`. The `.38` in this sentence is what the
+   phone ran when the item was written; see the closure at the end of this item.)*
    Handset walk 9 proved the install by reading `versionCode=41 / versionName=1.2-preview.39` back off the
    package and closed both readings with `findings: 0`: the admin PIN field at the phone's own
    `font_scale 1.35` measures **specified `21.6px`, factor `1.35`, glyphs `29.2px`, box `51.8px`,
@@ -2037,6 +2041,28 @@ actually present.
    combined reader had to be split into one surface per evaluation (`tools/device-leg-pin.js`,
    `tools/device-leg-rows.js`). `font_scale` was set back to 1.0 and read back as 1.0 before the emulator
    stopped.
+   **CLOSED 2026-10-24 by Handset walk 11 — the vivo reads the same as the OPPO.** `80d20768`, vivo 1906,
+   Android 11 (SDK 30), WebView `155.0.8059.43`, the page reporting `innerWidth 450`, `innerHeight 889`,
+   `devicePixelRatio 1.6`; `.39` installed and proved by reading `versionCode=41 / versionName=1.2-preview.39`
+   back off the package (it was `40 / .38` before this walk). Both surfaces opened by real taps, verdict
+   **`findings: 0`**:
+   • **Admin PIN field, default scale** — `specifiedFontSize 16px`, `measuredFactor 1`, glyph height `16px`,
+   box `48px`, `min-height:48px`, `tapFloorOk: true`. The bench figure, exactly.
+   • **Admin PIN field at the phone's own 1.35** — multiplier from a throwaway span `1.35`, root `21.6px`, and
+   the field **specified `21.6px`, factor `1.35`, rendered ≈`29.2px`, box `51.4px`, `min-height:48px`,
+   `tapFloorOk: true`**. So the sentence two bullets above — that this reading "has never been taken on any
+   Android target — bench only" — is retired: it has now been taken on **two** handsets and they agree to 0.4px.
+   • **Filter providers, default scale** — `n 16`, `minH 44`, `maxH 44`, `below44: 0`, type `15px`, rows Plumbing
+   / Electrical / Cleaning…; last row `top 888 / bottom 932` in an `889` viewport, `inViewportNow: false`,
+   **`reachable: true`** through `sheet-body` (`833 in 707`).
+   • **Filter providers at 1.35** — `n 16`, `minH 45.5`, **`below44: 0`**, type `20.25px` = 15 × 1.35.
+   Against the OPPO's `320x638`: PIN box `51.4` vs `51.8`, rows `45.5` vs `46`, glyphs `29.2` on both, factor
+   `1.35` on both, type `20.25px` on both. The residual differences are sub-pixel, and the two claims this leg
+   existed for hold on both panels: **the 44px floor survives the platform's multiplication, and the type
+   multiplies after CSS resolves.** `CHANGES.md` §109 records the two instrument repairs the run needed.
+   Verified as left by reading the phone rather than trusting the log: `versionName=1.2-preview.39`,
+   `font_scale` 1.0, `enabled_accessibility_services` null, no `suki*` file in `/sdcard/Download`, no
+   `window_dump.xml`, **0** forwards, app at `view: login` after its own Log Out row and the confirm's own button.
 
 3. **Closed 2026-10-24, and the item itself was the defect.** Walk 7 wrote that the vivo's WebView version
    "was never captured"; opening the log showed walk 5 had captured it, and `dumpsys webviewupdate` today

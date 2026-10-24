@@ -6915,3 +6915,60 @@ The rule for the next append to a numbered document: anchor at the end of the fi
 are appending after — never on a sentence that a previous append may have moved. And after any block move, ask
 the diff whether insertions and deletions balance; a pure relocation that does not balance is a pure relocation
 that deleted something.
+
+## 109. Handset walk 11: the vivo agrees with the OPPO, and the driver had to repair two of its own defects first
+
+The vivo 1906 came back on the bus (`80d20768`, Android 11 / SDK 30, WebView `155.0.8059.43`) running
+`versionCode=40 / 1.2-preview.38`. `node tools/device-legs.cjs --scale=1.35` installed the current artifact and
+proved it the only way this project accepts — read `versionCode=41 / versionName=1.2-preview.39` back off
+`dumpsys package`, not off the file name — then took both owed surfaces on that panel. **Verdict: `findings: 0`.**
+
+The page reported its own geometry first: `innerWidth 450`, `innerHeight 889`, `devicePixelRatio 1.6` — the
+number Windows and `dumpsys` only hint at, and the reason the leg existed. At the default scale the admin
+**Lock Admin Session** PIN field measures **specified `16px`, factor 1, glyph height `16px`, box `48px`,
+`min-height:48px`, `tapFloorOk: true`**, and the **Filter providers** sheet measures **16 rows at
+`minH 44 / maxH 44`, `below44: 0`, type `15px`**, with the last row at `top 888 / bottom 932` in an `889`
+viewport — `inViewportNow: false`, `reachable: true` through `sheet-body` (`833 in 707`). Those are the bench
+figures, on a phone, unchanged.
+
+At the phone's own `font_scale 1.35` the platform did what §68 says it does and nothing on the bench can show:
+the throwaway-span multiplier read **1.35**, the root computed **21.6px**, and the same field became
+**specified `21.6px`, factor `1.35`, rendered ≈`29.2px`, box `51.4px`**, still `min-height:48px`, still
+`tapFloorOk: true`. The filter rows went to **`minH 45.5`, type `20.25px` = 15 × 1.35, `below44: 0`**. Beside
+the OPPO's 320-CSS-px readings from walk 9 — box `51.8`, rows `46`, glyphs `29.2`, factor `1.35`, type
+`20.25px` — the two phones agree to within half a pixel, and both keep the floor. That closes the last hardware
+item the handset pass owed, and it retires the DEVICE-PASS sentence that said the `rem` reading at 1.35 "has
+never been taken on any Android target — bench only": it has now been taken on two.
+
+**The first attempt at this run measured nothing, and both causes were the driver.** Not the phone: the frame
+answered `targets: 1` and returned the multiplier in milliseconds, then reported
+`admin hub at scale: SyntaxError: Unexpected token ';'`. Two payloads in the scale stage still passed a list of
+statements into the expression wrapper `device-probe` evaluates — the defect `gotoScreen` had already been
+written to avoid, duplicated in a second place instead of routed through it. So the hub was never navigated,
+`tap Lock Admin Session` honestly reported MISSING, and the reader honestly reported NO PIN FIELD PAINTED: three
+clean-looking refusals stacked on one syntax error. The same bug sat in the `close sheet` step. Both navigations
+now go through `gotoScreen`, which wraps statements in an IIFE and verifies the destination's own `<h1>`
+(`admin hub at 1.35: on screen — h1="Admin account"`).
+
+**The second defect was the vivo behaving exactly like the OPPO had.** After the scale stage's force-stop and
+relaunch, the walk's later half degenerated: every read answered `}` and `Runtime.evaluate` timed out against
+**3 page targets on one socket** — the reload-leaves-a-target-behind pattern, which on a budget handset costs
+the whole back half of a pass. `gotoScreen` polled and retried, and polling a saturated frame does not clear it;
+what worked on the OPPO was a cold restart, so the retry loop now does one on its third attempt. Proven in the
+same log rather than assumed: `results reached?: NOT ANSWERED` three times, then
+**`cold restart: the frame has not answered twice — force-stop, and the target count must fall back to 1`**, then
+`results: on screen — h1="Find Services"` and every reading after it answered. The rule generalises past this
+driver: **a stale frame is repaired by restarting it, not by waiting longer on it.**
+
+Device left as found and checked by reading the phone rather than trusting the walk's own summary:
+`versionName=1.2-preview.39`, `font_scale` **1.0** (the scale stage's exit hook restored it and read it back),
+`enabled_accessibility_services` null, no `suki*` file in `/sdcard/Download`, no `window_dump.xml`, **0**
+forwards, app at `view: login` after its own Log Out row and the confirm dialog's own button. No application
+bytes changed: `git diff --quiet -- Sukinnect-next.html` answers clean, so the gate stays
+**all 566 checks passed** from the run that printed it, and `node tools/audit-build-bytes.cjs` still reports
+`findings: 0` with all four copies at `3c78fdd…`. No falsifier family reads `tools/device-legs.cjs`
+(`grep -l "device-legs" tools/falsify-*.cjs` answers nothing), so the family and probe totals are unchanged.
+
+**The handset pass has now run eleven times, across two physical phones and an emulated frame, and owes
+nothing.** What remains on this branch is a person's decision, not a measurement: PR #9 stays OPEN and the merge
+button is a human's.
