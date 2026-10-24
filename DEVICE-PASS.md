@@ -1846,6 +1846,11 @@ open. Nothing here is a defect the bench can close.
    keyevent` moved focus. That is independent corroboration of walk 7 on the phone where keys already 
    worked. **No ColorOS picker tree exists here at all**, so this item's residual is exactly what it was: 
    whether keys move focus among the rows on that shell, answered by one `--dump` reading on that phone.
+   **Attempted 2026-10-24 on this very phone and not reached**: the fixture pushed, touched, broadcast and
+   indexed cleanly (MediaStore `_id=37819`), but the app's page would not answer — 2 then 3 page targets on
+   one socket, every `state.view` probe timing out, `mCurrentFocus` on `StatusBar` — so `--open` refused to
+   tap a control whose rect it could not obtain. Leg B is therefore untested for the reason it was open for:
+   no key was ever pressed inside ColorOS's picker. See CHANGES §104b.
    **A defect in the guard itself, found by running it against real trees rather than made-up ones.** The 
    rule was "the focused row's name must be the fixture". Tested over every saved picker tree 
    (`node tools/device-picker-keys.cjs --guard-real`), it would have **allowed** the centre press on 
@@ -1879,7 +1884,15 @@ open. Nothing here is a defect the bench can close.
    named for the fixture it pushed — proved without a phone by `--guard-test` (3 of 3: nothing focused 
    refused, that photograph refused, the fixture allowed) and its parser proved by running it over that 
    saved tree, which is where the two photograph rows came to light.
-2. **`1.2-preview.39` is built and bundle-verified but not installed.** §98 changed the page (the
+2. **`1.2-preview.39` is installed and read on the OPPO CPH2179 (2026-10-24); the vivo still runs `.38`.**
+   Handset walk 9 proved the install by reading `versionCode=41 / versionName=1.2-preview.39` back off the
+   package and closed both readings with `findings: 0`: the admin PIN field at the phone's own
+   `font_scale 1.35` measures **specified `21.6px`, factor `1.35`, glyphs `29.2px`, box `51.8px`,
+   `min-height:48px`, `tapFloorOk: true`**, and the filter sheet is **16 rows at `46px`, `below44: 0`,
+   type `20.25px`, last row `reachable: true` through `sheet-body` (884 in 392) on a `320x638` viewport** —
+   both layers opened by real taps. **What is still owed here is parity, not mechanism**: the same two
+   readings on the vivo's ~450 CSS px panel, which is the device that found the nav-label bug and is not on
+   the bus. §98 changed the page (the
    admin lock field and its copy), so the tree, `dist/`, the staged asset and the APK all read
    `3c78fdd…` (three page changes since `.38`: the §98 lock field, §99's filter rows, and §99's
    unique icon ids), and the APK was rebuilt each time so the bundle still matches, while the vivo still
