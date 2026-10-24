@@ -2298,6 +2298,14 @@ header, the API's own timestamp), not this machine's: on a Windows box in an Asi
 lies, and it lies in whichever direction makes a too-recent deploy look too old. Related to the seed-date and
 Manila-midnight defects — the same class arriving from the machine clock instead of the application's.
 
+**Ruled by the owner on 2026-10-24: the public build is deliberately left stale.** Production keeps serving the
+2026-10-15 artifact for now, so `findings: 7` from `node tools/deploy-check.cjs` is an **accepted standing state and
+a tripwire, not a task** — it is not to be "fixed" by a redeploy nobody asked for, and it is not to be described as
+an open defect. What the tripwire is for: if the live page ever drifts in a way nobody chose — a partial build, an
+asset that stopped resolving, a repo path suddenly answering 200 — the same command goes red and names what moved.
+The Netlify branch/auto-deploy setting remains unread from this repository, and that is now a known and accepted
+blind spot rather than an oversight.
+
 A FIGURE KEPT BY HAND IN PROSE IS THE NEXT FIGURE THAT IS WRONG. `node tools/falsify-all.cjs`
 now runs every mutant family in one sequential pass and prints, per family, how many breaks were
 applied, how many the named check caught, and how many never matched the file. It exists because

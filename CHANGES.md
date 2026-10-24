@@ -7148,3 +7148,27 @@ right one differ by exactly one, because nothing looks broken.
 
 No application bytes changed. Gate **all 566 checks passed** in both trees; four on-disk copies identical at
 `3c78fdd…`; `Sukinnect.html` identical to `origin/main`.
+
+## 114. A ruling, recorded so the tripwire is not mistaken for a task
+
+Asked what to do about production still serving the 2026-10-15 build fifteen minutes after the merge, the owner
+ruled: **leave it stale.** So §113's and §112's `findings: 7` from `node tools/deploy-check.cjs` is now an
+**accepted standing state**, not an open defect, and it must not be "fixed" by a redeploy nobody asked for. AGENTS.md
+carries the ruling next to the section that found the drift.
+
+What that changes in practice is the meaning of the red line, not the line itself. `deploy-check` keeps exiting 1
+and keeps naming the six undeployed fixes, because its value is now **drift detection**: if the live page ever moves
+in a way nobody chose — a partial build, an asset that stops resolving, a repo path that suddenly answers 200 — the
+same command goes red over a change that was not made on purpose, and that is the difference between a stale site
+and a broken one. The Netlify branch and auto-deploy settings stay unread from this repository, which is now a
+**known and accepted blind spot** rather than an oversight; the nine-day drift happened precisely because nobody had
+written down that nobody knew.
+
+Two companion rulings from the same exchange, so the record is complete: **the public root serving
+`Sukinnect-next.html` is intended** (a decision about what a reviewer is shown, not `netlify.toml` drift), and
+**post-merge work lands through its own pull request** rather than being swept onto `main` — which is why this
+section arrives on a branch with a PR of its own rather than as a push.
+
+No application bytes changed and no deploy was triggered for this section. Gate **all 566 checks passed**; four
+on-disk copies identical at `3c78fdd…`; `Sukinnect.html` identical to `origin/main` at 4,707 lines by
+`node tools/measure.cjs Sukinnect.html`.
