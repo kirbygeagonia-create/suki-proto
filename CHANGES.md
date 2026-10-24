@@ -6478,17 +6478,18 @@ tree "walk 6 left on disk" and draws the ColorOS conclusion from it. The filenam
 a scan of all 34 saved dumps that carry a picker window or a focused node shows `docui.xml` and
 `d2.xml`–`d8.xml` are all stamped **2026-10-22, 16:43–16:58**,
 the afternoon walk 7 ran the key route on the **vivo**. Read as a sequence they are a better artifact than I
-thought — the 177-node tree has no focused node and the four later trees each have exactly one node focused
+thought — the 177-node tree has no focused node and the five later trees `d2.xml`–`d6.xml` (16:47–16:56) each have exactly one node focused
 inside `com.google.android.documentsui`, which independently corroborates that `input keyevent` moved focus
 *on the phone where the key route already worked* — but they say nothing about ColorOS, whose picker has no
 saved tree on this machine. So leg B's residual stands as written before this pass, and the "45 focusable
 nodes" reading belongs to the vivo. The two-owner-photograph hazard is real and came from the vivo's grid,
 which is exactly where walk 7 selected one. **A device was inferred from a filename; the mtime is what
-identifies it**, and `focused="true"` counts across a whole directory take one command. The scan is deliberately **not**
-promoted into `tools/audit-*.cjs` in this session: `probe-all.cjs` discovers that prefix by filename, the
-instrument pass now running would report 47 while the tree held 48, and a quoted total that disagrees with
-the tree is the drift this file keeps writing rules about. It gets promoted in a pass that re-runs the
-runner.
+identifies it**, and `focused="true"` counts across a whole directory take one command. The scan **is** now promoted, as
+`tools/device-dump-provenance.cjs` — deliberately *not* under the `probe-`/`audit-` prefix, because
+`probe-all.cjs` discovers those by filename and runs them against the application, while this tool reads
+saved files; naming it `device-*` keeps it a sibling of `device-probe.cjs` and leaves the quoted **47
+probes** true of the tree. It also corrects this row's own arithmetic: the focused trees are **five**
+(`d2.xml`–`d6.xml`, 16:47–16:56), not four, which is what the tool prints.
 Nothing on this machine can read the installed bundle, so `audit-build-bytes` still stops at four copies —
 source, `dist/`, staged asset, APK — all `3c78fdd…`. The fifth copy is the phone, and reading it is what the
 two armed scripts exist to do.

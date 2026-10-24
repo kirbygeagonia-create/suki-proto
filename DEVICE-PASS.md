@@ -1841,11 +1841,15 @@ open. Nothing here is a defect the bench can close.
    same tree was ColorOS's and "narrowed" the leg from it. It is not ColorOS's: a scan of every dump left 
    on this machine — 34 files carry a picker window or a focused node — shows `docui.xml`, `d2.xml` … `d8.xml` all stamped 
    **2026-10-22, 16:43 to 16:58** — the afternoon walk 7 ran the key route on the **vivo**. The sequence is 
-   legible: the 177-node tree has **no** focused node, and the four later trees each have **exactly one
+   legible: the 177-node tree has **no** focused node, and the five later trees `d2.xml`–`d6.xml` (16:47–16:56) each have **exactly one
    node focused inside `com.google.android.documentsui`** — the same picker before and after `input 
    keyevent` moved focus. That is independent corroboration of walk 7 on the phone where keys already 
    worked. **No ColorOS picker tree exists here at all**, so this item's residual is exactly what it was: 
    whether keys move focus among the rows on that shell, answered by one `--dump` reading on that phone.
+   The attribution itself is now an instrument: `node tools/device-dump-provenance.cjs` lists every saved
+   tree with its timestamp, node count and focus counts, and refuses with `NO CONCLUSION` when no picker tree
+   exists to attribute. It answers 18 picker trees on this machine, **all of them stamped 2026-10-22**, one
+   picker package, five with a focused node — which is the whole of the ColorOS question still being open.
    **Armed 2026-10-24, and the arming answered part of the question off the phone.** The picker tree walk 7 left on the **vivo** (`.scratch/docui.xml`, 177 nodes, every one of them `com.google.android.documentsui`) carries 
    **no node with `focused="true"`**, and two clickable rows named `Preview the file IMG_20261020_1859` — the 
    owner's own photographs, at `[167,526]` and `[386,526]`. So the open question is narrower than "does 

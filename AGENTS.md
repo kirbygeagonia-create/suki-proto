@@ -3124,8 +3124,13 @@ focus among those rows on that shell, answered by one `--dump` reading on the ph
 tool sends one key, re-reads the platform tree, and refuses `DPAD_CENTER` unless the focused row is named for
 the fixture it pushed (`--guard-test`: 3 of 3, one of them that very photograph name). The rule generalises:
 **an artifact's device comes from its timestamps and its package list, never from its file name** — and
-scanning every saved dump for `focused="true"` took one command, which is the shape an instrument should have
-before a scarce leg depends on it. Third: the walk's
+scanning every saved dump for `focused="true"` took one command — now `node tools/device-dump-provenance.cjs`,
+which prints each tree's timestamp, node count, focusable and focused counts, the picker package set, and
+refuses with `NO CONCLUSION` rather than reporting an empty directory as a clean one. Run over this
+machine's scratch it answers **18 picker trees, every one stamped 2026-10-22 16:43–17:25, one picker
+package, five holding a focused node** — so the ColorOS picker has no saved tree here at all, and the
+claim that the directory held one was a filename read as a device. An instrument should be the shape of
+the question before a scarce leg depends on it. Third: the walk's
 five page readings were run on the **bench** first, where the figures are already known, and that is where
 a reachability reader turned out to be wrong — it called the sheet's last row unreachable without asking
 whether an ancestor scrolls, and corrected it answers `reachable:true` through `sheet-body` at 833px of
