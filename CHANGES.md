@@ -6552,3 +6552,19 @@ Three fixes, each found only by executing:
 
 The AVD was created for this run and the emulator was started and stopped by this session; the owner's two
 handsets were never touched, and `findings` now says so in numbers.
+
+**One number the emulated device did produce, and it is the one §68 rests on:** with `font_scale` set to
+1.35 on that Android 16 / WebView 133 frame, the page's own throwaway span answered
+`{"factor":1.35,"rootFont":"21.6px"}` — the root computed **21.6px from a 16px declaration**, i.e. the
+platform multiplied the used size **after** CSS resolved. At 1.0 the same reading answered factor 1, which is
+the control that makes the first number meaningful rather than a tautology: the bench cannot tell those two
+apart because `navFontScale()` is exactly 1 there, and `--font-scale` on the bench moves the root directly
+instead of reproducing the multiplication. That is the mechanism §68 says the layout must absorb, now
+measured on a framework rather than asserted from a phone that once disagreed.
+
+**What it did not measure, stated plainly:** the admin PIN field and the sixteen filter rows were never
+painted on this emulator — the app stayed on its splash through four navigation retries per screen, so both
+readings are marked `NOT MEASURED` and the leg's verdict failed rather than passing quietly. So **the two
+readings DEVICE-PASS owes remain owed on real handsets**: the vivo's `.39` install with its field and row
+heights, and ColorOS's key route. An AVD settles a framework question; it cannot settle a hardware-parity
+question, and it is not recorded as if it had.
