@@ -1863,6 +1863,13 @@ open. Nothing here is a defect the bench can close.
    tree with its timestamp, node count and focus counts, and refuses with `NO CONCLUSION` when no picker tree
    exists to attribute. It answers 18 picker trees on this machine, **all of them stamped 2026-10-22**, one
    picker package, five with a focused node — which is the whole of the ColorOS question still being open.
+   **The route is now written down, in the order walk 7 actually took it.** `node tools/device-picker-keys.cjs`
+   runs `--fixture` (push + `touch` + a scan broadcast, then prove the MediaStore row exists), `--open` (a real
+   tap at the rect the page reports for the concierge's own photo button — `element.click()` carries no user
+   activation), `--search` (read the LIVE tree, find `documentsui:id/search_src_text`, tap its bounds centre in
+   **device** pixels, type the fixture's name, re-dump), then `--key=DPAD_DOWN` one press at a time until the
+   report names the fixture row as FOCUSED, then `--key=DPAD_CENTER`, which the guard allows only then, then
+   `--dump` to read what the page holds, then `--teardown`. `--connect=IP:PORT` reaches a phone over Wi-Fi.
    **Armed 2026-10-24, and the arming answered part of the question off the phone.** The picker tree walk 7 left on the **vivo** (`.scratch/docui.xml`, 177 nodes, every one of them `com.google.android.documentsui`) carries 
    **no node with `focused="true"`**, and two clickable rows named `Preview the file IMG_20261020_1859` — the 
    owner's own photographs, at `[167,526]` and `[386,526]`. So the open question is narrower than "does 

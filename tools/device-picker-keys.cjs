@@ -181,6 +181,35 @@ if (process.argv.indexOf('--guard-test') > -1) {
   process.exit(bad ? 1 : 0);
 }
 
+/* The route walk 7 actually took, read off its own trees rather than invented: focus was on
+   `documentsui:id/search_src_text` holding the text `suki-test-photo`, which means the file name was TYPED
+   INTO THE PICKER'S SEARCH FIELD and the document row was then reached from there. So the ColorOS leg is not
+   "press TAB four times and hope" — it is: tap the search field, type the fixture's name, let the picker
+   narrow to one row, then move focus from the field to that row. The bounds come from the LIVE tree, in
+   device pixels, because `input tap` speaks that space — the same two-coordinate trap §73 records. */
+if (process.argv.indexOf('--search') > -1) {
+  const t = parseTree(dump());
+  if (!t.pickerNodes) { console.log('NO CONCLUSION: the top window is not the picker — open it first with the leg driver\'s --open stage.'); process.exit(1); }
+  const field = t.focusable.concat(t.rows).concat(t.named).filter(n => /search_src_text/.test(n.id))[0] ||
+    t.named.filter(n => /Search/i.test(n.desc))[0];
+  if (!field) { console.log('NO SEARCH FIELD IN THIS TREE — the picker is showing a view without one, so the enter-by-name route is not available and the leg must be answered by DPAD alone.'); process.exit(1); }
+  const b = (field.bounds.match(/\[(\d+),(\d+)\]\[(\d+),(\d+)\]/) || []).slice(1).map(Number);
+  if (b.length !== 4) { console.log('UNPARSEABLE BOUNDS: ' + field.bounds); process.exit(1); }
+  const cx = Math.round((b[0] + b[2]) / 2), cy = Math.round((b[1] + b[3]) / 2);
+  console.log('search field ' + field.id + ' bounds ' + field.bounds + ' → device tap ' + cx + ',' + cy);
+  adb('shell', 'input', 'tap', String(cx), String(cy));
+  sleep(1500);
+  adb('shell', 'input', 'text', FIXTURE_NAME.replace(/[^A-Za-z0-9._-]/g, ''));
+  sleep(2500);
+  const after = parseTree(dump());
+  console.log('field text now: ' + JSON.stringify((after.named.concat(after.rows).map(n => n.text).filter(Boolean)[0] || '(none)').slice(0, 40)));
+  console.log('rows naming the fixture now visible: ' + after.fixture.length + (after.fixture.length ? ' — ' + after.fixture.map(n => n.bounds).join(',') : ''));
+  reportTree(after, 'after entering the name');
+  console.log('page holds: ' + ask(PAGE_STATE));
+  console.log('NEXT: send --key=DPAD_DOWN until the report names the fixture row as FOCUSED, then --key=DPAD_CENTER, which the guard will allow only then.');
+  process.exit(0);
+}
+
 /* ---------- stages ---------- */
 const treeArg = process.argv.filter(a => a.startsWith('--tree='))[0];
 if (treeArg) { reportTree(parseTree(fs.readFileSync(treeArg.slice(7), 'utf8')), treeArg.slice(7)); process.exit(0); }
@@ -259,4 +288,7 @@ if (process.argv.indexOf('--teardown') > -1) {
   process.exit(0);
 }
 
-console.log('usage: --tree=FILE | --dump | --key=NAME | --fixture | --open | --teardown');
+console.log('usage: --tree=FILE | --dump | --key=NAME | --fixture | --open | --search | --teardown | --guard-test | --guard-real');
+console.log('a leg runs as: --fixture, --open, --dump, then --search, then --key=DPAD_DOWN until the report names the');
+console.log('fixture row as FOCUSED, then --key=DPAD_CENTER (the guard refuses any press focused on a search box),');
+console.log('then --dump to read what the page holds, then --teardown. Add --connect=IP:PORT to reach the phone over Wi-Fi.');
