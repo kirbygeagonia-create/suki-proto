@@ -771,6 +771,14 @@ pairing across a kill/reopen, the sheet's marked payment row against the booking
 no address, and the provider reload check. The address item got furthest: the field was reached and
 cleared, and whether the save refuses is still unknown.
 
+*(Disposition as the later sections record it, none of it claimed for a phone that did not run it: the
+payment rail and the provider reload were closed **without** a handset and said so —
+`tools/probe-request-payment.js` and `tools/probe-provider-reload.cjs`; walking "booking with no address"
+is what surfaced the registration defect §78 fixed; thread pairing was settled on the vivo at
+`1.2-preview.28`; and the three genuinely handset-only remnants — the day states, the register greeting
+and the real file picker — were read in Handset walks 6 and 7, the last of them by the key route
+returning a document whose *name* is all the page kept.)*
+
 One thing the attempt did establish, measured rather than assumed: the vivo reports
 `font_scale 1.0`, and at that setting `preview.22` computes a 16px root and paints the same 14px
 caption it always did — the rem conversion is a no-op for a user who has not asked for larger text.
@@ -1341,6 +1349,10 @@ Installed over `preview.29` with data retained, so the upgrade path was part of 
    building the tree lazily (a tap warms it — read a dump twice before calling it a defect), and this
    is the tree, not speech. **TalkBack was not enabled**, because turning on the owner's accessibility
    service is a device change to ask for, so "the dialog is announced aloud" remains unverified.
+   *(Advanced as far as any channel here can advance it: on 2026-10-24 the owner approved enabling the
+   service for the measurement and restoring it, and Handset walk 8 ran with `dumpsys accessibility`
+   reporting it bound. The announcement is caught on the audio channel and the name in the tree; nothing
+   on either phone recovers the words, so whether it **sounds** right is a person's answer, not a log's.)*
 3. **§78, on screen.** Registering `Nueva Residente` / `Buayan` through the painted form greets
    `Nueva`, toasts `Prototype build - this account is not stored, and bookings use the demo household
    address`, and the snapshot still on disk names `Ana Dela Cruz` — the not-persisted promise, read
@@ -1396,6 +1408,9 @@ has not been reconnected since walk 4 — so what the handset owes this build is
 
 `preview.33` is what is installed on the device. When it is next connected: reinstall `.34`, remember
 `svc power stayon true` is still set, and read the analytics row before the Insights work lands.
+*(Both device states changed and were read: Handset walk 6 found the app **uninstalled** with
+`svc power stayon` already cleared, so neither instruction was performed, and the analytics caption was
+read and corrected as §77 rather than left pending the Insights work, which landed as §82.)*
 
 ## `1.2-preview.35` — supersedes `.34` an hour later; **still not handset-verified**, 2026-10-21
 
@@ -1423,9 +1438,15 @@ one file.
    awaits review and 1 is suspended`.
 4. The two legs walk 4 left open: whether **TalkBack speaks** an opened dialog, and the concierge's
    **system file picker**.
+   *(Both closed later on this list — the picker by Handset walk 7 returning a document through `input
+   keyevent` on the vivo, the dialog by Handset walk 8 with the reader actually enabled. What stays open
+   is narrower: the same key route on the OPPO's ColorOS, and whether the announcement sounds right.)*
 
 `preview.33` is still what is installed. `svc power stayon true` is still set on the device — clear it
 with `svc power stayon false` when it is next handled.
+*(Superseded by the read, not by an action: Handset walk 6 found the app uninstalled and the stay-on flag
+already `0`, so neither instruction was performed; Handset walk 7 installed `1.2-preview.38` on the **vivo**,
+and §98 built `1.2-preview.39` for that same phone, which is owed an install.)*
 
 ## `1.2-preview.36` — supersedes `.35`; **still not handset-verified**, 2026-10-21
 
@@ -1445,6 +1466,11 @@ construction rather than by timing. Everything else in the `.35` list still stan
 that order: the de-typed Provider Insights figures (60 / 75 / 38 and a flag named with a count), an
 unbroken `1039` in the admin stat row, the `6 of 8 … 1 awaits review and 1 is suspended` caption,
 whether **TalkBack speaks** an opened dialog, and the concierge's **system file picker**.
+*(All five were put to a phone and are written up in the owed list's own disposition — the caption, the
+Insights figures, the `1039`, the second provider's own header, the dialog tree, the TalkBack question,
+the five-item nav at the OPPO's text scale and the sign-out confirmation. The only leg this order owed
+and did not close is ColorOS refusing a synthetic tap on a document row, and Handset walk 7 retired even
+that as a platform conclusion by returning a document on the vivo through the key route.)*
 
 `preview.33` remains what is installed on `S4CUYTJB6HNNWC49`; `svc power stayon true` is still set.
 
@@ -1530,6 +1556,10 @@ Two obstacles sit between that and a completed selection, and both belong to the
   from `checked="false"` to `checked="true"`, and a swipe at `360,1200→360,700` scrolled the very list
   whose rows refuse taps. So the chrome answers and the document rows do not. **A thumb is still owed
   for this one tap.**
+  *(Retired for this device by the route this row did not try: Handset walk 7 ran
+  `--keys=TAB,TAB,DPAD_DOWN,DPAD_CENTER` against the vivo's DocumentsUI and our page came back holding a
+  file, which makes it a refused input method rather than a refused platform. ColorOS remains the open
+  half, and it has never been tried with keys.)*
 
 The app's half of the same promise was then measured in a real browser instead: a `File` handed to
 `#hidden-file-input` through `DataTransfer` — the mechanism the browser itself uses when a picker returns
