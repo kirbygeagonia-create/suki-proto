@@ -15,12 +15,13 @@
    Sequential on purpose: each family rewrites Sukinnect-next.html and restores it in a finally,
    so two families at once would measure each other's mutants.
 
-     node tools/falsify-all.cjs                (46 families on the tree as of 2026-10-23. The last full
-                                                pass printed 46 families, 232 mutants applied, 232 caught,
-                                                0 not applied in ~53 minutes — the wall clock from the
-                                                launch to the summary line, not an estimate, because the
-                                                earlier revision of this note advertised ~35 minutes and
-                                                this run took 53 on the same machine with the same seed.
+     node tools/falsify-all.cjs                (47 families on the tree as of 2026-10-24, counted as
+                                                `ls tools/falsify-*.cjs | wc -l` minus this file, not
+                                                remembered. The last full pass printed 47 families, 236
+                                                mutants applied, 236 caught, 0 not applied in ~51 minutes
+                                                — wall clock from launch to summary line, not an estimate;
+                                                earlier revisions advertised ~35 and then ~53 minutes for
+                                                the same machine, and both were memory.
                                                 An advertised cost that is wrong gets its runs abandoned
                                                 early, which is the one way to leave a mutant in the tree.)
      node tools/falsify-all.cjs count-labels    # only families whose name matches

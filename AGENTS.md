@@ -2882,6 +2882,24 @@ The camera is also a *target*: fifteen families needle `tools/shot.cjs`, so edit
 whole aggregate before quoting its totals, which is §82's orphaned-needle class arriving from the direction
 of "the file I changed is a test instrument".
 
+A RECURRED MISTAKE GETS A CHECK, NOT AN APOLOGY. I reused a previous commit's subject three times on this
+branch — `sort | uniq -d` over `git log --format=%s origin/main..HEAD` returns three pairs — and in two of
+them the body described the real change while the subject described a different one, which is worse than
+being vague: a reader scanning the log is handed a true sentence about the wrong commit. The cause is
+mechanical (writing a message while the previous one is still on screen), so `tools/audit-open-items.cjs`'s
+shape was reused rather than reasoned about: `node tools/audit-commit-subjects.cjs` lists every duplicated
+subject with its hashes and exits 0, because a duplicate is a record-keeping smell and the branch already
+carries three — a check that fails retroactively on history teaches a reader to ignore checks — while
+refusing with `NO CONCLUSION` and exit 1 when the range yields no commits, because a bad range and a clean
+branch must not print the same sentence. `tools/falsify-commit-subjects.cjs` proves it, 4 breaks 4 caught:
+the control recomputes the duplicate set AND the commit count independently and requires equality (a checker
+whose population is self-reported is measuring its own parser), and the breaks make the dedup never-true,
+widen it to every subject, force the refusal dead, and swap `a..b` for `a...b` — the last returns the same
+three duplicates but 95 commits instead of 88, so it is the count that sees it. One lesson about direction:
+the refusal break printed MISSED because I asserted the mutated tool must *refuse*, when the mutation's whole
+point is that it stops refusing. A break that removes a guard is caught when the guarded behaviour appears.
+Read a first MISSED before deleting it — that is how the missing empty-range control was found.
+
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by
 the 479-byte `ATKINSON-AUTHORS.txt` that sits beside it, a `--font-ui` opening with a family
@@ -3914,7 +3932,7 @@ correct code, so the root size is a variable now (`app._setRootFont(32)`) and th
 relations (fewer labels as the setting rises, a sparse series untouched at every setting, never
 zero) rather than the numbers 4/3/2.
 
-Gate **563** (the two new `hygiene` checks in §89 and the profile-reclaim guard in §92); whole suite **46 families, 232 mutants applied, 232 caught, 0 not applied** (`node tools/falsify-all.cjs`, re-run 2026-10-23 after `tools/shot.cjs` was edited and printing the same table in ~53 minutes with no flagged family and the tree clean after it — §91 added the `open-items` family's four breaks and §89 three count breaks to `falsify-probe-population` plus one conversion break to `falsify-nav-fit`, so the addition before this pass said 232 and the run printed 232; the addition before the last pass said 225 and that run printed 228, which is the reason the quoted figure is read off the log rather than derived in prose). Per-family rows read off that same log, each matching the run: `falsify-pay-records` 3 of 3, `falsify-step-stamps` 4 of 4, `falsify-insights-records` 7 of 7, `falsify-split-figures` 1 of 1 with its redundant half printed as an observation, `falsify-verification-progress` 6 of 6, `falsify-verification-records` 10 of 10, `falsify-chart-collide` 5 of 5 inside the run, `falsify-seed-dates` 4 of 4, `falsify-dialog-focus` 4 of 4, `falsify-register-identity` 4 of 4, `falsify-photo-name` 2 of 2 inside the run, `falsify-preflight` 3 of 3 inside the run, `falsify-nav-fit` 5 of 5 with §89’s conversion break, and `falsify-probe-population` 6 of 6 with §89’s three count rules, and `falsify-open-items` 4 of 4. Quote a total from a pass that printed one.
+Gate **563** (the two new `hygiene` checks in §89 and the profile-reclaim guard in §92); whole suite **47 families, 236 mutants applied, 236 caught, 0 not applied** (`node tools/falsify-all.cjs`, re-run 2026-10-24 after `tools/shot.cjs` was edited and printing the same table in ~51 minutes with no flagged family and the tree clean after it — §91 added the `open-items` family's four breaks, §89 three count breaks to `falsify-probe-population` plus one conversion break to `falsify-nav-fit`, and §94 the `commit-subjects` family's four, so the addition before this pass said 236 and the run printed 236; the addition before the last pass said 225 and that run printed 228, which is the reason the quoted figure is read off the log rather than derived in prose). Per-family rows read off that same log, each matching the run: `falsify-pay-records` 3 of 3, `falsify-step-stamps` 4 of 4, `falsify-insights-records` 7 of 7, `falsify-split-figures` 1 of 1 with its redundant half printed as an observation, `falsify-verification-progress` 6 of 6, `falsify-verification-records` 10 of 10, `falsify-chart-collide` 5 of 5 inside the run, `falsify-seed-dates` 4 of 4, `falsify-dialog-focus` 4 of 4, `falsify-register-identity` 4 of 4, `falsify-photo-name` 2 of 2 inside the run, `falsify-preflight` 3 of 3 inside the run, `falsify-nav-fit` 5 of 5 with §89’s conversion break, and `falsify-probe-population` 6 of 6 with §89’s three count rules, `falsify-open-items` 4 of 4, and `falsify-commit-subjects` 4 of 4. Quote a total from a pass that printed one.
 Of these, the families that drive the camera rather than the gate are whatever
 `grep -l shot.cjs tools/falsify-*.cjs` names — fifteen on 2026-10-23: `blank-query`,
 `camera-surfaces`, `chart-collide`, `control-reach`, `dialog-focus`, `double-tap`, `flex-crush`,

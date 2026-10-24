@@ -6070,3 +6070,43 @@ among them — which also corroborates the handset reading, because the corner w
 button sits at page `y=901` in an 889px viewport answers `controls no tap can reach: 0`: the panel scrolls, so
 the control is below the fold rather than out of reach. Details, readings and the restore checklist are in
 *Handset walk 7* in `DEVICE-PASS.md`.
+
+
+## 94. A commit subject copied from the previous commit — instrumented, because it happened three times
+
+The duplicate-subject audit exists because I wrote the same subject twice more after disclosing that I had
+done it once. `git log --format=%s origin/main..HEAD | sort | uniq -d` returns three pairs on this branch:
+`docs: stop carrying the totals a command already prints` (6ce7a34 and 5ee3554),
+`fix: read a probe's count through both print shapes, and convert the nav floor upward` (aa19fdd and
+b7af181), and `docs: re-run the layout sweep to the day rather than carry §85's figure` (33639fc and
+cab1696). In two of the three the body described the real change accurately while the subject described a
+different one, which is worse than a vague message: a reader scanning `git log` is handed a true sentence
+about the wrong commit. The cause is mechanical — writing a message while the previous one is still on the
+screen — and a cause that recurs gets a check, not an apology.
+
+**`tools/audit-commit-subjects.cjs`** prints every subject used more than once with its hashes, over a range
+defaulting to `origin/main..HEAD`. It exits 0 and lists, because a duplicate subject is a record-keeping
+smell and the branch already carries three: a check that fails retroactively on history teaches a reader to
+ignore checks. What it refuses to do is answer clean about nothing — if the range yields no commits, the last
+line is `NO CONCLUSION` and the exit is 1, because a bad range and a clean branch must not print the same
+sentence. `probe-all.cjs` picked it up from the filename, the same structural registration as the census.
+
+**`tools/falsify-commit-subjects.cjs` — 4 breaks, 4 caught** inside the aggregate. Its control does not ask
+whether the tool answered: it recomputes the duplicate set and the commit count independently and requires the
+two to be EQUAL, and it requires the empty-range refusal to fire on the unbroken file first. The breaks then
+make the dedup predicate never-true (0 vs 3), widen it to every subject (85 vs 3), force the refusal branch
+dead (an empty scan answers "every subject in this range is unique" and exits 0), and quietly swap the range to
+the symmetric difference — which returns the *same three* duplicates but 95 commits instead of 88, so the
+count equality is what sees it.
+
+**The family's own bug, and the rule it rewrites.** The refusal break printed MISSED on the first run, and the
+break was right while the check was wrong: I had asserted that the mutated tool must *refuse*, when the whole
+point of the mutation is that it stops refusing. So a break that removes a guard is caught when the guarded
+behaviour appears, not when it doesn't — and a first MISSED is read, not deleted, which is how the missing
+empty-range control got added in the same minute. Without that control there is no baseline, and "it answered
+clean" would be indistinguishable from "it always answers clean": the sentence this repository has written
+about screens, about data, and now about its own guard's direction of comparison.
+
+Two small facts for whoever reads this branch next: the audit is the thing to run before a push (`node
+tools/audit-commit-subjects.cjs`, seconds), and the three existing duplicates stay as they are — rewriting
+published history needs the owner, and the bodies already say what each commit did.
