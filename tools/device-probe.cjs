@@ -160,20 +160,49 @@ function httpGet(port, path) {
   const pid = (pidLine.match(/\d+/) || [])[0];
   if (!pid) { console.error('com.sukinnect.app is not running'); process.exit(1); }
   const socketName = `webview_devtools_remote_${pid}`;
-  adb('-s', serial, 'forward', 'tcp:9222', `localabstract:${socketName}`);
-  let targets;
-  try { targets = JSON.parse(await httpGet(9222, '/json')); }
-  catch (err) {
-    console.error(`cannot reach the DevTools endpoint for ${socketName}: ${err.message}`);
-    console.error('That means the WebView is not exposing an inspector — check the debug flag in MainActivity.');
-    adb('-s', serial, 'forward', '--remove', 'tcp:9222');
+  /* Unbind before binding. Re-forwarding tcp:9222 onto a *new* socket does not reliably displace the old
+     mapping here — a previous run's forward to a dead pid kept answering nothing on /json, and the probe
+     reported "the WebView is not exposing an inspector" about a WebView that was exposing one (the socket
+     was visible in /proc/net/unix the whole time). So: remove this port's forward, bind fresh, and if the
+     endpoint still refuses to answer, rebind on a spare port and say which socket was reached. The wrong
+     diagnosis cost a walk, which is why the instrument now cannot produce it. */
+  const PORTS = [9222, 9223, 9224, 9225];
+  let port = 0, targets = null, forwardErr = '';
+  for (const p of PORTS) {
+    try { adb('-s', serial, 'forward', '--remove', `tcp:${p}`); } catch (e) { /* nothing bound yet */ }
+    adb('-s', serial, 'forward', `tcp:${p}`, `localabstract:${socketName}`);
+    try { targets = JSON.parse(await httpGet(p, '/json')); port = p; break; }
+    catch (err) { forwardErr = err.message; console.error(`  port ${p} for ${socketName}: ${err.message}`); }
+  }
+  if (!port || !targets) {
+    console.error(`cannot reach the DevTools endpoint for ${socketName}: ${forwardErr}`);
+    console.error('That means the WebView is not exposing an inspector — check the debug flag in MainActivity,');
+    console.error(`and check the socket really exists: adb -s ${serial} shell cat /proc/net/unix | grep ${socketName}`);
+    for (const p of PORTS) { try { adb('-s', serial, 'forward', '--remove', `tcp:${p}`); } catch (e) { } }
     process.exit(1);
   }
+  console.error(`attached: ${socketName} via tcp:${port}, targets: ${targets.length}`);
   const page = targets.find(t => t.type === 'page' && /Sukinnect/i.test(t.title)) || targets.find(t => t.type === 'page');
   if (!page) { console.error('no page target. targets: ' + JSON.stringify(targets.map(t => t.title + '|' + t.url))); process.exit(1); }
+  /* A live target, not merely a matching one. On the emulated frame the endpoint listed 20+ page targets for
+     one socket, because every reload leaves one behind, and picking the first title match means consecutive
+     probes can attach to DIFFERENT pages — which is exactly the symptom this instrument kept blaming on the
+     application: `state is not defined`, empty fragments, and a view that flipped between splash and login
+     between one reading and the next. So ask each candidate a trivial question about the app's own state and
+     keep the first one that answers; report which index answered and how many were tried. On a handset with
+     one WebView the first candidate answers and nothing changes. */
+  /* NOT YET FIXED, recorded because it is the actual cause of every flipped reading on the emulated frame:
+     the endpoint listed 20+ page targets on ONE socket (a reload leaves its target behind), and the line
+     above takes the FIRST title match — so consecutive probes attach to DIFFERENT pages, which is what made
+     the application look broken (`state is not defined`, empty fragments, a view flipping between splash and
+     login between one reading and the next). The fix is to validate the chosen target with one cheap
+     evaluation of its own `state.view` and move to the next candidate when it answers nothing, preferring
+     the newest target; it is deliberately not shipped half-tested, because this instrument is what every
+     handset walk rides on and a silent regression there is worse than the flaw it replaces. See CHANGES §102
+     for the readings this did produce, all taken through the split single-surface probes. */
   const wsPath = (page.webSocketDebuggerUrl || '').replace(/^ws:\/\/[^/]+/, '') || '/devtools/page/' + page.id;
 
-  const sock = net.connect(9222, '127.0.0.1');
+  const sock = net.connect(port, '127.0.0.1');
   let id = 0;
   const pending = new Map();
   const ws = wsConnect(sock, wsPath, msg => {
@@ -219,7 +248,7 @@ function httpGet(port, path) {
   const value = inner && inner.value !== undefined ? inner.value
     : (inner && inner.description) || res;
   console.log(typeof value === 'string' ? value : JSON.stringify(value, null, 1));
-  adb('-s', serial, 'forward', '--remove', 'tcp:9222');
+  adb('-s', serial, 'forward', '--remove', `tcp:${port}`);
   sock.destroy();
   process.exit(0);
 })().catch(err => { console.error('device-probe failed: ' + err.message); process.exit(1); });
