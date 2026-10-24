@@ -2268,6 +2268,18 @@ manufactures findings that do not exist**, and a false alarm on a privacy claim 
 it teaches the reader that the claim was never checked. Status `0` now means "not answered", and a partial scan
 refuses with `NO CONCLUSION` and exit 1 instead of printing a leak count over the paths that did answer.
 
+**Two rulings on the deployment, made by the owner on 2026-10-24.** (1) **Merging PR #9 is theirs to click**, as
+always. (2) **The public root serving `Sukinnect-next.html` is intended** — `netlify.toml`'s `/` redirect is a
+decision about what a reviewer is shown, not drift, so the sentence earlier in this section calling
+`Sukinnect.html` "the file a reviewer opens" should be read as *the file in the repository*, not the deployed URL.
+The deployed surface is a live demo of the rebuild; the shipped file stays shipped-only until someone deliberately
+promotes it. **And the distinction that has to survive this:** merging is not promoting. `git diff --name-only
+origin/main...HEAD` answers **80 files and none of them is `Sukinnect.html`** — merging puts the rebuild, the
+instruments and the docs on `main`, may trigger a redeploy depending on the Netlify branch setting, and leaves the
+shipped prototype byte-for-byte as `origin/main` holds it (`git diff --quiet origin/main -- Sukinnect.html`).
+Whether the six undeployed fixes reached the public site is then a command, not a memory:
+`node tools/deploy-check.cjs` exits 1 until they do.
+
 A FIGURE KEPT BY HAND IN PROSE IS THE NEXT FIGURE THAT IS WRONG. `node tools/falsify-all.cjs`
 now runs every mutant family in one sequential pass and prints, per family, how many breaks were
 applied, how many the named check caught, and how many never matched the file. It exists because

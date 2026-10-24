@@ -7029,3 +7029,39 @@ Nothing was deployed and no setting was changed: reading a public URL is not an 
 the live site is a deploy, and which branch production tracks is a Netlify setting nobody here has read** — the
 live bytes say a feature-branch commit, so "production = main" is now known to be false rather than merely
 untested. That is the owner's to decide, and it is stated as an open question rather than quietly fixed.
+
+## 111. Two rulings about the deployment, and the sentence that was almost wrong: merging is not promoting
+
+Asked what to do about the nine-day-old live build and which page the public root should serve, the owner answered:
+**they will merge PR #9 themselves**, and **the public root keeps serving the rebuild, as it does now**. The second
+answer settles something the repository had been describing as an accident: `netlify.toml` redirects `/` to
+`/Sukinnect-next.html`, and until today the docs framed the reviewer's entry point as `Sukinnect.html` while the
+deployed URL quietly disagreed. That disagreement is now a ruling rather than a drift, and AGENTS.md records it as
+one — the deployed surface is a demo of the rebuild, and the shipped file stays the shipped file.
+
+**The distinction that nearly got lost in my own framing.** While preparing to say "merging is what moves the site"
+I ran the diff and found what the merge actually carries: `git diff --name-only origin/main...HEAD` → **80 files**,
+and **none of them is `Sukinnect.html`**. Merging therefore changes `main` — the rebuild file, the tool suite, the
+docs — and it may trigger a redeploy depending on the Netlify branch setting. It does **not** promote: the shipped
+prototype remains byte-for-byte what `origin/main` holds today, proved by `git diff --quiet origin/main --
+Sukinnect.html`, and promotion is a separate change nobody has greenlit. Describing the merge as promotion would
+have been the oldest defect in this repository's vocabulary — it is the same slide that let "merged" stand in for
+"ships" back when PRs #2–#7 landed.
+
+So what the owner's merge does and does not do, stated where they will read it:
+
+- **Does**: puts the rebuild, the 82-screen camera, the 49 mutant families and the handset records on `main`.
+- **Does probably**: refresh the public site, *if* production tracks `main` — which is unknown and now known to be
+  unknown, because the live bytes currently match a `feat/domain-kernel` commit that is not an ancestor of `main`.
+- **Does not**: touch `Sukinnect.html`, the APK, or `dist/`. The Android bundle keeps its own copy until someone
+  re-syncs it, and the four-copy invariant (`tools/audit-build-bytes.cjs`) still has to hold afterwards.
+- **Afterwards**: `node tools/deploy-check.cjs` is the instrument that says whether the six undeployed fixes went
+  live. It exits 1 until they do, so "did the deploy happen?" is a command rather than a memory.
+
+Nothing changed in the application for this section: gate **all 566 checks passed**, the four on-disk copies are
+identical at `3c78fdd…`, `Sukinnect.html` is identical to `origin/main`. The PR was re-checked before the click:
+`mergeable=MERGEABLE`, `mergeStateStatus=CLEAN`, Netlify's redirect check passing and the deploy preview live.
+One note for whoever reads this next: `gh pr diff 9 --name-only` failed with a forcibly-closed TCP connection and
+printed a single line, which a careless reader would have taken for "one file changed". **The repository is the
+authority on its own contents; a hosted API is a convenience** — the same rule that says to read an installed build
+off the device rather than off a note.
