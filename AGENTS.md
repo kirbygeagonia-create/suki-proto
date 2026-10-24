@@ -3385,6 +3385,17 @@ at the defect the audit's own header records (defaulting the range to `origin/ma
 is condemned by `SCOPE_FLOOR`). The rule to apply to any future break: if it depends on how far the branch is from
 another ref, it needs a premise that cannot move.
 
+**THE SAME PREMISE EXPIRED A SECOND TIME, TWELVE COMMITS LATER, AND THE HONEST FIX WAS NOT TO MOVE IT AGAIN.** PR #13
+merged, `origin/main` came to hold the whole branch, and `origin/main..HEAD` went from narrow to **empty** — so the
+re-pointed break's mutant now printed "0 commits read" and `NO CONCLUSION` instead of a smaller duplicate set, and the
+verdict, which by then required the child to have produced its page, read that as MISSED. The requirement is what made
+the reading truthful: an hour earlier the same break had been printing CAUGHT for every run over a mutant that failed
+to compile, because `exit !== 0` credits a crash. So the answer was not a third re-point but a second accepted shape —
+a refusal naming NO COMMITS IS the scope verdict, while a child that produced neither a page nor that refusal is not
+credited at all. Generalised: when a premise legitimately lives in a distance between refs, do not chase it with a new
+needle every merge; make the verdict read the tool's own account of why it stopped, and it stays true at every merge
+state. `node tools/falsify-commit-subjects.cjs` → 15 of 15, 0 not applied, 0 missed.
+
 THE EMULATOR SETTLES API-LEVEL QUESTIONS, NOT A SPECIFIC PHONE'S, AND IT NEEDS A MINUTE AFTER BOOT. The android-36
 AVD answers `targetSdk 36` forced edge-to-edge, inset arithmetic, and font multiplication — framework behaviour. It
 cannot answer a real handset's density, bar heights, or OEM shell quirks, and no reading from it closes a

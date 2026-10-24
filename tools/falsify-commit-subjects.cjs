@@ -21,7 +21,8 @@
      2. dedup predicate made never-true            → the tool reports 0 while the shell reports 6
      3. predicate widened to every subject         → the tool reports all of them, so the sets differ
      4. empty-range refusal forced dead            → nothing on the page names the empty scan as the cause
-     5. default history re-rooted onto origin/main → the population stops including merged commits
+     5. default history re-rooted onto origin/main → the walk loses merged commits; since PR #13 merged, main holds
+        them all, so today the mutant empties the population and the refusal is what proves it
      6. default count shrinks to 3                 → the floor condemns a scope too small to find anything
      7. the baseline stops matching                → six excused collisions become six findings
 
@@ -474,8 +475,18 @@ try {
       } else {
         const r = run();
         const d = toolDupes(r.out), c = toolCount(r.out);
-        verdict = producedSummary(r.out) && (r.code !== 0 || !same(expectDupes, d) || c !== expectCount);
-        detail = 'set ' + d.size + ' vs ' + expectDupes.size + ', count ' + c + '/' + expectCount;
+        /* A run that refuses BECAUSE IT READ NO COMMITS is a scope verdict, not a crash. Re-added 2026-10-25 after
+           PR #13 merged: `origin/main..HEAD` became empty, so the re-rooted default printed "0 commits read" then
+           `NO CONCLUSION`, produced no page, and `producedSummary` alone judged the break MISSED. The guard earned
+           its keep — it converted a break that had been crediting a SyntaxError into one that reported honestly —
+           and the fix is not to loosen it but to accept the refusal the tool itself prints, which a crashing child
+           never produces. Two shapes, told apart by whether `NO CONCLUSION` is on the page. */
+        const refusedEmpty = r.code !== 0 && /^NO CONCLUSION/m.test(r.out);
+        verdict = refusedEmpty
+          || (producedSummary(r.out) && (r.code !== 0 || !same(expectDupes, d) || c !== expectCount));
+        detail = 'set ' + d.size + ' vs ' + expectDupes.size + ', count ' + c + '/' + expectCount
+          + (refusedEmpty ? ', refused for reading NO commits — the merged premise emptied'
+            : producedSummary(r.out) ? '' : ' — NO PAGE AND NO REFUSAL, not credited');
       }
       console.log((verdict ? 'CAUGHT  ' : 'MISSED  ') + b.name + '  → ' + detail);
       if (verdict) caught++; else missed++;

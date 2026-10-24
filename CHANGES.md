@@ -7907,3 +7907,18 @@ therefore recorded as guarding. Final state of the merged instruments: `node too
 **15 of 15 breaks caught, 0 not applied, 0 missed**, audit restored byte-for-byte, fixtures removed; gate re-run green.
 The aggregate was not owed: no family mutates `verify.cjs` (33 mutate `Sukinnect-next.html`, and no app bytes moved),
 and a family that parses the check *count* for its baseline reports a bigger number rather than a wrong one.
+
+**Asked "is everything done", the answer needed a re-run rather than a memory — and the re-run found a red row.** PR #13
+merged while the question was being typed, so `origin/main` came to hold the whole branch and `origin/main..HEAD` became
+**empty**. Re-measuring the pushed tree (the last gate run predated the §130 continuation, which is this document's own
+named failure mode) turned the family from 15 of 15 into **14 of 15, 1 missed**: the break that re-points the default
+walk onto `origin/main` now produces no page at all, because the mutant reads zero commits and the tool refuses. The
+guard that exposed it is the one written an hour earlier — requiring the child to have produced its page — and that
+guard had just converted a break which had been crediting a SyntaxError for eleven runs into one that reported honestly.
+So the reading was right and the verdict was incomplete: a refusal naming *no commits read* **is** this break's scope
+verdict, while a child that produced neither its page nor that refusal is still not credited. Both shapes are accepted
+now, `node tools/falsify-commit-subjects.cjs` returns **15 of 15, 0 not applied, 0 missed** on the merged tree, gate
+**567**, and the rule went back into AGENTS.md beside the first expiry: when a premise lives in the distance between
+two refs, don't chase it with a fresh needle every merge — make the verdict read the tool's own account of why it
+stopped. Two PR #13 commits, then this follow-up: the lane closes with a measurement taken after the last edit, not
+before it.
