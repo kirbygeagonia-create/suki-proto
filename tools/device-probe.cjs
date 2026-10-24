@@ -184,36 +184,72 @@ function httpGet(port, path) {
   console.error(`attached: ${socketName} via tcp:${port}, targets: ${targets.length}`);
   const page = targets.find(t => t.type === 'page' && /Sukinnect/i.test(t.title)) || targets.find(t => t.type === 'page');
   if (!page) { console.error('no page target. targets: ' + JSON.stringify(targets.map(t => t.title + '|' + t.url))); process.exit(1); }
-  /* A live target, not merely a matching one. On the emulated frame the endpoint listed 20+ page targets for
-     one socket, because every reload leaves one behind, and picking the first title match means consecutive
-     probes can attach to DIFFERENT pages — which is exactly the symptom this instrument kept blaming on the
-     application: `state is not defined`, empty fragments, and a view that flipped between splash and login
-     between one reading and the next. So ask each candidate a trivial question about the app's own state and
-     keep the first one that answers; report which index answered and how many were tried. On a handset with
-     one WebView the first candidate answers and nothing changes. */
-  /* NOT YET FIXED, recorded because it is the actual cause of every flipped reading on the emulated frame:
-     the endpoint listed 20+ page targets on ONE socket (a reload leaves its target behind), and the line
-     above takes the FIRST title match — so consecutive probes attach to DIFFERENT pages, which is what made
-     the application look broken (`state is not defined`, empty fragments, a view flipping between splash and
-     login between one reading and the next). The fix is to validate the chosen target with one cheap
-     evaluation of its own `state.view` and move to the next candidate when it answers nothing, preferring
-     the newest target; it is deliberately not shipped half-tested, because this instrument is what every
-     handset walk rides on and a silent regression there is worse than the flaw it replaces. See CHANGES §102
-     for the readings this did produce, all taken through the split single-surface probes. */
-  const wsPath = (page.webSocketDebuggerUrl || '').replace(/^ws:\/\/[^/]+/, '') || '/devtools/page/' + page.id;
-
-  const sock = net.connect(port, '127.0.0.1');
-  let id = 0;
-  const pending = new Map();
-  const ws = wsConnect(sock, wsPath, msg => {
-    if (msg.id && pending.has(msg.id)) { const { resolve } = pending.get(msg.id); pending.delete(msg.id); resolve(msg); }
-  });
-  const send = (method, params) => new Promise(resolve => {
-    const my = ++id; pending.set(my, { resolve }); ws.send({ id: my, method, params: params || {} });
-    setTimeout(() => { if (pending.has(my)) { pending.delete(my); resolve({ error: { message: method + ' timed out' } }); } }, 15000);
-  });
-
-  await new Promise(r => { if (sock.connecting) sock.once('connect', r); else r(); });
+  /* A LIVE target, not merely a matching one. On the emulated frame this endpoint listed 20+ page targets on
+     ONE socket, because every reload leaves its target behind, and the picker above takes the FIRST title
+     match — so consecutive probes attach to DIFFERENT pages. That is the whole of what looked like the
+     application misbehaving: `state is not defined`, half-typed fragments, and a view that flipped between
+     splash and login from one reading to the next. So each candidate is asked one trivial question about the
+     app's own state, and the first that answers is kept — and kept for the rest of the session, because a
+     tap that lands on a different page from the reading that follows is worse than no tap at all. Prefer the
+     newest target (DevTools appends as pages are created). On a handset with one WebView the first candidate
+     answers and nothing about the behaviour changes; if NOTHING answers, the old path is taken loudly rather
+     than silently, so a walk can still report what it saw. */
+  const pagePath = t => (t.webSocketDebuggerUrl || '').replace(/^ws:\/\/[^/]+/, '') || '/devtools/page/' + t.id;
+  const openTo = async p => {
+    const s = net.connect(port, '127.0.0.1');
+    let id = 0;
+    const pending = new Map();
+    const w = wsConnect(s, p, msg => {
+      if (msg.id && pending.has(msg.id)) { const { resolve } = pending.get(msg.id); pending.delete(msg.id); resolve(msg); }
+    });
+    await new Promise(r => { if (s.connecting) s.once('connect', r); else r(); });
+    const sd = (method, params) => new Promise(resolve => {
+      const my = ++id; pending.set(my, { resolve }); w.send({ id: my, method, params: params || {} });
+      setTimeout(() => { if (pending.has(my)) { pending.delete(my); resolve({ error: { message: method + ' timed out' } }); } }, 15000);
+    });
+    return { sock: s, ws: w, send: sd };
+  };
+  const matches = targets.filter(t => t.type === 'page' && /Sukinnect/i.test((t.title || '') + (t.url || '')));
+  const ordered = (matches.length ? matches : targets.filter(t => t.type === 'page')).slice().reverse();
+  let active = null;
+  let inconclusive = null;
+  const tried = [];
+  for (const cand of ordered.slice(0, 6)) {
+    const c = await openTo(pagePath(cand));
+    let v = 'NO-STATE';
+    try {
+      const r = await c.send('Runtime.evaluate', {
+        expression: "JSON.stringify({v:(typeof state!=='undefined'&&state)?String(state.view):'NO-STATE'})",
+        returnByValue: true
+      });
+      if (r && r.result && r.result.value) v = String(JSON.parse(r.result.value).v);
+      else if (r && r.error) v = 'ERR ' + r.error.message;
+    } catch (e) { v = 'ERR ' + e.message; }
+    tried.push(String(cand.title || cand.url || '?').slice(0, 24) + '=' + v);
+    if (v !== 'NO-STATE' && !/^ERR/.test(v)) {
+      console.error(`live target found after ${tried.length} of ${Math.min(6, ordered.length)} candidate(s): ` + tried.join(' | '));
+      active = c;
+      break;
+    }
+    /* A validation that TIMES OUT is not a dead page. Proven the hard way: on a saturated frame this check
+       answered `ERR Runtime.evaluate timed out` for a target that then served the real reading perfectly a
+       second later — so treating inconclusive as dead made the instrument announce "NO LIVE TARGET" about
+       the only live page it had, which is this repository's oldest error in a new costume. Keep the first
+       inconclusive candidate as a fallback and adopt it, saying so, instead of destroying it. */
+    if (/timed out/.test(v) && !inconclusive) { inconclusive = c; continue; }
+    try { c.sock.destroy(); } catch (e) { /* already gone */ }
+  }
+  if (!active && inconclusive) {
+    active = inconclusive;
+    console.error(`VALIDATION INCONCLUSIVE, adopting the page anyway: state.view could not be read (` + tried.join(' | ') +
+      ') but the frame is slow rather than dead — the reading below will say whether it answered.');
+  }
+  if (!active) {
+    console.error(`NO LIVE TARGET: ${ordered.length} page target(s) on ${socketName}, none usable. Tried: ` + (tried.join(' | ') || 'nothing'));
+    console.error('Falling back to the first match so the walk still reports what it sees rather than nothing.');
+    active = await openTo(pagePath(page));
+  }
+  const sock = active.sock, ws = active.ws, send = active.send;
   await new Promise(r => setTimeout(r, 900));
   if (tap) {
     /* touchStart then touchEnd through the browser's input path — this is what carries user
