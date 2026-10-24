@@ -6703,3 +6703,25 @@ switch it back *on*, silently and with exit 0. What actually works on this Color
 (`Removed: com.sukinnect.app`), `font_scale` 1.35 as found, and the app installed at `versionCode=41`.
 **How to apply:** on this OEM, battery saver is not a `settings put` — write it with `cmd power set-mode`, and
 read the value back rather than trusting the exit code, which reports success for a write the platform ignores.
+
+## 104b. The ColorOS key route was attempted on its own phone, and the page channel — not the picker — is what failed
+
+The fixture stage worked exactly as designed: a 70-byte PNG pushed to `Download/`, `touch`ed, a scan
+broadcast, and **the MediaStore row proved present** (`_id=37819`,
+`/storage/emulated/0/Download/suki-leg9-test.png`) — the walk-5 lesson that a bare `adb push` indexes
+nothing, applied. Then the picker could not be opened **from the app**, because the app's own page stopped
+answering: `targets` read 2 then 3, both candidates timed out on `state.view`, and `mCurrentFocus` was
+`StatusBar` rather than the activity. `--open` therefore printed the rect it could not obtain and
+**refused to tap a guess**, which is the behaviour it was written to have.
+
+So leg B's verdict is unchanged and now narrower: ColorOS's *key handling* is still untested, because the
+route never reached the picker — the obstacle is getting the app onto a live, single, answerable DevTools
+target on this device. Two candidate causes, both testable next session and neither a claim: multiple page
+targets per socket on WebView 155.0.8059.46, and a renderer that stops servicing evaluations once several
+connections have been opened and destroyed against it — which is also how leg A went dark for an hour before
+the `Origin` header was found.
+
+The phone was left as found, verified by reading it rather than by memory: `suki-leg9*` files **0**,
+MediaStore rows naming the fixture **0**, no `window_dump.xml`, **all adb forwards removed**, battery saver
+back on (`low_power=1`), stay-awake `0`, app removed from the idle whitelist, `font_scale` **1.35** as found,
+`1.2-preview.39` installed, and the app signed out (`view: login`) by leg A's own final check.
