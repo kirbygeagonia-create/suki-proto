@@ -376,8 +376,8 @@ To swap an image, replace the file and keep the name. To add a trade, add a row 
 - Screens are rendered in Node, then painted and measured in a real browser at a phone size, and —
   when a phone is attached — on that phone: `tools/device-probe.cjs` drives the WebView's own Chrome
   over the DevTools socket, and [`DEVICE-PASS.md`](DEVICE-PASS.md) records handset walks 1–7 below, on two
-  phones. One leg stays open and it needs the other phone: ColorOS's file picker has never been tried
-  with `input keyevent`, which is the route that returned a document on the vivo where four injected taps
+  phones. Two things still need one: ColorOS's file picker has never been tried with `input keyevent`,
+  which is the route that returned a document on the vivo where four injected taps
   were refused. What no instrument here can prove is how any of it
   *feels*, and what TalkBack actually says aloud when a dialog opens — its burst proves an
   announcement happens and the accessibility tree proves the name is exposed, but no channel on these

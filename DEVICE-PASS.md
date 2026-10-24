@@ -1721,7 +1721,7 @@ eight-corner run is the figure quoted afterwards.
 Everything below is written out where it belongs; this is only the list of what the next person finds
 open. Nothing here is a defect the bench can close.
 
-**On the handset** — one item, and it needs the other phone:
+**On the handset** — two items, and neither is a bench task:
 1. **The OPPO's ColorOS picker has never been tried with keys.** Handset walk 7 settled this leg on the
    vivo: `node tools/device-probe.cjs --keys=TAB,TAB,DPAD_DOWN,DPAD_CENTER '<reader>'` closed the picker
    and our page came back holding a file, which retires "a thumb is owed" for that DocumentsUI. ColorOS
@@ -1730,6 +1730,14 @@ open. Nothing here is a defect the bench can close.
    owner's photograph by accident:** a key route selects the focused row, so run it against a folder that
    is empty except for the test file and entered by name — never against a recents grid holding real
    photographs.
+2. **The vivo's WebView version was never captured.** Walk 7 read that engine's *behaviour* — the factor it
+   applies (1.35 written 12.15px → 16.4025px, 2.0 written 8.15px → 16.3px) — but not its build, so the vivo's
+   numbers sit beside an unnamed engine while the OPPO's are recorded against WebView 155. Read
+   `adb shell dumpsys webviewupdate | grep -m1 version` on the next authorised session. **The device dropped
+   to `unauthorized` minutes after walk 7 finished** (`adb kill-server` and a restart moved it from
+   `offline` to `unauthorized`, which only a tap on the phone answers), so this is the first thing to do when
+   the owner re-authorises — and it is the same failure walk 5 hit mid-session, which is why the record says
+   to read the engine, not assume it.
 
 Everything else the `.37` list owed was put to a phone and is written up in *Handset walk 5* and
 *Handset walk 6* above — the caption, the Insights figures, the `1039`, the second provider's own header,
@@ -1738,6 +1746,9 @@ and the sign-out confirmation as a second modal surface. What those walks could 
 refusing a document row to a synthetic tap — four taps and one held press across two layouts, with the two controls that show
 the injected input reaching that same window. The app's half of the promise was measured in a browser and
 holds: a real `File` arrives, the screen paints only its name, no `blob:` or `data:` image exists.
+*(Superseded in part by Handset walk 7: the same pick completed on the vivo through `input keyevent`, and the
+no-bytes reading was repeated there against the real chooser rather than only in a browser. ColorOS on the
+OPPO is the remaining refusal, and it has never been tried with keys.)*
 
 Two more device-shaped things stay open because they are owner questions, not bench work: whether
 TalkBack's *wording* names the dialog (no channel here recovers spoken text — the tree proves the name
