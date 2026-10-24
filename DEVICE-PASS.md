@@ -1887,6 +1887,19 @@ open. Nothing here is a defect the bench can close.
    consulted a scrolling ancestor, and corrected, the row is reachable through `sheet-body` (833px of content 
    in a 660px box) — which the eight-corner sweep had already implied, since it reports 0 unreachable 
    controls. A walk that began on the phone would have filed that as a defect in the application.
+   **One stage needs the owner's say-so, and the driver says which.** At the `font_scale` these phones
+   were left at (1.0, restored after walk 8) the reading above can only prove the phone *agrees* with the
+   bench; §68's claim is that a `rem`-sized field is multiplied **after** CSS resolves, and that is only
+   observable with the text turned up. `node tools/device-legs.cjs --scale=1.35` reads the PIN field and
+   the sixteen filter rows again at that scale — reporting the measured factor, the rendered size it
+   implies, the box heights and the 44px verdict — then restores the previous value through an `exit`
+   hook as well as on the happy path (walk 8's first driver died between enabling TalkBack and restoring
+   it, which is why restoration is not the last line of a success branch) and proves the restore by
+   **reading the setting back** rather than remembering it. It is opt-in because this is the owner's
+   handset: ask, get a yes, then run it. The stage sits *after* the device gate, so it cannot change a
+   setting on a phone that is not there — verified: `--scale=1.35` with nothing attached prints `NO DEVICE`
+   and touches nothing.
+
 3. **Closed 2026-10-24, and the item itself was the defect.** Walk 7 wrote that the vivo's WebView version
    "was never captured"; opening the log showed walk 5 had captured it, and `dumpsys webviewupdate` today
    answers the same `com.google.android.webview 155.0.8059.43`. What the earlier walk had got wrong was the

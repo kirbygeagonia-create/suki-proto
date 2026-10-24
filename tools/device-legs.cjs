@@ -214,6 +214,58 @@ tapPainted('Unlock', "/state\\.adminAccountModal=null/", 'Unlock');
 say('after Unlock', "JSON.stringify({modal:state.adminAccountModal,view:state.view," +
   "h1:(document.querySelector('#screen h1')||{}).textContent})");
 
+/* ---------- 3b. the same field under the phone's own text inflation ---------- */
+/* With `font_scale` at the 1.0 the handsets were left at, the reading above can only say the phone agrees
+   with the bench. §68's claim is the opposite: the platform multiplies a `rem`-sized field AFTER CSS
+   resolves, and the only place that is observable is a phone with its text turned up. So this stage sets
+   the scale, reads, and restores it — and it is opt-in because it is the owner's handset: the previous
+   value is read first, restored on `exit` as well as on the happy path (walk 8's driver died between
+   enabling TalkBack and restoring it, which is why an exit hook rather than a last line), and the
+   restoration is verified by reading the setting back rather than remembering it. */
+const scaleFlag = process.argv.find(a => a.startsWith('--scale='));
+if (scaleFlag) {
+  const want = scaleFlag.slice(8);
+  const prev = adb('shell', 'settings', 'get', 'system', 'font_scale').trim();
+  let restored = false;
+  const restore = () => {
+    if (restored) return;
+    restored = true;
+    if (!prev || prev === 'null') adb('shell', 'settings', 'delete', 'system', 'font_scale');
+    else adb('shell', 'settings', 'put', 'system', 'font_scale', prev);
+    console.log('font_scale restored to ' + (prev === 'null' ? '(unset)' : prev) +
+      ' — read back: ' + adb('shell', 'settings', 'get', 'system', 'font_scale').trim());
+  };
+  process.on('exit', restore);
+  console.log('font_scale before = ' + prev);
+  adb('shell', 'settings', 'put', 'system', 'font_scale', want);
+  console.log('font_scale set to ' + want + ' — read back: ' + adb('shell', 'settings', 'get', 'system', 'font_scale').trim());
+  adb('shell', 'am', 'force-stop', PKG); sleep(900);
+  adb('shell', 'monkey', '-p', PKG, '-c', 'android.intent.category.LAUNCHER', '1'); sleep(6500);
+  say('multiplier at ' + want, '(function(){var s=document.createElement("span");' +
+    's.style.cssText="position:absolute;left:0;top:0;font-size:100px;line-height:1;white-space:pre";' +
+    's.textContent="Hgs";document.body.appendChild(s);var q=s.getBoundingClientRect();s.remove();' +
+    'return JSON.stringify({factor:Math.round((q.height/100)*1e4)/1e4,' +
+    'rootFont:getComputedStyle(document.documentElement).fontSize})})()');
+  say('admin hub at scale', "state.view='app'; state.role='admin'; state.tab='profile'; render(); 1");
+  tapPainted('Lock Admin Session', "/adminAccountAction\\('lock'\\)/", 'Lock Admin Session');
+  say('PIN field at ' + want, '(function(){var i=document.querySelector(".modal-layer input[type=password]");' +
+    'if(!i)return "NO PIN FIELD PAINTED";var cs=getComputedStyle(i),q=i.getBoundingClientRect();' +
+    'var p=document.createElement("span");p.style.cssText="position:absolute;left:-9999px;font-size:100px;line-height:1";' +
+    'p.textContent="Hgs";document.body.appendChild(p);var f=p.getBoundingClientRect().height/100;p.remove();' +
+    'return JSON.stringify({specifiedFontSize:cs.fontSize,measuredFactor:Math.round(f*1e4)/1e4,' +
+    'renderedSizeApprox:Math.round(parseFloat(cs.fontSize)*f*10)/10,rectH:Math.round(q.height*10)/10,' +
+    'minHeight:cs.minHeight,tapFloorOk:q.height>=44})})()');
+  say('filter rows at ' + want, "state.sheet=null;state.role='resident';startDiscovery('leak');1");
+  tapPainted('Filter providers', "/openSheet\\('providerFilters'\\)/", '#provider-filter-btn');
+  say('rows at scale', '(function(){var r=[].slice.call(document.querySelectorAll(".filter-option"));if(!r.length)return "NO ROWS";' +
+    'var h=r.map(function(x){return Math.round(x.getBoundingClientRect().height*10)/10});' +
+    'var s=document.createElement("span");s.style.cssText="position:absolute;left:-9999px;font-size:100px;line-height:1";' +
+    's.textContent="H";document.body.appendChild(s);var f=s.getBoundingClientRect().height/100;s.remove();' +
+    'return JSON.stringify({n:r.length,minH:Math.min.apply(null,h),below44:h.filter(function(x){return x<44}).length,' +
+    'factor:Math.round(f*1e4)/1e4,fontSizes:Array.from(new Set(r.map(function(x){return getComputedStyle(x).fontSize})))})})()');
+  restore();
+}
+
 /* ---------- 4. the resident filter rows ---------- */
 say('results', "state.view='app'; state.role='resident'; startDiscovery('leak');" +
   "JSON.stringify({tab:state.tab,h1:(document.querySelector('#screen h1')||{}).textContent," +
