@@ -105,18 +105,29 @@ never matched the file — the third column being the point, because a family wh
 matching reports a smaller applied count and looks like a clean run. No total is quoted in prose
 here: this passage said "twenty-six targeted breaks" for a while and was three families out of
 date by the time anyone read it. Each family restores the file from an in-memory copy in a
-`finally`, so a crash cannot leave a mutation behind; one earlier version of that harness died
-mid-run to a console-encoding error and poisoned its own backup, and the gate then reported green
-on a file that still carried a mutation. The restore is now the last thing that runs, and totals
-are only ever quoted from a run that ended green. (The harness is Node now for a second reason:
+`finally`, so a crash mid-family cannot leave a mutation behind — but a *cancelled* run never reaches
+its `finally`, and one did leave the exact defect its own family exists to condemn sitting in the app
+file, where the next measurement would have read it as the application. An earlier version had already
+shown the harder failure mode: it died mid-run to a console-encoding error and poisoned its own backup,
+so the gate reported green on a file that still carried a mutation — which is why the restore is the
+last thing that runs. So the runner asks the tree:
+`git status --porcelain -- Sukinnect-next.html` before the first family and again after the last.
+Dirty before means it prints the paths and exits without touching the file; dirty after prints
+`BROKEN` and folds into the exit code. A second pass started while one is alive is refused for the same
+reason, because the app file is the mutex. `node tools/falsify-preflight.cjs` proves the guards, and
+its first control is that a clean tree must still run the pass — a guard that refuses everything passes
+two of its tests by never running anything. Totals are only ever quoted from a run that ended green, and
+one pass at a time. (The harness is Node now for a second reason:
 three of its first mutants had silently matched nothing, because the app file is CRLF and a
 find-string carrying a newline missed every time. An unapplied mutant is a rule nobody tested.)
 
-Two runners keep the rest of the suite honest, and both were written after being mis-read by hand:
+Three runners keep the rest of the suite honest. Two were written after a total was mis-read by hand;
+the third was written after a cancelled pass left a mutation in the tree:
 
 ```
 node tools/falsify-all.cjs          # every mutant family, with applied / caught / not-applied
 node tools/probe-all.cjs            # every probe and audit, each run the way it is meant to run
+node tools/falsify-preflight.cjs    # the tree guards above, proved by dirtying the file on purpose
 ```
 
 `tools/probe-all.cjs` exists because the suite has two kinds of probe and the extension is what
@@ -125,6 +136,21 @@ is a single expression ending `})()` is evaluated inside a real page by `shot.cj
 and running it with plain node dies on `document is not defined`. A probe that prints nothing is
 called out rather than counted as a pass — an instrument nobody reads is how a stale needle spent a
 week guarding nothing.
+
+```
+node tools/audit-open-items.cjs     # every "still owed" sentence the present-tense documents still make
+node tools/audit-camera-dialog-coverage.cjs   # profile dialogs the camera's walk has never opened
+```
+
+The second is coverage rather than prose: it asks the application which profile controls raise a layer, asks
+the camera which of them a row of the walk clicks, and prints the difference — the destination-behind-a-row
+class it found seven of (`CHANGES.md` §97). Both halves are population-controlled, because a scan that
+matched nothing and a walk that needed nothing answer with the same zero.
+
+The first is a list, not a verdict: an open item is legitimate, so it exits 0 and a person reads the rows.
+It exists because four sentences went stale by describing an item as owed after the pass that closed it —
+see CHANGES.md §91 — and it refuses (exit 1, `NO CONCLUSION`) if its own phrase list matches nothing,
+because a rotted vocabulary must not read as a clean document.
 
 ### Look at the painted page
 
@@ -327,7 +353,7 @@ matches is a simulated flow, and the screens say so.
 | What | Where | Notes |
 |---|---|---|
 | Logo | `Sukinnect_Logo.png` | exact case. Official mark — never redrawn, recoloured, stretched or replaced. It has a white background, so change the surface around it, not the file. |
-| Icons | an inline SVG set inside `Sukinnect-next.html`; `reicon.js` (LFS) for `Sukinnect.html` | The rebuild loads no icon library: 43 glyphs are drawn in the file and every one of the 38 names the app can reach has one — whether the name is written in markup, carried by a service record, or passed to an empty state. Those two figures come from `node tools/measure.cjs`, not from a count kept in prose. The gate checks all three and fails if a new name arrives undrawn. Measured with reicon disabled, that set drew the same icons on every screen the camera walks — 62 now where the claim was made at 40, and `node tools/shot.cjs --list` is the count — so the rebuild dropped the 8 MB custom element and the four seconds of iconless paint it cost when registration lost the race. `Sukinnect.html` still uses reicon, so add a name to both files or neither. |
+| Icons | an inline SVG set inside `Sukinnect-next.html`; `reicon.js` (LFS) for `Sukinnect.html` | The rebuild loads no icon library: 43 glyphs are drawn in the file and every one of the 38 names the app can reach has one — whether the name is written in markup, carried by a service record, or passed to an empty state. Those two figures come from `node tools/measure.cjs`, not from a count kept in prose. The gate checks all three and fails if a new name arrives undrawn. Measured with reicon disabled, that set drew the same icons on every screen the camera walks — 73 now where the claim was made at 40, and `node tools/shot.cjs --list` is the count — so the rebuild dropped the 8 MB custom element and the four seconds of iconless paint it cost when registration lost the race. `Sukinnect.html` still uses reicon, so add a name to both files or neither. |
 | Type | `fonts/` | The two files differ here deliberately. `Sukinnect.html` uses Fraunces for display and Plus Jakarta Sans for UI. `Sukinnect-next.html` runs one sans family across every role — Atkinson Hyperlegible Next in four self-hosted weights, with Plus Jakarta Sans behind it for any glyph Atkinson does not carry — and its `--font-display` is an alias for `--font-ui`, so the serif paints nothing there (AGENTS.md §68). Self-hosted in both; no remote fonts. |
 | Photos | `avatars/` | local PNGs, mapped per persona in `PRO_PHOTOS`. Keep imagery local — the APK runs offline. |
 | Maps | `leaflet/` | vendored. Tiles come from OpenStreetMap, the one network dependency, so a map is blank with no connection. |
@@ -348,10 +374,26 @@ To swap an image, replace the file and keep the name. To add a trade, add a row 
   the screen plus a toast naming what was refused and why. A warning nobody who lost their session
   will read is not a warning.
 - `Sukinnect-Android/app/src/main/assets/` holds a **separate copy** of the web files. Any
-  accepted change must be re-synced there before it reaches a device build. It currently holds
-  the rebuild, staged for a handset pass — see [`DEVICE-PASS.md`](DEVICE-PASS.md), which also
-  says how to put the shipped file back.
-- Screens are rendered in Node and painted in a real browser at a phone size and measured, but
-  never on a handset. Touch feel, the on-screen keyboard, and device performance are the three
-  things no instrument in this repo can prove; [`DEVICE-PASS.md`](DEVICE-PASS.md) is the
-  checklist for the pass that is still owed.
+  accepted change must be re-synced there before it reaches a device build. It currently holds the
+  rebuild — `assets/Sukinnect.html` carries the same bytes as `Sukinnect-next.html`, and
+  `md5sum` on both answering one hash is the whole check — staged under the name the shell loads, and
+  those bytes went out as `1.2-preview.39` and were read on **two** handsets (the OPPO CPH2179 at 320 CSS px
+  and the vivo 1906 at 450). The comparison is now an instrument rather than a habit:
+  `node tools/audit-build-bytes.cjs` prints one row per copy — source, `dist/`, staged asset, and the file
+  extracted back out of the built APK — reports `findings: N` when they disagree, and **refuses** with
+  `NO CONCLUSION` when an artifact cannot be read or fewer than four were compared. See
+  [`DEVICE-PASS.md`](DEVICE-PASS.md), which also says how to put the shipped file back.
+- Screens are rendered in Node, then painted and measured in a real browser at a phone size, and —
+  when a phone is attached — on that phone: `tools/device-probe.cjs` drives the WebView's own Chrome
+  over the DevTools socket, and [`DEVICE-PASS.md`](DEVICE-PASS.md) records handset walks 1–11 below, on two
+  phones and an emulated frame. The last hardware leg closed on 2026-10-24: ColorOS's file picker **does** accept
+  `input keyevent` — one `TAB` focused a row and a guarded `DPAD_CENTER` returned the document — so the route
+  that had worked on the vivo works there too, and what survives is the narrower reading: four injected *taps*
+  on a document row on that shell refused, and a grid row and its preview icon turn out to have different
+  centre semantics. The same walk installed `1.2-preview.39` on the vivo and read the two surfaces it owed at
+  `450 CSS px`, both at the default scale and at the phone's own `1.35`.
+  The
+  TalkBack question is no longer owed: walk 8 asked it with the reader actually switched on, caught the
+  announcement on the audio channel and the dialog's name in the accessibility tree, and found nothing on
+  either phone that recovers the words themselves. What no instrument here can prove is how any of it
+  *feels*, and what a spoken announcement sounds like to the person who turned the reader on.

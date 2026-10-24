@@ -10,7 +10,7 @@ const APP = path.join(__dirname, '..', 'Sukinnect-next.html');
 /* The kernel grows a few exports every step. Names are pulled through a local
    eval so a suite can ask for what it needs and gets undefined for what has not
    landed yet, instead of the whole harness failing to boot over one symbol. */
-const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATIONS', 'LEDGER',
+const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'CREDENTIALS', 'LISTINGS', 'NOTIFICATIONS', 'LEDGER',
   'PAYMENTS', 'STATUS_EVENTS', 'PAYOUTS', 'DISPUTES', 'CONFIG', 'state', 'Store', 'snapshot',
   'hydrate', 'persist', 'restoreSeed', 'bookingsForResident', 'bookingsForProvider',
   'pendingProviderRequests', 'bookingById', 'providerOf', 'customerOf', 'listingsOf',
@@ -20,7 +20,7 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   'PAYMENTS', 'PAYOUTS', 'PAYMENT_LABELS', 'paymentsFor', 'recordPayment', 'Gateway',
   'earningsCard', 'jobActionBar', 'realRequestCard', 'listingsPanel', 'threadsFor', 'adminDashboard',
   'toggleListing', 'commitListingDraft', 'bookedThisWeek', 'completionRate', 'cancellationRate', 'nextPayoutDate', 'settlementLines',
-  'TRANSITIONS', 'BOOKING_STATES', 'FINISHED_STATES', 'attemptTransition', 'transitionAllowed',
+  'TRANSITIONS', 'BOOKING_STATES', 'FINISHED_STATES', 'STEP_STAMPS', 'attemptTransition', 'transitionAllowed',
   'nextActionFor', 'bookingTimeline', 'label', 'stateHint', 'recordStatusEvent', 'seedStatusHistory',
   'applyDueTransitions', 'MockGateway', 'authorizeBooking', 'captureBooking', 'voidBooking',
   'refundBooking', 'settleCashBooking', 'providerBalances', 'runPayoutCycle', 'platformStatement',
@@ -36,7 +36,8 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   'DISPUTE_STATES', 'disputeLabel', 'caseIsOpen', 'providerCases', 'resolveCase', 'resolveDispute', 'commitConfig', 'setIntFilter', 'runPayoutNow', 'openDispute',
   'categorySupply', 'weeklyBookings', 'providerWeeklyEarnings', 'providerDemandByBarangay', 'weekStart', 'MIN_SHARE_SAMPLE', 'chartShare', 'chartColumns', 'chartBars', 'chartEmpty', 'chartScale', 'chartSummary', 'adminFinanceScreen', 'ageingCard',
   'residentFinished', 'residentPaid', 'bookingTotal', 'residentSpendByService', 'warrantyEndsAt', 'shortDate', 'residentSectionBody',
-  'adminProviderMeta', 'credentialState', 'credentialsOf', 'worstCredentialState', 'verifiedProviderList', 'expiringProviderCount', 'bookingsForProvider', 'providerSectionBody', 'adminSectionBody', 'openCasesFor', 'credentialSummaryFor', 'closedJobCount',
+  'adminProviderMeta', 'credentialState', 'credentialsOf', 'worstCredentialState', 'verifiedProviderList', 'expiringProviderCount', 'bookingsForProvider', 'providerSectionBody', 'adminSectionBody', 'openCasesFor', 'credentialSummaryFor', 'closedJobCount', 'networkSummary',
+  'adminProviderInsights', 'networkAttentionList', 'networkServiceRows', 'networkHealthRows', 'networkFlagSummary',
   'PENDING_APPLICANTS', 'APPLICATION_DOCS', 'APPLICATION_DOC_KINDS', 'applicationDocs', 'applicationDocsSubmitted', 'applicationDocsOutstanding', 'applicationDocLabel', 'applicantWaitDays', 'applicantWaitLabel', 'applicantIssue', 'pendingApplicantList', 'reviewOf', 'reviewStatusLine', 'reviewTimeline', 'verificationApplication', 'verificationAction', 'openProviderVerification', 'reopenReview', 'docsOutstanding',
   'loginHTML', 'AUTH_ROLE_LABEL', 'DEMO_LOGIN',
   /* Added after the audit: the guards, the money readers and the case door were
@@ -53,6 +54,10 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'LISTINGS', 'NOTIFICATION
   /* the Back suite drives the app through its own navigation entry points, because a
      history handle is only worth testing if the step that created it is real */
   'openSheet', 'closeSheet', 'openChatThread', 'stepBack', 'openLayers', 'receiptCard',
+  'layerKeys', 'modalAboveSheet', 'openProfileSection', 'residentProfileAction',
+  'startOfDay', 'daysBetween', 'applicantWaitDays', 'applicantWaitLabel', 'credentialState',
+  'isoDay', 'isoDayAgo', 'isoDayAhead', 'saveProviderProfessionalProfile', 'submitAuth',
+  'adminVerifications', 'emptyState',
   'requestChoices', 'requestAddressBook', 'requestPaymentOptions', 'requestDays',
   'residentChatRoom', 'draftListing',
   'REQUEST_TIMES', 'submitBookingRequest', 'bookingRequestSheet',
@@ -158,6 +163,15 @@ function boot({ appMode = false, storage = null } = {}) {
     matchMedia: () => ({ matches: false, addEventListener() {} }) };
   const location = { search: appMode ? '?app=1' : '' };
   const navigator = { userAgent: 'node-test' };
+  /* The chart thins its axis labels by how wide the type actually is, so render code asks the
+     page for its root font size. Node has no page, so the double answers the default — and a
+     fixed 16 here would make that rule untestable: a mutant that ignores the measured size
+     reads identical at the default metrics. The size is therefore a variable a suite can raise
+     through `app._setRootFont(32)`, which is the same thing `tools/shot.cjs --font-scale=2`
+     does in a real browser, so the two instruments disagree only about layout, not about this.
+     Returning anything else would be a number invented to make a check pass. */
+  let rootFontPx = 16;
+  const getComputedStyle = () => ({ fontSize: rootFontPx + 'px', getPropertyValue: () => '' });
   class Image { set src(v) { this._src = v; } get src() { return this._src; } }
   const chain = () => {
     const o = {};
@@ -171,18 +185,21 @@ function boot({ appMode = false, storage = null } = {}) {
   else delete globalThis.localStorage;
 
   const ctx = new Function('window', 'document', 'location', 'navigator', 'L', 'Image', 'console',
+    'getComputedStyle',
     body + `
     const out = {};
     const names = ${JSON.stringify(EXPORTS)};
     names.forEach(name => { try { out[name] = eval(name); } catch (err) { out[name] = undefined; } });
     return out;`
-  )(window, document, location, navigator, L, Image, { log() {}, warn() {}, error() {} });
+  )(window, document, location, navigator, L, Image, { log() {}, warn() {}, error() {} },
+    getComputedStyle);
 
   ctx._document = document;
   ctx._window = window;
   ctx._history = history;
   ctx._els = els;
   ctx._source = src;
+  ctx._setRootFont = px => { rootFontPx = px; };
   return ctx;
 }
 

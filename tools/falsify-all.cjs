@@ -15,8 +15,16 @@
    Sequential on purpose: each family rewrites Sukinnect-next.html and restores it in a finally,
    so two families at once would measure each other's mutants.
 
-     node tools/falsify-all.cjs                (~15 minutes: every mutant is a fresh gate run)
-     node tools/falsify-all.cjs count-labes    # only families whose name matches
+     node tools/falsify-all.cjs                (49 families on the tree as of 2026-10-24, counted as
+                                                `ls tools/falsify-*.cjs | wc -l` minus this file, not
+                                                remembered. The last full pass printed 49 families, 247
+                                                mutants applied, 247 caught, 0 not applied in 52 minutes
+                                                — wall clock from launch to summary line, not an estimate;
+                                                earlier revisions advertised ~35, then ~53, then ~51, then
+                                                ~44 minutes for the same machine, and all four were memory.
+                                                An advertised cost that is wrong gets its runs abandoned
+                                                early, which is the one way to leave a mutant in the tree.)
+     node tools/falsify-all.cjs count-labels    # only families whose name matches
 */
 'use strict';
 const fs = require('fs');
@@ -35,16 +43,77 @@ const families = fs.readdirSync(TOOLS)
   .filter(f => !filter || f.includes(filter))
   .sort();
 
-/* The two summary shapes the families print, plus the skip line each one emits when its needle
-   no longer matches the file. The second family of endings is written two ways across the suite
-   — `not applied 0` and `failed to apply 0` — and a first version of this pattern matched only
-   one of them, which made six families look like they had crashed when they had finished cleanly
-   four lines earlier. A runner that mis-parses a result is worse than no runner, because it
-   prints a confident total: so the pattern accepts either spelling, and a family whose line
-   matches neither still reports itself as unproven rather than as zero. */
+const TARGET = 'Sukinnect-next.html';
+/* A filter that matches nothing must not print a green zero. Found by the family that tests the
+   preflight guard: its fixture copied the example filter from this file's own header, which is
+   `count-labes` — two letters short of `count-labels` — so the nested pass ran ZERO families, printed
+   `0 families, 0 mutants applied, 0 caught, 0 not applied — every rule is still being tested`, and
+   exited 0. The word "every" in that sentence is precisely the claim a zero-selection pass cannot make,
+   and the positive control in `falsify-preflight` refused to credit its own baseline because of it,
+   which is the only reason anyone noticed. */
+if (filter && families.length === 0) {
+  console.log('NO MATCH — the filter `' + filter + '` named no family, so nothing was tested. Family file names are');
+  console.log('`falsify-<name>.cjs`; `node tools/falsify-all.cjs` with no argument runs all ' +
+    fs.readdirSync(TOOLS).filter(f => /^falsify-.*\.cjs$/.test(f) && f !== 'falsify-all.cjs').length + '.');
+  process.exit(1);
+}
+/* A pass that starts on a dirty target measures a file nobody has. Each family rewrites
+   Sukinnect-next.html and restores it in a `finally`, so a family that is KILLED — not abandoned,
+   killed — leaves its own mutant in the tree with nothing to say about it. This happened on
+   2026-10-22: a pass was cancelled while `falsify-double-tap` held its break in place
+   (`if (changed.length) {` → `if (true) {` in `saveAdminProfile`), the log simply stopped mid-table,
+   and the injected defect — the exact bug that family exists to detect — sat in the working file
+   until `git status` was asked. The header of this file already warns that abandoning a run early
+   is the one way to leave a mutant in the tree; the warning was about the reader's patience and no
+   instrument checked the tree afterwards.
+   So ask the tree, before and after. `git status --porcelain` on the one path is the whole test. If
+   git itself is unavailable the pass still runs and says so, because a guard that silently disables
+   itself is the failure mode this repository has now written down four times. */
+function dirtyTarget() {
+  try {
+    return execFileSync('git', ['status', '--porcelain', '--', TARGET],
+      { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  } catch (noGit) { return null; }
+}
+const gitUnavailable = dirtyTarget() === null;
+const dirtyBefore = gitUnavailable ? '' : dirtyTarget();
+if (dirtyBefore) {
+  console.log('TARGET NOT CLEAN — nothing was mutated. `git status --porcelain -- ' + TARGET + '` answers:');
+  console.log(dirtyBefore.split(/\r?\n/).map(l => '   ' + l).join('\n'));
+  console.log('Either a previous pass was cancelled while a family held a mutant in the file, or another pass is');
+  console.log('running right now and this is its live break — this runner is the only writer, so two of them read');
+  console.log('each other\'s mutants. Find out which before doing anything: `tasklist | grep -i node` on Windows.');
+  console.log('If nothing is running, recover by saving the current bytes somewhere, `git checkout -- ' + TARGET + '`,');
+  console.log('then re-running `node tools/verify.cjs` before quoting any number from this runner.');
+  process.exit(1);
+}
+
+/* The summary shapes the families print, plus the skip line each one emits when its needle no
+   longer matches the file. A runner that mis-parses a result is worse than no runner, because it
+   prints a confident total. The endings are written two ways across the suite — `not applied 0`
+   and `failed to apply 0` — and a first version of this pattern matched only one of them, which
+   made six families look like they had crashed when they had finished cleanly four lines earlier.
+   A third spelling arrived with the camera families: they say "breaks" rather than "mutants"
+   because they restore a defect that was measured on a phone rather than mutate a token, and the
+   pattern now accepts either word. A family whose summary the runner cannot read still reports
+   itself as unproven rather than as zero — which is exactly what happened on its first run here,
+   and is the line to read rather than the headline count. */
+/* Each shape carries its own reader, because the families do not agree on the order of their own
+   numbers: the Node families print "applied N, caught M", the camera families print "N of M", so a
+   single positional rule would read one of the two backwards and print a confident wrong total —
+   which is the exact failure this runner exists to avoid, and the reason it reports an
+   unparseable family as unproven rather than as zero. */
 const SHAPES = [
-  /^mutants applied (\d+), caught (\d+), (?:not|failed to) appl(?:y|ied) (\d+)/m,
-  /^(\d+) of (\d+) mutants caught/m,
+  { re: /^mutants applied (\d+), caught (\d+), (?:not|failed to) appl(?:y|ied) (\d+)/m,
+    read: m => ({ applied: +m[1], caught: +m[2], skipped: +m[3] }) },
+  /* The camera families print "N of M mutants caught, K not applied". Without this shape the
+     runner derives K as M − N, which conflates a mutant that survived with a needle that no longer
+     matches the file — the two things most worth telling apart, because one is a bug in the app
+     and the other is a bug in the family. Listed before the shorter shape so it wins. */
+  { re: /^(\d+) of (\d+) (?:mutants|breaks) caught, (\d+) (?:not applied|skipped)/m,
+    read: m => ({ applied: +m[2], caught: +m[1], skipped: +m[3] }) },
+  { re: /^(\d+) of (\d+) (?:mutants|breaks) caught/m,
+    read: m => ({ applied: +m[2], caught: +m[1], skipped: +m[2] - +m[1] }) },
 ];
 
 function runOne(file) {
@@ -59,16 +128,21 @@ function runOne(file) {
     out = (err.stdout || '') + (err.stderr || '');
     if (err.status === undefined || err.status === null) crashed = err.message;
   }
-  for (const re of SHAPES) {
-    const m = out.match(re);
+  /* The verdict lines a family prints about WHICH break survived. Without echoing them the runner
+     reports a count and the reader has to re-run the family to learn anything — and a survivor that
+     does not reproduce (as one did on 2026-10-21, inside this pass and not outside it) leaves no
+     record at all of which rule was seen quiet. */
+  const notes = out.split(/\r?\n/)
+    .filter(l => /^(MISSED|SKIP|BROKEN|QUIET|NOTED|BASELINE|the run)/.test(l))
+    .map(l => l.slice(0, 158));
+  for (const shape of SHAPES) {
+    const m = out.match(shape.re);
     if (m) {
-      const applied = m[1] !== undefined && m[3] !== undefined ? +m[1] : +m[2];
-      const caught = m[1] !== undefined && m[3] !== undefined ? +m[2] : +m[1];
-      const skipped = m[3] !== undefined ? +m[3] : applied - caught;
-      return { applied, caught, skipped, crashed, missed: (out.match(/^MISSED\b/gm) || []).length };
+      const r = shape.read(m);
+      return { ...r, crashed, missed: (out.match(/^MISSED\b/gm) || []).length, notes };
     }
   }
-  return { applied: 0, caught: 0, skipped: 0, crashed, missed: 0, silent: true };
+  return { applied: 0, caught: 0, skipped: 0, crashed, missed: 0, silent: true, notes };
 }
 
 let A = 0, C = 0, S = 0, bad = 0;
@@ -84,8 +158,17 @@ for (const f of families) {
     + (r.silent ? '   <<< printed no summary — nothing was proven' : '')
     + (!r.silent && r.caught !== r.applied ? '   <<< MUTANT SURVIVED' : '')
     + (r.crashed ? '   <<< exited on a signal: ' + String(r.crashed).slice(0, 40) : ''));
+  if (trouble) (r.notes || []).forEach(n => console.log('      | ' + n));
 }
 console.log('─'.repeat(72));
-console.log(families.length + ' families, ' + A + ' mutants applied, ' + C + ' caught, '
+const dirtyAfter = gitUnavailable ? '' : dirtyTarget();
+console.log(families.length + (families.length === 1 ? ' family, ' : ' families, ') + A + ' mutants applied, ' + C + ' caught, '
   + S + ' not applied' + (bad ? ' — ' + bad + ' family needs attention' : ' — every rule is still being tested'));
+if (gitUnavailable) console.log('NOTED the target was never checked against git — no git on PATH, so a leftover mutant would not have been seen');
+else if (dirtyAfter) {
+  console.log('BROKEN the tree is not clean after the pass, so this table is a measurement of a file nobody has:');
+  console.log(dirtyAfter.split(/\r?\n/).map(l => '   ' + l).join('\n'));
+  bad++;
+}
 process.exit(bad ? 1 : 0);
+

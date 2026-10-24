@@ -78,25 +78,81 @@ function runPage(file, spec) {
   }
 }
 
-let silent = 0, failed = 0;
+let silent = 0, failed = 0, unmeasured = 0, counted = 0;
 for (const f of probes) {
   const spec = kindOf(f);
   const run = spec.kind === 'node' ? runNode(f) : runPage(f, spec);
   /* The answer is the probe's own value, not the camera's footer: an in-page probe's verdict
      arrives on the `probe → {…}` line, and printing the last line of the run instead would show
-     where the PNGs went and read like a result. */
-  const probeValue = (run.out.match(/probe → (\S.*)/) || [])[1] || '';
+     where the PNGs went and read like a result.
+
+     ALL of those lines, not the first. The camera evaluates a page probe once per screen of the
+     walk, so the first answer belongs to whatever screen happens to be first — and for two probes
+     that was the only answer ever read. `probe-nav-fit.js` says "no bottom nav painted" there,
+     which is true of the sign-in page and nothing else: measured on 2026-10-19 it answered on all
+     72 screens and 69 of them hold a nav (the counts from that day; the walk is longer now). `probe-chart-axis-coverage.js` answered `charts:[]` on
+     the first screen and the runner called that an answer, while the question it exists to ask —
+     does an axis name its tallest bar — went unasked for the whole pass. */
+  const values = (run.out.match(/probe → (\S[^\n]*)/g) || []).map(s => s.replace(/^probe → /, ''));
+  const probeValue = values[0] || '';
   const line = probeValue || (run.out.split(/\r?\n/).filter(l => l.trim() && !/^PASS\b/.test(l)).pop() || '').trim();
   const threw = /threw:/.test(run.out);
   const nothing = run.out.trim().length === 0;
-  const trouble = run.code !== 0 || nothing || threw || (spec.kind === 'page' && probeValue === 'null');
+  /* A probe refuses by saying `NO CONCLUSION`: an empty population is not a clean measurement.
+     Refuse on it only when EVERY answer refused — one refusal among the screens of a long walk is the subject
+     genuinely not existing on one screen, and flagging that would punish the honest probe. */
+  const refused = values.filter(v => v.indexOf('NO CONCLUSION') > -1).length;
+  const answered = values.length - refused;
+  /* The second half of the contract. `NO CONCLUSION` answers "did this instrument measure anything";
+     it says nothing about what the measurement SAID, which is how `probe-whitespace.js` came to print
+     `ok … findings:1` — a defect count sitting inside a line the runner called clean, cut off after 78
+     characters so the row that explained it never reached the page either. So a page probe that counts
+     defects names its number `findings`, and any leg it could not complete `instrumentRows`, and this
+     runner reads both. A probe that does not use the keys is still judged only on whether it answered —
+     the convention is opt-in per probe, and `falsify-probe-population` plants probes to prove both the
+     promotion and the boundary: a positive count must be flagged, an instrument row must be flagged
+     separately, and neither may be inferred from a probe that reports no counts at all. */
+  const count = (v, key) => {
+    /* An answer is printed two ways, and the first version of this matcher only knew one of them.
+       A probe that returns an object comes back as plain JSON; a probe that returns
+       `JSON.stringify(…)` comes back as a JSON *string*, so every quote in it is printed escaped and
+       `"findings"` is not in the text at all — which is how `findings:1` read clean to a rule whose
+       whole job was to flag it. Unwrap both shapes rather than widen the regex, so a probe cannot
+       choose its way out of the count by how it returns. */
+    let parsed;
+    try { parsed = JSON.parse(v); } catch (notJson) { return null; }
+    if (typeof parsed === 'string') { try { parsed = JSON.parse(parsed); } catch (stillText) { return null; } }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    const n = parsed[key];
+    return (typeof n === 'number' && isFinite(n)) ? n : null;
+  };
+  const sum = key => values.reduce((a, v) => a + (count(v, key) || 0), 0);
+  const findings = sum('findings');
+  const instrumentRows = sum('instrumentRows');
+  const countsFindings = values.some(v => count(v, 'findings') !== null);
+  const countsBlind = values.some(v => count(v, 'instrumentRows') !== null);
+  if (countsFindings) counted++;
+  const noPopulation = spec.kind === 'page' ? (values.length === 0 || answered === 0)
+    : (line.indexOf('NO CONCLUSION') > -1);
+  if (noPopulation && !threw && !nothing) unmeasured++;
+  const trouble = run.code !== 0 || nothing || threw || noPopulation
+    || (spec.kind === 'page' && probeValue === 'null')
+    || findings > 0 || instrumentRows > 0;
   if (trouble) failed++;
   if (nothing) silent++;
+  const head = (countsFindings || countsBlind)
+    ? (countsFindings ? 'findings=' + findings : '') + (countsBlind ? (countsFindings ? ', ' : '') + 'instrumentRows=' + instrumentRows : '') + ' · '
+    : '';
   console.log((trouble ? 'XX ' : 'ok ') + f.padEnd(34) + ('[' + spec.kind +
     (spec.kind === 'page' && spec.only ? ' ' + spec.only : '') + ']').padEnd(26)
     + (threw ? 'the page threw: ' + (probeValue || run.out).slice(0, 60)
       : nothing ? 'printed nothing — it proved nothing'
-      : line.slice(0, 78) || '(no summary line)'));
+      : noPopulation && spec.kind === 'page'
+        ? values.length + ' answers, none measured anything — ' + (probeValue || '').slice(0, 58)
+        : head
+          + ((values.length > 1 ? values.length + ' answers' + (refused ? ', ' + refused + ' refused' : '') + ' · ' : '')
+          + (values.slice().sort((a, b) => b.length - a.length)[0] || line).replace(/^NO CONCLUSION[^\n]*/, 'refused'))
+          .slice(0, 78) || '(no summary line)'));
   if (run.code !== 0 && !threw && !nothing) {
     console.log('     exit ' + run.code + ' · ' + (run.out.split(/\r?\n/).find(l => /Error/.test(l)) || '').slice(0, 90));
   }
@@ -104,5 +160,7 @@ for (const f of probes) {
 console.log('─'.repeat(78));
 console.log(probes.length + ' probes, ' + failed + ' needing attention'
   + (silent ? ' (' + silent + ' printed nothing at all)' : '')
-  + (failed ? '' : ' — every instrument still answers its question'));
+  + (unmeasured ? ' (' + unmeasured + ' reached no population)' : '')
+  + ' — ' + counted + ' of them report a findings count this runner reads'
+  + (failed ? '' : ', and every instrument still answers its question'));
 process.exit(failed ? 1 : 0);
