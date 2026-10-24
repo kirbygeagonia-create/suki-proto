@@ -6568,3 +6568,15 @@ readings are marked `NOT MEASURED` and the leg's verdict failed rather than pass
 readings DEVICE-PASS owes remain owed on real handsets**: the vivo's `.39` install with its field and row
 heights, and ColorOS's key route. An AVD settles a framework question; it cannot settle a hardware-parity
 question, and it is not recorded as if it had.
+
+**The atomic surfaces reader was written, bench-proven, and then refused by the frame — recorded
+as three separate facts rather than one success.** To stop the walk straddling an app restart, both
+surfaces are now read inside ONE page evaluation (: navigate, raise each
+layer through the app's own handler, measure, clean up, return one object). On the bench it answers
+exactly the known figures in a single call — PIN field 16px in a 48px box, 16 rows at 44px with
+, sheet title "Filter providers", last row reachable through  at 833 in 660,
+ returning . Sent to the emulated frame it came back
+: that page cannot complete a multi-render read under the pressure this
+laptop puts on software-rendered Android, which is the limit written down in project memory before it
+was tested, now tested. So the two handset readings remain owed, the instrument for taking them is
+proven on a surface where the answer is known, and the emulator has been stopped.
