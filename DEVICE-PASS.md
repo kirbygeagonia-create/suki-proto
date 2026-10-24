@@ -1841,9 +1841,14 @@ holds: a real `File` arrives, the screen paints only its name, no `blob:` or `da
 no-bytes reading was repeated there against the real chooser rather than only in a browser. ColorOS on the
 OPPO is the remaining refusal, and it has never been tried with keys.)*
 
-One device-shaped thing stays open because it is an owner question, not bench work: whether either
+One device-shaped thing was open because it is an owner question rather than bench work: whether either
 provider or admin reaches a notification surface at all in this build (§27 is untestable for the other two
-roles, as `tools/probe-notification-targets.js` reports). TalkBack's *wording* is no longer on this list in
+roles, as `tools/probe-notification-targets.js` reports every pass). **Decided 2026-10-24: leave it as
+documented.** The owner declined both a per-role notification record family and an empty-state screen for it,
+so the gap stays a sentence in `AGENTS.md` rather than a feature invented to make a check pass — §88's rule
+that a doc section is not a requirement. Nothing here is owed on it.
+
+TalkBack's *wording* is no longer on this list in
 the same shape. Handset walk 8 turned the reader on, verified the service bound, opened a dialog that
 `role=dialog` and `aria-labelledby` name, and found the announcement on the audio channel and nothing
 anywhere that carries the words — so the remaining question is not *whether* it is spoken but whether it

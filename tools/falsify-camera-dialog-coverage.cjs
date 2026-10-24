@@ -82,8 +82,11 @@ try {
 } finally {
   while (restore.length) { const it = restore.pop(); fs.writeFileSync(it.p, it.s); }
   console.log('─'.repeat(70));
-  console.log(applied + ' of ' + BREAKS.length + ' breaks applied, ' + caught + ' caught, ' +
-    notPlanted + ' not applied, ' + missed + ' missed');
+  /* This line's SHAPE is load-bearing: `falsify-all.cjs` parses `N of M breaks caught, K not
+     applied`, and a family it cannot read is reported as unproven rather than as zero — which is
+     exactly how this family appeared as `0 0 0 0 <<< printed no summary` on its first aggregate,
+     guarding nothing while the headline total stayed green. */
+  console.log(caught + ' of ' + applied + ' breaks caught, ' + notPlanted + ' not applied, ' + missed + ' missed');
   console.log('cleanup  audit restored: ' + (fs.readFileSync(AUDIT, 'utf8') === PRISTINE_AUDIT) +
     ' · camera restored: ' + (fs.readFileSync(CAM, 'utf8') === PRISTINE_CAM));
   if (caught !== BREAKS.length || notPlanted || missed) process.exitCode = 1;
