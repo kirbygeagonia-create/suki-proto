@@ -6110,3 +6110,34 @@ about screens, about data, and now about its own guard's direction of comparison
 Two small facts for whoever reads this branch next: the audit is the thing to run before a push (`node
 tools/audit-commit-subjects.cjs`, seconds), and the three existing duplicates stay as they are — rewriting
 published history needs the owner, and the bodies already say what each commit did.
+
+
+## 95. The owed item written from memory was wrong, and the thing it hid was a false fact in three documents
+
+Walk 7 left a pointer saying the vivo's WebView version "was never captured" and to read it on the next
+authorised session. The phone came back authorised, so the first thing captured was that the pointer was
+false: **walk 5 had captured it** — `155.0.8059.43` — and `dumpsys webviewupdate` today answers the same
+value. The writing of that owed item never opened walk 5's device paragraph; it trusted the summary of it.
+
+What the earlier walk *had* got wrong is a fact, not a formality: it recorded the phone as **Android 10**,
+and the device answers `ro.build.version.release` **11**, `sdk` 30, `RP1A.200720.012`, vivo OS 11.5, with a
+build dated 2025-07-11 — so no OTA explains the discrepancy, it was simply a wrong read. From there it had
+travelled: two sentences in `AGENTS.md` (the walk-5 parenthetical, and an attribution of a
+`PlaybackActivityMonitor` limitation to "Android 10") and two dated rows in this file. The live documents are
+corrected; the log rows keep their text and gain a dated note, because a row that says what was measured on
+its own day is a record, while a release used to *explain* something is a claim — so the explanation was
+reworded to "that build" and the observation (0 lines matching `talkback|accessib`; client handles without
+per-player detail) left standing, since it was read off the device and does not depend on the number.
+
+**The rule:** before writing an owed item that says "never measured", search for whether some earlier walk
+measured it. This file has now caught the same shape four times from the other direction — a claim kept after
+the measurement moved (§90), a state sentence kept after the item closed (§91), a total kept after a run
+printed another (§92) — and here it is the *absence* claimed as owed that was already present. An inventory
+written from memory is an inventory of memory.
+
+**The fact worth having instead:** the two handsets are one patch apart on the same Chromium build line —
+`.43` on the vivo, `.45` on the OPPO — and yet the key route returns a document on one while ColorOS refused
+four synthetic taps on the other. That localises the picker difference to the OEM shell, not to WebView, which
+is why the OPPO's item stays open and cannot be reasoned closed from anything the vivo did. Read beside it, and
+left exactly as found: `enabled_accessibility_services` `null`, `accessibility_enabled` `0` — TalkBack off, so
+the wording question remains the owner's to open rather than a measurement owed.

@@ -1448,7 +1448,11 @@ whether **TalkBack speaks** an opened dialog, and the concierge's **system file 
 
 ## Handset walk 5 — `1.2-preview.37` on the vivo 1906, 2026-10-22
 
-Device: `80d20768`, vivo 1906, Android 10, WebView `155.0.8059.43`, `Physical size: 720x1544` with
+Device: `80d20768`, vivo 1906, Android **11** — this row said 10 until 2026-10-24, when the phone was asked
+again: `ro.build.version.release` 11, `sdk` 30, `RP1A.200720.012`, vivo OS 11.5, build dated 2025-07-11, so no
+update explains the 10 and it was simply a wrong reading. The observations that row drew from the device stand
+unchanged; only the release and the two sentences that reasoned from it were corrected, in this file and in
+`AGENTS.md`. — WebView `155.0.8059.43`, `Physical size: 720x1544` with
 `Override density: 256` → **450 CSS px**. Read from the page this walk, not assumed: `innerWidth 450`,
 `innerHeight 889`, `devicePixelRatio 1.600000023841858`, and the WebView node occupying device
 `[0,54][720,1423]` — two coordinate spaces, which matters because `--tap` takes **page** coordinates and
@@ -1504,7 +1508,7 @@ upgrade path was walked: `dumpsys package com.sukinnect.app` answers `versionCod
    long it waited. **A silence from a channel that is still busy is not a negative result.**
    What this does *not* prove: that the announcement *names* the dialog. No utterance text is
    recoverable here — `logcat` carries no TalkBack speech line for this walk (0 lines matching
-   `talkback|accessib`), and Android 10's `PlaybackActivityMonitor` dump lists client handles without
+   `talkback|accessib`), and that build's `PlaybackActivityMonitor` dump lists client handles without
    per-player detail. The naming is carried by the tree evidence in row 5, not by this row.
 
 **Not settled by automation, with the whole chain recorded: picking the file.** The concierge's photo
@@ -1721,7 +1725,7 @@ eight-corner run is the figure quoted afterwards.
 Everything below is written out where it belongs; this is only the list of what the next person finds
 open. Nothing here is a defect the bench can close.
 
-**On the handset** — two items, and neither is a bench task:
+**On the handset** — one item, and it belongs to the other phone:
 1. **The OPPO's ColorOS picker has never been tried with keys.** Handset walk 7 settled this leg on the
    vivo: `node tools/device-probe.cjs --keys=TAB,TAB,DPAD_DOWN,DPAD_CENTER '<reader>'` closed the picker
    and our page came back holding a file, which retires "a thumb is owed" for that DocumentsUI. ColorOS
@@ -1730,14 +1734,17 @@ open. Nothing here is a defect the bench can close.
    owner's photograph by accident:** a key route selects the focused row, so run it against a folder that
    is empty except for the test file and entered by name — never against a recents grid holding real
    photographs.
-2. **The vivo's WebView version was never captured.** Walk 7 read that engine's *behaviour* — the factor it
-   applies (1.35 written 12.15px → 16.4025px, 2.0 written 8.15px → 16.3px) — but not its build, so the vivo's
-   numbers sit beside an unnamed engine while the OPPO's are recorded against WebView 155. Read
-   `adb shell dumpsys webviewupdate | grep -m1 version` on the next authorised session. **The device dropped
-   to `unauthorized` minutes after walk 7 finished** (`adb kill-server` and a restart moved it from
-   `offline` to `unauthorized`, which only a tap on the phone answers), so this is the first thing to do when
-   the owner re-authorises — and it is the same failure walk 5 hit mid-session, which is why the record says
-   to read the engine, not assume it.
+2. **Closed 2026-10-24, and the item itself was the defect.** Walk 7 wrote that the vivo's WebView version
+   "was never captured"; opening the log showed walk 5 had captured it, and `dumpsys webviewupdate` today
+   answers the same `com.google.android.webview 155.0.8059.43`. What the earlier walk had got wrong was the
+   release above. The parity is worth keeping for its own sake: the two handsets sit **one patch apart on the
+   same Chromium build line** (.43 here, .45 on the OPPO), yet the key route selects a document on one while
+   ColorOS refused four synthetic taps on the other — which locates that difference in the OEM shell, not in
+   the WebView, and is the reason item 1 above stays open rather than being folded into "Android refuses
+   this". Read and left alone: `enabled_accessibility_services` is `null` and `accessibility_enabled` is 0, so
+   TalkBack is off; measuring what it *says* would mean turning the owner's accessibility service on, which
+   they have ruled to leave as documented. Device otherwise as walk 7 left it: `.38` installed, `font_scale`
+   1.0, no fixture file on disk.
 
 Everything else the `.37` list owed was put to a phone and is written up in *Handset walk 5* and
 *Handset walk 6* above — the caption, the Insights figures, the `1039`, the second provider's own header,

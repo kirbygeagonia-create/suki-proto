@@ -2648,7 +2648,8 @@ only light` is now declared, decided by the owner 2026-10-21, with `--measure --
 73 screens afterwards to prove the declaration costs nothing measurable.
 
 A CHANNEL THAT IS STILL BUSY CANNOT REPORT A NEGATIVE — AND A RING BUFFER CANNOT BE READ BY TIMESTAMP.
-Handset walk 5 (`1.2-preview.37` on the vivo 1906, `80d20768`, Android 10, WebView `155.0.8059.43`,
+Handset walk 5 (`1.2-preview.37` on the vivo 1906, `80d20768`, Android 11 — the sentence carried 10 until
+2026-10-24 re-read the device — WebView `155.0.8059.43`,
 720x1544 at `Override density: 256` → **450 CSS px**, read from the page as `innerWidth 450`,
 `innerHeight 889`, `devicePixelRatio 1.6`) settled five of the six owed legs and its write-up is
 *Handset walk 5* in `DEVICE-PASS.md`. The two findings that outlive that phone are about instruments.
@@ -2662,7 +2663,7 @@ control rows — a non-interactive card and a dialog's body text, both 0 — the
 also compared a bare `HH:MM:SS` against lines beginning `MM-DD HH:MM:SS:mmm`, a lexical comparison that
 answers "nothing new" forever; the log is a ring buffer, so read it as a **set difference against a
 snapshot**. And no channel here recovers the *words*: `logcat` printed 0 lines matching
-`talkback|accessib` across the walk and Android 10's `PlaybackActivityMonitor` dump lists client handles
+`talkback|accessib` across the walk and that build's `PlaybackActivityMonitor` dump lists client handles
 with no per-player detail. So the burst proves an announcement occurs, §77's tree proves the name is
 exposed, and neither proves the wording is spoken — say it that way rather than as "TalkBack announces
 the dialog by name".
