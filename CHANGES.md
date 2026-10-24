@@ -6626,3 +6626,32 @@ frame* — not answered, and not an application defect. The three readings recor
 were taken on an earlier boot that did answer; this one would not. **The admin PIN field at 1.35 has still
 never been measured on any Android target** — it exists only as a bench figure, and it stays a handset leg.
 The emulator was stopped with `font_scale` read back at 1.0.
+
+## 103. `.39` reached a real handset for the first time, and the page underneath it would not answer
+
+The OPPO CPH2179 (`S4CUYTJB6HNNWC49`, Android 10, WebView **155.0.8059.46**) finally came onto the bus.
+**The install leg is done on real hardware and proved the way this file insists on**: the package read
+`versionCode=41 / versionName=1.2-preview.39` back from `dumpsys package` after `adb install -r -t`, where
+before it read `40 / 1.2-preview.38`. That is the first `.39` ever to run on a phone, and the fifth copy in
+`tools/audit-build-bytes.cjs` — the one only a device can report — is no longer hypothetical for this device.
+
+**The page readings did not happen, and the walk said so instead of pretending.** `Runtime.evaluate` timed
+out on everything, including `1+1`, while the app was `mCurrentFocus`, `mResumedActivity`, screen `Awake`.
+The walk's own honesty layers did their job: `NO PAGE` after ten tries, `readings taken: 0, failed: 10`,
+`findings: 1 — the leg could not be measured, which is NOT the same as measuring nothing wrong`, exit 1.
+
+Two real defects were found and fixed on the way, both worth keeping regardless of this leg:
+1. **`device-probe` relaunched the activity on every call.** A walk that asks five questions issued five
+   `am start`s; each left a renderer reloading an 11,851-line page, so the next probe landed on a busy or
+   dead target and the target count climbed (5 → 6 → 7) while nothing answered. It now asks the window
+   manager first and leaves a running app alone — measured: `targets: 1`, and the single target is the right
+   page (`file:///android_asset/Sukinnect.html?app=1`, title `Sukinnect — next (rebuild)`).
+2. **A stale port binding is now visible instead of blamed on the app** (`attached: <socket> via tcp:<port>,
+   targets: N`), and an inconclusive validation is reported as inconclusive.
+
+What is left, stated as a symptom rather than a theory: with exactly one correct page target and the activity
+resumed, the renderer still refuses every evaluation, and `dumpsys activity processes` shows a second
+process record with `empty=true`. So the next diagnostic step on this device is a cold start *after* the
+in-place upgrade (force-stop, wait, launch once, then probe) and checking for a pending JavaScript dialog,
+not another change to the readers. The vivo leg and the ColorOS key route are still owed; the key route is
+now actually reachable, because the phone it belongs to is on the bus.

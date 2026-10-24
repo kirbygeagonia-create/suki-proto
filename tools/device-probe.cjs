@@ -154,8 +154,21 @@ function httpGet(port, path) {
   const out = adb('devices');
   const serial = (out.match(/^(\S+)\s+device$/m) || [])[1];
   if (!serial) { console.error('no authorised device. adb devices said:\n' + out); process.exit(1); }
-  adb('-s', serial, 'shell', 'am', 'start', '-n', 'com.sukinnect.app/.MainActivity');
-  await new Promise(r => setTimeout(r, 2500));
+  /* Only launch when the app is not already on screen. Launching unconditionally — which this instrument did
+     for every one of its life — means a walk that asks five questions issues five `am start`s, and each one
+     leaves a renderer reloading an eleven-thousand-line page; by the next call the previous target is dead
+     and the fresh one is busy, so every Runtime.evaluate times out and the target list keeps growing. That
+     is exactly what the OPPO produced: app focused, activity resumed, screen awake, and seven consecutive
+     probes all refusing to answer. Ask the window manager first and leave a running app alone. */
+  const focusLine = adb('-s', serial, 'shell', 'dumpsys', 'window').match(/mCurrentFocus=[^\n]*/g) || [];
+  const alreadyUp = focusLine.some(l => /com\.sukinnect\.app/.test(l));
+  if (alreadyUp) {
+    console.error('already foreground, not relaunching: ' + focusLine[0].trim());
+  } else {
+    console.error('launching (foreground was: ' + (focusLine[0] || 'unknown').trim() + ')');
+    adb('-s', serial, 'shell', 'am', 'start', '-n', 'com.sukinnect.app/.MainActivity');
+    await new Promise(r => setTimeout(r, 2500));
+  }
   const pidLine = adb('-s', serial, 'shell', 'pidof', 'com.sukinnect.app');
   const pid = (pidLine.match(/\d+/) || [])[0];
   if (!pid) { console.error('com.sukinnect.app is not running'); process.exit(1); }
