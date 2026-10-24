@@ -3085,6 +3085,22 @@ same sentence §75 wrote about the mechanism it chose not to implement, and it i
 mode it names (testing for a name's presence rather than for the thing that produces it) is the third one
 this session caught in its own tooling: after `Action\D{1,4}` matching through a renamed caller, the
 `["x",` count matching nested literals, and `aria-invalid="true"` read as an element `id`.
+FOUR COPIES OF ONE PAGE, AND THE INVARIANT IS NOW A TOOL RATHER THAN A HABIT. The rebuild exists as
+`Sukinnect-next.html`, as the copy `dist/` publishes, as `Sukinnect-Android/app/src/main/assets/Sukinnect.html`
+that the shell loads, and as the bundle inside the built APK. Today the page changed twice, so that
+comparison was run and re-run by hand — `md5sum` across three files, then `unzip -p … | md5sum` for the
+archive — which is precisely the hand-kept check §90 was written about, and `DEVICE-PASS.md` already tells a
+reader to perform it. `node tools/audit-build-bytes.cjs` does it instead: one row per read, `findings: N`
+for copies that disagree with the source, and a **refusal** (`NO CONCLUSION`, exit 1) whenever an artifact
+cannot be read or fewer than four were compared. Current state, printed by it: all four at `3c78fdd…`.
+`node tools/falsify-build-bytes.cjs` is **4 of 4 breaks caught, 0 not applied**, and its two
+absence-breaks are the point: the missing-artifact guard and the artifact-count guard are each broken
+*singly* against the same deleted staged asset, and the other one still refuses — because the failure mode
+of a comparison tool is never a wrong verdict, it is a skipped file that leaves three rows agreeing and
+prints like a healthy build. The fifth copy is the one this machine cannot read: the installed build on the
+vivo is `1.2-preview.38`, cut from `a4cf6fc3…`, while every artifact on disk is now `3c78fdd…`, and only a
+handset can report what it is actually running — which is the owed install in `DEVICE-PASS.md`, stated as a
+byte pair rather than as a feeling.
 
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by

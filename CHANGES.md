@@ -6363,3 +6363,37 @@ scanner asking for a name instead of the thing that produces it (`provider_detai
 times by `openProviderDetail()`, which also mounts the map; `verification_review` by the seven
 `admin-review*` rows). A widening whose first output is two phantom findings is noise, not a net.
 
+## 100. Four copies of one page stopped being a habit and became a check
+
+The rebuild lives in four places: `Sukinnect-next.html`, the copy `dist/` publishes,
+`Sukinnect-Android/app/src/main/assets/Sukinnect.html` that the shell loads, and the bundle inside the
+built APK. Today the page changed twice, so each time the comparison was performed by hand — `md5sum`
+across three files, then `unzip -p <apk> assets/Sukinnect.html | md5sum` for the fourth — and
+`DEVICE-PASS.md` already instructs a reader to do exactly that. A check whose enforcement is "remember to
+run it" is the §90 class in its purest form, so it is a tool now:
+
+```
+node tools/audit-build-bytes.cjs
+```
+
+It prints one row per read with its hash and `findings: N`, where N is the number of copies disagreeing
+with the source, and it **refuses** (`NO CONCLUSION`, exit 1) rather than answering when an artifact could
+not be read or fewer than four were compared. On this tree: four rows, every one of them
+`3c78fddbeaeea01f66a00de78c44e034`. `probe-all.cjs` picked the audit up from its filename.
+
+`node tools/falsify-build-bytes.cjs` is 4 breaks, 4 caught, 0 not applied, and the interesting two are not
+the drift case (a byte appended to `dist/` is reported `DIFFER` with `findings: 1` and exit 1) but the two
+absence breaks. The audit carries two independent guards — an unread artifact, and fewer than four
+artifacts compared — and each is disabled *singly* against the same deleted staged asset, so the surviving
+guard has to refuse on its own. Both do. That is the evidence the pair is load-bearing rather than
+decorative, and it matters because a comparison tool almost never fails by answering wrongly: it fails by
+skipping a row and printing a clean answer over three agreeing copies.
+
+**What the tool still cannot see is the copy that matters most on a phone.** The installed build on the
+vivo is `1.2-preview.38`, cut from `a4cf6fc3…`; every artifact on this machine is `3c78fdd…`. `unzip` can
+read the APK but nothing can read the installed app's bundle from here, so the fifth copy is only
+checkable by a handset — which is why `DEVICE-PASS.md`'s owed item is now stated as a byte pair
+(`3c78fdd…` built, `a4cf6fc3…` installed) rather than as "the device may be behind". Reinstalling `.39`
+and reading the lock dialog's field and the filter sheet's rows are the two things left on this thread
+that no instrument on this machine can do.
+
