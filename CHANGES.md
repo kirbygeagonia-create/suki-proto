@@ -6472,6 +6472,23 @@ focusable to land on, and it has plenty. What is still untested is the narrower 
 document row rather than only the picker's chrome. Naming the residual precisely is what makes the leg
 one reading rather than an afternoon of guessing: `node tools/device-picker-keys.cjs --dump` answers it
 once the phone is on the bus.
+
+**A correction to the paragraph above, before it is copied anywhere.** It calls `.scratch/docui.xml` the
+tree "walk 6 left on disk" and draws the ColorOS conclusion from it. The filename is not the provenance:
+a scan of all 34 saved dumps that carry a picker window or a focused node shows `docui.xml` and
+`d2.xml`–`d8.xml` are all stamped **2026-10-22, 16:43–16:58**,
+the afternoon walk 7 ran the key route on the **vivo**. Read as a sequence they are a better artifact than I
+thought — the 177-node tree has no focused node and the four later trees each have exactly one node focused
+inside `com.google.android.documentsui`, which independently corroborates that `input keyevent` moved focus
+*on the phone where the key route already worked* — but they say nothing about ColorOS, whose picker has no
+saved tree on this machine. So leg B's residual stands as written before this pass, and the "45 focusable
+nodes" reading belongs to the vivo. The two-owner-photograph hazard is real and came from the vivo's grid,
+which is exactly where walk 7 selected one. **A device was inferred from a filename; the mtime is what
+identifies it**, and `focused="true"` counts across a whole directory take one command. The scan is deliberately **not**
+promoted into `tools/audit-*.cjs` in this session: `probe-all.cjs` discovers that prefix by filename, the
+instrument pass now running would report 47 while the tree held 48, and a quoted total that disagrees with
+the tree is the drift this file keeps writing rules about. It gets promoted in a pass that re-runs the
+runner.
 Nothing on this machine can read the installed bundle, so `audit-build-bytes` still stops at four copies —
 source, `dist/`, staged asset, APK — all `3c78fdd…`. The fifth copy is the phone, and reading it is what the
 two armed scripts exist to do.

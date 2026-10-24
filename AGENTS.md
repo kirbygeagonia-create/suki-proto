@@ -3112,13 +3112,20 @@ wrong constant would have surfaced only as "INSTALL NOT PROVEN" on the device, s
 function tested against five synthetic `dumpsys` answers, including both spellings of the field
 (`versionName:` and `versionName=`) because a proof that matches one release's separator refuses the
 other's good install. The package and the version are now read out of `output-metadata.json` rather than
-written twice. Second: the ColorOS picker question moved forward off the phone, because the tree walk 6
-saved is still on disk — **no node in it carries `focused="true"`**, while two clickable rows are named
-`Preview the file IMG_20261020_1859`, the owner's own photographs. "Does ColorOS accept keys" is therefore
-the wrong shape of the question: with nothing focused the first key *establishes* focus and a centre key
-activates whatever it lands on, which is exactly how walk 7 selected a real photograph. So the picker tool
-sends one key, re-reads the platform tree, and refuses `DPAD_CENTER` unless the focused row is named for
-the fixture it pushed (`--guard-test`: 3 of 3, one of them that very photograph name). Third: the walk's
+written twice. Second: the picker's focus behaviour was read off the disk, and the first reading of it named
+the wrong phone. `docui.xml` and `d2.xml`–`d8.xml` are all stamped **2026-10-22, 16:43–16:58** — the afternoon
+walk 7 ran the key route on the **vivo** — and I called them ColorOS's from the filename. Read as the sequence
+they are, they corroborate walk 7 rather than teach leg B: the 177-node tree carries **no** `focused="true"`
+node while the four later trees each carry exactly one inside `com.google.android.documentsui`, so
+`input keyevent` did move focus on that phone; and two clickable rows in that grid are named
+`Preview the file IMG_20261020_1859`, the owner's own photographs, which is how walk 7 came to select one.
+**No ColorOS picker tree exists on this machine**, so that leg's residual is unchanged — whether keys move
+focus among those rows on that shell, answered by one `--dump` reading on the phone. Either way the picker
+tool sends one key, re-reads the platform tree, and refuses `DPAD_CENTER` unless the focused row is named for
+the fixture it pushed (`--guard-test`: 3 of 3, one of them that very photograph name). The rule generalises:
+**an artifact's device comes from its timestamps and its package list, never from its file name** — and
+scanning every saved dump for `focused="true"` took one command, which is the shape an instrument should have
+before a scarce leg depends on it. Third: the walk's
 five page readings were run on the **bench** first, where the figures are already known, and that is where
 a reachability reader turned out to be wrong — it called the sheet's last row unreachable without asking
 whether an ancestor scrolls, and corrected it answers `reachable:true` through `sheet-body` at 833px of

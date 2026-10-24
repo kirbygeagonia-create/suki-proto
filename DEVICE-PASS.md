@@ -1837,15 +1837,16 @@ open. Nothing here is a defect the bench can close.
    owner's photograph by accident:** a key route selects the focused row, so run it against a folder that
    is empty except for the test file and entered by name — never against a recents grid holding real
    photographs.
-   **Narrowed 2026-10-24, again from that same saved tree.** The platform marks **45 of the 177 nodes in
-   that picker focusable**, and 21 of those are clickable and named — so the key route is not
-   structurally blocked on ColorOS the way a "this OEM refuses synthetic input" story would imply. What
-   remains genuinely untested is the narrower thing: whether `input keyevent` MOVES focus among those
-   rows on that shell, and whether a centre key then activates a document row rather than only the
-   picker's own chrome. That is the whole of the leg, and `--dump` answers it in one reading once the
-   phone is on the bus.
-   **Armed 2026-10-24, and the arming answered part of the question off the phone.** The tree walk 6 left 
-   behind (`.scratch/docui.xml`, 177 nodes, every one of them `com.google.android.documentsui`) carries 
+   **Correction 2026-10-24, and the correction is the finding.** An earlier draft of this item read that 
+   same tree was ColorOS's and "narrowed" the leg from it. It is not ColorOS's: a scan of every dump left 
+   on this machine — 34 files carry a picker window or a focused node — shows `docui.xml`, `d2.xml` … `d8.xml` all stamped 
+   **2026-10-22, 16:43 to 16:58** — the afternoon walk 7 ran the key route on the **vivo**. The sequence is 
+   legible: the 177-node tree has **no** focused node, and the four later trees each have **exactly one
+   node focused inside `com.google.android.documentsui`** — the same picker before and after `input 
+   keyevent` moved focus. That is independent corroboration of walk 7 on the phone where keys already 
+   worked. **No ColorOS picker tree exists here at all**, so this item's residual is exactly what it was: 
+   whether keys move focus among the rows on that shell, answered by one `--dump` reading on that phone.
+   **Armed 2026-10-24, and the arming answered part of the question off the phone.** The picker tree walk 7 left on the **vivo** (`.scratch/docui.xml`, 177 nodes, every one of them `com.google.android.documentsui`) carries 
    **no node with `focused="true"`**, and two clickable rows named `Preview the file IMG_20261020_1859` — the 
    owner's own photographs, at `[167,526]` and `[386,526]`. So the open question is narrower than "does 
    ColorOS accept keys": with nothing focused, the first key *establishes* focus and a centre key then 
