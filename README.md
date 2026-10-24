@@ -377,13 +377,22 @@ To swap an image, replace the file and keep the name. To add a trade, add a row 
   accepted change must be re-synced there before it reaches a device build. It currently holds the
   rebuild — `assets/Sukinnect.html` carries the same bytes as `Sukinnect-next.html`, and
   `md5sum` on both answering one hash is the whole check — staged under the name the shell loads, and
-  those bytes went out as `1.2-preview.38` and were read on a handset. See
+  those bytes went out as `1.2-preview.39` and were read on **two** handsets (the OPPO CPH2179 at 320 CSS px
+  and the vivo 1906 at 450). The comparison is now an instrument rather than a habit:
+  `node tools/audit-build-bytes.cjs` prints one row per copy — source, `dist/`, staged asset, and the file
+  extracted back out of the built APK — reports `findings: N` when they disagree, and **refuses** with
+  `NO CONCLUSION` when an artifact cannot be read or fewer than four were compared. See
   [`DEVICE-PASS.md`](DEVICE-PASS.md), which also says how to put the shipped file back.
 - Screens are rendered in Node, then painted and measured in a real browser at a phone size, and —
   when a phone is attached — on that phone: `tools/device-probe.cjs` drives the WebView's own Chrome
-  over the DevTools socket, and [`DEVICE-PASS.md`](DEVICE-PASS.md) records handset walks 1–8 below, on two
-  phones. One thing still needs one: ColorOS's file picker has never been tried with `input keyevent`,
-  which is the route that returned a document on the vivo where four injected taps were refused. The
+  over the DevTools socket, and [`DEVICE-PASS.md`](DEVICE-PASS.md) records handset walks 1–11 below, on two
+  phones and an emulated frame. The last hardware leg closed on 2026-10-24: ColorOS's file picker **does** accept
+  `input keyevent` — one `TAB` focused a row and a guarded `DPAD_CENTER` returned the document — so the route
+  that had worked on the vivo works there too, and what survives is the narrower reading: four injected *taps*
+  on a document row on that shell refused, and a grid row and its preview icon turn out to have different
+  centre semantics. The same walk installed `1.2-preview.39` on the vivo and read the two surfaces it owed at
+  `450 CSS px`, both at the default scale and at the phone's own `1.35`.
+  The
   TalkBack question is no longer owed: walk 8 asked it with the reader actually switched on, caught the
   announcement on the audio channel and the dialog's name in the accessibility tree, and found nothing on
   either phone that recovers the words themselves. What no instrument here can prove is how any of it
