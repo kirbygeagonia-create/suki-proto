@@ -7065,3 +7065,40 @@ One note for whoever reads this next: `gh pr diff 9 --name-only` failed with a f
 printed a single line, which a careless reader would have taken for "one file changed". **The repository is the
 authority on its own contents; a hosted API is a convenience** — the same rule that says to read an installed build
 off the device rather than off a note.
+
+## 112. PR #9 is merged; the shipped file is still untouched; and the local clock nearly wrote a false history
+
+The owner merged at **2026-10-24T03:08:08Z**; `main` moved to the merge commit **`a14c4fa`** and `git merge-base
+--is-ancestor HEAD origin/main` confirms this branch's tip is inside it. Everything below was read after the click,
+because a claim about what a repository holds is worth exactly the command that printed it.
+
+- `git diff --quiet origin/main HEAD -- Sukinnect-next.html` → **identical**. `main` now carries the rebuild at
+  853,782 bytes, hash `3c78fdd…`, and `git ls-tree -r --name-only origin/main -- tools | wc -l` → **144** files:
+  the gate, the camera, the sweep, the mutant families, the handset drivers.
+- `git diff --quiet origin/main -- Sukinnect.html` → **clean, and the file is still 4,706 lines**. **Merging is not
+  promoting.** `main` now holds the rebuild and the shipped prototype side by side, which is precisely the state
+  every floor claim in AGENTS.md has been describing — proven for one file, unproven for the other, and the merge
+  changed which file a reviewer must deliberately choose, not what either one is.
+- Census: several present-tense sentences were falsified the moment the button was pressed — DEVICE-PASS's "the
+  owner's ruling is to **refresh** PR #9 rather than merge it … and stays OPEN" and AGENTS's "**Merging PR #9 is
+  theirs to click**". Both are corrected with dated notes rather than rewritten, per the house rule for a superseded
+  row: the ruling was real when it was written, and what changed is its date.
+
+**The deployment did not follow, and the clock nearly turned that into a false history.** `node
+tools/deploy-check.cjs` still reports the public `/` matching commit `3c73bfef` (2026-10-15), six fixes undeployed,
+`findings: 7`. The first reading looked like a **19-hour** gap between the merge and an unchanged site, and the
+sentence about to be written was "production does not auto-deploy on push to main". It was the machine: this
+shell's `date -u` is ~19 hours ahead of the servers, while the Netlify `Date:` header (`03:10:43`, `03:13:21`,
+`03:16:23` across three checks) and GitHub's own `mergedAt` said only 2–8 minutes had passed. So the honest
+statement is narrower than the one nearly recorded: **eight minutes after a merge, production had not refreshed —
+which is consistent with a queued build and equally consistent with production not tracking `main`, and this
+repository cannot read the difference.** The rule generalises: **any elapsed-time claim needs a
+server-authoritative clock** — a response header or an API timestamp, never this box's — because a wrong local
+offset can make a five-minute-old event look a day old, and this machine sits in exactly the timezone where that
+happens. It is the same family as the seed-date and Manila-midnight defects, arriving from the operator's clock
+rather than the application's.
+
+No application bytes changed in this pass, so the gate stays **all 566 checks passed** from the run that printed
+it and the four on-disk copies remain identical at `3c78fdd…`. The next person to touch the deployment question
+should start from `node tools/deploy-check.cjs` rather than from anything written here: it exits 1 until the live
+bytes match, names the missing fixes, and refuses with `NO CONCLUSION` when the host does not answer.

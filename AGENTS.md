@@ -2280,6 +2280,23 @@ shipped prototype byte-for-byte as `origin/main` holds it (`git diff --quiet ori
 Whether the six undeployed fixes reached the public site is then a command, not a memory:
 `node tools/deploy-check.cjs` exits 1 until they do.
 
+**Executed: PR #9 merged 2026-10-24 03:08:08Z into `main` as `a14c4fa`.** Read back after the fact rather than
+remembered: `main`'s `Sukinnect-next.html` is byte-identical to the branch's and `main` carries 144 files under
+`tools/`, while `Sukinnect.html` is **untouched — still 4,706 lines**, so the merge put the rebuild and the shipped
+prototype side by side on `main` and promoted nothing, exactly as the paragraph above says a merge does. The
+deployment did not follow within the next 8 minutes, which leaves two live possibilities and no way here to choose
+between them: a queued build, or production not tracking `main`. Ask the command, not the clock:
+`node tools/deploy-check.cjs`.
+
+**And a clock warning that nearly produced a false conclusion in this very session.** The local shell's `date -u`
+is ~19 hours ahead of the servers on this machine, so the first post-merge check appeared to show production
+unchanged **19 hours** after a merge that had actually happened 2.5 minutes earlier — and the sentence about to be
+written was "production does not auto-deploy on push to main". The Netlify `Date:` response header and GitHub's
+`mergedAt` both said otherwise. **Any claim about elapsed time needs a server-authoritative clock** (a response
+header, the API's own timestamp), not this machine's: on a Windows box in an Asian timezone the local UTC offset
+lies, and it lies in whichever direction makes a too-recent deploy look too old. Related to the seed-date and
+Manila-midnight defects — the same class arriving from the machine clock instead of the application's.
+
 A FIGURE KEPT BY HAND IN PROSE IS THE NEXT FIGURE THAT IS WRONG. `node tools/falsify-all.cjs`
 now runs every mutant family in one sequential pass and prints, per family, how many breaks were
 applied, how many the named check caught, and how many never matched the file. It exists because
