@@ -6449,6 +6449,20 @@ both patchers chose their ending by looking for `\r\n` in the bytes themselves a
 convention. The check that is load-bearing is the one that reads bytes; the one that printed the confident
 wrong answer is the one a future session would copy into a script.
 
+
+**A third reading came from the matchers themselves, and it is the one that would have made the walk
+dishonest rather than wrong.** `tapPainted` reached each control by searching `[onclick]` for the handler
+string, and the lock dialog paints its header `×` and its **Unlock** button with the identical
+`state.adminAccountModal=null; render();` — that string occurs **7 times** in the file, and in the
+dialog the cross comes first in DOM order. So "tap Unlock, then read what happened" would have pressed
+the cross, dismissed the same dialog by another route, and printed a clean result about a control that
+was never tapped. The chooser now takes a visible text or an id selector as its third argument, reports
+`how` it chose and `attrMatches`, and **refuses** when a handler-only search answers more than one node
+and nothing was named. The same pass made the walk count its own residue in the key the instrument
+runner already reads — `findings: N`, where a fixture left behind, a dump left behind, a screen not
+signed out or an enabled reader each raise the number — and scoped that search to this walk's own names,
+because the owner's `suki-*` file in `Download/` dated 2026-10-11 is not residue and a cleanup that
+greps `/suki/` would delete something no instrument here is entitled to touch.
 Nothing on this machine can read the installed bundle, so `audit-build-bytes` still stops at four copies —
 source, `dist/`, staged asset, APK — all `3c78fdd…`. The fifth copy is the phone, and reading it is what the
 two armed scripts exist to do.

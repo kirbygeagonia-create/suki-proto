@@ -76,20 +76,37 @@ if (process.argv.indexOf('--selftest') > -1) {
       PKG + ' / ' + WANT_NAME + ' / code ' + WANT_CODE + '.');
   process.exit(bad ? 1 : 0);
 }
-/* A real tap at the centre of the node the page paints for this matcher, reported back. */
-function tapPainted(label, matcherExpr) {
-  const rect = ask('(function(){var re=' + matcherExpr + ';var b=[].slice.call(document.querySelectorAll("[onclick]"))' +
-    '.filter(function(e){return re.test(e.getAttribute("onclick")||"")});' +
-    'if(!b.length)return "MISSING:"+re;' +
-    'var q=b[0].getBoundingClientRect();if(!q.width||!q.height)return "ZERO:"+re;' +
+/* A real tap at the centre of the node the page paints for this matcher, reported back.
+   The third argument is not a nicety: the lock dialog paints its `×` and its `Unlock` button with the
+   identical `state.adminAccountModal=null` handler, and that string occurs 7 times in the file, so an
+   attribute-only search takes the node that comes first in DOM order — the cross — and then prints
+   "after Unlock" about a tap that closed the dialog by another route. Same end state, dishonest label.
+   So pass the visible text or an id selector, and the count is reported either way. */
+function tapPainted(label, matcherExpr, selectBy) {
+  const rect = ask('(function(){var re=' + matcherExpr + ';var sel=' + JSON.stringify(selectBy || '') + ';' +
+    'var all=[].slice.call(document.querySelectorAll("[onclick]"));' +
+    'var byAttr=all.filter(function(e){return re.test(e.getAttribute("onclick")||"")});' +
+    'var isSelector=/^[#..[]/.test(sel);' +
+    'var chosen=null,how="";' +
+    'if(isSelector){chosen=document.querySelector(sel);if(chosen)how="by selector "+sel;}' +
+    'else if(sel){chosen=all.filter(function(e){return e.textContent.trim()===sel})[0]||null;if(chosen)how="by visible text "+sel;}' +
+    'if(!chosen){chosen=byAttr[0]||null;how="by handler only";}' +
+    'if(!chosen)return "MISSING:"+re;' +
+    'var q=chosen.getBoundingClientRect();if(!q.width||!q.height)return "ZERO:"+how;' +
     'return JSON.stringify({t:Math.round(q.left+q.width/2),l:Math.round(q.top+q.height/2),' +
-    'w:Math.round(q.width*10)/10,h:Math.round(q.height*10)/10,text:(b[0].textContent||"").trim().slice(0,28)})})()');
+    'w:Math.round(q.width*10)/10,h:Math.round(q.height*10)/10,text:(chosen.textContent||"").trim().slice(0,28),' +
+    'how:how,attrMatches:byAttr.length})})()');
   let o = null; try { o = JSON.parse(rect); } catch (e) { /* MISSING / ZERO / PROBE ERROR */ }
   if (!o) { console.log('tap ' + label + ': ' + rect); return null; }
+  if (o.attrMatches > 1 && o.how === 'by handler only') {
+    console.log('AMBIGUOUS ' + label + ': ' + o.attrMatches + ' nodes share that handler and none was named — refusing to call this a tap on "' + label + '"');
+    return null;
+  }
   if (o.h < 44) console.log('NOTE control below the 44px floor before the tap: ' + label + ' h=' + o.h);
   probe(['--tap=' + o.t + ',' + o.l, '1']);
   sleep(2400);
-  console.log('tapped ' + label + ' at page ' + o.t + ',' + o.l + ' (box ' + o.w + 'x' + o.h + ' "' + o.text + '")');
+  console.log('tapped ' + label + ' — ' + o.how + ', ' + o.attrMatches + ' handler match(es), text "' + o.text +
+    '", box ' + o.w + 'x' + o.h + ' at page ' + o.t + ',' + o.l);
   return o;
 }
 
@@ -159,7 +176,7 @@ say('multiplier', '(function(){var s=document.createElement("span");' +
 /* ---------- 3. the admin lock field ---------- */
 say('admin hub', "state.view='app'; state.role='admin'; state.tab='profile'; render();" +
   "JSON.stringify({h1:(document.querySelector('#screen h1')||{}).textContent})");
-tapPainted('Lock Admin Session', "/adminAccountAction\\('lock'\\)/");
+tapPainted('Lock Admin Session', "/adminAccountAction\\('lock'\\)/", 'Lock Admin Session');
 say('dialog', 'JSON.stringify({title:(document.querySelector(".modal-layer b")||{}).textContent||"NO DIALOG PAINTED",' +
   'copy:(document.querySelector(".modal-layer")||{}).textContent.replace(/\\s+/g," ").trim().slice(0,150)})');
 say('PIN field', '(function(){var i=document.querySelector(".modal-layer input[type=password]");' +
@@ -169,7 +186,7 @@ say('PIN field', '(function(){var i=document.querySelector(".modal-layer input[t
   'tokenOfDeclaration:"--t-body per .form-input",rectH:Math.round(q.height*10)/10,rectW:Math.round(q.width*10)/10,' +
   'minHeight:cs.minHeight,boxSizing:cs.boxSizing,tapFloorOk:q.height>=44,' +
   'labelText:lab?lab.firstChild.textContent.replace(/\\s+/g," ").trim():"NO LABEL"})})()');
-tapPainted('Unlock', "/state\\.adminAccountModal=null/");
+tapPainted('Unlock', "/state\\.adminAccountModal=null/", 'Unlock');
 say('after Unlock', "JSON.stringify({modal:state.adminAccountModal,view:state.view," +
   "h1:(document.querySelector('#screen h1')||{}).textContent})");
 
@@ -177,7 +194,7 @@ say('after Unlock', "JSON.stringify({modal:state.adminAccountModal,view:state.vi
 say('results', "state.view='app'; state.role='resident'; startDiscovery('leak');" +
   "JSON.stringify({tab:state.tab,h1:(document.querySelector('#screen h1')||{}).textContent," +
   "filterBtn:!!document.getElementById('provider-filter-btn')})");
-tapPainted('Filter providers', "/openSheet\\('providerFilters'\\)/");
+tapPainted('Filter providers', "/openSheet\\('providerFilters'\\)/", '#provider-filter-btn');
 say('sheet', 'JSON.stringify({sheet:state.sheet,title:(document.querySelector(".sheet-title")||{}).textContent||"NO SHEET",' +
   'rows:document.querySelectorAll(".filter-option").length})');
 say('rows', '(function(){var rows=[].slice.call(document.querySelectorAll(".filter-option"));if(!rows.length)return "NO ROWS PAINTED";' +
@@ -207,9 +224,34 @@ say('confirm', "(function(){var m=document.querySelector('.modal-layer');if(!m)r
 say('signed out', 'JSON.stringify({view:state.view,h1:(document.querySelector("h1,h2")||{}).textContent})');
 
 console.log('--- the platform as found (this walk sets none of these) ---');
-console.log('enabled_accessibility_services = ' + adb('shell', 'settings', 'get', 'secure', 'enabled_accessibility_services').trim());
-console.log('accessibility_enabled          = ' + adb('shell', 'settings', 'get', 'secure', 'accessibility_enabled').trim());
-console.log('talkback process               = ' + (adb('shell', 'ps', '-A').split('\n').filter(l => /talkback/i.test(l)).length || 'none'));
-console.log('font_scale (system)            = ' + adb('shell', 'settings', 'get', 'system', 'font_scale').trim());
-console.log('suki* in Download              = ' + (adb('shell', 'ls', '/sdcard/Download/').split('\n').filter(n => /suki/i.test(n)).join(', ') || 'none'));
+const a11y = adb('shell', 'settings', 'get', 'secure', 'enabled_accessibility_services').trim();
+const a11yOn = adb('shell', 'settings', 'get', 'secure', 'accessibility_enabled').trim();
+const tb = adb('shell', 'ps', '-A').split('\n').filter(l => /talkback/i.test(l)).length;
+const fsys = adb('shell', 'settings', 'get', 'system', 'font_scale').trim();
+/* This walk's own names only. The owner has a `suki-*` file in Download dated 2026-10-11, recorded in
+   walk 4 as one of their files left where it was: a residue list that greps `/suki/` calls it mine, and a
+   cleanup that trusts that list deletes something I was never allowed to touch. */
+const leftovers = adb('shell', 'ls', '/sdcard/Download/').split('\n').filter(n => /suki-leg9/i.test(n)).map(s => s.trim()).filter(Boolean);
+const dumps = adb('shell', 'ls', '/sdcard/').split('\n').filter(n => /window_dump/.test(n)).map(s => s.trim()).filter(Boolean);
+const endView = ask('JSON.stringify({view:state.view})');
+console.log('enabled_accessibility_services = ' + a11y);
+console.log('accessibility_enabled          = ' + a11yOn);
+console.log('talkback process               = ' + (tb || 'none'));
+console.log('font_scale (system)            = ' + fsys);
+console.log('this walk\'s fixture left      = ' + (leftovers.join(', ') || 'none'));
+console.log('uiautomator dumps left         = ' + (dumps.join(', ') || 'none'));
+console.log('app view at the end            = ' + endView);
 console.log('installed build                = ' + after);
+
+/* One number, in the key the instrument runner already reads: every sentence the walk record writes about
+   the device is a claim about a machine somebody else owns, and a paragraph is easier to misread than a
+   count that has to be zero. */
+const residue = [];
+if (leftovers.length) residue.push('fixture left: ' + leftovers.join(','));
+if (dumps.length) residue.push('dump left: ' + dumps.join(','));
+if (!/login/.test(endView)) residue.push('not signed out: ' + endView);
+if (!installProven(after, WANT_NAME, WANT_CODE)) residue.push('build does not read .39: ' + after);
+if (!/^(null|0)$/i.test(a11y)) residue.push('an accessibility service is enabled: ' + a11y);
+console.log('findings: ' + residue.length + (residue.length ? ' — ' + residue.join(' | ')
+  : ' — nothing this walk left on the device, the app signed out, the build reads .39, no reader enabled'));
+process.exit(residue.length ? 1 : 0);

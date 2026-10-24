@@ -3127,6 +3127,14 @@ content in a 660px box. Bench readings for the leg to be compared against: PIN f
 rediscovering — **prove the instrument on a surface where the answer is known**, because a device leg that
 begins on the device reports its own errors as findings, and a phone is the scarcest instrument here.
 
+The same arming caught a matcher that would have lied rather than failed: the lock dialog paints its
+header `×` and its **Unlock** button with the identical `state.adminAccountModal=null` handler (7
+occurrences of that string in the file, the cross first in DOM order), so a handler-only search taps
+the cross and still prints "after Unlock" — a clean result about a control that was never pressed.
+`tapPainted` now names the control by visible text or id, reports how it chose and how many nodes
+matched the handler, and refuses when the handler alone is ambiguous. **A tap that reaches the right
+end state by the wrong control is still a wrong reading**, and this is only visible if the instrument
+prints which node it chose.
 §68's typography rule is pinned by checks in the `hygiene` suite and proven by
 `node tools/falsify-typography.cjs`: a dangling `url()` in `fonts/fonts.css`, a face replaced by
 the 479-byte `ATKINSON-AUTHORS.txt` that sits beside it, a `--font-ui` opening with a family
