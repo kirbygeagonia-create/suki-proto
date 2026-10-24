@@ -1846,11 +1846,27 @@ open. Nothing here is a defect the bench can close.
    keyevent` moved focus. That is independent corroboration of walk 7 on the phone where keys already 
    worked. **No ColorOS picker tree exists here at all**, so this item's residual is exactly what it was: 
    whether keys move focus among the rows on that shell, answered by one `--dump` reading on that phone.
+   **Answered as far as it can be on 2026-10-24 (CHANGES §105)**: a real tap on the concierge's own photo
+   control raised `ChooserActivity`, its tree named one target (**"Files"**, `[59,1165][174,1280]`), and the
+   tap on it produced a **ColorOS permission dialog** (`USE APP FOR 5 MINUTES` / `OK`) that **ignores
+   `input tap` at its own button centre** and returns `null root node` to `uiautomator`. The key route never
+   reached DocumentsUI, so ColorOS key handling is still untested — now blocked one step earlier than
+   assumed, behind a human decision on the owner's phone. Two mechanics worth keeping: the DevTools endpoint
+   only answers a **fresh process** (a resumed one carried 7 stale targets and timed out every evaluate;
+   force-stop then start gave `targets: 1` and an answer in milliseconds), and that dialog **does** accept
+   `KEYCODE_BACK`, so pointer injection and key injection are different permissions on this OEM.
+   Device verified as found afterwards: app foreground, `conciergePhotoAttached: false`, no fixture, no
+   MediaStore row, no dumps, forwards cleared, `low_power=1`, `font_scale` 1.35, `.39` installed.
+   **Next step needs you**: re-open the picker and tap that permission dialog yourself (the 5-minute option is
+   the least-privilege one); once Files is allowed, `node tools/device-picker-keys.cjs --dump` will show the
+   real picker and the guarded one-key-at-a-time route can be walked to a document.
    **Attempted 2026-10-24 on this very phone and not reached**: the fixture pushed, touched, broadcast and
    indexed cleanly (MediaStore `_id=37819`), but the app's page would not answer — 2 then 3 page targets on
    one socket, every `state.view` probe timing out, `mCurrentFocus` on `StatusBar` — so `--open` refused to
    tap a control whose rect it could not obtain. Leg B is therefore untested for the reason it was open for:
-   no key was ever pressed inside ColorOS's picker. See CHANGES §104b.
+   no key was ever pressed inside ColorOS's picker. *(Resolved the same day — the two candidate causes named
+   there are settled in CHANGES §105: a resumed process with stale DevTools targets, and statements passed
+   into an expression wrapper. See the paragraph above.)* See CHANGES §104b.
    **A defect in the guard itself, found by running it against real trees rather than made-up ones.** The 
    rule was "the focused row's name must be the fixture". Tested over every saved picker tree 
    (`node tools/device-picker-keys.cjs --guard-real`), it would have **allowed** the centre press on 
