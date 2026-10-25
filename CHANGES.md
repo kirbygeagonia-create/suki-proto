@@ -7765,6 +7765,17 @@ containing the old page from the one containing `bac09020`. The install itself w
 disk and `audit-build-bytes` proves that file matches the source, so the reading is valid; but a versionName bump or
 a hash comparison of the bundled asset is what would make it provable from the device side. Recorded as a gap, not
 papered over.
+**Closed the same hour, by doing the hash comparison instead of deferring it.** `pm path com.sukinnect.app` gave
+`/data/app/com.sukinnect.app-wajZyvh0Fb0to8T9SPBCCA==/base.apk`; pulling it needed `MSYS_NO_PATHCONV=1`, because Git
+Bash rewrites a leading `/data/...` into a Windows path and `adb` then reports the remote object as missing — the same
+conversion that already bites `avdmanager.bat`, arrived at from a different direction. `unzip -p` of
+`assets/Sukinnect.html` out of the APK **on the phone** hashes to `bac09020e78cb1518a809985e38fc355`, and so do the
+repo source, `dist/`, and the staged asset — 854,247 bytes each. So walk 12's inset reading is **proved** to have been
+taken on the current page rather than inferred from the build log, and the fifth copy of the page now has a reader.
+
+What the versionCode proof still cannot do is tell apart two different builds that share a version string. That gap is
+real and stays open; it simply does not apply to this reading, and the device-side hash is the check that closes it for
+any future one.
 
 Device left as found: `font_scale` still 1.35 (read, never written), forwards cleared, no dumps left on the
 handset, the app sitting on its own sign-in screen unsigned-in. Gate: all 566 checks passed.
