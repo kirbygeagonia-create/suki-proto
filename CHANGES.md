@@ -7932,3 +7932,49 @@ only worth anything if you ask it after a merge instead of assuming either outco
 
 Two PR #13 commits, then this follow-up, then the confirmation above: the lane closes with a measurement taken after
 the last edit, not before it.
+
+## 131. The audit's window hid a seventh pair, the window was removed, and the fix ate the evidence
+
+§130 closed with six duplicated subjects over 114 distinct ones. That number was a **window artefact**, and the gate
+built to catch this mistake reproduced the mistake it named: the default population was `-n 120 HEAD`, and over every
+commit reachable from HEAD the branch actually carries **seven** pairs over 330 distinct subjects. The hidden pair is
+`docs: the captures were reviewed and cleared, so the plan says so and names the command` — `f830bd9` and `6f9bf45`,
+**both dated 2026-10-10**, sitting at positions **233 and 239** of 337 in `git log HEAD`, published on `main`, and
+therefore two weeks older than every pair this lane has been discussing. Chronologically it is the *first* reuse, not
+the last; §130's title calls the next one "the seventh", which this section now renumbers: seven recorded pairs, and
+the guard's job is the eighth.
+
+Found not by reading the window but by the instrument widening it under its own weight: `node
+tools/audit-commit-subjects.cjs HEAD` exited 1 with `1 findings`, naming a collision the baseline had never been told
+about. **The clause in AGENTS.md that promised "an unrecorded one is a failure" fired for real, on history that
+already existed when the clause was written.** The pair is now excused the same way the other six are — repair means
+re-keying every commit after it, and `git rev-list --count f830bd9..origin/main` answered **233** — and the same
+command re-measured against the nearer anchor moved from 104 to **113** since §130 quoted it, because two PRs merged
+in between. A figure this repository keeps re-deriving to prove that figures drift: the drift happened to the
+paragraph about the drift.
+
+**Excusing it consumed the evidence that the guard works.** The family asserts that each of the audit's three finding
+kinds has an instance before it credits any mutant with deleting one. With all seven pairs in the baseline, the
+new-collision kind had no instance anywhere in this repository: the fixture had to be *planted*, exactly as the drift
+kind's already is — one baseline entry temporarily renamed so the real pair becomes a live, unexcused collision again.
+The orphan kind lost its instance from the other direction, and the cause is the one this lane has now recorded three
+times: its window was `HEAD~20..HEAD`, and `~20` walks **first parents**, so through nine merge commits the reachable
+difference is **320** commits, every baseline pair sat inside it, and the control aborted a healthy audit over "0
+orphaned". A narrow window is now derived by reachability — newest 20, else 40, 80, 160 — so it means what it says
+whatever the merge structure is.
+
+Two of the defects in this pass were caught by an instrument rather than by reading, and both are the class already
+named here. Moving the default population left **`ARGS` declared above the `RANGE` it reads**, and `node --check`
+passed on the file while running it threw `Cannot access 'RANGE' before initialization` — a temporal dead zone is
+valid syntax, so only an executor sees it; a `hygiene` check now pins the declaration order alongside the shape. And a
+duplicate `const ARGS` from the same edit was caught by `node --check` at once. Renaming the pinned check itself
+("reads merged history" → "reads all reachable history") then aborted the family on its own `GATE_LABEL` constant —
+which is the renamed-check hazard the family's comment predicts, met for real, and answered by making the label one
+shared constant rather than two typed copies.
+
+State after the change, each re-run on the merged tree rather than carried over: `node
+tools/audit-commit-subjects.cjs` → **7 duplicated subjects over 330 distinct; 7 of 7 baseline entries excused; 0
+findings**; narrow window → refuses with its own cause named; empty scan → `NO CONCLUSION`, exit 1; `node
+tools/falsify-commit-subjects.cjs` → **15 of 15 breaks caught, 0 not applied, 0 missed** with all three finding kinds
+holding instances; `node tools/verify.cjs` → **all 567 checks passed**. `Sukinnect.html` still identical to
+`origin/main`; no application bytes moved; nothing here redeploys.

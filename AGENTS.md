@@ -3030,28 +3030,38 @@ whole aggregate before quoting its totals, which is §82's orphaned-needle class
 of "the file I changed is a test instrument".
 
 A RECURRED MISTAKE GETS A CHECK, AND THE CHECK IS ASKED BEFORE THE COMMIT EXISTS. I reused a previous commit's
-subject six times on this branch — the number is `node tools/audit-commit-subjects.cjs`, which walks HEAD's last 120
-commits and answers six duplicated subjects over 114 distinct ones — and in three of them the body described the real
-change while the subject described a DIFFERENT one, which is worse than being vague: a reader scanning `git log` is
-handed a true sentence about the wrong commit, and one of them carries a `fix:` prefix on a commit that fixes nothing.
+subject seven times across this branch's reachable history — the number is `node tools/audit-commit-subjects.cjs`,
+which walks every commit reachable from HEAD and answers seven duplicated subjects over 330 distinct ones — and in
+three of them the body described the real change while the subject described a DIFFERENT one, which is worse than
+being vague: a reader scanning `git log` is handed a true sentence about the wrong commit, and one of them carries a
+`fix:` prefix on a commit that fixes nothing. **This paragraph said "six" for one day, and the sixth was a window
+artefact:** the tool then defaulted to `-n 120 HEAD`, and the seventh pair — `f830bd9`, `6f9bf45`, both 2026-10-10 —
+sits at position 233 of 337, so the window never read it. A fixed count is a bet about how much history the branch
+writes after a mistake happens; the default population is now all of `HEAD`, and `--check-message` consequently
+refuses a subject reused from a commit two weeks old.
 WHAT THIS PARAGRAPH USED TO CITE IS NOW FALSE, AND INSTRUCTIVELY SO: it named `sort | uniq -d` over
 `git log --format=%s origin/main..HEAD` as returning three pairs. That command answers NOTHING today, not because the
 duplicates were repaired but because all twelve commits reached `origin/main` when PR #10 merged. **A population
 defined as "what is not yet merged" cannot see a collision with anything already merged**, which is precisely the case
 a reused subject produces once its branch lands — and the same failure was measured live on 2026-10-24, minutes after
 PR #9 merged, when the tool printed "every subject in this range is unique" over a real collision four entries away in
-the log. So the default is the branch's recent history, and a citation has to name a command that reproduces on the day
-it is read rather than the day it was written.
+the log. So the default population is now every commit reachable from `HEAD`, and a citation has to name a command that
+reproduces on the day it is read rather than the day it was written.
 
-Repair in place was declined by the owner, and the cost is a command rather than a feeling: rewriting from the oldest
-of the six re-keys every commit after it — `git rev-list --count 33639fc..origin/main` answers 104 — and it strands
-commit hashes this repository's own documents cite, three PR merge commits among them. So the pair-by-pair record of
-which hash carried what lives in `CHANGES.md` §130, where a reader can tell `b7af181`'s nine lines of follow-up prose
-from `aa19fdd`'s nine-file fix without touching history. And the audit now carries a **baseline** of the six:
-grandfathered, but re-verified against reality every run, so a collision that is neither in the baseline nor excused
-exits 1. That is the correction to this paragraph's earlier rule that the tool "exits 0, because a duplicate is a
-record-keeping smell" — it still exits 0 for the six that are recorded, and a check that failed retroactively on
-history would teach a reader to ignore checks; a seventh is a failure, which is the whole point.
+Repair in place was declined by the owner, and the cost is a command rather than a feeling. Rewriting from the deepest
+of the seven pairs — `f830bd9`, 2026-10-10 — re-keys every commit after it: `git rev-list --count f830bd9..origin/main`
+answered **233** when this was measured on 2026-10-25. The nearer anchor `33639fc..origin/main` answered **113**, and
+the same command in this paragraph's earlier revision answered 104 — the number moved because two PRs merged in
+between, which is the drift this section names, in a figure this section itself kept. Quote the command, not either
+number. It also strands commit hashes this repository's own documents cite, several PR merge commits among them. So
+the pair-by-pair record of which hash carried what lives in `CHANGES.md` §130, where a reader can tell `b7af181`'s
+nine lines of follow-up prose from `aa19fdd`'s nine-file fix without touching history. And the audit carries a
+**baseline** of all seven: grandfathered, but re-verified against reality every run, so a collision that is neither in
+the baseline nor excused exits 1. That is the correction to this paragraph's earlier rule that the tool "exits 0,
+because a duplicate is a record-keeping smell" — it still exits 0 for the recorded ones, and a check that failed
+retroactively on history would teach a reader to ignore checks, while an unrecorded one is a failure, which is the
+whole point. **That clause has now fired for real once:** over full history the tool reported the 2026-10-10 pair as a
+finding it had never been told about, and the finding was correct.
 
 The cause is mechanical — writing a message while the previous one is still on the screen — so a list can only be read
 after the fact. `node tools/audit-commit-subjects.cjs --check-message <file>` judges a message BEFORE it is committed:

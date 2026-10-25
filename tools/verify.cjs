@@ -1685,18 +1685,24 @@ suite('hygiene', async () => {
   const auditPath = require('path').join(appDir, 'tools', 'audit-commit-subjects.cjs');
   const auditSrc = fsx.existsSync(auditPath) ? fsx.readFileSync(auditPath, 'utf8') : '';
   const auditWhy = [];
-  const auditCount = (auditSrc.match(/const DEFAULT_COUNT = (\d+);/) || [])[1];
+  /* The default population is every commit reachable from HEAD, with no count cap — asserted as that SHAPE, because
+     a fixed cap is a bet about how much history the branch writes after a mistake happens. Measured 2026-10-25: the
+     `-n 120` default could not see the seventh pair (2026-10-10, position 233 of 337), so it printed six while the
+     branch carried seven, and `--check-message` would have waved through a reuse of it. */
+  const fullHistoryDefault = /RANGE \? \[RANGE\] : \['HEAD'\]/.test(auditSrc);
+  const cappedDefault = /RANGE \? \[RANGE\] : \['-n'/.test(auditSrc);
   const gatePresent = /'--check-message'/.test(auditSrc);
   const baselineBlock = (auditSrc.match(/const BASELINE = \[([\s\S]*?)\n\];/) || [])[1] || '';
   const baselineEntries = (baselineBlock.match(/\{ subject:/g) || []).length;
   if (auditSrc.length === 0) auditWhy.push('the audit file was not readable');
   else {
-    if (!/\['-n', String\(DEFAULT_COUNT\), 'HEAD'\]/.test(auditSrc))
-      auditWhy.push('the default walk is no longer rooted at HEAD');
-    if (!(Number(auditCount) >= 60))
-      auditWhy.push('DEFAULT_COUNT is ' + auditCount + ', below the 60 the family floors');
+    if (!fullHistoryDefault || cappedDefault)
+      auditWhy.push('the default walk is no longer the full reachable history of HEAD');
     if (!/!\(CHECK_AT >= 0 && i === CHECK_AT \+ 1\)/.test(auditSrc))
       auditWhy.push('the range filter drops index 0 when the flag is absent, so a plain range argument is lost');
+    if (!/^const ARGS = .*RANGE/m.test(auditSrc)
+      || auditSrc.indexOf('const RANGE') > auditSrc.indexOf('const ARGS'))
+      auditWhy.push('ARGS is declared before RANGE, which parses and throws at runtime (a TDZ is valid syntax)');
     if (!gatePresent) auditWhy.push('the pre-commit gate is gone');
     else {
       if (!/COLLIDES with/.test(auditSrc)) auditWhy.push('the gate no longer names the hash it collided with');
@@ -1705,9 +1711,10 @@ suite('hygiene', async () => {
     }
     if (baselineEntries === 0) auditWhy.push('the baseline is empty, so every recorded collision is a finding');
   }
-  c.check('the commit-subject audit reads merged history, and its gate refuses for a named reason',
+  c.check('the commit-subject audit reads all reachable history, and its gate refuses for a named reason',
     auditWhy.length === 0,
-    'DEFAULT_COUNT ' + auditCount + ', gate ' + (gatePresent ? 'present' : 'MISSING')
+    'default ' + (fullHistoryDefault && !cappedDefault ? 'full HEAD' : 'CAPPED')
+      + ', gate ' + (gatePresent ? 'present' : 'MISSING')
       + ', baseline ' + baselineEntries + ' entries — ' + auditWhy.join('; '));
 
   /* The collision tally is new, and every one of its three guards exists because the first version
