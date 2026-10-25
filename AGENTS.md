@@ -3415,6 +3415,122 @@ the frame stops doing what it does after boot", not a fixed nap. And the leg no 
 its scope and judges the question that holds at every level, whether the page paints under a system bar, which is what
 the two handsets here (OPPO API 29, vivo API 30) can actually answer.
 
+A PROPOSED TIME IS A RECORD, AND THE BOOKING MOVES ONLY WHEN THE OTHER SIDE AGREES. `reschedul`
+appeared zero times in this file before 2026-10-25, so a household with a conflict after an
+appointment was agreed had exactly one door — cancel — and the booking's own `cancelWarning()` names
+the fee that costs. `RESCHEDULE_REQUESTS` now holds one row per proposal against a
+`RESCHEDULE_STATES` vocabulary, seeded **empty**, because a sample request would be a written record
+of an agreement nobody proposed (§86). Only `upcoming` may move: a request nobody answered has no
+agreed time to change, and once a provider is `en_route` or `arrived`, a new hour is a no-show
+waiting to happen. Accepting is the only statement in the file that writes `b.date` and `b.time`, and
+it writes nothing else on the booking — no amount, no `status`, no payment state — which is asserted by
+reading the booking back, not by trusting the handler. It does append one timeline row, described below. The proposing side is not offered an accept button on its
+own request, one proposal per booking is the rule, and the whole flow is in the camera's walk
+(`reschedule-sheet`, `reschedule-answer`) reached through the app's own openers. Three consequences of
+reading §9 of the plan rather than only the prompt: an accepted move writes **one `STATUS_EVENTS`
+row** and `decidedAt` is derived from that same reading, because two representations of one press need
+one clock (§83) — the check asserts `Date.parse(event.at) === r.decidedAt` instead of timing anything;
+that row is rendered from its own **note**, since the status never changes and printing the label twice
+is §7's repeated indicator; an optional **reason** rides on the record, escaped, and an untouched reason
+is stored as `null` so the card never prints quotation marks around nothing; and the answering side may
+**counter**, which marks the ask it answers `superseded` and raises a fresh one rather than editing a
+decision that already happened — its error path first restored a superseded ask to `pending`, which
+re-opened a proposal the other side had already answered, so a refusal now mutates nothing at all.
+`node tools/falsify-reschedule.cjs` proves fourteen properties; break 1 is the honesty one (a proposal
+that moves the appointment while the message says it did not), and the two structural breaks — the
+event writer ignoring the handed instant, the timeline printing the label — exist because a behavioural
+check cannot pin a race that usually does not happen.
+
+A SCHEMA BUMP IS FOR AN AMBIGUITY, NOT FOR A NEW KEY. The approved plan said this feature would move
+`SCHEMA_VERSION`; it does not. A v16 dump simply has no `rescheduleRequests` key, and an absent key
+is unambiguous — unlike the v15 dump whose typed-date rows were indistinguishable on disk from real
+instants, which is the precedent that earned a bump. Bumping here would have deleted every tester's
+saved bookings, edited provider profile and audit rows to protect nothing, so `hydrate()` reads the
+missing key as an empty list and the number stays put with a comment saying why. **Read the approved
+wording as the intent, not the implementation:** the deviation is recorded in `CHANGES.md` §132
+rather than smoothed over.
+
+THE REGISTER WRITES THE ACCEPTANCE BEFORE IT WRITES AN IDENTITY. `this account is not stored` was
+true while registration wrote no bytes at all. An acceptance nobody can point at afterwards is a
+claim rather than a record, so the versioned acceptance is now stored — and the order is the whole
+claim: `state.termsAcceptances` is written and `persist()` is called **before** the typed name and
+barangay are applied to the profile, so the bytes this action leaves hold a versioned acceptance plus
+the demo household's own profile. The toast was rewritten to say exactly that, because the sentence
+and the bytes must be checked against each other (`suite('login')`: an unticked box refuses with a
+message naming the box and writes nothing; an accepted register writes the acceptance and not the
+account; the optional consent appears only when that box was ticked). A later edit made deliberately
+is stored by that edit, which is existing behaviour and is not hidden by the register's sentence.
+
+THREE DOCUMENTS, AND EVERY FACT THE BUSINESS HAS NOT DECIDED IS A BRACKET. Terms, Sukinnect Policy
+and Privacy Notice are drafted into `Sukinnect-next.html` as a sheet reached from the sign-in card.
+They are **drafts**: each carries a visible "Draft — not reviewed by Philippine counsel" banner, and
+that status is also in `SUKINNECT_UX_RELIABILITY_MVP_PLAN.md` §11 and in `README.md`, because §11 of
+the improvement brief asks for the review status to be visible in the plan *and* the developer
+documentation. `privacy.gov.ph` answered 403 on both pages the brief names, `ecommerce.dti.gov.ph`
+failed to connect, and the Senate issuance library was unreachable, so the text was written against
+full-text reproductions on LawPhil and says which statutes it leaned on: RA 10173 §§12–13 and 16
+(consent is ONE of six grounds — the notice separates contract, legal obligation, legitimate
+interests and consent instead of treating every process as consented), RA 11967 (marketplaces, not
+pure consumer-to-consumer deals; the merchant issues the invoice), RA 8792, RA 7394 (which reaches
+services, not only goods). Providers are described as **merchants offering services through the
+platform** — the owner's ruling, and the choice that decides whether RA 11967's duties attach at all,
+flagged for counsel rather than presented as settled. The gate enforces the shape rather than the
+sentiment: an entity name, address, privacy officer, complaint channel, retention period or effective
+date that has not been decided appears only inside a bracket marked `NOT DECIDED`, and a check fails
+if a bracket loses its mark, if an email address appears outside one, or if the text claims NPC
+registration it does not have. `node tools/falsify-legal-truth.cjs` proves those.
+
+A LABEL MAY NOT PROMISE A MECHANISM, AND THE HONEST FIX IS SOMETIMES DELETION. "Arrives within" sat
+above a filter that compared `availabilityMin` — when a provider can *start*, not when anybody
+reaches the door — so the group is "Can start within" with a line saying nobody is on the way yet, and
+the card that said "arrives ~N min" says "can start in ~N min". "About 0.8 km from you" was a number
+typed into the seed, so the provider card's map line now calls it a sample figure not measured from
+the reader — which matters more since registration accepts the reader's own barangay. On the FSM
+screen, "Dynamic Availability Optimizer — suggests when to go Available/Busy based on real-time surge
+predictions" became a plain statement of what the switch does (nothing reads it; no routing exists in
+this build), and "Route & Schedule Optimizer — optimized sequence for your 2 active jobs today…
+travel time minimized by 18 mins" was **deleted rather than reworded**, because the dashboard already
+lists today's jobs in the order their own times put them and a second list of the same day is the
+drift this file keeps calling a defect. A check now fails if FSM grows a `Today` heading again.
+
+FOUR INSTRUMENT LESSONS FROM THE SAME PASS, ALL ABOUT THE CHECKER. (1) **A check that reads a field
+the harness zeroes measures the harness.** Two reschedule checks first asserted `state.sheet`; in the
+Node harness `openSheet()` leaves that flag null after `render()` — and the pre-existing booking
+sheet does the same, which is how the artifact was recognised instead of filed as an app defect. The
+checks now assert the armed draft and the sheet's own markup, and the comment says the camera walks
+both sheets in a real browser. (2) **A substring needle can fail a correct build.** The
+no-provider-is-called-"Pro" check tested `codeOnly.indexOf('Service Pro') < 0`, and the legal
+documents write "Service Professional" legitimately; the rule is `\bService Pro\b` now, on both
+halves. (3) **The gate had never rendered the FSM screen.** `providerFSM` was absent from the harness
+export list, so no check could reach it — the same "a destination no instrument reads" class as the
+admin Account tab and the audit log — and the mutant that found it was a card inserted into the wrong
+function, which died on `today is not defined`. (4) **A break that prints MISSED is read, not
+deleted**, for the sixth time in this repository: the id-substitution break survived because the
+table's first booking happened not to be at a movable stage, so "nothing opened, nothing written"
+stayed true for an unrelated reason. The check was widened to make that row reschedulable first and to
+assert the lookup itself answers `null` — a positive control, not a softer needle.
+
+THE FIGURES FOR THIS PASS ARE COMMANDS, NOT SENTENCES: `node tools/verify.cjs` prints the check total,
+`node tools/shot.cjs --list` prints the screens the walk reaches, and `node tools/falsify-all.cjs`
+prints one row per mutant family with applied / caught / not-applied / missed. Quote a run, not a
+number carried forward in prose.
+
+A DENSITY METRIC THAT NAMES ONE AFFORDANCE SHAPE INVENTS FINDINGS. Phase A reported seven screens that
+bury their first large action below the fold, measured by a probe asking "where is the first `.btn` at
+least 40px tall". Promoted to `node tools/shot.cjs --probe=@tools/probe-density.js` with a selector
+that counts anything a thumb can press (`button, a[href], [onclick], .btn`), the honest population on
+the untouched build was **one**: the admin's Money screen, whose only two operations sat 2,239px down
+a 2.5-screen scroll beneath the three cards they change. Master Administrator's 13 pressable rows
+begin at 121px and the thing 2,054px down is its lock/logout pair, which belongs at the bottom of an
+account screen; Categories' single button is a link to fee settings on a screen whose own copy says the
+catalogue is read-only, so promoting it would have surfaced a convenience above the content. The action
+card was hoisted and extracted as `thisDeviceCard()` so its position is one line a check can order
+(`node tools/falsify-action-above-fold.cjs`). Two rules: **print the old figure beside the new one when
+widening a selector**, because a changed headline with no comparison is a vocabulary change masquerading
+as a finding; and navigate by the value a render branch answers, not the word printed on the button —
+`state.tab='dash'` painted nothing, and the check that inherited it failed loudly only because it
+requires each marker to exist before comparing positions.
+
 ---
 
 # 32. GRADIENT USAGE

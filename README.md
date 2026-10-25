@@ -358,6 +358,36 @@ reads the live catalogue back — modes, pricing models, commission basis, decla
 safety rules, supply against 30-day demand — and says plainly that editing those rules is not
 available here, because they decide how money moves and are still being validated.
 
+## Rescheduling a job
+
+A conflict after an appointment is agreed no longer has to end in a cancellation. Either side can
+propose a day and an hour on a booking that is accepted but not started; the proposal is a record
+(`RESCHEDULE_REQUESTS`), and the booking's own `date` and `time` change **only** when the other side
+accepts. Declining, withdrawing, or answering a request that was already decided moves nothing. The
+proposing side never sees an accept button on its own request, one proposal at a time is allowed per
+booking, and an unknown booking id resolves to nothing rather than to the first job in the table.
+Requests and decisions survive a reload; the record family is additive, so `SCHEMA_VERSION` stayed
+where it was.
+
+## Legal drafts and the acceptance record
+
+Three documents — Terms & Conditions, Sukinnect Policy, Privacy Notice — are drafted for this
+prototype and **every one of them is marked "Draft — not reviewed by Philippine counsel."** They are
+not legal advice, and no part of this build should be read as certified compliance: qualified
+Philippine counsel and a privacy professional must review the text before any public launch. Facts
+the business has not decided (entity name, registered address, the person answerable for privacy, a
+complaint channel, retention periods, an effective date) appear as square-bracketed placeholders
+marked `NOT DECIDED`, and a gate check fails if a bracket loses its mark or if an invented contact
+address appears outside one. Providers are described as merchants offering services through the
+platform, which is the characterisation that decides whether the Internet Transactions Act's invoice
+and disclosure duties attach at all; it is flagged for counsel, not settled here.
+
+Registration carries one unchecked **accept** box that is never pre-ticked, a separate optional
+consent row that is recorded only when ticked, and a refusal that names the box. The acceptance is
+written to this device's storage before the typed name is applied to the profile, so the record says
+which document version was agreed and does not silently store an account. It is a local record, not a
+server-side audit trail, and the screens say so.
+
 ## Honest labelling
 
 Demo data is `source:'demo'`, records you create in a session are `source:'live'`. Pilot

@@ -1009,6 +1009,25 @@ const SCREENS = [
                         state.sheet='bookingRequest'; render();`],
   ['booking-detail',   `state.view='app'; state.role='resident';
                         openBookingDetail(BOOKINGS.find(b=>b.status==='upcoming'&&b.customerId===CURRENT_CUSTOMER_ID).id);`],
+  /* A proposed time is a record, and the sheet that files it and the card that answers it are two
+     destinations reached by tapping. The walk creates the request the way a resident does — the real
+     opener, the real submit — rather than pushing a row into the array, because a screen whose state
+     was written by the harness is a screen nobody can reach. */
+  ['reschedule-sheet',  `state.view='app'; state.role='resident';
+                        const mv = BOOKINGS.find(b=>b.status==='upcoming'&&b.customerId===CURRENT_CUSTOMER_ID) || BOOKINGS[0];
+                        mv.status='upcoming'; openBookingDetail(mv.id);
+                        openRescheduleRequest(mv.id); state.sheet='reschedule'; render();`],
+  /* The legal sheet is the screen a person reaches from the sign-in card before they agree to
+     anything, so it is walked from its own opener. */
+  ['legal-terms',       `state.view='login'; state.role='resident'; state.authMode='register'; render();
+                        openLegalDoc('terms'); state.sheet='legalDoc'; render();`],
+  ['reschedule-answer', `state.view='app'; state.role='resident';
+                        const ans = BOOKINGS.find(b=>b.status==='upcoming') || BOOKINGS[0];
+                        ans.status='upcoming'; openRescheduleRequest(ans.id);
+                        state.rescheduleDraft.dayIdx=1; state.rescheduleDraft.timeIdx=2;
+                        submitRescheduleRequest();
+                        applyProviderIdentity(ans.providerId); state.role='provider';
+                        openProviderBooking(ans.id); render();`],
   /* The pilot category, reached the way a resident reaches it: pick the category's
      provider, open the sheet, choose a mode. Screens nobody can navigate to are
      not screens — they are markup. */

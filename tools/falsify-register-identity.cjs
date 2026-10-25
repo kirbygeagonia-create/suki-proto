@@ -14,11 +14,15 @@
      B  the typed barangay is not written    -> the same check with  barangay "Poblacion"
      C  the address is blanked (the option the owner did NOT choose)
                                             -> '…keeps the demo household address…'
-     D  register persists                    -> 'a register stores nothing, as its own toast claims'
+     D  register persists AFTER the identity is written
+                                            -> '…stores the versioned acceptance and nothing else…'
 
-   D is the one that keeps the third check honest: a check that compares two reads of storage passes
-   just as loudly when the writer cannot write. The check therefore calls persist() itself and requires
-   bytes to appear; this break shows a real write makes it go red.
+   D moved on 2026-10-25, and the reason is worth keeping: it used to break a rule that said a register
+   writes no bytes at all, and that rule became false the moment the acceptance became a record. The
+   hazard it guards is the same one, one level deeper — the check now reads the CONTENT of the dump it
+   was handed, so a write that stores the versioned acceptance is green and a write that also stores the
+   typed identity is red. A check that only asked "did bytes appear" would have gone quiet on exactly
+   this change, which is the difference between measuring a write and measuring what was written.
 
      node tools/falsify-register-identity.cjs    ~4 minutes                                      */
 'use strict';
@@ -36,7 +40,7 @@ const BRGY_LINE = '        profile.barangay = typedBarangay;';
 const PROFILE_LINE = '      const profile = state.role === \'provider\' ? state.providerProfileData : state.profileData;';
 const CHECK_IDENTITY = 'a register writes the name and barangay the form collected';
 const CHECK_ADDRESS = 'a register keeps the demo household address';
-const CHECK_STORAGE = 'a register stores nothing';
+const CHECK_STORAGE = 'an accepted register stores the versioned acceptance and nothing else about the account';
 
 /* The app file is CRLF; a needle written with \n matches nothing and the run reports a clean gate for
    a mutation that never landed. */
@@ -70,8 +74,8 @@ const BREAKS = [
     from: NAME_LINE,
     to: NAME_LINE + '\n      profile.address = \'\';\n      profile.savedAddresses = [];',
     expect: CHECK_ADDRESS, detail: null },
-  { name: 'register writes the session to storage, which its toast denies',
-    from: PROFILE_LINE, to: PROFILE_LINE + '\n      persist();',
+  { name: 'register persists AFTER writing the typed identity, so the account reaches storage the toast denies',
+    from: BRGY_LINE, to: BRGY_LINE + '\n      persist();',
     expect: CHECK_STORAGE, detail: null },
 ];
 

@@ -7978,3 +7978,158 @@ findings**; narrow window → refuses with its own cause named; empty scan → `
 tools/falsify-commit-subjects.cjs` → **15 of 15 breaks caught, 0 not applied, 0 missed** with all three finding kinds
 holding instances; `node tools/verify.cjs` → **all 567 checks passed**. `Sukinnect.html` still identical to
 `origin/main`; no application bytes moved; nothing here redeploys.
+
+## 132. Phase B landed the two absences and the mislabelling, and the gate found a checker that matched a prefix
+
+Approved 2026-10-25 by the owner as "all P1, legal included, reschedule by propose-and-accept,
+providers as merchants". Four increments landed on `Sukinnect-next.html`; the gate went 567 → 616
+checks, and the screens the camera walks went 82 → 85.
+
+**Reschedule is a record now.** The audit's headline absence: `reschedul` appeared zero times in the
+file, so a household with a conflict after an appointment was agreed had exactly one door — cancel —
+and the booking's own `cancelWarning()` names the fee that costs. `RESCHEDULE_REQUESTS` holds one row
+per proposal (`bookingId`, `raisedBy`, `date`, `time`, `status`, `createdAt`, `decidedAt`, `decidedBy`)
+against a four-state `RESCHEDULE_STATES` vocabulary, seeded **empty** because a sample request would
+record an agreement nobody proposed. Only `upcoming` may move: a request nobody answered has no agreed
+time to change, and once a provider is `en_route` or `arrived` a new hour is a no-show waiting to
+happen. The resident's status card and the provider's job detail both read it, the proposing side
+cannot answer its own request, one proposal at a time per job, and the answering side's Accept is the
+only statement in the file that writes `b.date` and `b.time` — it touches no amount, no status, no
+payment state, which is asserted rather than assumed.
+
+**No schema bump, and the reason is kept.** The approved framing said the feature would move
+`SCHEMA_VERSION` 16 → 17. It does not. A v16 dump simply has no `rescheduleRequests` key, and that
+absence is unambiguous — unlike the v15 dump whose typed-date rows were indistinguishable from real
+instants, which is the precedent that earned a bump. Bumping here would have deleted every tester's
+saved bookings, edited provider profile and audit rows to protect nothing, so `hydrate()` reads the
+missing key as an empty list and the version stays 16 with a comment saying why. Deviating from the
+approved wording is recorded here rather than smoothed over: what was approved was the flow.
+
+**The register now writes a record, so its own sentence had to move.** `this account is not stored`
+was true while registration wrote no bytes. An acceptance nobody can point at afterwards is a claim,
+not a record, so the versioned acceptance is stored — and the order matters: `state.termsAcceptances`
+is written and `persist()` is called **before** the typed name and barangay are applied to the
+profile, so the bytes this action leaves hold a versioned acceptance plus the demo household's own
+profile. The toast says exactly that now, and the login suite asserts both halves in both directions:
+an unticked box refuses with a message naming the box and writes nothing, and an accepted register
+writes the acceptance and not the account. A later edit made deliberately is stored by that edit.
+
+**Three documents, drafted from statutes actually read.** `privacy.gov.ph` answered 403 on both pages
+the brief names, `ecommerce.dti.gov.ph` failed to connect, and the Senate issuance library was
+unreachable, so the text was drafted against full-text reproductions on LawPhil and says so: RA 10173
+§§12–13 and 16 (consent is one of six grounds — the notice names contract, legal obligation,
+legitimate interests and consent separately, which is what the brief asked for instead of the usual
+"we process everything because you clicked yes"), RA 11967 (marketplaces, not pure consumer-to-consumer
+deals; the merchant issues the invoice), RA 8792 and RA 7394 (which reaches services, not only goods).
+Every fact the business has not decided is a bracket marked `NOT DECIDED`, and the gate enforces that
+shape: a bracket without the mark fails, an email address outside a bracket fails, and a sentence
+claiming NPC registration fails while the true denial must be present. Providers are described as
+merchants offering services through the platform — the owner's ruling, and the choice that decides
+whether RA 11967's duties attach at all. All three carry a visible **Draft — not reviewed by
+Philippine counsel** banner, because misrepresenting draft text as approved is the failure the brief
+names. The Terms box is never pre-ticked; the optional consent is a separate row recorded only when
+ticked; sign-in is never held up by a re-acceptance.
+
+**The two labels that promised a mechanism.** "Arrives within" filtered `availabilityMin`, which is
+when a provider can *start* — nothing computes a route — so the group is "Can start within" with a
+line saying nobody is on the way yet. The provider card said "about 0.8 km from you" over a number
+typed into the seed, which is a GPS-flavoured claim about a distance that was never measured, and
+registration now accepts a barangay of the reader's own choosing, so "from you" was doubly unearned:
+the card says *sample figure, not measured from you*. On the FSM screen, "Dynamic Availability
+Optimizer — suggests when to go Available/Busy based on real-time surge predictions" became an honest
+statement of what the switch does (nothing reads it; no routing exists), and "Route & Schedule
+Optimizer — optimized sequence for your 2 active jobs today… travel time minimized by 18 mins" was
+**deleted rather than reworded**: the dashboard already lists today's jobs in the order their own
+times put them, and a second list of the same day is the drift this file keeps calling a defect.
+Two of the eight new wording checks assert those absences, so a re-add shows up as a failure.
+
+**Four instrument lessons from the same pass.**
+
+1. **A substring needle matched a longer word and failed a correct build.** The `no provider is
+   called "Pro"` check tested `codeOnly.indexOf('Service Pro') < 0`, and the legal documents write
+   "Service Professional" legitimately — the prefix matched inside it. The check was wrong, not the
+   prose, and it now uses `\bService Pro\b` on both halves of the rule. A needle that matches a
+   longer word is the same failure as a needle that matches a comment.
+2. **A check that asserts a flag the harness zeroes measures the harness.** Two reschedule checks
+   first read `state.sheet`. In the Node harness, `openSheet()` leaves `state.sheet` null after
+   `render()` — and the **pre-existing booking sheet does the same**, which is how the artifact was
+   recognised rather than filed as a defect. The checks now assert the armed draft and the sheet's
+   own markup, and say in a comment that the camera walks both sheets in a real browser.
+3. **A break that prints MISSED is read, not deleted.** The falsifier's id-substitution break —
+   `rescheduleBooking` answering an unknown id with `BOOKINGS[0]` — survived its own check, because
+   that first booking happened not to be at a movable stage, so "nothing opened, nothing written"
+   stayed true for an unrelated reason. The check was widened: the table's first row is now made
+   reschedulable first, and the lookup itself is asserted to answer `null` for an unknown id and the
+   right record for a real one. This is the fifth time this repository has written that sentence.
+4. **The gate reached a screen the harness could not call.** `providerFSM` was not in the harness
+   export list, so no gate check had ever rendered the FSM screen — the same "a destination no
+   instrument reads" class as the admin Account tab and the audit log. It is exported now, and it was
+   the mutant that found it: the first reschedule card was inserted into `providerFSM`, and
+   `today is not defined` proved the screen had never been run.
+
+**Also found while looking: P1-3 was already resolved.** `isRegister = !isAdmin && state.authMode ===
+'register'` means the admin route never renders a register form, so there is no public
+self-registration as administrator to restrict. Recorded as already-resolved rather than re-implemented.
+
+**A completion audit against §9 of the plan found three promises the first cut had not built.** An
+accepted move now writes **one `STATUS_EVENTS` row**, and `decidedAt` is derived from that same reading
+rather than taken a second time — §83's rule that one act has one moment, asserted as
+`Date.parse(event.at) === r.decidedAt` because a behavioural check cannot pin a race that usually does
+not happen. That row is rendered from its own **note**: a reschedule never changes the status, so
+printing the status label again would be §7's repeated indicator. An optional **reason** travels on the
+record, escaped, and a reason nobody typed is stored as `null` rather than an empty string, so the card
+never prints quotation marks around nothing. And the answering side may **counter**, which marks the
+ask it answers `superseded` and raises a fresh one instead of editing a decision that already happened.
+The counter's refusal path was wrong on its first draft and is the sharper lesson: it restored a
+superseded ask to `pending` on its way out, which re-opened a proposal the other side had already
+answered — an error branch that mutated the very record it was refusing to write. `reschedule` is 34
+checks and `node tools/falsify-reschedule.cjs` is 14 breaks. Two instrument facts came out of proving
+them. The first run reported **12 of 12 caught, 1 not applied**, and the not-applied column is what
+showed the cause: `answerReschedule` and `counterReschedule` refuse the proposer with the identical
+one-line condition, so the break's anchor matched twice — the anchor became two lines (the refusal
+message is what tells the guards apart), and the family now pre-flights every anchor and refuses before
+spending a gate pass on a rotted needle. A second edit then crashed the suite with `appSrc is not
+defined`: that identifier belongs to the honesty suite, and the reschedule checks live in their own
+suite, which is a scope fact the shape of the file does not advertise. The reading is now taken from
+the exported function's own text.
+
+**Not done, stated plainly.** The chat keyboard leg still needs a handset (`visualViewport` appears
+zero times in the file, so the claim about composer behaviour under a keyboard remains unverifiable
+from the bench). P2 coherence work was not approved and was not done.
+
+**Verification, as printed.** Six families carry the new rules and were each re-run on the final
+tree: `falsify-reschedule` **14 of 14 caught, 0 not applied, 0 missed**, `falsify-legal-truth` 8 of 8,
+`falsify-wording-truth` 7 of 7, `falsify-action-above-fold` 2 of 2, `falsify-register-identity` 4 of 4
+after its fourth break was re-pointed at the rule that replaced the one it used to condemn, and
+`falsify-camera-dialog-coverage` 6 of 6 with the three new screens in the table.
+`node tools/verify.cjs` → **all 625 checks passed**, and `node tools/sweep-text-scale.cjs` → **8 of 8
+phone corners measured clean** over the 85 screens `node tools/shot.cjs --list` counts. Before/after
+taken from the painted page rather than from reasoning: the Money screen’s first pressable action
+moved from **2,239px to 246px**, and the FSM screen became **93px shorter** (`scrolls 675px past the
+fold` → `582px`) by losing the fabricated route card and gaining no replacement.
+`node tools/build-web-dist.cjs` republished `dist/`, and `node tools/audit-build-bytes.cjs` reports
+`findings: 2` — the Android staged asset and the built APK, left stale by the owner’s ruling, are the
+two reads that disagree with the source. Not verified and not claimed: the chat keyboard leg needs a
+handset, and `visualViewport` still appears zero times in the page, so no composer-under-keyboard
+statement in this document is measured.
+
+**P1-6 shrank when the metric was corrected, and that is the finding.** Phase A quoted "seven
+screens bury their first large action below the fold", measured by a probe that asked where the first
+`.btn` at least 40px tall sits. Promoted to `tools/probe-density.js` and re-run against the untouched
+build with a selector that counts anything a thumb can press (`button, a[href], [onclick], .btn`), the
+population is **one**: the admin's Money screen, whose only two operations — Run this week's payouts
+and Restore the sample records — sat 2,239px down a 2.5-screen scroll, beneath three cards they
+change. Master Administrator's 13 pressable rows begin at 121px (the thing 2,054px down is the
+lock/logout pair, which belongs at the bottom of an account screen), and Categories' single button is
+a link to fee settings on a screen whose own copy says the catalogue is read-only — promoting that
+would have surfaced a convenience above the content. The action card was hoisted to the top of the
+Money screen, extracted as `thisDeviceCard()` so its position is one line a check can order and a
+falsifier can move (`node tools/falsify-action-above-fold.cjs`).
+
+**The new check failed loudly, which is the only reason the bug was caught.** It first navigated with
+`state.tab = 'dash'` — the word printed on the admin's own button, not the value its render branch
+answers (`admin_dashboard`) — so nothing painted and all three markers read `-1`. Because the check
+requires each marker to exist *before* comparing positions, that showed up as a FAIL rather than a
+passing vacuum. The repository has written this trap down before (a probe that set `tab='dash'` and
+concluded the app could reach a blank screen); it recurs because the button label and the tab value
+live in different places in the file.

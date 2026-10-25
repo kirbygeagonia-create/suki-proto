@@ -1291,10 +1291,13 @@ suite('hygiene', async () => {
      been caught doing exactly that with a typed claim inside a comment. */
   const codeOnly = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '');
   const proInCode = (codeOnly.match(/\bPro\b/g) || []).length;
+  /* The bare prefix "Service Pro" also matches inside "Service Professional", which the legal
+     documents write legitimately — so the word-boundary form is the one that asks the question the
+     ruling actually answers. This check failed on a correct build for exactly that reason. */
+  const proPhrase = /Service Pro\b/;
   c.check('no code, label or painted string calls a provider "Pro"',
-    proInCode === 0 && codeOnly.indexOf('Service Pro') < 0 && src.indexOf('Service Pro') > -1,
-    'standalone Pro in code: ' + proInCode + ' · exemption comment present: ' +
-      (src.indexOf('Service Pro') > -1));
+    proInCode === 0 && !proPhrase.test(codeOnly) && proPhrase.test(src),
+    'standalone Pro in code: ' + proInCode + ' · exemption comment present: ' + proPhrase.test(src));
 
   /* Every number field in this app holds money, a weight, a count of days or a rate, and none of
      them can sensibly be negative. Seven declared a lower bound and four did not — including the
@@ -1849,7 +1852,8 @@ suite('login', async () => {
   c.check('no disclaimer paragraph competes with the fields',
     !/auth-note-line|not an account|Demo environment/.test(one));
   c.check('and the sign-in still says the account is not stored',
-    /this account is not stored/.test(app._source));
+    /the account itself is not stored/.test(app._source)
+      && /Only your acceptance of the Terms is kept on this device/.test(app._source));
   c.check('forgot password reads as a link under the field', /class="auth-forgot"/.test(one));
   c.check('log in is the only primary action',
     (one.match(/class="btn" id="login-btn"/g) || []).length === 1);
@@ -1880,6 +1884,9 @@ suite('login', async () => {
    ['login-email', 'nueva@example.com'], ['login-pass', 'demo1234']].forEach(([id, v]) => {
     regBoot._document.getElementById(id).value = v;
   });
+  /* The Terms box is never pre-ticked, so a walk that wants an account has to tick it — and a
+     register run that forgets to is the refusal this suite now asserts further down. */
+  regBoot._document.getElementById('reg-terms').checked = true;
   regBoot.submitAuth();
   await new Promise(r => setTimeout(r, 900));
   c.check('a register writes the name and barangay the form collected',
@@ -1900,24 +1907,70 @@ suite('login', async () => {
      shared store must leave the key exactly as it was. The control that follows writes on purpose,
      because "no change" from a checker that cannot see a change is the failure this repository has
      been taught twice — a positive control makes the zero mean something. */
+  /* What a register writes is now a precise claim, so it is measured as bytes in both directions.
+     The account is still not stored — the disclosure says so, and the dump proves it. What IS
+     stored is the acceptance: a versioned record of which document this device agreed to, because
+     an acceptance nobody can point at afterwards is a claim, not a record. The refusal case is
+     asserted too, with the box left alone: a checker that only ever runs the happy path cannot see
+     a pre-ticked box come back. */
+  const fill = (b) => {
+    [['reg-name', 'Nueva Residente'], ['reg-brgy', 'Buayan'],
+     ['login-email', 'nueva@example.com'], ['login-pass', 'demo1234']].forEach(([id, v]) => {
+      b._document.getElementById(id).value = v;
+    });
+  };
+  const refusedStore = fakeStorage();
+  const refusedBoot = boot({ storage: refusedStore });
+  refusedBoot.state.view = 'login'; refusedBoot.state.role = 'resident'; refusedBoot.state.authMode = 'register';
+  refusedBoot.render();
+  fill(refusedBoot);
+  const refusedBefore = refusedStore.getItem('sukinnect.snapshot.v1');
+  refusedBoot.submitAuth();
+  await new Promise(r => setTimeout(r, 900));
+  c.check('a register without the Terms box ticked is refused, in words that name the box',
+    refusedStore.getItem('sukinnect.snapshot.v1') === refusedBefore
+      && (refusedBoot.state.termsAcceptances || []).length === 0
+      && refusedBoot.state.authError && refusedBoot.state.authError.terms
+      && /Terms/.test(refusedBoot.state.authError.terms)
+      && refusedBoot.state.view === 'login',
+    'error ' + JSON.stringify(refusedBoot.state.authError || null) + ', view ' + refusedBoot.state.view);
+
   const regStore = fakeStorage();
   const regBoot2 = boot({ storage: regStore });
   regBoot2.state.view = 'login'; regBoot2.state.role = 'resident'; regBoot2.state.authMode = 'register';
   regBoot2.render();
-  [['reg-name', 'Nueva Residente'], ['reg-brgy', 'Buayan'],
-   ['login-email', 'nueva@example.com'], ['login-pass', 'demo1234']].forEach(([id, v]) => {
-    regBoot2._document.getElementById(id).value = v;
-  });
+  fill(regBoot2);
+  regBoot2._document.getElementById('reg-terms').checked = true;
   const beforeBytes = regStore.getItem('sukinnect.snapshot.v1');
   regBoot2.submitAuth();
   await new Promise(r => setTimeout(r, 900));
   const afterBytes = regStore.getItem('sukinnect.snapshot.v1');
   regBoot2.persist();
   const controlBytes = regStore.getItem('sukinnect.snapshot.v1');
-  c.check('a register stores nothing, as its own toast claims',
-    afterBytes === beforeBytes && typeof controlBytes === 'string' && controlBytes.length > 0,
+  const written = JSON.parse(afterBytes || 'null');
+  c.check('an accepted register stores the versioned acceptance and nothing else about the account',
+    typeof afterBytes === 'string' && afterBytes !== beforeBytes
+      && written && Array.isArray(written.termsAcceptances)
+      && written.termsAcceptances.some(a => a.doc === 'terms' && a.version === regBoot2.LEGAL_VERSION)
+      && written.profileData.name !== 'Nueva Residente'
+      && typeof controlBytes === 'string' && controlBytes.length > 0,
     'bytes after register: ' + (afterBytes === null ? 'none' : (afterBytes || '').length)
-      + ', after an explicit persist(): ' + (controlBytes || '').length);
+      + ' | acceptances ' + JSON.stringify(written && written.termsAcceptances || null)
+      + ' | stored name ' + (written && written.profileData ? written.profileData.name : 'none'));
+  /* The consent below the Terms is a separate yes, and refusing it must cost nothing. */
+  const noConsent = fakeStorage();
+  const ncBoot = boot({ storage: noConsent });
+  ncBoot.state.view = 'login'; ncBoot.state.role = 'resident'; ncBoot.state.authMode = 'register';
+  ncBoot.render();
+  fill(ncBoot);
+  ncBoot._document.getElementById('reg-terms').checked = true;
+  ncBoot.submitAuth();
+  await new Promise(r => setTimeout(r, 900));
+  const ncWritten = JSON.parse(noConsent.getItem('sukinnect.snapshot.v1') || 'null');
+  c.check('the optional marketing consent is not bundled into the Terms acceptance',
+    ncBoot.state.view === 'app' && ncWritten
+      && !ncWritten.termsAcceptances.some(a => a.doc === 'marketing-consent'),
+    JSON.stringify(ncWritten && ncWritten.termsAcceptances || null));
   return c;
 });
 
@@ -3680,6 +3733,76 @@ suite('honesty', async () => {
   c.check('the payments module says the method is a label, not a linked account',
     /not a linked account/.test(appSrc) && /No card or wallet number is stored/.test(appSrc));
 
+  /* "Arrives within" sat above a row that filtered availabilityMin — when a provider can START a job,
+     which is not when anybody reaches the door. Nothing here computes travel time, so the wording is
+     the only honest place left to fix it. */
+  c.check('the wait filter is labelled for the field it actually filters',
+    /sheet-label">Can start within/.test(appSrc) && !/sheet-label">Arrives within/.test(appSrc)
+      && /p\.availabilityMin <= f\.maxWait/.test(appSrc),
+    'the label and the predicate no longer name the same thing');
+  c.check('no provider card calls availabilityMin an arrival',
+    !/arrives ~\$\{p\.availabilityMin\}/.test(appSrc) && /can start in ~\$\{p\.availabilityMin\}/.test(appSrc));
+  /* distanceKm is a number typed into the seed, so a card may not imply it was measured from whoever
+     is reading — especially now that registration accepts a barangay of the reader's own choosing. */
+  c.check('the seeded distance is disclosed as a sample, not as a measurement of the reader',
+    /km away \(sample figure, not measured from you\)/.test(appSrc)
+      && !appSrc.includes("' km from you'"));
+
+  /* Two FSM cards promised a surge suggestion engine and an "optimized sequence for your 2 active jobs
+     today" that saved 18 minutes between two typed streets. Neither mechanism exists, and the day's
+     jobs were already listed on the dashboard in the order their own times put them — so the route card
+     was deleted rather given new wording, and §82's rule held: a claim with no record behind it is
+     removed, and a second list of the same day is the drift this file keeps calling a defect. */
+  const pdash = boot();
+  pdash.state.view = 'app'; pdash.state.role = 'provider'; pdash.state.tab = 'dashboard';
+  pdash.applyProviderIdentity('p1');
+  const dashP1html = String(pdash.providerDashboard());
+  const fsmP1html = String(pdash.providerFSM());
+  const p1Today = pdash.BOOKINGS.filter(b => b.providerId === 'p1'
+    && (b.status === 'upcoming' || b.status === 'ongoing') && b.date === pdash.dayName(0));
+  c.check('no card claims an optimizer or a travel saving the build does not compute',
+    !/Optimiz/i.test(appSrc) && !/Travel time minimized/i.test(appSrc)
+      && !/minimized/i.test(fsmP1html) && !/Rizal St\. \(2:30 PM\)/.test(fsmP1html));
+  c.check('and the day is listed in exactly one place',
+    /<h3[^>]*>Today<\/h3>/.test(dashP1html) && !/<h3[^>]*>Today<\/h3>/.test(fsmP1html),
+    'either the dashboard lost its list or FSM grew a second one');
+  c.check("the one list carries every job today's records hold for this provider",
+    p1Today.length > 0 && p1Today.every(b => dashP1html.includes(b.summary)),
+    'records hold ' + p1Today.length + ' job(s) dated today');
+  pdash.applyProviderIdentity('p7');
+  const dashP7html = String(pdash.providerDashboard());
+  c.check('a provider with no job today is told so, and never shown p1’s day',
+    !/Kitchen faucet leak/.test(dashP7html) && /Nothing is scheduled for today/.test(dashP7html),
+    'p7 saw somebody else’s booking or a missing empty state');
+  c.check('the dispatch switch says what it does instead of promising suggestions',
+    /no surge model or suggestion engine/i.test(fsmP1html)
+      && !/Suggests when to go Available\/Busy/i.test(appSrc));
+
+  /* §8.4 asks that important actions not need excessive scrolling. Measured, not assumed: the
+     corrected density probe (tools/probe-density.js) counts anything a thumb can press, and on the
+     untouched build only ONE screen buried its only actions — Money, where "Run this week’s
+     payouts" and "Restore the sample records" sat 2,239px down a 2.5-screen scroll, below three
+     cards they change. The action card now leads the screen; the statement figures follow.
+     Master Administrator was NOT a defect: its 13 pressable section rows start at 121px, and the
+     thing 2,054px down is the lock/logout pair, which belongs at the bottom. Categories had one
+     pressable at 2,085px — a link to the fee settings on a screen whose own copy says it is
+     read-only, so promoting it would have surfaced a convenience over the catalogue that is the
+     screen's whole content. Two rows of §13's checklist turned out to be the metric, not the app. */
+  const fin = boot();
+  fin.state.view = 'app'; fin.state.role = 'admin';
+  /* The destination value behind the admin's dashboard button, not the word printed on it: 'dash'
+     paints nothing, and every marker this check looks for then reads -1. The check's own `> -1`
+     guards are what turned that into a red line instead of a passing vacuum. */
+  fin.state.tab = 'admin_dashboard'; fin.state.adminScreen = 'finance'; fin.render();
+  const finHtml = fin._document.getElementById('screen').innerHTML;
+  c.check('the Money screen offers its two actions before the figures those actions change',
+    finHtml.indexOf('Run this week') > -1 && finHtml.indexOf('Restore the sample records') > -1
+      && finHtml.indexOf('Platform statement') > -1
+      && finHtml.indexOf('Run this week') < finHtml.indexOf('Platform statement')
+      && finHtml.indexOf('Restore the sample records') < finHtml.indexOf('Platform statement'),
+    'actions at ' + finHtml.indexOf('Run this week') + '/' + finHtml.indexOf('Restore the sample records')
+      + ', statement at ' + finHtml.indexOf('Platform statement'));
+
   return c;
 });
 /* ══ 15. fruit — the pilot category, as the brief's checklist ═════════════════
@@ -4799,6 +4922,410 @@ suite('dates', async () => {
     PARTNER_CODES.some(k => seenCodes[k]) && seenCodes.collected > 0 &&
       ['unpaid', 'pending_site'].some(k => seenCodes[k]) && pay.PAYMENTS.length >= 8,
     Object.keys(seenCodes).map(k => k + '=' + seenCodes[k]).join(' ') + ' | rows ' + pay.PAYMENTS.length);
+
+  return c;
+});
+
+/* ══ 18. reschedule — a proposed time is a record, not a mutation ═════════════
+   The flow did not exist: a conflict after an appointment was agreed had one door, cancel, and
+   the record itself names the fee that costs. Every check here drives the real handlers and reads
+   the BOOKING back, because the promise the interface makes — "your current time stays as it is
+   until the other side answers" — is a claim about a record, and a claim that only holds while
+   nobody tries the accept path is the kind this file keeps finding after the fact. */
+suite('reschedule', async () => {
+  const c = makeChecker();
+  const app = boot();
+  app.state.view = 'app'; app.state.role = 'resident'; app.state.tab = 'bookings';
+
+  c.check('no reschedule request is seeded — a sample proposal would record an agreement nobody proposed',
+    app.RESCHEDULE_REQUESTS.length === 0);
+
+  const offered = Object.keys(app.BOOKING_STATES)
+    .filter(s => app.reschedulable({ status: s }) !== (s === 'upcoming'));
+  c.check('exactly the accepted-but-not-started state may be moved',
+    offered.length === 0, offered.join(', ') || 'only upcoming');
+
+  const b = app.BOOKINGS.find(x => x.status === 'requested') || app.BOOKINGS[0];
+  b.status = 'upcoming';
+  const was = { date: b.date, time: b.time, amount: b.amountCentavos,
+                pay: b.payStatus, status: b.status };
+
+  /* The refusal has to come from the reference, not from luck. The first break written against this
+     check fell back to BOOKINGS[0] and the suite still passed, because that particular first booking
+     happened not to be at a movable stage — so the substitution was invisible and the check was
+     measuring nothing. The table's own first row is therefore made reschedulable first: if the
+     lookup answers an unknown id with somebody else's job, a draft bound to THAT id is the evidence. */
+  app.BOOKINGS[0].status = 'upcoming';
+  c.check('an unknown booking id resolves to nothing at the lookup, not to the first job in the table',
+    app.rescheduleBooking('no-such-booking') === null
+      && app.rescheduleBooking(app.BOOKINGS[0].id) === app.BOOKINGS[0]);
+  c.check('an id the bookings do not hold arms no draft and writes no record', (() => {
+    app.state.rescheduleDraft = null;
+    app.openRescheduleRequest('no-such-booking');
+    return app.state.rescheduleDraft === null && app.RESCHEDULE_REQUESTS.length === 0;
+  })());
+
+  /* Measured, not assumed: in the Node harness, `openSheet()` leaves `state.sheet` null after
+     render() — and the pre-existing booking-request sheet behaves identically, which is why this
+     suite asserts the armed draft and the sheet's own markup rather than the flag. The camera walks
+     both sheets in a real browser, where they stay open; a check that read the flag here would be
+     measuring the harness. */
+  app.openRescheduleRequest(b.id);
+  const sheetMarkup = String(app.rescheduleSheet());
+  c.check('the door arms a draft bound to the job that was asked for, and its sheet names the current time',
+    app.state.rescheduleDraft && app.state.rescheduleDraft.bookingId === b.id
+      && /Propose a new time/.test(sheetMarkup) && sheetMarkup.includes(was.time)
+      && /does not change/.test(sheetMarkup),
+    'draft ' + JSON.stringify(app.state.rescheduleDraft) + ' | ' + sheetMarkup.replace(/<[^>]*>/g, ' ').slice(0, 120));
+  app.state.sheet = 'reschedule';
+  app.state.rescheduleDraft.dayIdx = 1;
+  app.state.rescheduleDraft.timeIdx = 2;
+  app.submitRescheduleRequest();
+  const r = app.RESCHEDULE_REQUESTS[0];
+  c.check('sending files a proposal and leaves the agreed time exactly where it was',
+    app.RESCHEDULE_REQUESTS.length === 1 && r && r.status === 'pending'
+      && r.bookingId === b.id && r.raisedBy === 'resident'
+      && b.date === was.date && b.time === was.time
+      && r.date === app.dayName(1) && r.time === '1:00 PM',
+    r ? r.date + ' ' + r.time + ' vs booking ' + b.date + ' ' + b.time : 'no record written');
+  c.check('the draft is cleared once the request is on the record',
+    app.state.rescheduleDraft === null);
+
+  app.openRescheduleRequest(b.id);
+  c.check('a second proposal is refused while one is waiting, so the answer decides one thing',
+    app.state.rescheduleDraft === null && app.RESCHEDULE_REQUESTS.length === 1,
+    'a second draft or record was armed');
+
+  app.answerReschedule(r.id, 'accepted');
+  c.check('the side that asked cannot accept its own request',
+    r.status === 'pending' && b.date === was.date && b.time === was.time);
+
+  /* The pending line the resident sees has to say the time is unchanged, because that is the
+     state the records are actually in. Asserted on the row's own markup: the booking detail is
+     reached by selecting a job, and a check that paints the wrong screen reports a clean result
+     about a screen nobody is looking at. */
+  const row = String(app.rescheduleRow(b));
+  c.check('the waiting line names the proposed time and swears the current one is unchanged',
+    /is waiting for/.test(row) && /Your time is unchanged until they answer/.test(row)
+      && row.includes(app.dayName(1)), row.replace(/<[^>]*>/g, ' ').slice(0, 160));
+
+  app.applyProviderIdentity(b.providerId);
+  app.state.role = 'provider';
+  app.answerReschedule(r.id, 'accepted');
+  c.check('accepting moves the day and the hour, and nothing else about the job',
+    r.status === 'accepted' && b.date === app.dayName(1) && b.time === '1:00 PM'
+      && b.amountCentavos === was.amount && b.payStatus === was.pay && b.status === was.status,
+    'booking now ' + b.date + ' ' + b.time + ' / ' + b.amountCentavos + ' / ' + b.status);
+  c.check('the decision is stamped with who made it and when',
+    typeof r.decidedAt === 'number' && r.decidedBy === 'provider:' + b.providerId,
+    String(r.decidedBy));
+  app.answerReschedule(r.id, 'declined');
+  c.check('a decided request cannot be decided a second time',
+    b.date === app.dayName(1) && b.time === '1:00 PM' && r.status === 'accepted');
+  /* Positive control on the card's own sentence: after an accept it has to read the NEW time,
+     or the summary line would be a fixed string that always looked right. */
+  const card = String(app.rescheduleCard(b));
+  c.check('the card always reads the live booking, not the proposal it is describing',
+    card.includes(app.dayName(1)) && card.includes('1:00 PM')
+      && /A proposed time becomes the appointment only when the other side accepts it/.test(card),
+    card.replace(/<[^>]*>/g, ' ').slice(0, 160));
+
+  /* Decline is the other half of the promise: nothing moves. */
+  const b2 = app.BOOKINGS.find(x => x.id !== b.id && x.status === 'upcoming')
+    || app.BOOKINGS.find(x => x.id !== b.id);
+  b2.status = 'upcoming';
+  const was2 = { date: b2.date, time: b2.time };
+  app.state.role = 'resident';
+  app.openRescheduleRequest(b2.id);
+  app.state.rescheduleDraft.dayIdx = 2;
+  app.state.rescheduleDraft.timeIdx = 4;
+  app.submitRescheduleRequest();
+  const r2 = app.RESCHEDULE_REQUESTS[1];
+  app.applyProviderIdentity(b2.providerId);
+  app.state.role = 'provider';
+  app.answerReschedule(r2.id, 'declined');
+  c.check('declining keeps the appointment and records the answer',
+    r2.status === 'declined' && b2.date === was2.date && b2.time === was2.time
+      && /^provider:/.test(r2.decidedBy),
+    'booking ' + b2.date + ' ' + b2.time + ', request ' + r2.status);
+
+  /* Withdraw: only the proposer, and it re-opens the door rather than wedging the job. */
+  app.state.role = 'provider';
+  app.withdrawReschedule(r2.id);
+  c.check('the answering side cannot withdraw a request it did not raise',
+    r2.status === 'declined');
+  const b3 = app.BOOKINGS.find(x => x.id !== b.id && x.id !== b2.id);
+  b3.status = 'upcoming';
+  app.state.role = 'resident';
+  app.openRescheduleRequest(b3.id);
+  app.submitRescheduleRequest();
+  const r3 = app.RESCHEDULE_REQUESTS[app.RESCHEDULE_REQUESTS.length - 1];
+  app.withdrawReschedule(r3.id);
+  c.check('the proposer can withdraw, and the job can then be proposed again',
+    r3.status === 'withdrawn' && !app.pendingReschedule(b3.id)
+      && (app.openRescheduleRequest(b3.id), app.state.rescheduleDraft
+        && app.state.rescheduleDraft.bookingId === b3.id));
+  app.state.rescheduleDraft = null;
+
+  /* The claim the app makes about a reload is the claim this repository measures by bytes. */
+  const store = fakeStorage();
+  const writer = boot({ storage: store });
+  writer.state.view = 'app'; writer.state.role = 'resident';
+  const wb = writer.BOOKINGS[0];
+  wb.status = 'upcoming';
+  const wbWas = { date: wb.date, time: wb.time };
+  writer.openRescheduleRequest(wb.id);
+  writer.state.rescheduleDraft.dayIdx = 1;
+  writer.state.rescheduleDraft.timeIdx = 0;
+  writer.submitRescheduleRequest();
+  const again = boot({ storage: store });
+  const back = again.hydrate();
+  c.check('a proposal survives a reload, because a request that vanishes is one nobody answered',
+    back.restored === true && again.RESCHEDULE_REQUESTS.length === 1
+      && again.RESCHEDULE_REQUESTS[0].bookingId === wb.id
+      && again.RESCHEDULE_REQUESTS[0].status === 'pending',
+    'restored ' + JSON.stringify(back) + ' rows ' + again.RESCHEDULE_REQUESTS.length);
+  c.check('and the reload does not move the booking either',
+    again.BOOKINGS[0].date === wbWas.date && again.BOOKINGS[0].time === wbWas.time);
+
+  /* Two ways the family can be wrong on disk, refused at the door like every other record. */
+  const dumpWith = (rows) => {
+    const bad = fakeStorage();
+    bad.setItem('sukinnect.snapshot.v1', JSON.stringify({
+      schemaVersion: app.SCHEMA_VERSION,
+      bookings: [{ id: 'z1', providerId: 'p1', customerId: 'c1', status: 'upcoming' }],
+      providers: [{ id: 'p1' }], customers: [{ id: 'c1' }],
+      rescheduleRequests: rows }));
+    return boot({ storage: bad }).hydrate();
+  };
+  c.check('a request attached to no booking is refused, not painted onto somebody else’s job',
+    dumpWith([{ id: 'rs1', bookingId: 'gone', raisedBy: 'resident', status: 'pending' }])
+      .restored === false);
+  c.check('an unknown state is refused',
+    dumpWith([{ id: 'rs1', bookingId: 'z1', raisedBy: 'resident', status: 'agreed' }])
+      .restored === false);
+  c.check('a proposer that is neither side is refused, because the answer controls are chosen from it',
+    dumpWith([{ id: 'rs1', bookingId: 'z1', raisedBy: 'admin', status: 'pending' }])
+      .restored === false);
+  c.check('and a well-formed dump restores — the positive control that stops those three passing on a door that blocks everything',
+    dumpWith([{ id: 'rs1', bookingId: 'z1', raisedBy: 'resident', status: 'pending',
+                date: 'Fri', time: '8:00 AM', createdAt: 1, decidedAt: null, decidedBy: null }])
+      .restored === true);
+
+  /* The machine's own invariants: a move must not re-open a closed job or re-price an agreed one. */
+  const closed = ['completed', 'cancelled', 'expired', 'no_show', 'disputed'];
+  c.check('no closed state is offered a door',
+    closed.every(s => !app.reschedulable({ status: s }))
+      && !app.reschedulable({ status: 'en_route' }) && !app.reschedulable({ status: 'arrived' })
+      && !app.reschedulable({ status: 'requested' }));
+  c.check('and the vocabulary the door validates against is the one the records print',
+    Object.keys(app.RESCHEDULE_STATES).join(',') === 'pending,accepted,declined,withdrawn,superseded',
+    Object.keys(app.RESCHEDULE_STATES).join(','));
+
+  /* An accepted move is one act with two representations — the request record's decidedAt and the
+     row the booking's timeline prints — and §83 already learned what two readings of one press do
+     on a slow machine. One instant is taken and handed to both, and the timeline row is rendered
+     from its own note, because a reschedule does not change the status: printed under the status
+     label it would read as the same step twice, which is the repeated indicator §7 forbids. */
+  const tRows = app.bookingTimeline(b.id);
+  const movedRow = tRows.filter(e => e.kind === 'reschedule');
+  c.check('accepting writes exactly one timeline row, and its instant IS the record’s decided instant',
+    movedRow.length === 1 && Date.parse(movedRow[0].at) === r.decidedAt
+      && movedRow[0].bookingId === b.id && /Moved to/.test(movedRow[0].note),
+    movedRow.length + ' row(s); at=' + (movedRow[0] || {}).at + ' decidedAt=' + r.decidedAt);
+  c.check('and the timeline says what moved instead of repeating the state it never left',
+    /Moved to/.test(String(app.timelineRows(b))), String(app.timelineRows(b)).replace(/<[^>]*>/g, ' ').slice(0, 120));
+
+  /* §83 twice learned that a behavioural check cannot pin two clock readings a statement apart: on
+     a fast machine they land in the same millisecond and every timing assertion stays green while
+     the divergence is real. The break that made that visible here was a mutant which stopped
+     honouring the shared instant, and the timing check did not notice. So the SHAPE is pinned as
+     well: exactly one reading is taken in the answer path, the record stamps itself from that
+     reading, and the same value is what the event writer receives. */
+  const answerSrc = String(app.answerReschedule);
+  const clockReads = (answerSrc.match(/new Date\(\)/g) || []).length;
+  c.check('the answer path reads the clock ONCE, and that one reading is what both writers receive',
+    clockReads === 1
+      && /const at = new Date\(\)\.toISOString\(\);/.test(answerSrc)
+      && /r\.decidedAt = Date\.parse\(at\);/.test(answerSrc)
+      && /\r?\n {4}at\);/.test(answerSrc),
+    clockReads + ' clock reading(s) in answerReschedule');
+
+  /* Decline is the same promise in the other direction, on the timeline as well as in the record. */
+  const dRow = app.bookingTimeline(b2.id).filter(e => e.kind === 'reschedule');
+  c.check('a declined request leaves one row naming both the time refused and the time that stands',
+    dRow.length === 1 && dRow[0].note.includes(r2.date) && dRow[0].note.includes(was2.time)
+      && b2.date === was2.date && /declined/.test(dRow[0].note),
+    (dRow[0] || {}).note || 'no row');
+
+  /* A counter retires the proposal it answers rather than editing it, so the chain is readable and
+     exactly one ask is ever open. */
+  const b4 = app.BOOKINGS.find(x => x.id !== b.id && x.id !== b2.id && x.id !== b3.id);
+  b4.status = 'upcoming';
+  const was4 = { date: b4.date, time: b4.time };
+  app.state.role = 'resident';
+  app.openRescheduleRequest(b4.id);
+  app.state.rescheduleDraft.reason = 'The tank lorry comes that morning.';
+  app.submitRescheduleRequest();
+  const r4 = app.RESCHEDULE_REQUESTS.filter(x => x.bookingId === b4.id)[0];
+  c.check('an optional reason lands on the record and is shown to the other side',
+    r4.reason === 'The tank lorry comes that morning.'
+      && (app.rescheduleCard(b4).includes('The tank lorry comes')));
+  app.applyProviderIdentity(b4.providerId);
+  app.state.role = 'provider';
+  app.counterReschedule(r4.id);
+  app.state.rescheduleDraft.dayIdx = 2;
+  app.state.rescheduleDraft.timeIdx = 3;
+  app.submitRescheduleRequest();
+  const chain = app.RESCHEDULE_REQUESTS.filter(x => x.bookingId === b4.id);
+  c.check('countering supersedes the ask it answers, raises exactly one new ask, and moves nothing',
+    r4.status === 'superseded' && chain.length === 2 && chain[1].status === 'pending'
+      && chain[1].raisedBy === 'provider' && r4.raisedBy === 'resident'
+      && app.pendingReschedule(b4.id) === chain[1]
+      && b4.date === was4.date && b4.time === was4.time,
+    chain.map(x => x.raisedBy + ':' + x.status).join(' -> ') + ' | booking ' + b4.date + ' ' + b4.time);
+  c.check('the counter retires the old ask with who and when, not silently',
+    /^provider:/.test(r4.decidedBy) && typeof r4.decidedAt === 'number');
+  c.check('and countering something already answered writes nothing and re-opens nothing', (() => {
+    const before = app.RESCHEDULE_REQUESTS.filter(x => x.bookingId === b4.id).length;
+    app.state.rescheduleDraft = { bookingId: b4.id, dayIdx: 0, timeIdx: 0, reason: '', counterOf: r4.id };
+    app.submitRescheduleRequest();
+    return r4.status === 'superseded'
+      && app.RESCHEDULE_REQUESTS.filter(x => x.bookingId === b4.id).length === before
+      && !!app.state.rescheduleError;
+  })());
+
+  /* A reason left empty is stored as nothing rather than as an empty string, or the card would
+     print quotation marks around a sentence nobody wrote. Asserted on the FIRST proposal in this
+     suite, which was submitted without ever touching the field — the natural absent case, not a
+     hand-made one. */
+  c.check('a reason left empty is stored as nothing and paints no quotation marks',
+    r.reason === null && !/\u201c\u201d/.test(String(app.rescheduleRow(b)))
+      && !/\u201c\u201d/.test(String(app.rescheduleCard(b))),
+    'reason ' + JSON.stringify(r.reason));
+
+  return c;
+});
+
+/* ══ 19. the three documents, and the acceptance this device can point at ══════
+   Drafted from four statutes read in reproduction (RA 10173 §§12-13 and 16, RA 11967, RA 8792,
+   RA 7394) because the official URLs the brief names were unreachable from this machine — 403s and
+   one failed connection, recorded rather than hidden. The rule the checks hold is the one the brief
+   insists on: no invented legal fact. An entity name, an address, a privacy officer, a complaint
+   channel, a retention period and an effective date do not exist yet, so each one appears inside
+   square brackets marked NOT DECIDED, and a scan that finds a bracket without that mark, or an
+   email address outside one, fails. */
+suite('legal', async () => {
+  const c = makeChecker();
+  const app = boot();
+  const { LEGAL_DOCUMENTS, LEGAL_VERSION } = app;
+
+  c.check('three documents exist and each opens with a heading and real sections',
+    LEGAL_DOCUMENTS.length === 3 && LEGAL_DOCUMENTS.every(d =>
+      d.title && d.intro && d.sections.length >= 5 && d.sections.every(s => s.h && s.p.length)),
+    LEGAL_DOCUMENTS.map(d => d.id + ':' + d.sections.length).join(' '));
+
+  const text = LEGAL_DOCUMENTS.map(d => d.sections.map(s => s.h + ' ' + s.p.join(' ')).join(' ')).join(' ');
+  const brackets = text.match(/\[[^\]]*\]/g) || [];
+  const unmarked = brackets.filter(b => !/NOT DECIDED|currently/.test(b));
+  c.check('every unknown business fact is a bracket marked as undecided, and nothing is bracketed by accident',
+    brackets.length >= 6 && unmarked.length === 0,
+    brackets.length + ' placeholders, unmarked: ' + unmarked.join(' | '));
+  /* The specific fabrications the brief forbids: a company name, a DPO, an address, an email, a
+     date, a registration claim. Each would be a fact the business has not decided. */
+  const emailish = text.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g) || [];
+  const registrationClaim = /is registered with the National Privacy Commission|has registered with/.test(text);
+  c.check('no document invents a contact address, an officer, or a registration that has not happened',
+    emailish.length === 0 && !registrationClaim
+      && /has not registered with the National Privacy Commission/.test(text),
+    'emails found: ' + emailish.join(',') + ' | claim: ' + registrationClaim);
+
+  const drafts = LEGAL_DOCUMENTS.filter(d => /not reviewed by Philippine counsel|not legal advice|must be reviewed by qualified Philippine counsel/.test(
+    d.sections.map(s => s.h + ' ' + s.p.join(' ')).join(' ')));
+  c.check('each document tells the reader it is a draft awaiting counsel',
+    drafts.length === 3, drafts.map(d => d.id).join(',') || 'none marked as a draft');
+
+  /* Providers are merchants offering services through the platform — the owner's ruling, and the
+     choice that decides whether RA 11967's invoice and disclosure duties attach at all. It has to
+     be said in the documents, not only in the plan. */
+  const all = text.toLowerCase();
+  c.check('the documents state the merchant characterisation and the invoice duty it carries',
+    /merchants offering services through the platform/.test(all)
+      && /issues the receipt or invoice/.test(all),
+    'the merchant wording the owner ruled is missing from the documents');
+
+  /* Consent is not treated as the only lawful basis, which is the mistake the brief warns about. */
+  c.check('the Privacy Notice names the other lawful bases, not consent alone',
+    /Performance of a contract/.test(text) && /Compliance with a legal obligation/.test(text)
+      && /Legitimate interests/.test(text) && /Consent: the things you can say no to/.test(text));
+
+  /* Acceptance: unchecked by default, refused without it, versioned, and never re-asked at sign-in. */
+  /* Acceptance is asked for on the REGISTER screen, so it has to be measured there. The first
+     version read the sign-in render, where the register fields are never painted at all: the scan
+     found no `reg-terms`, concluded "not pre-ticked", and passed forever — a check that cannot fail
+     looks exactly like one that passes, and the falsifier caught it as a MISSED rather than a
+     green row. The positive control is in the same assertion: the box must be PRESENT. */
+  const loginBoot = boot();
+  loginBoot.state.view = 'login'; loginBoot.state.role = 'resident'; loginBoot.state.authMode = 'login';
+  loginBoot.render();
+  const regScreen = boot();
+  regScreen.state.view = 'login'; regScreen.state.role = 'resident';
+  regScreen.state.authMode = 'register'; regScreen.render();
+  const regHtml = regScreen._document.getElementById('screen').innerHTML;
+  const signInHtml = loginBoot._document.getElementById('screen').innerHTML;
+  c.check('the Terms box is painted, is not pre-ticked, and the document links are on the same screen',
+    /id="reg-terms"/.test(regHtml) && !/<input[^>]*id="reg-terms"[^>]*checked/.test(regHtml)
+      && /openLegalDoc\('terms'\)/.test(regHtml) && /openLegalDoc\('privacy'\)/.test(signInHtml),
+    'box present: ' + /id="reg-terms"/.test(regHtml)
+      + ' | links on register: ' + /openLegalDoc\('terms'\)/.test(regHtml)
+      + ' | links on sign-in: ' + /openLegalDoc\('privacy'\)/.test(signInHtml));
+
+  c.check('signing in is never held up by a re-acceptance the app has no reason to ask for', (() => {
+    const s = boot();
+    s.state.view = 'login'; s.state.role = 'resident'; s.state.authMode = 'login';
+    s.render();
+    s._document.getElementById('login-email').value = 'ana@demo.ph';
+    s._document.getElementById('login-pass').value = 'demo1234';
+    s.submitAuth();
+    return s.state.authMode === 'login' && !(s.state.authError || {}).terms;
+  })());
+
+  /* A request for a document that does not exist gets a refusal, not a blank panel. The two halves
+     are the door and the sheet: the opener must not arm a destination that has no record, and the
+     renderer must name the absence rather than paint an empty legal screen. */
+  const missing = boot();
+  missing.state.view = 'app'; missing.state.role = 'resident';
+  missing.openLegalDoc('nonexistent-doc');
+  c.check('an unknown document id arms nothing',
+    !missing.state.legalDoc && !missing.state.sheet,
+    'legalDoc=' + String(missing.state.legalDoc) + ' sheet=' + String(missing.state.sheet));
+  missing.state.legalDoc = 'nonexistent-doc';
+  c.check('and the sheet itself refuses rather than painting an empty legal screen',
+    /Document not found/.test(String(missing.legalDocSheet())));
+
+  /* The version travels with the record, and the sheet reports what the record actually says. */
+  const recBoot = boot();
+  recBoot.state.view = 'app'; recBoot.state.role = 'resident';
+  recBoot.state.termsAcceptances = [{ role:'resident', doc:'terms', version: LEGAL_VERSION, at: Date.now() }];
+  recBoot.state.legalDoc = 'terms';
+  const sheetHtml = String(recBoot.legalDocSheet());
+  c.check('the document names the version this device agreed to, from the record',
+    sheetHtml.includes(LEGAL_VERSION) && /This device recorded your acceptance/.test(sheetHtml),
+    sheetHtml.replace(/<[^>]*>/g, ' ').slice(0, 140));
+  const recBoot2 = boot();
+  recBoot2.state.view = 'app'; recBoot2.state.role = 'resident'; recBoot2.state.legalDoc = 'privacy';
+  c.check('and says nothing about an acceptance that was never recorded',
+    !/This device recorded your acceptance/.test(String(recBoot2.legalDocSheet())));
+
+  /* The draft banner is on every document, not only in the prose. */
+  c.check('each document opens with the draft banner, so the status is visible before the text', (() => {
+    const b = boot();
+    b.state.view = 'app'; b.state.role = 'resident';
+    return b.LEGAL_DOCUMENTS.every(d => {
+      b.state.legalDoc = d.id;
+      return /Draft — not reviewed by Philippine counsel/.test(String(b.legalDocSheet()));
+    });
+  })());
 
   return c;
 });

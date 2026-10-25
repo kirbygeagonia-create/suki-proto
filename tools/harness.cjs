@@ -95,8 +95,16 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'CREDENTIALS', 'LISTINGS'
   /* the operator's view of the pilot */
   'adminMarketplaceIntelligence', 'adminCategories', 'intelligenceStats', 'bookingsInWindow',
   'ADMIN_PRICING_WORDS', 'ADMIN_CAPABILITY_WORDS', 'ADMIN_SAFETY_WORDS',
-  'residentResults', 'residentProviderDetail', 'providerBookings', 'providerDashboard',
-  'openBookingRequest', 'submitBookingRequest', 'openProviderBooking', 'findProviderBooking'];
+  'residentResults', 'residentProviderDetail', 'providerBookings', 'providerDashboard', 'providerFSM',
+  'openBookingRequest', 'submitBookingRequest', 'openProviderBooking', 'findProviderBooking',
+  /* the reschedule flow: a proposal is a record, so the gate drives the real handlers and reads
+     the booking back rather than trusting that a button was wired. */
+  'RESCHEDULE_REQUESTS', 'RESCHEDULE_STATES', 'reschedulable', 'pendingReschedule',
+  'bookingTimeline', 'timelineRows',
+  'rescheduleBooking', 'rescheduleHistory', 'openRescheduleRequest', 'submitRescheduleRequest', 'answerReschedule',
+  'withdrawReschedule', 'counterReschedule', 'rescheduleCard', 'rescheduleRow', 'rescheduleSheet',
+  /* the three documents and the acceptance record, so the gate can drive the real register path */
+  'LEGAL_DOCUMENTS', 'LEGAL_VERSION', 'legalDoc', 'openLegalDoc', 'legalDocSheet', 'legalLinks'];
 
 function boot({ appMode = false, storage = null } = {}) {
   const src = fs.readFileSync(APP, 'utf8');

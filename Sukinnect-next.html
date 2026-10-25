@@ -5043,6 +5043,10 @@ function resetDemoData() {
    dump holds rows stamped 'Sep 10, 2026' / '2:42 PM' with no instant behind them, and
    nothing on disk can tell those from a real time — so a device holding 15 starts again
    rather than showing a log that prints an empty timestamp against every entry. */
+/* Stays at 16. A reschedule request is a new key, and a v16 dump simply has no such key — an
+   absence that is unambiguous, not a v15 dump's typed-date rows pretending to be real instants.
+   Bumping here would throw away every tester's saved bookings, edited provider profile and audit
+   rows to protect nothing. `hydrate()` reads the missing key as an empty list instead. */
 const SCHEMA_VERSION = 16;
 const STORE_KEY = 'sukinnect.snapshot.v1';
 
@@ -5165,7 +5169,11 @@ function snapshot() {
        storage, so a flag that stayed in memory alone would leave a log line saying an
        account was flagged while every screen that reads the flag said it was not. */
     adminFlagged: state.adminFlagged,
-    adminDocRequests: state.adminDocRequests
+    adminDocRequests: state.adminDocRequests,
+    /* A proposed time that vanishes on reload was never a request: the other side would answer
+       nothing, and the side that asked would see no trace of having asked. */
+    rescheduleRequests: RESCHEDULE_REQUESTS,
+    termsAcceptances: state.termsAcceptances
   };
 }
 
@@ -5210,6 +5218,20 @@ function hydrate() {
   if (Array.isArray(snap.offers) &&
       snap.offers.some(o => !o || !OFFER_STATES[o.status]))
     return { restored:false, kind:Store.kind, rejected:'an offer carries a state that does not exist' };
+  /* A reschedule request names both a booking and the side that asked, and the answer controls
+     are chosen from that side — a dump teaching the app a third party would render an accept
+     button the other side can already press. */
+  if (Array.isArray(snap.rescheduleRequests) &&
+      snap.rescheduleRequests.some(r => !r || !RESCHEDULE_STATES[r.status]
+        || (r.raisedBy !== 'resident' && r.raisedBy !== 'provider')))
+    return { restored:false, kind:Store.kind, rejected:'a reschedule request carries a state or a proposer that does not exist' };
+  /* An acceptance is a claim about this device, so a dump that names a document the app does not
+     have, or a role the app does not issue, is refused rather than shown as an agreement. */
+  if (Array.isArray(snap.termsAcceptances) &&
+      snap.termsAcceptances.some(a => !a || typeof a.version !== 'string'
+        || !['resident','provider','admin'].includes(a.role)
+        || !['terms','policy','marketing-consent'].includes(a.doc)))
+    return { restored:false, kind:Store.kind, rejected:'an acceptance names a document or a role that does not exist' };
   if (Array.isArray(snap.offers) &&
       snap.offers.some(o => o.bookingId && !snap.bookings.some(b => b.id === o.bookingId)))
     return { restored:false, kind:Store.kind, rejected:'an offer belongs to no booking' };
@@ -5235,7 +5257,8 @@ function hydrate() {
      message would still print as though it belonged to a job. */
   let orphan = null;
   [['payments', 'a payment'], ['disputes', 'a case'], ['statusEvents', 'a status line'],
-   ['notifications', 'a notification'], ['messages', 'a message']].forEach(pair => {
+   ['notifications', 'a notification'], ['messages', 'a message'],
+   ['rescheduleRequests', 'a reschedule request']].forEach(pair => {
     const rows = snap[pair[0]];
     if (!orphan && Array.isArray(rows)
         && rows.some(r => r && r.bookingId && !known(snap.bookings, r.bookingId)))
@@ -5249,6 +5272,10 @@ function hydrate() {
   replaceContents(NOTIFICATIONS, snap.notifications);
   replaceContents(DISPUTES, snap.disputes);
   if (snap.offers) replaceContents(OFFERS, snap.offers);
+  /* A proposal is a record with a state of its own, so it comes back through the same door as
+     an offer. A v16 dump has no such key, and the absence is read as an empty list — which is
+     why the schema version did not move for this feature. */
+  if (snap.rescheduleRequests) replaceContents(RESCHEDULE_REQUESTS, snap.rescheduleRequests);
   OFFERS.forEach(o => { const num = parseInt(String(o.id).replace(/[^0-9]/g, ''), 10);
                         if (!Number.isNaN(num) && num > offerSeq) offerSeq = num; });
   DISPUTES.forEach(d => { const n = parseInt(String(d.id).split('-').pop(), 10); if (!Number.isNaN(n) && n > disputeSeq) disputeSeq = n; });
@@ -5324,6 +5351,8 @@ function hydrate() {
     return { restored:false, kind:Store.kind, rejected:'a verification review carries a decision that does not exist' };
   }
   if (Array.isArray(snap.adminDocRequests)) state.adminDocRequests = snap.adminDocRequests.slice();
+  if (Array.isArray(snap.termsAcceptances)) state.termsAcceptances = snap.termsAcceptances.slice();
+  if (Array.isArray(snap.rescheduleRequests)) replaceContents(RESCHEDULE_REQUESTS, snap.rescheduleRequests);
   /* The typed-and-told-it-was-saved fields, held to the door like everything else. Each
      rule is the shape a screen reads without checking: an item with no type prints
      "undefined — Paso", a note that is not a string paints [object Object], and a read
@@ -5445,6 +5474,9 @@ let state = {
   activeChatBookingId:null,
   // Per-thread read markers: the unread dot means messages, not job status.
   threadRead:{},
+  /* Which document version this device agreed to, in which role, when. A local record of a real
+     action on this device — not a server-side audit trail, and the screen that shows it says so. */
+  termsAcceptances:[],
   isChatOpen:false,
   conciergePhotoAttached: false,
   conciergePhotoName: '',
@@ -6229,7 +6261,8 @@ function providerFiltersSheet(){
         ${brgys.map(b => filterOption(f.barangay === b, 'map-pin', b, `toggleProviderFilter('barangay','${b}')`)).join('')}
       </div>
       <div class="sheet-group">
-        <div class="sheet-label">Arrives within</div>
+        <div class="sheet-label">Can start within</div>
+        <div style="font-size:var(--t-caption); color:var(--ink-soft); margin-bottom:6px;">How soon a provider can begin a job, counted from now. Nobody is on the way yet — you agree a time before anyone comes.</div>
         ${WAIT_WINDOWS.map(m => filterOption(f.maxWait === m, 'clock', m + ' minutes', `toggleProviderFilter('maxWait',${m})`)).join('')}
       </div>
     </div>
@@ -6239,7 +6272,7 @@ function providerFiltersSheet(){
     </div>`;
 }
 
-const SHEET_LABELS = { providerFilters:'Filter providers', bookingRequest:'Book an appointment', raiseCase:'Raise a case', profileSection:'Profile section', makeOffer:'Make an offer', finaliseProduce:'Record the actual quantity' };
+const SHEET_LABELS = { providerFilters:'Filter providers', bookingRequest:'Book an appointment', reschedule:'Propose a new time', legalDoc:'Legal document', raiseCase:'Raise a case', profileSection:'Profile section', makeOffer:'Make an offer', finaliseProduce:'Record the actual quantity' };
 
 const REQUEST_TIMES = ['8:00 AM','10:00 AM','1:00 PM','3:00 PM','5:00 PM'];
 
@@ -6390,7 +6423,7 @@ function openProviderDetail(providerId, fromTab){
     /* Every provider was pinned to the same barangay. The card names a person;
        the map has to show where that person works. */
     mountMap('leafletmap', [p.lat, p.lng], 14, p.name + ' \u00b7 ' + p.service,
-      ['Brgy. ' + p.barangay + ' · about ' + p.distanceKm + ' km from you',
+      ['Brgy. ' + p.barangay + ' · about ' + p.distanceKm + ' km away (sample figure, not measured from you)',
        'They travel up to ' + (p.serviceRadius || '5 km') + ' from there.']);
   }, 100);
 }
@@ -6746,9 +6779,14 @@ function timelineRows(b) {
   return steps.map((e, i) => {
     const last = i === steps.length - 1;
     const when = agoText(e.at);
+    /* A reschedule is not a change of state: the job stays "Accepted" and only its day and hour
+       move. Printed under the status label it would read as the same step twice — the repeated
+       indicator §7 forbids — so these rows say what actually moved, from the note the record
+       carries. */
+    const what = e.kind === 'reschedule' ? esc(e.note) : label(e.to);
     return last
-      ? `<div style="font-weight:700; color:var(--deep); display:flex; align-items:center; gap:4px;">${ic('clock', 12)} ${label(e.to)} <span style="color:var(--ink-soft); font-weight:600;">&middot; ${when}</span></div>`
-      : `<div style="display:flex; align-items:center; gap:4px;">${ic('check', 12)} ${label(e.to)} <span style="color:var(--ink-soft);">&middot; ${when}</span></div>`;
+      ? `<div style="font-weight:700; color:var(--deep); display:flex; align-items:center; gap:4px;">${ic('clock', 12)} ${what} <span style="color:var(--ink-soft); font-weight:600;">&middot; ${when}</span></div>`
+      : `<div style="display:flex; align-items:center; gap:4px;">${ic('check', 12)} ${what} <span style="color:var(--ink-soft);">&middot; ${when}</span></div>`;
   }).join('');
 }
 /* What walking away costs, told before the button rather than after. */
@@ -6770,6 +6808,271 @@ function cancelRow(b) {
           ${late ? 'Cancel this booking' : 'Withdraw this request'}
         </button>
       </div>`;
+}
+
+/* ---- asking for a different time -------------------------------------------
+   A household with a conflict after an appointment was agreed had exactly one door: cancel,
+   and the record itself names what that costs. Moving a job is what people actually do, so a
+   reschedule is its own record rather than a quiet mutation of the booking. One side proposes
+   a day and an hour, the other accepts or declines, and nothing about the agreed time changes
+   in between — which is the only claim the success message is allowed to make, and the gate
+   checks it by refusing the accept path and reading the booking back. */
+const RESCHEDULE_STATES = {
+  pending:     { label:'Waiting for an answer', tone:'held' },
+  accepted:    { label:'Accepted',              tone:'done' },
+  declined:    { label:'Declined',              tone:'gone' },
+  withdrawn:   { label:'Withdrawn',             tone:'gone' },
+  /* A counter does not delete the proposal it answers: the chain of who asked for what stays
+     readable, and the newest pending row is the one with buttons beside it. */
+  superseded:  { label:'Replaced by a new proposal', tone:'gone' }
+};
+/* Seeded empty on purpose. A sample request would be a written record of an agreement nobody
+   proposed (§86), and every step of this flow is reachable by tapping, so it needs no prop. */
+const RESCHEDULE_REQUESTS = [];
+
+/* Only an accepted job that has not started can move. A request nobody has answered has no
+   agreed time to change, and once a provider is on the way or at the door a new hour is a
+   no-show waiting to happen, so neither is offered. */
+function reschedulable(b){ return !!b && b.status === 'upcoming'; }
+function rescheduleBooking(bookingId){ return BOOKINGS.find(b => b.id === bookingId) || null; }
+function rescheduleHistory(bookingId){ return RESCHEDULE_REQUESTS.filter(r => r.bookingId === bookingId); }
+function pendingReschedule(bookingId){
+  return RESCHEDULE_REQUESTS.find(r => r.bookingId === bookingId && r.status === 'pending') || null;
+}
+/* Who is reading the thread of a request: the proposing side gets a status line, the answering
+   side gets the decision. */
+function rescheduleActor(){
+  return state.role === 'provider'
+    ? { side:'provider', label:'the resident' }
+    : { side:'resident', label:'the service professional' };
+}
+
+function openRescheduleRequest(bookingId){
+  const b = rescheduleBooking(bookingId);
+  if (!b) { showToast('No booking carries that id'); return; }
+  if (!reschedulable(b)) {
+    showToast('This job is not at a stage where a time can be proposed'); return;
+  }
+  if (pendingReschedule(b.id)) {
+    showToast('A reschedule request for this job is already waiting for an answer'); return;
+  }
+  state.rescheduleDraft = { bookingId: b.id, dayIdx: 0, timeIdx: 1, reason: '' };
+  state.rescheduleError = null;
+  openSheet('reschedule');
+}
+/* Answering with a different time is a third button, not a fourth state of the old request: the
+   proposal being countered is marked superseded and a new one is raised by whoever is answering,
+   so the chain of asks stays readable instead of being edited in place. */
+function counterReschedule(requestId){
+  const r = RESCHEDULE_REQUESTS.find(x => x.id === requestId);
+  if (!r || r.status !== 'pending') { showToast('That request has already been answered'); return; }
+  const b = rescheduleBooking(r.bookingId);
+  if (!b || !reschedulable(b)) {
+    showToast('This job is no longer at a stage where a time can be changed'); return;
+  }
+  const actor = rescheduleActor();
+  if (actor.side === r.raisedBy) { showToast('Only the other side can counter this request'); return; }
+  state.rescheduleDraft = { bookingId: b.id, dayIdx: 1, timeIdx: 1, reason: '', counterOf: r.id };
+  state.rescheduleError = null;
+  openSheet('reschedule');
+}
+function rescheduleReason(el){
+  if (state.rescheduleDraft) state.rescheduleDraft.reason = el.value;
+}
+function pickReschedule(key, idx){
+  if (!state.rescheduleDraft) return;
+  state.rescheduleDraft[key] = idx;
+  render();
+}
+function rescheduleSheet(){
+  const d = state.rescheduleDraft;
+  const b = d && rescheduleBooking(d.bookingId);
+  if (!b || !reschedulable(b)) {
+    return `<div class="sheet-head"><div style="min-width:0;"><div class="sheet-title">Nothing to move</div>
+      <div class="sheet-sub">This job is no longer at a stage where a time can be proposed.</div></div>
+      <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close">${ic("x",15)}</button></div>`;
+  }
+  const { days, times, dayIdx, timeIdx } = requestChoices(d);
+  const who = rescheduleActor();
+  return `
+    <div class="sheet-head">
+      <div style="min-width:0;">
+        <h2 class="sheet-title">${d.counterOf ? 'Counter with a different time' : 'Propose a new time'}</h2>
+        <div class="sheet-sub">${esc(b.summary)} — currently ${esc(b.date)} at ${esc(b.time)}.</div>
+      </div>
+      <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close">${ic("x",15)}</button>
+    </div>
+    <div class="sheet-body">
+      <div class="sheet-group">
+        <div class="sheet-label">Day</div>
+        ${days.map((day, i) => requestPick(dayIdx === i, day.label + (day.label === day.date ? '' : ' · ' + day.date), `pickReschedule('dayIdx',${i})`)).join('')}
+      </div>
+      <div class="sheet-group">
+        <div class="sheet-label">Time</div>
+        ${times.map((t, i) => requestPick(timeIdx === i, t, `pickReschedule('timeIdx',${i})`)).join('')}
+      </div>
+      <div class="sheet-group">
+        <label class="sheet-label" style="display:block;" for="reschedule-reason">Why, if you want to say so</label>
+        <textarea id="reschedule-reason" class="req-field" rows="2" oninput="rescheduleReason(this)" placeholder="e.g. The water tank delivery arrives that morning.">${esc(d.reason || '')}</textarea>
+        <div style="font-size:var(--t-caption); color:var(--mist); margin-top:4px;">Optional, and only ever sent to the other person on this booking.</div>
+      </div>
+      <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5;">
+        ${ic('clock', 12)} Sending this does not change ${esc(b.date)} at ${esc(b.time)}. ${who.side === 'provider' ? 'The resident' : 'The provider'} accepts or declines, and the booking moves only if they accept.
+      </div>
+      ${state.rescheduleError ? `<div class="inline-error" role="alert">${esc(state.rescheduleError)}</div>` : ''}
+    </div>
+    <div class="sheet-foot">
+      <button type="button" class="btn secondary" style="flex:1; border-radius:12px;" onclick="closeSheet()">Keep ${esc(b.time)}</button>
+      <button type="button" class="btn" style="flex:1.3; border-radius:12px;" onclick="submitRescheduleRequest()">Send the request</button>
+    </div>`;
+}
+
+function submitRescheduleRequest(){
+  const d = state.rescheduleDraft;
+  const b = d && rescheduleBooking(d.bookingId);
+  if (!b || !reschedulable(b)) {
+    state.rescheduleError = 'This job is no longer at a stage where a time can be proposed. Nothing was sent.';
+    render(); return;
+  }
+  if (!d.counterOf && pendingReschedule(b.id)) {
+    state.rescheduleError = 'A request for this job is already waiting for an answer. One at a time keeps the decision honest.';
+    render(); return;
+  }
+  const { day, time } = requestChoices(d);
+  if (!day || !time) { state.rescheduleError = 'Choose both a day and a time.'; render(); return; }
+  /* A counter retires the request it answers in the same breath it raises its own, so there is
+     never a moment where two proposals on one booking both claim to be open. */
+  const countered = d.counterOf ? RESCHEDULE_REQUESTS.find(x => x.id === d.counterOf) : null;
+  if (countered && countered.status === 'pending') {
+    countered.status = 'superseded';
+    countered.decidedAt = Date.now();
+    countered.decidedBy = rescheduleActor().side + ':'
+      + (rescheduleActor().side === 'provider' ? CURRENT_PROVIDER_ID : CURRENT_CUSTOMER_ID);
+  } else if (d.counterOf) {
+    /* Countering something already answered: retire nothing. The branch that used to sit here
+       restored the request to 'pending' on its way out, which re-opened a proposal the other side
+       had already decided — an error path that changed the record it was refusing to write. */
+    state.rescheduleError = 'That proposal has already been answered, so nothing was sent.';
+    render(); return;
+  }
+  RESCHEDULE_REQUESTS.push({
+    id: 'rs' + RESCHEDULE_REQUESTS.length + '-' + Date.now(),
+    bookingId: b.id,
+    raisedBy: rescheduleActor().side,
+    date: day.date, time,
+    reason: (d.reason || '').trim() || null,
+    status: 'pending',
+    createdAt: Date.now(), decidedAt: null, decidedBy: null
+  });
+  const saved = persist();
+  state.sheet = null; state.rescheduleDraft = null; state.rescheduleError = null;
+  render();
+  showToast(saved
+    ? 'Reschedule request sent for ' + day.date + ' at ' + time + '. Your booking stays at ' + b.date + ' at ' + b.time + ' until the other side answers.'
+    : 'Reschedule request sent for this session only - this device could not store it.');
+}
+
+/* The decision is the only moment the booking itself changes, and only in these two
+   fields. Money, status and payment are untouched, so an accepted move cannot quietly
+   re-open a closed job or re-price an agreed one. */
+function answerReschedule(requestId, decision){
+  const r = RESCHEDULE_REQUESTS.find(x => x.id === requestId);
+  if (!r || r.status !== 'pending') { showToast('That request has already been answered'); return; }
+  const b = rescheduleBooking(r.bookingId);
+  if (!b || !reschedulable(b)) {
+    showToast('This job is no longer at a stage where a time can be changed, so it stays as it is');
+    return;
+  }
+  const actor = rescheduleActor();
+  if (actor.side === r.raisedBy) {
+    showToast('Only the other side can answer this request'); return;
+  }
+  if (decision === 'accepted') { b.date = r.date; b.time = r.time; }
+  else if (decision !== 'declined') return;
+  /* One clock reading, handed to both representations of this act. The request record and the
+     booking's timeline are read on different screens, and §83 already learned what two readings of
+     the same press look like: identical on a fast machine, divergent on a slow one, and impossible
+     to tell apart afterwards. `decidedAt` keeps epoch milliseconds because that is what the other
+     state records on this device use, and it is derived from the same instant the event carries. */
+  const at = new Date().toISOString();
+  r.status = decision;
+  r.decidedAt = Date.parse(at);
+  r.decidedBy = actor.side + ':' + (actor.side === 'provider' ? CURRENT_PROVIDER_ID : CURRENT_CUSTOMER_ID);
+  const event = recordStatusEvent(b, b.status, b.status,
+    { role: actor.side, id: actor.side === 'provider' ? CURRENT_PROVIDER_ID : CURRENT_CUSTOMER_ID },
+    decision === 'accepted'
+      ? 'Moved to ' + r.date + ' at ' + r.time
+      : 'Request to move to ' + r.date + ' at ' + r.time + ' declined - the booking stays ' + b.date + ' at ' + b.time,
+    at);
+  event.kind = 'reschedule';
+  persist();
+  render();
+  showToast(decision === 'accepted'
+    ? 'New time agreed: ' + b.date + ' at ' + b.time + '.'
+    : 'Request declined. The booking stays at ' + b.date + ' at ' + b.time + '.');
+}
+
+function withdrawReschedule(requestId){
+  const r = RESCHEDULE_REQUESTS.find(x => x.id === requestId);
+  if (!r || r.status !== 'pending') { showToast('That request is no longer open'); return; }
+  if (rescheduleActor().side !== r.raisedBy) { showToast('Only the side that asked can withdraw it'); return; }
+  r.status = 'withdrawn';
+  r.decidedAt = Date.now();
+  r.decidedBy = r.raisedBy + ':' + (r.raisedBy === 'provider' ? CURRENT_PROVIDER_ID : CURRENT_CUSTOMER_ID);
+  const b = rescheduleBooking(r.bookingId);
+  persist(); render();
+  showToast('Request withdrawn.' + (b ? ' The booking stays at ' + b.date + ' at ' + b.time + '.' : ''));
+}
+
+/* The card both parties see. One sentence per request, always about the record, and the
+   answer controls only for the side that did not propose. */
+function rescheduleCard(b){
+  const rows = rescheduleHistory(b.id);
+  if (!rows.length) return '';
+  const actor = rescheduleActor();
+  return `<div class="card" style="border:1px solid var(--line);">
+    <div class="row" style="margin-bottom:6px;">
+      <b class="card-title">Reschedule requests</b>
+      <span class="chip">${rows.length} on this job</span>
+    </div>
+    ${rows.map(r => `<div style="padding:8px 0; border-top:1px solid var(--line); min-width:0;">
+      <div style="font-size:var(--t-body-sm); font-weight:700;">${esc(r.date)} at ${esc(r.time)}</div>
+      <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">
+        ${r.raisedBy === actor.side ? 'You asked' : (r.raisedBy === 'provider' ? 'The provider asked' : 'The resident asked')} · ${RESCHEDULE_STATES[r.status].label}${r.decidedAt ? ' · ' + agoText(new Date(r.decidedAt).toISOString()) : ''}
+      </div>
+      ${r.reason ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:4px; line-height:1.5;">“${esc(r.reason)}”</div>` : ''}
+      ${r.status === 'pending' && r.raisedBy !== actor.side ? `
+        <div style="display:flex; gap:6px; margin-top:8px;">
+          <button type="button" class="btn sm" style="flex:1; border-radius:10px;" onclick="answerReschedule('${r.id}','accepted')">Accept the new time</button>
+          <button type="button" class="btn sm secondary" style="flex:1; border-radius:10px;" onclick="answerReschedule('${r.id}','declined')">Decline</button>
+        </div>
+        <button type="button" class="btn sm secondary" style="width:100%; margin-top:6px; border-radius:10px;" onclick="counterReschedule('${r.id}')">Counter with another time</button>` : ''}
+      ${r.status === 'pending' && r.raisedBy === actor.side ? `
+        <button type="button" class="btn sm secondary" style="width:100%; margin-top:8px; border-radius:10px;" onclick="withdrawReschedule('${r.id}')">Withdraw this request</button>` : ''}
+    </div>`).join('')}
+    <div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px;">
+      The booking still reads ${esc(b.date)} at ${esc(b.time)}. A proposed time becomes the appointment only when the other side accepts it.
+    </div>
+  </div>`;
+}
+
+/* The resident's door to the flow, sitting above the cancel row so moving a job is
+   offered before dropping one is. */
+function rescheduleRow(b){
+  if (!reschedulable(b)) return '';
+  const waiting = pendingReschedule(b.id);
+  if (waiting) {
+    return `<div style="margin-top:12px;">
+      <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5;">
+        ${ic('clock', 12)} A request to move this job to <b>${esc(waiting.date)} at ${esc(waiting.time)}</b> is waiting for ${rescheduleActor().label}. Your time is unchanged until they answer.
+      </div></div>`;
+  }
+  return `<div style="margin-top:12px;">
+    <div style="font-size:var(--t-caption); color:var(--mist); line-height:1.5; margin-bottom:8px;">
+      Something came up? Propose another time instead of cancelling — the agreed hour stays as it is until the other side answers.
+    </div>
+    <button type="button" class="btn sm secondary" style="width:100%; border-radius:10px;" onclick="openRescheduleRequest('${b.id}')">Request a new time</button>
+  </div>`;
 }
 
 /* ---- raising a case --------------------------------------------------------
@@ -7117,7 +7420,8 @@ function statusCard(b) {
             ${steps}
           </div>
           ${next ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:10px;">Next: ${next}.</div>` : ''}
-        </div>`;
+          ${rescheduleRow(b)}
+        </div>${rescheduleCard(b)}`;
 }
 function bookingRequestSheet(){
   const p = state.selectedProvider;
@@ -7333,9 +7637,11 @@ function cancelBookingRequest(id){
 function sheetHTML(){
   if(state.sheet === 'providerFilters') return providerFiltersSheet();
   if(state.sheet === 'bookingRequest') return bookingRequestSheet();
+  if(state.sheet === 'reschedule') return rescheduleSheet();
   if(state.sheet === 'makeOffer') return makeOfferSheet();
   if(state.sheet === 'finaliseProduce') return finaliseProduceSheet();
   if(state.sheet === 'raiseCase') return raiseCaseSheet();
+  if(state.sheet === 'legalDoc') return legalDocSheet();
   if(state.sheet === 'profileSection') return profileSectionSheet();
   return '';
 }
@@ -7754,6 +8060,154 @@ const AUTH_ROLE_LABEL = { resident:'Resident', provider:'Provider', admin:'Admin
    takes you: a home, a wrench, a shield. */
 const AUTH_ROLE_ICON = { resident:'home', provider:'wrench', admin:'shield' };
 
+/* ---- the documents a person agrees to --------------------------------------
+   Three documents, drafted for this prototype and marked as drafts. Every business fact that
+   does not exist yet — entity name, registered address, the person answerable for privacy,
+   the complaint channel, retention periods, an effective date — is a bracketed placeholder
+   rather than an invention, because a made-up DPO name in a privacy notice is worse than an
+   empty one. The statutes named here were read in full-text reproduction, not from memory:
+   RA 10173 sections 12, 13 and 16 (consent is ONE of six grounds, not the only one), RA 11967
+   (which covers marketplaces and excludes pure consumer-to-consumer deals, and puts the invoice
+   duty on the merchant), RA 8792 (electronic records are valid) and RA 7394 (which reaches
+   services, not only goods). Providers are described as merchants offering services through
+   the platform — the owner's ruling of 2026-10-25 — which is the characterisation that attaches
+   those duties, and it is flagged for counsel rather than presented as settled.
+   None of this is legal advice and none of it has been reviewed by a Philippine lawyer. */
+const LEGAL_VERSION = 'draft-1';
+const LEGAL_DOCUMENTS = [
+  { id: 'terms', title: 'Terms & Conditions', label: 'Terms & Conditions',
+    intro: 'What you and Sukinnect each promise when a job is found, booked and recorded.',
+    sections: [
+      { h: 'What Sukinnect is', p: [
+        'Sukinnect is a marketplace where residents of a municipality find local service professionals, compare them, request work, and keep a record of what was agreed.',
+        'This build is a prototype. It runs on your device, it does not create real accounts, and it does not move money. Nothing here binds a real company until [legal entity name — NOT DECIDED] is registered and its details are published.' ] },
+      { h: 'Your account and your role', p: [
+        'You choose whether you are looking for a service (Resident) or offering one (Service Professional). One account does not act as both at the same time in this build.',
+        'Keep your contact details current: the person you book needs to reach you about the job.' ] },
+      { h: 'Listings are the provider’s own words', p: [
+        'A service professional publishes their trade, rate, service area and availability. Providers are treated as merchants offering services through the platform, not as Sukinnect employees.',
+        'Sukinnect shows verification information it holds on record. It does not guarantee anybody’s work.' ] },
+      { h: 'A request is not yet a job', p: [
+        'Sending a request asks; nothing is agreed until the provider accepts.',
+        'Where a provider must look before pricing, they send you an offer, and the price becomes agreed only when you answer it. Where a price is shown as "from", it is an estimate — the final scope and price are agreed before work starts.' ] },
+      { h: 'Changing your mind: reschedule and cancel', p: [
+        'If something comes up after a time is agreed, you can propose a new time. Your current day and hour stay as they are unless the other side accepts your proposal.',
+        'Cancelling is always possible from the booking, and the booking screen tells you what cancelling costs at that stage, because the provider may already have held the slot for you.' ] },
+      { h: 'Paying', p: [
+        'The prototype shows two routes: cash on the day, or a licensed payment partner in future.',
+        'There is no Sukinnect wallet and no stored balance. In a real deployment the licensed partner, not Sukinnect, holds and moves the money, and the provider as merchant issues the receipt or invoice for the service they delivered.' ] },
+      { h: 'Reviews and records', p: [
+        'After a job is completed you can rate and review it. Reviews must be about work you actually booked.',
+        'A rating is an average of the reviews on record, not a promise about the next job.' ] },
+      { h: 'If something goes wrong', p: [
+        'You or the provider can raise a case on the booking. It puts the booking, the messages, the evidence and the timeline in front of a human reviewer and marks the job "Under review".',
+        'The platform does not decide fault automatically, and no screen pretends otherwise.' ] },
+      { h: 'Conduct that gets an account removed', p: [
+        'Fake identity or documents. Listing work you cannot do. Contacting people outside a booking to harass them. Taking payment for work you do not intend to do. Asking either side to pay away from the record.' ] },
+      { h: 'The limits of this build', p: [
+        'Nothing here means a real service was performed, a real payment was taken, or a real document was verified by a real officer. The records you see are the sample records of a demonstration.',
+        '[Effective date — NOT DECIDED] · Draft, not reviewed by Philippine counsel.' ] } ] },
+  { id: 'policy', title: 'Sukinnect Policy', label: 'Community & Provider Standards',
+    intro: 'The house rules for listing, accepting and doing work on Sukinnect.',
+    sections: [
+      { h: 'Say what you can actually do', p: [
+        'Titles, rates and photos describe work you have done. A rate shown "from ₱X" is a starting point, not a fixed price.' ] },
+      { h: 'Keep credentials current', p: [
+        'Verification holds the documents a reviewer asked for and shows each one’s status. An expired document is shown as expired to everyone, including the administrator’s queue.',
+        'Renew it. Do not ask anyone to overlook it.' ] },
+      { h: 'Serve the area you declared', p: [
+        'Discovery filters on the barangays recorded under your service area, not on the radius text you typed. If you cannot reach a household, decline the request.' ] },
+      { h: 'Answer, then show up', p: [
+        'Requests expect an answer, and accepting holds a slot.',
+        'If your day changes, propose a new time instead of disappearing — a proposal does not move the appointment until the other side agrees it.' ] },
+      { h: 'Talk about the job', p: [
+        'Messages exist to coordinate work: access, scope, arrival. Keep contact details to the booking. This is not a social feed.' ] },
+      { h: 'Respect the household', p: [
+        'You may be invited into someone’s home. Arrive at the agreed time, explain what you find before starting work that was not agreed, and leave the place as you found it.' ] },
+      { h: 'Money stays on the record', p: [
+        'Do not ask for payment outside the booking record. The record is what protects a customer’s complaint and a provider’s claim of payment.' ] },
+      { h: 'How enforcement works in this build', p: [
+        'An administrator can request missing documents, decline an application, or suspend a provider account. Each decision is written with who decided and when.',
+        'There is no automatic suspension and no appeal queue yet — [appeal route — NOT DECIDED].' ] },
+      { h: 'This policy is a draft', p: [
+        'It describes how this prototype behaves, not how a launched platform is regulated. It is not legal advice and has not been reviewed by Philippine counsel; the standards above must be confirmed with the enforcement process a real operation can actually staff.' ] } ] },
+  { id: 'privacy', title: 'Privacy Notice', label: 'Privacy Notice',
+    intro: 'What this prototype holds about you, who can see it, and what you can ask for.',
+    sections: [
+      { h: 'What is collected, and why it is small', p: [
+        'For a resident: name, contact number, email, barangay and service addresses, the text and the file names of photos you attach, booking requests and messages, ratings, notification settings, and payment-method labels.',
+        'For a provider: professional profile, trade, rates, declared service area, working hours, credentials with their expiry dates, payout account details, and job records.' ] },
+      { h: 'What this prototype does not do', p: [
+        'It does not read your photos. Attaching a picture keeps its name, never the picture, so a provider sees the filename you gave it.',
+        'It does not track where you are. It does not connect to a Sukinnect server: every record stays in this device’s own storage, and clearing the app’s site data deletes it. There is no analytics SDK and no advertising tracker.' ] },
+      { h: 'The one exception, stated plainly', p: [
+        'Map tiles come from [tile provider — currently OpenStreetMap map tiles]. When your device has a network, that provider sees your device’s IP address and the coordinates of the area being drawn.',
+        'Sukinnect cannot change that while live tiles are shown. It is a data-sharing question the pilot must settle with counsel before launch.' ] },
+      { h: 'Who else can see your information', p: [
+        'The provider or customer on the other side of your booking sees what the job needs: your name, the service address only once a request is accepted, a contact number for that job, and your messages.',
+        'Other residents never see your address, phone, email or documents. An administrator sees provider documents and case evidence because reviewing them is the job, and each decision on those records is written to an audit trail.' ] },
+      { h: 'The legal basis for each processing (RA 10173, sections 12 and 13)', p: [
+        'Performance of a contract: booking, scheduling, coordinating and recording the service.',
+        'Compliance with a legal obligation: transaction records and any report the law requires.',
+        'Legitimate interests of the platform: keeping the marketplace honest — verification, refusing fraudulent accounts, dispute review.',
+        'Consent: the things you can say no to without losing the service, such as optional notifications. Accepting the Terms is not the same as consenting to optional processing, and no hidden switch collects either.' ] },
+      { h: 'Sensitive information', p: [
+        'Government IDs, clearances and credential documents are handled as sensitive personal information: shown to the reviewing administrator, summarised as a badge or a status for everyone else, and never painted onto a public profile.' ] },
+      { h: 'How long it is kept', p: [
+        'In this build: until you clear the site data or reset the demo, on this device only.',
+        'For a real deployment, retention periods for bookings, messages, credentials, disputes and payment records must be set by counsel — [retention periods — NOT DECIDED].' ] },
+      { h: 'Your rights, and how to use them today', p: [
+        'Under RA 10173 section 16 you have the right to be informed, to object, to access, to correct, to suspend or withdraw, to seek indemnity where there are damages, and to complain to the National Privacy Commission.',
+        'In this build you can already exercise access and correction yourself: your profile and your records are on the screens they belong to, and you can edit or delete what you typed. For anything you cannot reach on screen, use the contact below.' ] },
+      { h: 'Who to contact', p: [
+        '[Data Protection Officer or responsible person — NOT DECIDED] · [complaint email — NOT DECIDED] · [registered address — NOT DECIDED].',
+        'Sukinnect has not registered with the National Privacy Commission, and nothing here claims that it has.' ] },
+      { h: 'This notice is a draft', p: [
+        'It was written for a prototype. It is not legal advice, and it must be reviewed by qualified Philippine counsel and a privacy professional before any public launch.' ] } ] }
+];
+function legalDoc(id){ return LEGAL_DOCUMENTS.find(d => d.id === id) || null; }
+function openLegalDoc(id){
+  const d = legalDoc(id);
+  if (!d) { showToast('No document carries that id'); return; }
+  state.legalDoc = id;
+  openSheet('legalDoc');
+}
+function legalDocSheet(){
+  const d = legalDoc(state.legalDoc);
+  if (!d) {
+    return `<div class="sheet-head"><div style="min-width:0;"><h2 class="sheet-title">Document not found</h2>
+      <div class="sheet-sub">No legal document on this device carries that id.</div></div>
+      <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close">${ic("x",15)}</button></div>`;
+  }
+  const accepted = (state.termsAcceptances || []).filter(a => a.doc === d.id);
+  return `
+    <div class="sheet-head">
+      <div style="min-width:0;">
+        <h2 class="sheet-title">${esc(d.title)}</h2>
+        <div class="sheet-sub">${esc(d.intro)}</div>
+      </div>
+      <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close">${ic("x",15)}</button>
+    </div>
+    <div class="sheet-body">
+      <div style="font-size:var(--t-caption); color:var(--warning-ink); background:var(--warning-100); border-radius:12px; padding:10px 12px; line-height:1.5; margin-bottom:10px;">
+        ${ic('alert-triangle',12)} <b>Draft — not reviewed by Philippine counsel.</b> Placeholders in square brackets are facts the business has not decided yet; none of them is a claim.
+      </div>
+      ${accepted.length ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin-bottom:10px;">${ic('check',12)} This device recorded your acceptance of the ${esc(d.label)} ${esc(LEGAL_VERSION)} on ${esc(shortDate(new Date(accepted[accepted.length-1].at)))}.</div>` : ''}
+      ${d.sections.map((s, i) => `<div style="margin-bottom:12px;">
+        <div style="font-weight:800; font-size:var(--t-body-sm); margin-bottom:4px;">${i+1}. ${esc(s.h)}</div>
+        ${s.p.map(par => `<p style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.55; margin:0 0 6px;">${esc(par)}</p>`).join('')}
+      </div>`).join('')}
+    </div>
+    <div class="sheet-foot">
+      <button type="button" class="btn" style="flex:1; border-radius:12px;" onclick="closeSheet()">Close</button>
+    </div>`;
+}
+function legalLinks(){
+  return `<div style="display:flex; flex-wrap:wrap; gap:4px 14px; justify-content:center; margin-top:14px;">
+    ${LEGAL_DOCUMENTS.map(d => `<button type="button" class="auth-switch" style="font-size:var(--t-caption);" onclick="openLegalDoc('${d.id}')">${esc(d.label)}</button>`).join('')}
+  </div>`;
+}
+
 function loginHTML(){
   /* Admin is a route into the operations console, not a kind of account, so on
      that route the card renders sign-in fields whatever mode was left behind —
@@ -7826,12 +8280,27 @@ function loginHTML(){
           </div>
           ${err.brgy ? `<div class="inline-error auth-error" id="err-brgy" role="alert">${ic('alert-triangle',13)} ${err.brgy}</div>` : ''}
         </div>
-        ` : ''}
+        <div class="auth-field">
+          <label class="row" style="align-items:flex-start; gap:10px; font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; min-height:var(--tap);">
+            <input type="checkbox" id="reg-terms" style="margin-top:3px; width:20px; height:20px; flex-shrink:0;" ${err.terms ? 'aria-invalid="true" aria-describedby="err-terms"' : ''}>
+            <span>I have read and accept the <b>Terms &amp; Conditions</b> and the <b>Sukinnect Policy</b>.
+            <button type="button" class="auth-switch" style="font-size:var(--t-caption);" onclick="openLegalDoc('terms')">Read them now</button></span>
+          </label>
+          ${err.terms ? `<div class="inline-error auth-error" id="err-terms" role="alert">${ic('alert-triangle',13)} ${err.terms}</div>` : ''}
+        </div>
+        <div class="auth-field">
+          <label class="row" style="align-items:flex-start; gap:10px; font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; min-height:var(--tap);">
+            <input type="checkbox" id="reg-marketing" style="margin-top:3px; width:20px; height:20px; flex-shrink:0;">
+            <span>Optional: tell me about new services and offers in my area. Saying no does not affect booking.</span>
+          </label>
+        </div>` : ''}
 
         ${state.role === 'provider' && !isRegister ? `<div class="auth-hint">
           Two demo pros to sign in as: <b>ramil@demo.ph</b> for plumbing, or
           <b>erning@demo.ph</b> for the Fruit Harvest &amp; Buy pilot. Same app, different work.</div>` : ''}
         ${isRegister ? '' : `<button type="button" class="auth-forgot" onclick="showToast('Password reset is not part of this prototype.')">Forgot password?</button>`}
+
+        ${legalLinks()}
 
         <div class="auth-field" style="margin-bottom:0;">
           <button class="btn" id="login-btn">
@@ -7921,11 +8390,17 @@ function submitAuth(){
   if (!value('login-pass')) errors.pass = 'Enter your password.';
   if (isRegister && !value('reg-name')) errors.name = 'Tell us who to greet.';
   if (isRegister && !value('reg-brgy')) errors.brgy = 'Your barangay decides who is nearby.';
+  // An unchecked box is a refusal, not a default. It is never pre-ticked, and the
+  // optional consent below it is a separate yes that changes nothing about booking.
+  const termsBox = document.getElementById('reg-terms');
+  if (isRegister && !(termsBox && termsBox.checked)) {
+    errors.terms = 'Accept the Terms & Conditions and Sukinnect Policy to create an account. You can read them first — the link opens the whole document.';
+  }
   if (Object.keys(errors).length) {
     state.authError = errors;
     render();
     // Focus the first field, in reading order, that still needs the reader (49, 73).
-    const invalid = [['reg-name','name'], ['login-email','email'], ['reg-brgy','brgy'], ['login-pass','pass']]
+    const invalid = [['reg-name','name'], ['login-email','email'], ['reg-brgy','brgy'], ['reg-terms','terms'], ['login-pass','pass']]
       .find(pair => errors[pair[1]]);
     if (invalid) document.getElementById(invalid[0]).focus();
     return;
@@ -7950,7 +8425,7 @@ function submitAuth(){
         : 'Signed in as ' + state.providerProfileData.name + ' — the fruit pilot');
     } else {
       showToast(isRegister
-        ? 'Prototype build - this account is not stored, and bookings use the demo household address'
+        ? 'Prototype build - the account itself is not stored. Only your acceptance of the Terms is kept on this device, and bookings use the demo household address'
         : 'Signed in to the demo environment');
     }
     /* The register form asked for a name and a barangay, validated them with "Tell us who to greet"
@@ -7964,6 +8439,23 @@ function submitAuth(){
        person who signs in as the demo. A reload returning the demo identity is what the sentence
        promises, so the behaviour and the claim agree. */
     if (isRegister) {
+      /* The acceptance is written FIRST, and the typed name and barangay are applied to memory
+         afterwards, so the bytes this action leaves behind hold a versioned acceptance and the
+         demo household's own profile. That ordering is the whole claim: registering records that
+         you agreed, not an account. A later edit you make deliberately is stored by that edit.
+         A consent nobody can point at afterwards is a claim rather than a record — and this is a
+         local record, not a server-side audit trail. The optional consent is a separate row and
+         only appears if that box was ticked. */
+      const at = Date.now();
+      const mine = (state.termsAcceptances || []).filter(a => a.role !== state.role);
+      mine.push({ role: state.role, doc: 'terms', version: LEGAL_VERSION, at });
+      mine.push({ role: state.role, doc: 'policy', version: LEGAL_VERSION, at });
+      const marketing = document.getElementById('reg-marketing');
+      if (marketing && marketing.checked) {
+        mine.push({ role: state.role, doc: 'marketing-consent', version: LEGAL_VERSION, at });
+      }
+      state.termsAcceptances = mine;
+      persist();
       const profile = state.role === 'provider' ? state.providerProfileData : state.profileData;
       const typedName = value('reg-name').trim();
       const typedBarangay = value('reg-brgy').trim();
@@ -8596,7 +9088,7 @@ function residentResults(){
             <div style="min-width:0;">
               <div style="font-size:var(--t-body-lg); font-weight:700; color:var(--ink);">${p.name}</div>
               <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px; display:flex; align-items:center; gap:3px;">
-                ${ic("map-pin",12)} ${p.distanceKm} km · Brgy. ${esc(p.barangay)} · arrives ~${p.availabilityMin} min
+                ${ic("map-pin",12)} ${p.distanceKm} km · Brgy. ${esc(p.barangay)} · can start in ~${p.availabilityMin} min
               </div>
               <div style="font-size:var(--t-body); margin-top:5px;">
                 <b>from ${pesoShort(cheapestListing(p))}</b>
@@ -9491,22 +9983,31 @@ function adminDashboard(){
   </div>`;
 }
 
+function thisDeviceCard() {
+  /* The action card of the Money screen, as one fragment so its position on that screen is a single
+     line that a check can order and a falsifier can move. It holds the only two operations the
+     screen offers, and the copy that tells the reader where the figures came from. */
+  return `
+  <div class="card" style="padding:14px">
+  <div style="font-size:var(--t-body-sm); font-weight:800; margin-bottom:8px;">This device</div>
+  <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.6;">
+  Records live in ${Store.isPersistent() ? 'this browser’s local storage — nothing leaves the device' : 'memory only, because this browser refuses storage for a file:// page — a reload restores the sample set'}.
+  There is no server in this prototype, so no figure here is a live marketplace count.
+  </div>
+  <button type="button" class="btn sm secondary" style="width:100%; margin-top:12px; border-radius:10px;" onclick="runPayoutNow()">Run this week’s payouts</button>
+  <button type="button" class="btn sm secondary" style="width:100%; margin-top:8px; border-radius:10px;" onclick="resetDemoData()">Restore the sample records</button>
+  </div>
+  `;
+}
+
 function adminFinanceScreen() {
   return `
   ${screenHeader('Money', { back:"state.adminScreen='overview'; render();", backLabel:'Back to the console', sub:'What the marketplace earned, and what it owes' })}
   <div class="pad" style="background:var(--cloud);">
+    ${thisDeviceCard()}
     ${statementCard()}
     ${ageingCard()}
     ${configPanel()}
-    <div class="card" style="padding:14px">
-      <div style="font-size:var(--t-body-sm); font-weight:800; margin-bottom:8px;">This device</div>
-      <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.6;">
-        Records live in ${Store.isPersistent() ? 'this browser’s local storage — nothing leaves the device' : 'memory only, because this browser refuses storage for a file:// page — a reload restores the sample set'}.
-        There is no server in this prototype, so no figure here is a live marketplace count.
-      </div>
-      <button type="button" class="btn sm secondary" style="width:100%; margin-top:12px; border-radius:10px;" onclick="runPayoutNow()">Run this week’s payouts</button>
-      <button type="button" class="btn sm secondary" style="width:100%; margin-top:8px; border-radius:10px;" onclick="resetDemoData()">Restore the sample records</button>
-    </div>
   </div>`;
 }
 function runPayoutNow() {
@@ -11352,17 +11853,10 @@ function providerFSM(){
 
     <div class="card">
       <div class="row" style="margin-bottom:6px;">
-        <span style="font-weight:700; font-size:var(--t-body-sm);">Dynamic Availability Optimizer</span>
+        <span style="font-weight:700; font-size:var(--t-body-sm);">Emergency dispatch</span>
         <button type="button" class="chip" style="cursor:pointer;" aria-pressed="${state.providerEmergencyDispatch}" onclick="toggleEmergencyDispatch()">Emergency dispatch ${state.providerEmergencyDispatch ? 'on' : 'off'}</button>
       </div>
-      <div style="font-size:var(--t-caption); color:var(--mist);">Suggests when to go Available/Busy based on real-time surge predictions.</div>
-    </div>
-
-    <div class="card">
-      <div style="font-weight:700; font-size:var(--t-body-sm); margin-bottom:4px;">Route & Schedule Optimizer</div>
-      <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.4;">
-        ${ic("map-pin",13)} Optimized sequence for your 2 active jobs today: Rizal St. (2:30 PM) ${ic("arrow-right",11)} San Isidro Ave. (4:00 PM). Travel time minimized by 18 mins.
-      </div>
+      <div style="font-size:var(--t-caption); color:var(--mist);">This switch records your preference on this device. No urgent-request routing reads it yet, so nothing arrives because of it - there is no surge model or suggestion engine in this prototype.</div>
     </div>
 
   </div>`;
@@ -11586,6 +12080,8 @@ function providerBookingDetail(){
 
     ${finaliseCard(booking)}
     ${jobActionBar(booking)}
+    ${rescheduleRow(booking)}
+    ${rescheduleCard(booking)}
     ${receiptCard(booking)}
   </div>`;
 }
