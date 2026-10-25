@@ -503,7 +503,10 @@ the only record.
    imports. This is the edge-to-edge compensation for item 4 and it is **device-unverified**. *(Answered 2026-10-25 on the
 android-36 AVD at its native 1080x2340 skin, and the answer is a defect: the padding delivered zero on every edge
 while the window really is edge-to-edge — the status bar paints over the greeting and the gesture pill sits inside
-the bottom nav. `CHANGES.md` §120. The shell fix is the next action, not a further reading.)*
+the bottom nav. `CHANGES.md` §120. **Fixed 2026-10-25 in §121**: the listener was already receiving real insets (`top=136
+bottom=66 sdk=36`, logged) and a WebView ignores its own padding — moving the padding to `android.R.id.content`
+gave a 202px inset the page honours (surface 2138 of 2340, `innerHeight` 778). Framework reading on Android 16, not
+a physical API 35+ handset.)*
 7. `gradlew`, `gradlew.bat`, `gradle/wrapper/`: new, generated 2026-10-11.
 8. `tools/check-assets.cjs`, `tools/falsify-assets.cjs`: new. Both are about the artifact rather
    than the page, which is why they live here and not in `tools/` at the repo root.

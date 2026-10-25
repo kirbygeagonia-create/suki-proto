@@ -76,8 +76,20 @@ function judge(m) {
   const cssH = m.innerHeight, dpr = m.dpr;
   if (!cssH || !dpr || !m.viewH) return { ok: false, reasons: ['a needed figure was missing (innerHeight/dpr/viewH)'] };
   if (m.screenH && m.viewH < m.screenH - 2) {
-    return { ok: true, refusal: true, reasons: [], slack: m.screenH - m.viewH, contentPx: Math.round(cssH * dpr),
-      note: 'the window is already inset by the framework (' + m.viewH + ' of ' + m.screenH + 'px), so this frame cannot test the shell padding question' };
+    const inset = m.screenH - m.viewH;
+    if (m.sdk >= 35) {
+      /* Edge-to-edge is FORCED at API 35+, so the framework does not shorten the window itself: an inset surface
+         can only have come from the shell padding its container. That is the pass condition, and until 2026-10-25
+         this branch reported it as UNTESTABLE — the sensor read a working fix as a frame that could not answer,
+         which is the same class as a fix that suppresses the evidence that found the bug. */
+      return { ok: true, reasons: [], slack: inset, contentPx: Math.round(cssH * dpr), insetByShell: true,
+        note: 'the WebView surface is ' + inset + 'px shorter than the ' + m.screenH + 'px screen on a framework that'
+          + ' forces edge-to-edge at API ' + m.sdk + ' — that inset is the shell padding, and the page fills the'
+          + ' padded box with ' + Math.round(cssH * dpr) + 'px of content' };
+    }
+    return { ok: true, refusal: true, reasons: [], slack: inset, contentPx: Math.round(cssH * dpr),
+      note: 'the window is already inset by the framework (' + m.viewH + ' of ' + m.screenH + 'px), so this frame'
+        + ' cannot test the shell padding question' };
   }
   const contentPx = cssH * dpr;
   const slack = m.viewH - contentPx;
@@ -104,6 +116,15 @@ if (process.argv.indexOf('--selftest') > -1) {
   const under = judge({ viewH: 2340, screenH: 2340, innerHeight: 1170, dpr: 2, bars: BARS, navBottomCss: 1170, bottomNavBottom: 1169 });
   t('filling the View while bars exist is condemned', under.ok, false);
   t('…and the reason carries the pixel arithmetic', /2340px/.test(under.reasons.join(' ')), true);
+  /* The branch that used to call a working fix UNTESTABLE: at API 35+ an inset surface IS the shell padding, and
+     below it the refusal is still the honest answer. */
+  const shellInset = judge({ sdk: 36, viewH: 2138, screenH: 2340, innerHeight: 778, dpr: 2.75, bars: BARS, navBottomCss: 778, bottomNavBottom: 774 });
+  t('an inset surface at API 36 is the shell padding, not an untestable frame', shellInset.ok && !shellInset.refusal && shellInset.insetByShell === true, true);
+  t('…and its note names the 202px it measured', /202px shorter/.test(shellInset.note), true);
+  const oldRefusal = judge({ sdk: 30, viewH: 2138, screenH: 2340, innerHeight: 778, dpr: 2.75, bars: BARS, navBottomCss: 778, bottomNavBottom: 774 });
+  t('below API 35 the same surface is still a refusal, not a pass', oldRefusal.refusal === true, true);
+  const noSdk = judge({ viewH: 2138, screenH: 2340, innerHeight: 778, dpr: 2.75, bars: BARS, navBottomCss: 778, bottomNavBottom: 774 });
+  t('an unread sdk reads as the refusal, never as the pass', noSdk.refusal === true, true);
   t('a gesture-nav frame with a padded top still passes', judge({ viewH: 2340, screenH: 2340, innerHeight: 1138, dpr: 2, bars: { top: true, bottom: false, read: true, source: 'test' }, navBottomCss: 1138, bottomNavBottom: 1132 }).ok, true);
   t('bars never reported refuses rather than passing', judge({ viewH: 2340, screenH: 2340, innerHeight: 1170, dpr: 2, bars: { read: false } }).ok, false);
   t('a frame reporting no status bar refuses as a reader limit', judge({ viewH: 2340, screenH: 2340, innerHeight: 1170, dpr: 2, bars: { top: false, bottom: true, read: true } }).ok, false);
@@ -170,6 +191,10 @@ for (let i = 0; i < 12; i++) {
   if (hit) { socket = hit[1]; break; }
 }
 if (!socket) { console.log('NO CONCLUSION — no webview_devtools_remote socket appeared, so the page was never going to answer.'); process.exit(1); }
+/* Then let the frame settle before the first ask. On 2026-10-25 the same socket answered every reading when the
+   app was cold-started and left alone for a minute, and answered nothing when the retry loop relaunched it each
+   time — the timeouts were the instrument arriving early, not the renderer being dead. */
+sleep(60000);
 console.log('devtools socket: webview_devtools_remote_' + socket);
 
 function probe(args) {
@@ -182,28 +207,45 @@ const lastLine = out => String(out).trim().split('\n').filter(Boolean).pop() || 
 function ask(expr) { return lastLine(probe([expr])); }
 /* Retry the first read: the renderer needs a moment after the socket appears, and a single timeout is the
    instrument being early, not the app being broken. */
-let page = null;
-for (let i = 0; i < 4 && !page; i++) {
-  const raw = ask('(function(){var nb=document.querySelector(".bottomnav");var q=nb?nb.getBoundingClientRect():null;' +
-    'return JSON.stringify({view:state.view,innerHeight:innerHeight,dpr:devicePixelRatio,' +
-    'bottomNavBottom:q?Math.round(q.bottom*10)/10:null,navBottomCss:innerHeight});})()');
-  try { page = JSON.parse(raw); } catch (e) { console.log('  page read ' + (i + 1) + '/4 not parseable yet: ' + String(raw).slice(0, 90)); sleep(4000); }
+/* Read the page over CDP directly: ONE attach, to the NEWEST page target, with no relaunch.
+   The leg used to ask through tools/device-probe.cjs, which launches the activity on every call. On the API 36
+   frame each relaunch landed on an ANR dialog — systemui’s once, the launcher’s next — and every
+   `Runtime.evaluate` timed out, which is what §120 first mistook for a frame that could not answer. Left alone,
+   the same socket answers every reading. The surface height comes from the same target list, so the two numbers
+   the verdict compares are read from one place at one moment rather than from two instruments that can disagree.
+   The `curl` lesson still applies: this is Node’s own fetch over a forward this function makes (§110). */
+const GEOMETRY = '(function(){var nb=document.querySelector(".bottomnav");var q=nb?nb.getBoundingClientRect():null;'
+  + 'return JSON.stringify({view:state.view,innerHeight:innerHeight,dpr:devicePixelRatio,'
+  + 'bottomNavBottom:q?Math.round(q.bottom*10)/10:null,navBottomCss:innerHeight});})()';
+function cdpEvaluate(wsUrl, expression, timeoutMs) {
+  return new Promise((resolve) => {
+    let ws; try { ws = new WebSocket(wsUrl); } catch (e) { return resolve('ERR ' + e.message); }
+    const timer = setTimeout(() => { try { ws.close(); } catch (_) {} resolve('ERR timeout'); }, timeoutMs);
+    ws.onopen = () => ws.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate',
+      params: { expression: expression, returnByValue: true } }));
+    ws.onmessage = (ev) => { const m = JSON.parse(ev.data); if (m.id !== 1) return;
+      clearTimeout(timer); try { ws.close(); } catch (_) {}
+      resolve(m.result && m.result.result ? String(m.result.result.value)
+        : 'ERR ' + JSON.stringify(m.error || m.result).slice(0, 80)); };
+    ws.onerror = () => { clearTimeout(timer); resolve('ERR socket'); };
+  });
 }
-
-/* The View's own surface, from the CDP target description — the one box this frame will disclose.
-   Read with Node's own fetch over a forward this function makes, NOT by spawning curl: the same defect
-   deploy-check.cjs was fixed for (§110) reappeared here, where `curl` spawned outside MSYS produced an empty
-   body and the leg reported "surface NOT READ" for an emulator that was answering fine a moment later. An
-   instrument's failure to read must never be allowed to look like the thing under test failing. */
-let viewH = 0;
-try {
-  adb('-s', SERIAL, 'forward', 'tcp:9333', 'localabstract:webview_devtools_remote_' + socket);
-  const res = await fetch('http://127.0.0.1:9333/json', { signal: AbortSignal.timeout(15000) });
-  const list = JSON.parse(await res.text());
-  const pageTarget = (list || []).find(t => t.type === 'page') || null;
-  viewH = viewHeightPxFromTarget(pageTarget ? (pageTarget.description || '') + ' ' + JSON.stringify(pageTarget) : '');
-  console.log('cdp /json: ' + (list || []).length + ' target(s), page type present: ' + !!pageTarget);
-} catch (e) { console.log('cdp /json unread: ' + String(e.message || e).slice(0, 90)); }
+adb('-s', SERIAL, 'forward', 'tcp:9333', 'localabstract:webview_devtools_remote_' + socket);
+let page = null, viewH = 0, targetCount = 0;
+for (let i = 0; i < 4 && !page; i++) {
+  let list = [];
+  try { list = JSON.parse(await (await fetch('http://127.0.0.1:9333/json', { signal: AbortSignal.timeout(15000) })).text()); }
+  catch (e) { console.log('  cdp /json unread on attempt ' + (i + 1) + '/4: ' + String(e.message || e).slice(0, 70)); }
+  targetCount = (list || []).length;
+  const pages = (list || []).filter(t => t.type === 'page');
+  const target = pages[pages.length - 1] || null;
+  if (target) viewH = viewHeightPxFromTarget((target.description || '') + ' ' + JSON.stringify(target));
+  if (!target) { console.log('  no page target on attempt ' + (i + 1) + '/4'); sleep(6000); continue; }
+  const raw = await cdpEvaluate(target.webSocketDebuggerUrl, GEOMETRY, 45000);
+  try { page = JSON.parse(raw); }
+  catch (e) { console.log('  page read ' + (i + 1) + '/4 not parseable yet: ' + String(raw).slice(0, 90)); sleep(6000); }
+}
+console.log('cdp /json: ' + targetCount + ' target(s), read the newest page target: ' + !!page);
 console.log('webview surface: ' + (viewH ? viewH + 'px tall (from the CDP target description)' : 'NOT READ'));
 
 const findings = [];
@@ -211,12 +253,12 @@ if (!viewH) findings.push('the WebView surface height was never read, so the pad
 if (!page) findings.push('the page never answered with geometry, so nothing about the padding was observed');
 let v = null;
 if (viewH && page) {
-  v = judge({ viewH: viewH, screenH: screenH, bars: bars, innerHeight: page.innerHeight, dpr: page.dpr,
+  v = judge({ sdk: +sdk || 0, viewH: viewH, screenH: screenH, bars: bars, innerHeight: page.innerHeight, dpr: page.dpr,
     navBottomCss: page.navBottomCss, bottomNavBottom: page.bottomNavBottom });
   console.log('measurement: view=' + page.view + ' innerHeight=' + page.innerHeight + ' dpr=' + page.dpr +
     ' → content ' + v.contentPx + 'px inside a ' + viewH + 'px surface, slack ' + (v.slack === undefined ? '?' : Math.round(v.slack * 10) / 10) + 'px');
   if (v.refusal) console.log('  UNTESTABLE: ' + v.note);
-  else if (v.ok) console.log('  verdict: the shell padded the WebView — the page\'s content box is ' + Math.round(v.slack) + 'px shorter than a surface spanning the ' + screenH + 'px screen, and the platform reports system bars');
+  else if (v.ok) console.log('  verdict: the shell inset the page from the bars — the page\'s content box is ' + Math.round(v.slack) + 'px shorter than a surface spanning the ' + screenH + 'px screen, and the platform reports system bars');
   else v.reasons.forEach(r => findings.push(r));
 }
 console.log('findings: ' + findings.length);

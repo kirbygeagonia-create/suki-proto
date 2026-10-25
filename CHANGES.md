@@ -7395,3 +7395,68 @@ a page nobody was looking at.
 Funtouch shell reports the insets differently. This is a framework reading on Android 16, which is the thing the leg
 asked; the handset-parity caveat in `reference-avd-as-leg-target` still applies to anything about a specific phone.
 No application bytes changed. Gate: **all 566 checks passed** before this section.
+
+## 121. The listener was right and the padding was a no-op: `WebView` ignores its own padding, and the sensor called the fix "untestable"
+
+§120 left a defect with two candidate causes and a reverted patch. Both candidates have now been tested on the same
+android-36 frame, and **both were wrong about where the zeros came from** — which is why the instrument, not the
+guess, got the next edit.
+
+**The decisive reading was a log line, not another screenshot.** `android.util.Log.i("SukiInsets", …)` inside the
+listener answered in one boot: `top=136 bottom=66 left=0 right=0 sdk=36`, twenty-one dispatches. So the listener
+*runs*, and it is handed real, correct insets. The padding call it makes — `v.setPadding(0, 136, 0, 66)` on the
+WebView — is what does nothing: **a WebView lays its page out at the full view size and ignores its own padding**, so
+`innerHeight` stayed 851 CSS px = 2340 device px = the whole screen. Retargeting the same listener at the content
+view (`getWindow().getDecorView().findViewById(android.R.id.content)`) moved the numbers immediately: surface **2138px
+of 2340**, `innerHeight` **778** (was 851), slack **202px** — 136 + 66, exactly the two bars the listener had
+reported. The debug line was then removed and the build re-made without it, so the shipping shell carries the fix
+and not the probe.
+
+**The sensor read the working fix as a frame that could not answer.** With the surface inset, `judge()` took its
+existing branch — *the window is already inset by the framework, so this frame cannot test the shell padding
+question* — and printed `UNTESTABLE` with `findings: 0`. That branch was written when nothing could produce an inset
+surface except a framework that shortens the window; at API 35+ edge-to-edge is **forced**, so an inset surface can
+only have come from the shell. The rule now splits on the SDK the leg already reads: `sdk >= 35` and inset → the
+pass, naming the pixels; below 35, or with the SDK unread → the refusal, still. Four selftest cases pin it (20 run,
+0 failing), including the one that matters most: **an unread `sdk` reads as the refusal, never as the pass**, so the
+branch cannot go quiet by losing an input. The verdict sentence was also re-worded — it said "the shell padded the
+WebView", which is the mechanism this section exists to disprove.
+
+**The instrument defect behind §120 was bigger than the leg.** `device-edge-leg.cjs` asked the page through
+`tools/device-probe.cjs`, which launches the activity on every call — so each of its four retries began by bouncing
+the app off an ANR dialog (systemui's, then the launcher's), and every `Runtime.evaluate` timed out. That is what
+five boots had been reported as. The leg now makes one CDP attach of its own to the **newest** page target and
+evaluates over that socket: `cdp /json: 1 target(s), read the newest page target: true`, and the page answered on
+the first attempt. The surface height and the page geometry now come from the same target list at the same moment,
+instead of from two instruments that could disagree about which page they were looking at.
+
+**The shell change, written out because git will never show it** (`MainActivity.java`, untracked by the owner's
+standing decision — see §65 for why a fix recorded on one machine only is a fix the next rebuild re-breaks):
+
+```java
+// was: applySystemBarInsets(web);
+// A WebView ignores its own padding: the listener ran with real insets (136/66 at sdk 36) and innerHeight
+// never moved. Pad the content view, which lays the WebView out inside the bars.
+applySystemBarInsets(getWindow().getDecorView().findViewById(android.R.id.content));
+```
+
+and inside `applySystemBarInsets`, before the listener:
+
+```java
+if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+    getWindow().setDecorFitsSystemWindows(false);
+}
+view.requestApplyInsets();
+```
+
+`setDecorFitsSystemWindows(false)` and `requestApplyInsets()` each changed nothing on their own — §120 falsified the
+call-order hypothesis and this section falsifies the two together on the WebView — and they stay because the first is
+what makes the window's state honest at API 35+ and the second guarantees a dispatch after the listener is installed.
+Rebuild: `./gradlew --offline --no-daemon :app:assembleDebug` → BUILD SUCCESSFUL, installed with `adb install -r -t`,
+proved by the leg's own package read (`1.2-preview.39 / versionCode 41`).
+
+**What is still not settled:** this is a framework reading on Android 16, not a physical API 35+ handset — no such
+device has been on this bus (OPPO API 29, vivo API 30). The bar heights here are the emulator's, and a ColorOS or
+Funtouch shell may report different insets or draw its own gesture area. The claim that survives is the narrow one:
+**at an API level that forces edge-to-edge, the shell's compensation now produces a 202px inset that the page honours,
+and it does so because the padding moved from the WebView to the content view.**
