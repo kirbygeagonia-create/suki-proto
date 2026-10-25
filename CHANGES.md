@@ -8133,3 +8133,39 @@ requires each marker to exist *before* comparing positions, that showed up as a 
 passing vacuum. The repository has written this trap down before (a probe that set `tab='dash'` and
 concluded the app could reach a blank screen); it recurs because the button label and the tab value
 live in different places in the file.
+
+## 133. The two plan rules the first cut of the reschedule flow had not built, and a falsifier that correctly refuses to run on a deliberately stale tree
+
+A completion audit of the committed Phase B against §9 of the approved plan — read rule by rule, not
+from the summary — found two promises the implementation had skipped, and one accepted state that
+quietly disables an instrument.
+
+**The plan allowed `requested` as well as `upcoming`; the build allows only `upcoming`, and that is a
+stated deviation rather than an oversight.** A request nobody has answered has no agreed day or hour to
+move, and the two real actions on it already exist: withdraw, and the provider's accept or decline.
+Offering "reschedule" there would put a second word on the same door. Recorded here and in the plan
+because the difference between a deviation and a defect is whether it is written down.
+
+**Two rules that were missing and are now built.** Plan §9 lists `fromAt (the confirmed schedule at
+request time)` among the record's fields and rule 5 says "a stale request (booking meanwhile
+cancelled/completed/**time changed**) is refused with its reason named". Neither existed. A request now
+stores `fromDate`/`fromTime` beside the `date`/`time` it asks for, the answer card reads
+"Sat, Oct 31 at 8:00 AM **→** Mon, Nov 2 at 10:00 AM" so the reader sees both ends of the move, and an
+answer whose booking has moved on is refused: the row becomes `stale`, the refusal names the schedule
+it was written against, and **nothing is written** — including no timeline row, asserted because the
+alternative is a refusal that still mutates the record it is refusing. Four new gate checks, one of them
+a positive control (a *current* request still moves the job) so the guard cannot pass by disabling
+acceptance wholesale. `node tools/falsify-reschedule.cjs` is 17 breaks: drop the stored `fromDate`,
+disable the guard, or leave the retired row answerable, and each one goes red by name.
+
+**`falsify-build-bytes` now refuses to run, and the reason is the owner's ruling, not a defect.** The
+aggregate reports **55 families, 299 mutants applied, 299 caught, 0 not applied — 1 family needs
+attention**, and the flagged row is `build-bytes 0 / 0 — printed no summary — nothing was proven`. Run
+alone it says why: `control unmutated tree: findings=2 differs=true refused=false exit=1` then
+`ABORT — the audit does not answer clean on the unmutated tree; nothing below isolates a cause.` Two
+copies of the page (the staged Android asset and the built APK) are stale **by decision** — the owner
+ruled on 2026-10-25 to leave them, and the handset currently runs `1.2-preview.39`. So a family that
+grades itself against "all four copies identical" cannot demonstrate anything until the shell is
+rebuilt, and it is right to say so rather than to grade breaks against a baseline it does not share.
+The aggregate's exit code 1 is the guard working: a run with an unproven family is not a clean run, and
+reading only the headline "299 caught" would have hidden it.

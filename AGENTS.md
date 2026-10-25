@@ -3435,8 +3435,12 @@ is §7's repeated indicator; an optional **reason** rides on the record, escaped
 is stored as `null` so the card never prints quotation marks around nothing; and the answering side may
 **counter**, which marks the ask it answers `superseded` and raises a fresh one rather than editing a
 decision that already happened — its error path first restored a superseded ask to `pending`, which
-re-opened a proposal the other side had already answered, so a refusal now mutates nothing at all.
-`node tools/falsify-reschedule.cjs` proves fourteen properties; break 1 is the honesty one (a proposal
+re-opened a proposal the other side had already answered, so a refusal now mutates nothing at all. A request also carries **the schedule it was raised against**
+(`fromDate`/`fromTime`): an answer whose booking has moved on is refused, the row retired as `stale`,
+nothing written - the plan rule it closes is "a stale request is refused with its reason named", and
+the deviation that survives is that `requested` bookings are NOT offered a reschedule, because an
+unanswered request has no agreed time to move. Recorded, not smoothed over.
+`node tools/falsify-reschedule.cjs` proves seventeen properties; break 1 is the honesty one (a proposal
 that moves the appointment while the message says it did not), and the two structural breaks — the
 event writer ignoring the handed instant, the timeline printing the label — exist because a behavioural
 check cannot pin a race that usually does not happen.

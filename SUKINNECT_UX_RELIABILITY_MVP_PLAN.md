@@ -616,6 +616,11 @@ nothing. The reason is a comment beside the constant and a paragraph in `CHANGES
   actions are tappable rows). Re-measure first, move content only where a real action is buried.
 - **All P2** — not approved, so not started.
 
-**Open in this pass.** One `legal` check reads a screen that never paints the Terms box, so it passes
-vacuously; `falsify-legal-truth` caught it as a MISSED and the check is being re-pointed at the
-register-mode render before the family is re-run.
+**Closed after the first report.** `falsify-legal-truth` caught one of my own checks as a MISSED - it
+grepped the sign-in render, where the register fields are never painted - and was re-pointed at the
+register-mode paint with a presence half, so the family now reads 8 of 8. A second audit against §9 of
+this plan then found two rules the first cut had skipped, now built: a request stores the schedule it
+was raised against (so an answer arriving after the booking moved is refused and retired as `stale`,
+writing nothing), and the card shows both ends of the move. The one deviation that survives is
+deliberate: `requested` bookings are not offered a reschedule, because an unanswered request has no
+agreed time to move. Recorded in `CHANGES.md` §133.

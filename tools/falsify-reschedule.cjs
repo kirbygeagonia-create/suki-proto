@@ -10,7 +10,7 @@
    record.
 
    Each break re-points at a hazard the check specifically names, and the file is restored in a
-   finally. Fourteen full gate passes: ~14 minutes. The two clock breaks aim at the SHAPE (one
+   finally. Seventeen full gate passes: ~17 minutes. The two clock breaks aim at the SHAPE (one
    reading, handed to both writers) rather than at timing, because a break that made the event writer
    take its own reading survived its behavioural check: two `new Date()` calls a statement apart land
    in the same millisecond, which is §83's lesson applied for the third time in this repository.
@@ -94,6 +94,21 @@ const BREAKS = [
     check: 'the vocabulary the door validates against',
     from: "  superseded:  { label:'Replaced by a new proposal', tone:'gone' }",
     to: "  withdrawn2:  { label:'Withdrawn', tone:'gone' }" },
+  /* The staleness pair: a request must remember the schedule it was raised against, and an answer
+     that no longer matches it must be refused without writing. Without the first there is nothing to
+     compare; without the second an accepted move silently overwrites a change nobody offered. */
+  { name: 'the request stops recording the schedule it was raised against',
+    check: 'a request stores the schedule it was raised against',
+    from: '    fromDate: b.date, fromTime: b.time,',
+    to: '' },
+  { name: 'the stale-request guard is disabled, so an answer overwrites a change it never offered',
+    check: 'an answer whose schedule has moved on is refused',
+    from: '  if (r.fromDate && (b.date !== r.fromDate || b.time !== r.fromTime)) {',
+    to: '  if (r.fromDate && false && (b.date !== r.fromDate || b.time !== r.fromTime)) {' },
+  { name: 'a retired request stays answerable instead of being closed',
+    check: 'an answer whose schedule has moved on is refused',
+    from: "    r.status = 'stale';",
+    to: "    r.status = 'pending';" },
 ];
 
 function gateOutput() {

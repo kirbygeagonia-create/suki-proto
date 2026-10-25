@@ -6824,7 +6824,11 @@ const RESCHEDULE_STATES = {
   withdrawn:   { label:'Withdrawn',             tone:'gone' },
   /* A counter does not delete the proposal it answers: the chain of who asked for what stays
      readable, and the newest pending row is the one with buttons beside it. */
-  superseded:  { label:'Replaced by a new proposal', tone:'gone' }
+  superseded:  { label:'Replaced by a new proposal', tone:'gone' },
+  /* The schedule a request was raised against has moved on — usually because another request was
+     accepted in the meantime. Accepting such a row would overwrite a change nobody offered, so it is
+     refused and the row is retired under this name rather than left looking answerable. */
+  stale:       { label:'No longer current', tone:'gone' }
 };
 /* Seeded empty on purpose. A sample request would be a written record of an agreement nobody
    proposed (§86), and every step of this flow is reachable by tapping, so it needs no prop. */
@@ -6960,6 +6964,10 @@ function submitRescheduleRequest(){
     bookingId: b.id,
     raisedBy: rescheduleActor().side,
     date: day.date, time,
+    /* The schedule this proposal was raised against. Without it, "accept" could be pressed after
+       the booking had already moved for another reason and would silently overwrite that move; with
+       it, the answer can be checked and the card can say what would change. */
+    fromDate: b.date, fromTime: b.time,
     reason: (d.reason || '').trim() || null,
     status: 'pending',
     createdAt: Date.now(), decidedAt: null, decidedBy: null
@@ -6986,6 +6994,19 @@ function answerReschedule(requestId, decision){
   const actor = rescheduleActor();
   if (actor.side === r.raisedBy) {
     showToast('Only the other side can answer this request'); return;
+  }
+  /* The schedule this request was written against has moved on — a second proposal accepted in the
+     meantime, or an edit from the other screen. Applying it now would overwrite a change nobody
+     offered, so the request is retired as stale and NOTHING is written: a refusal that also mutates
+     the record it is refusing is the error this file keeps catching. */
+  if (r.fromDate && (b.date !== r.fromDate || b.time !== r.fromTime)) {
+    r.status = 'stale';
+    r.decidedAt = Date.now();
+    r.decidedBy = 'system:' + (actor.side === 'provider' ? CURRENT_PROVIDER_ID : CURRENT_CUSTOMER_ID);
+    persist(); render();
+    showToast('That request was raised against ' + r.fromDate + ' at ' + r.fromTime
+      + ', which is no longer the booked time. Nothing was changed - propose the new time again.');
+    return;
   }
   if (decision === 'accepted') { b.date = r.date; b.time = r.time; }
   else if (decision !== 'declined') return;
@@ -7036,7 +7057,7 @@ function rescheduleCard(b){
       <span class="chip">${rows.length} on this job</span>
     </div>
     ${rows.map(r => `<div style="padding:8px 0; border-top:1px solid var(--line); min-width:0;">
-      <div style="font-size:var(--t-body-sm); font-weight:700;">${esc(r.date)} at ${esc(r.time)}</div>
+      <div style="font-size:var(--t-body-sm); font-weight:700;">${r.fromDate ? esc(r.fromDate) + ' at ' + esc(r.fromTime) + ' → ' : ''}${esc(r.date)} at ${esc(r.time)}</div>
       <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">
         ${r.raisedBy === actor.side ? 'You asked' : (r.raisedBy === 'provider' ? 'The provider asked' : 'The resident asked')} · ${RESCHEDULE_STATES[r.status].label}${r.decidedAt ? ' · ' + agoText(new Date(r.decidedAt).toISOString()) : ''}
       </div>

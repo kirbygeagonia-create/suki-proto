@@ -5119,7 +5119,7 @@ suite('reschedule', async () => {
       && !app.reschedulable({ status: 'en_route' }) && !app.reschedulable({ status: 'arrived' })
       && !app.reschedulable({ status: 'requested' }));
   c.check('and the vocabulary the door validates against is the one the records print',
-    Object.keys(app.RESCHEDULE_STATES).join(',') === 'pending,accepted,declined,withdrawn,superseded',
+    Object.keys(app.RESCHEDULE_STATES).join(',') === 'pending,accepted,declined,withdrawn,superseded,stale',
     Object.keys(app.RESCHEDULE_STATES).join(','));
 
   /* An accepted move is one act with two representations — the request record's decidedAt and the
@@ -5203,6 +5203,56 @@ suite('reschedule', async () => {
     r.reason === null && !/\u201c\u201d/.test(String(app.rescheduleRow(b)))
       && !/\u201c\u201d/.test(String(app.rescheduleCard(b))),
     'reason ' + JSON.stringify(r.reason));
+
+  /* A request records the schedule it was raised against, because the booking can move for another
+     reason before the answer arrives. Accepting then would overwrite a change nobody offered, so the
+     row is retired as `stale` and the booking is left exactly where the OTHER change put it. */
+  const b5 = app.BOOKINGS.find(x => ![b.id, b2.id, b3.id, b4.id].includes(x.id));
+  b5.status = 'upcoming';
+  const b5Was = { date: b5.date, time: b5.time };
+  app.state.role = 'resident';
+  app.openRescheduleRequest(b5.id);
+  app.state.rescheduleDraft.dayIdx = 2;
+  app.state.rescheduleDraft.timeIdx = 1;
+  app.submitRescheduleRequest();
+  const r5 = app.pendingReschedule(b5.id);
+  c.check('a request stores the schedule it was raised against and shows both ends of the move',
+    r5.fromDate === b5Was.date && r5.fromTime === b5Was.time
+      && String(app.rescheduleCard(b5)).includes(b5Was.date)
+      && /→/.test(String(app.rescheduleCard(b5))),
+    JSON.stringify({ from: r5.fromDate + ' ' + r5.fromTime, to: r5.date + ' ' + r5.time }));
+  /* Something else moves the job first — the only way this branch is reachable by a person. */
+  b5.date = app.dayName(2); b5.time = '5:00 PM';
+  app.applyProviderIdentity(b5.providerId);
+  app.state.role = 'provider';
+  app.answerReschedule(r5.id, 'accepted');
+  c.check('an answer whose schedule has moved on is refused, retires the row, and writes NOTHING',
+    r5.status === 'stale' && b5.date === app.dayName(2) && b5.time === '5:00 PM'
+      && app.pendingReschedule(b5.id) === null
+      && !app.bookingTimeline(b5.id).some(e => e.kind === 'reschedule'),
+    'request ' + r5.status + ', booking ' + b5.date + ' ' + b5.time);
+  c.check('and a retired row cannot be answered again', (() => {
+    app.answerReschedule(r5.id, 'accepted');
+    return b5.date === app.dayName(2) && r5.status === 'stale';
+  })());
+  /* Positive control: the same answer on a request that is NOT stale still moves the job, so the
+     four assertions above cannot pass by the accept path having been disabled wholesale. */
+  const b6 = app.BOOKINGS.find(x => ![b.id, b2.id, b3.id, b4.id, b5.id].includes(x.id));
+  b6.status = 'upcoming';
+  const b6Was = { date: b6.date, time: b6.time };
+  app.state.role = 'resident';
+  app.openRescheduleRequest(b6.id);
+  app.state.rescheduleDraft.dayIdx = 1;
+  app.state.rescheduleDraft.timeIdx = 0;
+  app.submitRescheduleRequest();
+  const r6 = app.pendingReschedule(b6.id);
+  app.applyProviderIdentity(b6.providerId);
+  app.state.role = 'provider';
+  app.answerReschedule(r6.id, 'accepted');
+  c.check('a current request still moves the job (the control that stops the stale guard passing by blocking everything)',
+    r6.status === 'accepted' && b6.date === r6.date && b6.time === r6.time
+      && (b6.date !== b6Was.date || b6.time !== b6Was.time),
+    'booking ' + b6.date + ' ' + b6.time + ' vs asked ' + r6.date + ' ' + r6.time);
 
   return c;
 });

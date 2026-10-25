@@ -363,7 +363,11 @@ available here, because they decide how money moves and are still being validate
 A conflict after an appointment is agreed no longer has to end in a cancellation. Either side can
 propose a day and an hour on a booking that is accepted but not started; the proposal is a record
 (`RESCHEDULE_REQUESTS`), and the booking's own `date` and `time` change **only** when the other side
-accepts. Declining, withdrawing, or answering a request that was already decided moves nothing. The
+accepts. Declining, withdrawing, or answering a request that was already decided moves nothing, and
+the other side may also **counter with a different time**, which retires the proposal it answers
+as `superseded` rather than editing a decision that already happened. Each request stores the
+schedule it was raised against, so an answer arriving after the booking moved for some other reason
+is refused and retired as no longer current instead of overwriting that change. The
 proposing side never sees an accept button on its own request, one proposal at a time is allowed per
 booking, and an unknown booking id resolves to nothing rather than to the first job in the table.
 Requests and decisions survive a reload; the record family is additive, so `SCHEMA_VERSION` stayed
