@@ -7880,3 +7880,30 @@ evidence about the overlap and not about the application. Ask the family, don't 
 Gate: `node tools/verify.cjs` answered **all 567 checks passed** on the run that added the shape check
 (566 before, +1) — re-run it for the current number, since the other session may land checks in the same window.
 No application bytes changed; `Sukinnect.html` is untouched (`git diff --quiet origin/main -- Sukinnect.html`).
+
+**Two hours later the instruments came back, and both defects were in the harness.** The tools session went quiet at
+22:14 without committing and no `node.exe` was alive, so ownership of the three files returned here by the owner's
+decision. Re-running the family then aborted on a control it had never satisfied, and reading it found two things:
+
+- **The drift fixture never landed.** The control called `plant(DRIFT_FIXTURE)` — one object into a function whose
+  first parameter is the needle *string* — so `Array.isArray` was false, the needle coerced to `[object Object]`,
+  matched 0, and **the return value was discarded**. The audit then ran unmutated: zero drift findings, exit 0, and the
+  line printed `planted drift: 0`, which the control read as "the branch has no instance" and aborted over. The
+  missing instance was the family's. Planting is now checked, and a failed plant prints `FIXTURE NOT PLANTED` with the
+  reason instead of a number, because "no instance exists" and "the fixture never landed" need different fixes.
+- **A break had been crediting a crash for every run since it was written.** Its replacement string carried a closing
+  paren the needle did not have, so the mutated audit died with a SyntaxError; `verdict = r.code !== 0 || …` was true,
+  and the line printed CAUGHT while `toolFindings` returned null. Measured, not inferred: six identical runs of the
+  mutated child, each 958 bytes ending `Node.js v24.13.0`. Printing the captured byte-count and tail is what exposed
+  it, and the count is now required — a null parse cannot be credited — which took the break from a false CAUGHT to
+  `findings 6 against the control's 0`: the real behaviour, finally measured.
+
+The general rule was then applied across the family rather than left in the one branch: **no verdict may be credited
+unless the child produced its own page**, so a helper `producedSummary(out)` now guards the two branches that decided
+on an exit code, and one branch written by the other session already required it (`toolCount(r.out) !== null`) — which
+is how the two halves of a merged family ended up agreeing. The defect class is already in this document, arriving from
+the opposite side: not a mutant that fires every check except its own, but a mutant that cannot behave at all and is
+therefore recorded as guarding. Final state of the merged instruments: `node tools/falsify-commit-subjects.cjs` →
+**15 of 15 breaks caught, 0 not applied, 0 missed**, audit restored byte-for-byte, fixtures removed; gate re-run green.
+The aggregate was not owed: no family mutates `verify.cjs` (33 mutate `Sukinnect-next.html`, and no app bytes moved),
+and a family that parses the check *count* for its baseline reports a bigger number rather than a wrong one.

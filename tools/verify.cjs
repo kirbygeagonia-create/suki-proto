@@ -1672,6 +1672,44 @@ suite('hygiene', async () => {
     prefixes.length + ' prefixes [' + prefixes.join(' ') + '], hour guard '
       + (hourGuard ? 'present' : 'MISSING'));
 
+  /* The commit-subject instrument is the only one whose subject is the messages this repository writes, and both of
+     its halves fail by printing something reassuring. The list was originally scoped `origin/main..HEAD`, which by
+     construction cannot see a collision with anything already merged — measured 2026-10-24, five minutes after PR #9
+     merged, when it printed "every subject in this range is unique" over a real collision four entries away in the
+     log. The gate half is `--check-message`, and its hazard is the mirror image: a guard that certifies an empty
+     file unique, or that reads the BODY instead of the title, passes every message while still exiting 0. So the
+     SHAPE is asserted rather than the count — the count legitimately moves when history moves, and a needle pinned
+     at six collisions would be red on a correct build the day one is repaired. Read code forms, not phrases: this
+     file's own header explains `--check-message` in prose, and a needle that matches prose passes on a build where
+     the mode was deleted. */
+  const auditPath = require('path').join(appDir, 'tools', 'audit-commit-subjects.cjs');
+  const auditSrc = fsx.existsSync(auditPath) ? fsx.readFileSync(auditPath, 'utf8') : '';
+  const auditWhy = [];
+  const auditCount = (auditSrc.match(/const DEFAULT_COUNT = (\d+);/) || [])[1];
+  const gatePresent = /'--check-message'/.test(auditSrc);
+  const baselineBlock = (auditSrc.match(/const BASELINE = \[([\s\S]*?)\n\];/) || [])[1] || '';
+  const baselineEntries = (baselineBlock.match(/\{ subject:/g) || []).length;
+  if (auditSrc.length === 0) auditWhy.push('the audit file was not readable');
+  else {
+    if (!/\['-n', String\(DEFAULT_COUNT\), 'HEAD'\]/.test(auditSrc))
+      auditWhy.push('the default walk is no longer rooted at HEAD');
+    if (!(Number(auditCount) >= 60))
+      auditWhy.push('DEFAULT_COUNT is ' + auditCount + ', below the 60 the family floors');
+    if (!/!\(CHECK_AT >= 0 && i === CHECK_AT \+ 1\)/.test(auditSrc))
+      auditWhy.push('the range filter drops index 0 when the flag is absent, so a plain range argument is lost');
+    if (!gatePresent) auditWhy.push('the pre-commit gate is gone');
+    else {
+      if (!/COLLIDES with/.test(auditSrc)) auditWhy.push('the gate no longer names the hash it collided with');
+      if (!/if \(!MSG_FILE\) refuse/.test(auditSrc)) auditWhy.push('the gate answers about a file it never read');
+      if (!/if \(!subject\) refuse/.test(auditSrc)) auditWhy.push('the gate certifies an empty message unique');
+    }
+    if (baselineEntries === 0) auditWhy.push('the baseline is empty, so every recorded collision is a finding');
+  }
+  c.check('the commit-subject audit reads merged history, and its gate refuses for a named reason',
+    auditWhy.length === 0,
+    'DEFAULT_COUNT ' + auditCount + ', gate ' + (gatePresent ? 'present' : 'MISSING')
+      + ', baseline ' + baselineEntries + ' entries — ' + auditWhy.join('; '));
+
   /* The collision tally is new, and every one of its three guards exists because the first version
      produced a false finding without it: text inside a CLOSED <details> still has a layout box in
      Chrome (seven findings on four screens, all of them collapsed content), a clipped sr-only data
