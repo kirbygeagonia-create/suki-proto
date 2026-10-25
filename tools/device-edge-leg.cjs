@@ -125,6 +125,8 @@ if (process.argv.indexOf('--selftest') > -1) {
 }
 
 /* ---------- the device part ---------- */
+(async function runDeviceSection() {
+
 function pickSerial() {
   const force = process.argv.find(a => a.startsWith('--serial='));
   if (force) return force.slice(9);
@@ -188,11 +190,20 @@ for (let i = 0; i < 4 && !page; i++) {
   try { page = JSON.parse(raw); } catch (e) { console.log('  page read ' + (i + 1) + '/4 not parseable yet: ' + String(raw).slice(0, 90)); sleep(4000); }
 }
 
-/* The View's own surface, from the CDP target description — the one box this frame will disclose. */
-const targetsRaw = adb('-s', SERIAL, 'shell', 'cat', '/proc/net/unix') && (function () {
-  try { return execFileSync('curl', ['-s', '--max-time', '20', 'http://127.0.0.1:9222/json'], { encoding: 'utf8' }); } catch (e) { return ''; }
-})();
-const viewH = viewHeightPxFromTarget(targetsRaw);
+/* The View's own surface, from the CDP target description — the one box this frame will disclose.
+   Read with Node's own fetch over a forward this function makes, NOT by spawning curl: the same defect
+   deploy-check.cjs was fixed for (§110) reappeared here, where `curl` spawned outside MSYS produced an empty
+   body and the leg reported "surface NOT READ" for an emulator that was answering fine a moment later. An
+   instrument's failure to read must never be allowed to look like the thing under test failing. */
+let viewH = 0;
+try {
+  adb('-s', SERIAL, 'forward', 'tcp:9333', 'localabstract:webview_devtools_remote_' + socket);
+  const res = await fetch('http://127.0.0.1:9333/json', { signal: AbortSignal.timeout(15000) });
+  const list = JSON.parse(await res.text());
+  const pageTarget = (list || []).find(t => t.type === 'page') || null;
+  viewH = viewHeightPxFromTarget(pageTarget ? (pageTarget.description || '') + ' ' + JSON.stringify(pageTarget) : '');
+  console.log('cdp /json: ' + (list || []).length + ' target(s), page type present: ' + !!pageTarget);
+} catch (e) { console.log('cdp /json unread: ' + String(e.message || e).slice(0, 90)); }
 console.log('webview surface: ' + (viewH ? viewH + 'px tall (from the CDP target description)' : 'NOT READ'));
 
 const findings = [];
@@ -213,3 +224,5 @@ findings.forEach(f => console.log('  FINDING ' + f));
 adb('-s', SERIAL, 'shell', 'rm', '/sdcard/window_dump.xml', '/sdcard/wd.xml', '/sdcard/wd2.xml');
 console.log('cleanup: stray dumps removed, forwards cleared: ' + (String(adb('forward', '--remove-all')).trim() || 'ok'));
 process.exit(findings.length ? 1 : 0);
+
+})().catch(e => { console.log("BROKEN — the device section threw: " + String(e && e.message || e).slice(0,160)); process.exit(1); });

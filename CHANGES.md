@@ -7286,3 +7286,15 @@ spot, do not fabricate the reading.
 
 The frame was shut down with `adb emu kill`, forwards removed, no devices left on the bus, no node processes
 running, and the working tree carries only the intended tool edit.
+
+## 118. Three boots, two GPU backends, one answer: this machine cannot host an API 36 frame
+
+The leg was retried after the first starvation report rather than accepted on one sample, and the retry changed the flags and not the outcome. Boot two: `-gpu swift_shader_indirect`, 110 s, ANRs in `inputmethod.latin`, `gms` and `com.android.systemui`. Boot three: `-gpu host -cores 4 -accel on`, which the launcher log reported straight back as
+`GPU mode control feature flag 'ForceSwiftshader' is set` — the host backend is not actually available here — and 120 s later the ANR had moved to `com.google.android.apps.nexuslauncher`. The last run’s log carries four consecutive focus lines reading `Application Not Responding: com.google.android.apps.nexuslauncher` and no `ANR in` dump at all — the earlier run’s `dumpsys window` is where the two `ANR in` reports (inputmethod.latin, gms) were, and the systemui ANR appeared as a focus window rather than a dump. `Runtime.evaluate` timed out on every one of four retries in each of the three attempts. Quoted this way because the first draft of this paragraph said “six `ANR in` lines in that final log”, and `grep -c` answered 0: a number read off a different file than the sentence names is still a fabricated number.
+
+So the block is evidenced rather than assumed, in both directions. The instrument was fixed on the way (the View surface is now read with Node's own `fetch` over a forward the tool makes itself, after spawning `curl` from `execFileSync` produced an empty body and a
+`surface NOT READ` on a frame that had answered a moment earlier — the same defect §110 records for `deploy-check.cjs`, re-committed within an hour, which is the argument for why the fix belongs in a rule and not in memory), and the section now runs under an async
+wrapper so that refusal path is reachable at all. 16 selftest cases still pass, the tool still refuses below API 35 before installing, and it refused here rather than turning two unread inputs into a pass.
+
+**What would settle the edge-to-edge question, concretely:** any handset at API 35+ — the two that have been attached are API 29 and API 30 and take the deprecated fallback, so they cannot answer it — or this AVD on a machine that is not also running a desktop
+session. The claim stays stated and unmeasured, and it is now stated as *attempted on three boots with these numbers*, not as an unexplored gap.
