@@ -2171,4 +2171,16 @@ Menu is the owner's own setting, left alone.
   so either a build is queued or **production does not track `main`** — a Netlify setting nobody in this
   repository can read. `node tools/deploy-check.cjs` is the command that says which, and it exits 1 naming the six
   undeployed fixes until it stops doing so.
+  **Two more merges since, both verified the same way.** PR #10 merged as `0e490cc`; PR #11 — the compatibility floor,
+the §121–§129 inset work and the four new instruments — merged **2026-10-24T13:28:23Z server-authoritative** as
+`b0600db`, carrying 15 files with head `e412328`. Verified rather than assumed: `git merge-base --is-ancestor
+e412328 origin/main` answers YES; `git diff --quiet 0e490cc origin/main -- Sukinnect.html` answers *unchanged*, so the
+merge put the rebuild's page and the new instruments on `main` and **promoted nothing**; and a detached worktree
+checked out at `origin/main` runs **all 566 gate checks** and `audit-compat-floor` with `findings: 0`, which is the
+test that `main` is self-contained rather than merely equal to a working tree that happens to hold extra files.
+Deployment afterwards is the accepted state, not a finding: minutes after the merge (server clock — this machine's
+`date -u` runs ~18 h ahead, so elapsed claims use response headers and API timestamps, never the local clock) the
+public `/` still serves `3c73bfef` from 2026-10-15 with the same six fixes absent and `findings: 7`. The owner ruled
+that build deliberately stale on 2026-10-24, so the number is a tripwire against unchosen drift; whether a Netlify
+build was queued at that instant is not distinguishable from here and is not claimed either way.
 
