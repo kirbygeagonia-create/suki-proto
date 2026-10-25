@@ -3317,6 +3317,49 @@ booking when the provider accepts.
 
 Do not scatter raw color codes throughout the file.
 
+THE COMPATIBILITY FLOOR IS A WEBVIEW, NOT `minSdkVersion`. `Sukinnect-Android/app/build.gradle` says
+`minSdk 24 / targetSdk 36`, and that pair describes the *shell*. The application is a page inside a WebView, and the
+WebView updates through Play independently of the OS, so an Android 7 handset with a 2024 engine is fine and a 2020
+Go handset frozen at WebView 77 is not — `minSdk` answers neither case. The real floor is a property of the CSS and JS
+this file uses, so it is read from there: **`node tools/audit-compat-floor.cjs`** scans 17 features against the
+Chromium version that first honoured each, strips comments so prose about `:has()` is not a use of it, and prints
+**two numbers, because the one people quote is the wrong one** — the *raw* floor (today Chromium 108, from `dvh`) and
+the **breaking** floor (features whose drop removes geometry rather than cosmetics). Flex `gap` at 84 is the raw
+floor's neighbour and degrades to items touching; `inset:0` at 87 left a scrim with no box, which is not a cosmetic
+loss, and all six of those are now explicit `top/right/bottom/left`. Exceptions are declared **in the application,
+beside the rule** — `/* compat-exception: <feature> — <reason> */` — and read from the raw source, because the
+declaration is itself a comment; a stale exception, an absent feature, or a reason too short to say what degrades and
+where that is checked is a finding, not a silence. Proven by `node tools/falsify-compat-floor.cjs` (7 breaks, 7
+caught). The exit code gates the breaking floor only, because the raw floor is information about a graceful
+degradation, not a defect.
+
+A WEBVIEW IGNORES ITS OWN PADDING. `MainActivity.applySystemBarInsets()` set a listener on the WebView and called
+`v.setPadding(...)`, and the listener ran with real insets (`top=136 bottom=66` at API 36, logged) while
+`innerHeight` never moved — a WebView lays its page out at the full view size. Padding `android.R.id.content` instead
+and the page is inset by exactly the bars (202px on the android-36 frame). This cost two falsified hypotheses before a
+log line settled it, so the standing rule beside it is: **a fix that produces an identical reading is a falsified
+hypothesis, not a partial success**, and the patch that did nothing was reverted rather than left in with a comment
+naming a cause.
+
+A MUTATION TEST WHOSE PREMISE IS A DISTANCE IN HISTORY EXPIRES THE NEXT TIME SOMEONE MERGES.
+`tools/falsify-commit-subjects.cjs` broke the audit's default by re-rooting its walk from `HEAD` onto `origin/main`,
+which was a real population shrink while the branch ran ahead of `main`. After PR #10 merged, `origin/main` sits one
+commit behind HEAD, walking 120 back from either rev lands on nearly the same 120, and the break became **equivalent
+by history rather than by edit** — it printed MISSED while the guard it represents was still needed. Every other
+equivalent mutant recorded here was absorbed by the code; this is the first absorbed by the branch. It was re-pointed
+at the defect the audit's own header records (defaulting the range to `origin/main..HEAD`, which really is narrow and
+is condemned by `SCOPE_FLOOR`). The rule to apply to any future break: if it depends on how far the branch is from
+another ref, it needs a premise that cannot move.
+
+THE EMULATOR SETTLES API-LEVEL QUESTIONS, NOT A SPECIFIC PHONE'S, AND IT NEEDS A MINUTE AFTER BOOT. The android-36
+AVD answers `targetSdk 36` forced edge-to-edge, inset arithmetic, and font multiplication — framework behaviour. It
+cannot answer a real handset's density, bar heights, or OEM shell quirks, and no reading from it closes a
+hardware-parity leg. It also starves for ~150 s after `Boot completed` (96% CPU, `dumpsys meminfo` timing out), during
+which `tools/device-edge-leg.cjs` correctly prints `NO CONCLUSION` rather than a zero — so the settle rule is "until
+the frame stops doing what it does after boot", not a fixed nap. And the leg no longer refuses below API 35: it prints
+its scope and judges the question that holds at every level, whether the page paints under a system bar, which is what
+the two handsets here (OPPO API 29, vivo API 30) can actually answer.
+
 ---
 
 # 32. GRADIENT USAGE
