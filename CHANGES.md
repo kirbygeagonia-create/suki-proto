@@ -7679,3 +7679,24 @@ the only way a guard like that earns its keep. Gate: all 566 checks passed; `dep
 **What stays true about the deployment surface:** production is still the deliberately-stale `3c73bfe` artifact by the
 owner's ruling, and PR #11's preview builds but is not readable from this machine without auth. So "does this branch
 deploy correctly" is verified only as far as Netlify's own build status, not as a byte comparison from here.
+
+## 127. The low-end regime was reproduced without a handset, and it turned up two defects in the reader
+
+Only the OPPO can exercise the legacy `getSystemWindowInset*` getters, and no device is on this bus — but the thing §121
+actually risked on low-end Android is a **window-regime** question: does padding `android.R.id.content` double-count
+when the framework is already insetting the window? That is reproducible on the API 36 frame by building the identical
+page against **`targetSdk 34`**, at which point edge-to-edge is no longer forced. Built, installed, read:
+`innerHeight 778`, surface **2138 of 2340**, `findings: 0` — the same numbers as the shipping build. So the content box
+is inset by the bars exactly once, whether the framework or the shell is responsible. The regime half of task #70 is
+measured; the legacy-getters half still needs the handset, and that is stated rather than folded into a pass.
+
+**Getting there found two defects in `judge()`, both fixed.** It keyed the "forces edge-to-edge" decision on the
+*device* SDK, so a `targetSdk 34` build on an API 36 frame was credited with "the shell inset the page on a frame that
+forces edge-to-edge" — a sentence that was false in that configuration; the regime is `min(deviceSdk, targetSdk)`.
+And the new `LIMIT` branch sat in the chain *before* the reasons reporting, so an actual intrusion in the unattributed
+regime would have printed `LIMIT` and `findings: 0`: a note that suppresses the evidence it stands next to. It now
+fires only when the measurement passed, and the unattributed path asks its own question — does the page draw **beyond**
+its inset box — instead of reusing the full-bleed rule, where "content fills the surface" is what health looks like.
+
+Machine state: `targetSdk` reverted to 36, the APK rebuilt and reinstalled, the AVD killed and forwards cleared.
+Selftests 23 of 23; gate: all 566 checks passed.

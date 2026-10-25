@@ -93,6 +93,20 @@ function judge(m) {
          it was handed while the platform reports bars? That is a legibility and reachability defect wherever it is
          true, and it is the only one a low-end handset can be asked about. */
       m.unattributedInset = inset;
+      /* In this regime the surface is already shorter than the screen — by the framework, the shell, or both, which
+         is exactly what cannot be told apart here — so the question is not "does the page fill its surface" (it
+         should, and that is what a healthy inset box looks like) but "does it draw BEYOND the inset box". Comparing
+         content against the surface with the full-bleed rule flagged a correct page as painted under a bar. */
+      const over = cssH * dpr - m.viewH;
+      const unReasons = [];
+      if (over > 2) unReasons.push('the page measures ' + Math.round(over) + 'px beyond its own ' + m.viewH
+        + 'px surface, so it is drawn outside the inset box');
+      if (m.navBottomCss != null && m.bottomNavBottom != null && m.bottomNavBottom > m.navBottomCss + 1) {
+        unReasons.push('the bottom navigation row ends at ' + m.bottomNavBottom + ' CSS px, below the content edge '
+          + m.navBottomCss + ' — a thumb target off the reduced viewport');
+      }
+      return { ok: unReasons.length === 0, reasons: unReasons, slack: m.viewH - contentPx,
+        contentPx: Math.round(contentPx), unattributedInset: inset };
     } else {
       return { ok: true, refusal: true, reasons: [], slack: inset, contentPx: Math.round(cssH * dpr),
         note: 'the window is already inset by the framework (' + m.viewH + ' of ' + m.screenH + 'px) and no API level'
@@ -280,12 +294,17 @@ if (!viewH) findings.push('the WebView surface height was never read, so the pad
 if (!page) findings.push('the page never answered with geometry, so nothing about the padding was observed');
 let v = null;
 if (viewH && page) {
-  v = judge({ sdk: +sdk || 0, viewH: viewH, screenH: screenH, bars: bars, innerHeight: page.innerHeight, dpr: page.dpr,
+  /* Edge-to-edge is forced only when BOTH the platform and the app's targetSdk clear 35. Reading the device SDK alone
+     let a targetSdk-34 build on an API-36 frame credit the shell with the insetting, when in that regime the
+     framework insets the window by default — measured 2026-10-25 by building the identical page against targetSdk 34
+     and reading the same 202px. So the regime is the min of the two numbers. */
+  const appTarget = Number((String(pkgDump).match(/targetSdk=(\d+)/) || [])[1] || 0);
+  v = judge({ sdk: Math.min(+sdk || 0, appTarget), viewH: viewH, screenH: screenH, bars: bars, innerHeight: page.innerHeight, dpr: page.dpr,
     navBottomCss: page.navBottomCss, bottomNavBottom: page.bottomNavBottom });
   console.log('measurement: view=' + page.view + ' innerHeight=' + page.innerHeight + ' dpr=' + page.dpr +
     ' → content ' + v.contentPx + 'px inside a ' + viewH + 'px surface, slack ' + (v.slack === undefined ? '?' : Math.round(v.slack * 10) / 10) + 'px');
   if (v.refusal) console.log('  UNTESTABLE: ' + v.note);
-  else if (v.unattributedInset) console.log('  LIMIT: API ' + sdk + ' does not force edge-to-edge, so the '
+  else if (v.ok && v.unattributedInset) console.log('  LIMIT: API ' + sdk + ' does not force edge-to-edge, so the '
     + v.unattributedInset + 'px the window lost cannot be credited to the shell. What was judged is the question'
     + ' that holds at any level: does the page paint under a system bar.');
   else if (v.ok) console.log(v.insetByShell
