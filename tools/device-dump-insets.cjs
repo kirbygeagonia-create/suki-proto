@@ -63,6 +63,19 @@ if (ours.length === 0) {
   process.exit(1);
 }
 const others = nodes.filter(n => n.pkg && n.pkg !== PKG);
+/* A dump that contains only our own package is a PAGE-level dump: the accessibility tree a WebView publishes
+   reports bounds relative to the WebView's own coordinate space, which already begins below the bars. Judging those
+   numbers against window bands is a category error — it will call the top of the page "under the status bar" — so the
+   reader refuses unless the dump also holds foreign nodes, which is what a window-level dump looks like. This was
+   found by re-running the reader on a recorded handset dump after the content-root change: the same file that read
+   `findings: 0` on a window-level basis read `findings: 1` once the content root was followed properly, and neither
+   number meant anything. */
+if (others.length === 0) {
+  console.log('NO CONCLUSION: every node in the dump belongs to ' + PKG + ', so this is a page-level (WebView) dump '
+    + 'whose bounds are relative to the WebView, not the window. Take the dump with the window chrome in it, or read '
+    + 'the renderer-side numbers with tools/device-edge-leg.cjs instead.');
+  process.exit(1);
+}
 
 /* Bar bands, derived. A node that starts at the very top and is not ours is part of the status band; the band's
    floor is the lowest such bottom that is still a plausible bar (under a fifth of the screen), because a full-screen
@@ -90,16 +103,19 @@ if (!statusBar && !navFromBottom) {
   process.exit(1);
 }
 
-/* The window's own scaffolding always spans the bars on a non-edge-to-edge window — `android:id/statusBarBackground`
-   exists precisely to paint behind the status bar, and the DecorView and its first layout wrap the whole window.
-   Judging them produces three confident false findings on an app whose content is inset correctly, which is exactly
-   what the first run of this reader did on a recorded handset dump. So the population is the app's CONTENT: nodes
-   that are not the framework's bar backgrounds and do not cover the whole window themselves. */
+/* The population to judge is the app's CONTENT, not its nodes. Two reasons, both found on real and synthetic dumps
+   in the same session: the decor and the framework's bar backgrounds always span the bars (`statusBarBackground`
+   exists precisely to paint behind the status bar), and a bottom-anchored `navigationBarBackground` also poisons any
+   "how far down does the app reach" test built from the node list. So the content root is taken from Android's own
+   definition — `android:id/content` — and because a uiautomator dump is depth-first, that node and everything after
+   it in document order is the content and its descendants. Without that node the reader falls back to excluding the
+   known scaffolding, and says which rule it used: a verdict computed two ways must name the way it was computed. */
 const DECOR_IDS = /android:id\/(statusBarBackground|navigationBarBackground)$/;
-const isScaffolding = (n) => DECOR_IDS.test(n.id)
-  || (n.b.l === 0 && n.b.t === 0 && n.b.r >= screenW && n.b.b >= maxBottomOf(ours));
-const maxBottomOf = (list) => Math.max(...list.map(x => x.b.b));
-const content = ours.filter(n => !isScaffolding(n));
+const rootInOurs = ours.findIndex(n => n.id === 'android:id/content');
+const allBottom = Math.max(...ours.map(n => n.b.b));
+const content = rootInOurs >= 0 ? ours.slice(rootInOurs)
+  : ours.filter(n => !DECOR_IDS.test(n.id) && !(n.b.t === 0 && n.b.b >= allBottom));
+const contentRule = rootInOurs >= 0 ? 'android:id/content root' : 'scaffolding excluded by bounds and id';
 
 const findings = [];
 const maxBottom = Math.max(...ours.map(n => n.b.b));
@@ -117,8 +133,8 @@ for (const n of content) {
 const appBox = { t: minTop, b: maxBottom };
 
 console.log('dump inset audit — ' + path.basename(FILE) + ' on a ' + screenW + 'x' + screenH + ' display');
-console.log('  our nodes: ' + ours.length + ' total, ' + content.length + ' judged as content ('
-  + (ours.length - content.length) + ' excluded as window scaffolding)');
+console.log('  our nodes: ' + ours.length + ' total, ' + content.length + ' judged as content by '
+  + contentRule + ' (' + (ours.length - content.length) + ' excluded as window scaffolding)');
 console.log('  content box: topmost ' + appBox.t + ', bottommost ' + appBox.b
   + ' — the window itself reaches ' + maxBottom);
 console.log('  status band: ' + (statusBar ? 'floor at y=' + statusBar + '  [' + bandSource(statusBarExplicit !== null) + ']' : 'not derived'));

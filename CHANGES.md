@@ -7624,3 +7624,29 @@ node tools/device-dump-insets.cjs --file=.scratch/wd.xml --screen=<wm size> --st
 
 with `node tools/device-edge-leg.cjs` still answering the renderer-side question in the same sitting. The OPPO (API 29)
 is the device that exercises the legacy `getSystemWindowInset*` branch; the vivo (API 30) takes the modern path.
+
+**Corrected twenty minutes later by its own falsifier — do not trust the paragraph above's use of the recorded dump.**
+Writing `tools/falsify-dump-insets.cjs` to prove the reader broke it twice, and both breaks were real:
+
+- A **bottom**-anchored `android:id/navigationBarBackground` is not excluded by a test that only rejects nodes
+  spanning from the top, and its presence also poisons the "how far down does the app reach" figure the exclusion
+  depended on. The population is now taken from Android's own definition — the `android:id/content` root, plus
+  everything after it in the dump's depth-first order — and the reader prints which rule it used.
+- Then the reader's verdict on the recorded handset dump flipped from `findings: 0` to `findings: 1` under the corrected
+  rule, and **neither number meant anything**: a dump whose every node belongs to the app is a *page-level* dump, and a
+  WebView publishes bounds relative to its own surface, which already begins below the bars. Comparing them against
+  window bands is a category error. The reader now refuses that case outright, so the "both controls pass on the
+  recorded dump" claim above is retired — the recorded dump cannot validate this instrument at all, and the calibration
+  lives in the falsifier's own window-level fixtures instead.
+
+`node tools/falsify-dump-insets.cjs` is **7 breaks, 7 caught, 0 not applied**, fixtures embedded (`.scratch/` is
+gitignored, so a control that depends on it is not re-runnable): a correct window-level dump reads 0 and a band
+planted 6px deep reads 2; excluding scaffolding, the status comparison, the `--file=` slice that was today's actual
+bug, the no-band refusal, the wrong-package refusal, the null-root refusal, and the page-level refusal each get
+removed in turn and each is caught. Two of those breaks had to be written as *"the wrong diagnosis fires"* — a null-root
+dump and a foreign dump both refuse with exit 1, so the only way to show the two guards are separately live is to
+require the specific message that must appear when one is disabled.
+
+**Scope, stated plainly:** `uiautomator dump` captures the active window, so a full-screen app's dump may never contain
+the bars as foreign nodes. That makes this reader a secondary instrument — useful on split-screen, overlays and
+pickers — and `tools/device-edge-leg.cjs` the primary path for task #70. Gate: all 566 checks passed.
