@@ -87,9 +87,17 @@ function judge(m) {
           + ' forces edge-to-edge at API ' + m.sdk + ' — that inset is the shell padding, and the page fills the'
           + ' padded box with ' + Math.round(cssH * dpr) + 'px of content' };
     }
-    return { ok: true, refusal: true, reasons: [], slack: inset, contentPx: Math.round(cssH * dpr),
-      note: 'the window is already inset by the framework (' + m.viewH + ' of ' + m.screenH + 'px), so this frame'
-        + ' cannot test the shell padding question' };
+    if (typeof m.sdk === 'number') {
+      /* Below API 35 the framework may have shortened the window itself, so the inset cannot be credited to the
+         shell. Keep going and ask the question that holds at any API level instead: does the page fill the surface
+         it was handed while the platform reports bars? That is a legibility and reachability defect wherever it is
+         true, and it is the only one a low-end handset can be asked about. */
+      m.unattributedInset = inset;
+    } else {
+      return { ok: true, refusal: true, reasons: [], slack: inset, contentPx: Math.round(cssH * dpr),
+        note: 'the window is already inset by the framework (' + m.viewH + ' of ' + m.screenH + 'px) and no API level'
+          + ' was read, so neither the shell-padding question nor the low-end one can be attributed' };
+    }
   }
   const contentPx = cssH * dpr;
   const slack = m.viewH - contentPx;
@@ -105,7 +113,8 @@ function judge(m) {
   if (m.navBottomCss != null && m.bottomNavBottom != null && m.bottomNavBottom > m.navBottomCss + 1) {
     reasons.push('the bottom navigation row ends at ' + m.bottomNavBottom + ' CSS px, below the content edge ' + m.navBottomCss + ' — a thumb target off the reduced viewport');
   }
-  return { ok: reasons.length === 0, reasons, slack, contentPx: Math.round(contentPx) };
+  return { ok: reasons.length === 0, reasons, slack, contentPx: Math.round(contentPx),
+    unattributedInset: m.unattributedInset || 0 };
 }
 
 if (process.argv.indexOf('--selftest') > -1) {
@@ -122,7 +131,10 @@ if (process.argv.indexOf('--selftest') > -1) {
   t('an inset surface at API 36 is the shell padding, not an untestable frame', shellInset.ok && !shellInset.refusal && shellInset.insetByShell === true, true);
   t('…and its note names the 202px it measured', /202px shorter/.test(shellInset.note), true);
   const oldRefusal = judge({ sdk: 30, viewH: 2138, screenH: 2340, innerHeight: 778, dpr: 2.75, bars: BARS, navBottomCss: 778, bottomNavBottom: 774 });
-  t('below API 35 the same surface is still a refusal, not a pass', oldRefusal.refusal === true, true);
+  /* Rewritten 2026-10-25, not deleted: this case asserted "below API 35 an inset surface is a refusal", which is the
+     behaviour the owner asked to replace with a low-end measurement. The rule that survives is narrower and still
+     worth pinning — below API 35 the inset may be the framework's, so it must never be credited to the shell. */
+  t('below API 35 an inset surface is never credited to the shell', oldRefusal.insetByShell === undefined, true);
   const noSdk = judge({ viewH: 2138, screenH: 2340, innerHeight: 778, dpr: 2.75, bars: BARS, navBottomCss: 778, bottomNavBottom: 774 });
   t('an unread sdk reads as the refusal, never as the pass', noSdk.refusal === true, true);
   t('a gesture-nav frame with a padded top still passes', judge({ viewH: 2340, screenH: 2340, innerHeight: 1138, dpr: 2, bars: { top: true, bottom: false, read: true, source: 'test' }, navBottomCss: 1138, bottomNavBottom: 1132 }).ok, true);
@@ -130,6 +142,16 @@ if (process.argv.indexOf('--selftest') > -1) {
   t('a frame reporting no status bar refuses as a reader limit', judge({ viewH: 2340, screenH: 2340, innerHeight: 1170, dpr: 2, bars: { top: false, bottom: true, read: true } }).ok, false);
   const inset = judge({ viewH: 2277, screenH: 2340, innerHeight: 1138, dpr: 2, bars: BARS, navBottomCss: 1138, bottomNavBottom: 1130 });
   t('a framework-inset window is declared untestable, not clean', inset.refusal === true && inset.ok === true, true);
+  /* The low-end half of the same question. Below API 35 the framework may inset the window itself, so the inset is
+     never credited to the shell — but "does the page paint under a bar" is answerable on a 2016 handset, and that is
+     the reading the two phones on this bus can give. */
+  const lowEnd = judge({ sdk: 30, viewH: 2277, screenH: 2340, innerHeight: 1138, dpr: 2, bars: BARS,
+    navBottomCss: 1138, bottomNavBottom: 1130 });
+  t('an API 30 frame is judged, not refused', lowEnd.refusal === undefined && lowEnd.ok === true, true);
+  t('…and the 63px it lost is reported as unattributed', lowEnd.unattributedInset === 63, true);
+  const lowEndUnder = judge({ sdk: 29, viewH: 2277, screenH: 2340, innerHeight: 1139, dpr: 2, bars: BARS,
+    navBottomCss: 1139, bottomNavBottom: 1139 });
+  t('an API 29 page filling its surface while bars exist is still condemned', lowEndUnder.ok === false, true);
   t('a nav row below the content edge is condemned', judge({ viewH: 2340, screenH: 2340, innerHeight: 1105, dpr: 2, bars: BARS, navBottomCss: 1105, bottomNavBottom: 1118 }).ok, false);
   t('a null measurement refuses', judge(null).ok, false);
   t('a missing dpr refuses', judge({ viewH: 2340, screenH: 2340, innerHeight: 1105, bars: BARS }).ok, false);
@@ -162,9 +184,14 @@ const sdk = parseInt(String(adb('-s', SERIAL, 'shell', 'getprop', 'ro.build.vers
 console.log('ro.build.version.sdk = ' + (isNaN(sdk) ? 'unreadable' : sdk));
 if (isNaN(sdk)) { console.log('NO CONCLUSION — the API level could not be read, so the frame is not even classifiable.'); process.exit(1); }
 if (sdk < 35) {
-  console.log('WRONG TARGET — edge-to-edge is only FORCED at API 35+ (this is ' + sdk + '), where the shell uses the deprecated' +
-    ' getSystemWindowInset* fallback instead. A clean reading here would not answer the open question, so nothing is installed.');
-  process.exit(1);
+  /* Used to refuse here, which made the leg unable to answer the one question a low-end handset CAN answer: is any
+     part of this app painted underneath a system bar? Edge-to-edge is not FORCED below API 35, so a shortened
+     surface cannot be attributed to the shell's padding — but content filling whatever surface it was given, while
+     the platform reports bars, is a defect on any API level. So the scope is printed and the reading is taken.
+     The pass/fail arithmetic lives in judge(), which splits on the same number. */
+  console.log('SCOPE — API ' + sdk + ' is below 35, where edge-to-edge is not forced and the framework may inset the'
+    + ' window itself. The shell-padding question is therefore NOT answered here; what is measured is whether the'
+    + ' page paints under a system bar, which is the user-visible half and holds at every API level.');
 }
 
 const screenH = screenHeightPx(adb('-s', SERIAL, 'shell', 'wm', 'size'));
@@ -258,6 +285,9 @@ if (viewH && page) {
   console.log('measurement: view=' + page.view + ' innerHeight=' + page.innerHeight + ' dpr=' + page.dpr +
     ' → content ' + v.contentPx + 'px inside a ' + viewH + 'px surface, slack ' + (v.slack === undefined ? '?' : Math.round(v.slack * 10) / 10) + 'px');
   if (v.refusal) console.log('  UNTESTABLE: ' + v.note);
+  else if (v.unattributedInset) console.log('  LIMIT: API ' + sdk + ' does not force edge-to-edge, so the '
+    + v.unattributedInset + 'px the window lost cannot be credited to the shell. What was judged is the question'
+    + ' that holds at any level: does the page paint under a system bar.');
   else if (v.ok) console.log('  verdict: the shell inset the page from the bars — the page\'s content box is ' + Math.round(v.slack) + 'px shorter than a surface spanning the ' + screenH + 'px screen, and the platform reports system bars');
   else v.reasons.forEach(r => findings.push(r));
 }

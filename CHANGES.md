@@ -7460,3 +7460,83 @@ device has been on this bus (OPPO API 29, vivo API 30). The bar heights here are
 Funtouch shell may report different insets or draw its own gesture area. The claim that survives is the narrow one:
 **at an API level that forces edge-to-edge, the shell's compensation now produces a 202px inset that the page honours,
 and it does so because the padding moved from the WebView to the content view.**
+
+## 122. The compatibility floor is a WebView, not a `minSdkVersion` — and the only breaking feature above it was `inset:0`
+
+Asked to make the app hold on both low-end and high-end Android, with no API 35+ device on the bus, the tempting
+answer is the number in `app/build.gradle`: **`minSdk 24`**, Android 7 from 2016. That number describes the *shell*.
+This application is a page inside a WebView, and the WebView updates through Play independently of the OS — so an
+Android 7 handset with a 2024 WebView is fine, and a 2020 Go handset whose WebView froze at 77 is not, and
+`minSdk` says nothing about either. The real floor is a property of the CSS and JS the file actually uses, so it is
+now read from there.
+
+`node tools/audit-compat-floor.cjs` carries a table of 17 features with the Chromium version that first honoured
+each, and prints **two numbers, because the one people quote is the wrong one**:
+
+- **raw floor — Chromium 108**, from the dynamic viewport units. Harmless: both uses are written
+  `min-height:100vh; min-height:100dvh;`, so an old engine drops the second line and keeps the first.
+- **breaking floor — none** (it was **88** before this section). Restricted to features whose drop removes geometry
+  rather than cosmetics, which is the distinction that decides whether a device can be below the number.
+
+What it found, and what was done:
+
+| feature | version | uses | verdict |
+|---|---|---|---|
+| `inset` shorthand | 87 | 6 | **breaking** — a scrim with only `inset:0` has no box, so it cannot dim or catch the tap-to-close |
+| `:where()` focus ring | 88 | 1 | breaking by shape, benign in fact — the UA ring still paints |
+| flexbox `gap` | 84 | 191 | benign — items touch, padding still spaces |
+| `min()/max()/clamp()` | 79 | 5 | benign — `:root font-size` falls back to the UA default |
+| `dvh/svh/lvh` | 108 | 2 | benign **only** because a `vh` fallback precedes each |
+
+All six `inset:0` uses became explicit `top/right/bottom/left`, which is what took the breaking floor from 88 to
+none. The `:where()` rule was not rewritten — zero specificity is the reason it exists — and is instead excused
+**in the application, beside the rule**, as `/* compat-exception: :is() / :where() — … */`. The audit reads its
+exceptions from the source rather than maintaining a list beside it, refuses an exception naming a feature that is
+absent (the excuse outliving the rule), and refuses one whose reason is too short to say what degrades and where
+that is checked. Comments are stripped before the feature scan, so a sentence *about* `:has()` is not a use of it;
+the exception text itself is read from the raw source, because the declaration **is** a comment.
+
+**`node tools/falsify-compat-floor.cjs` — 7 breaks, 7 caught, 0 not applied**, and three of the seven were the
+family's own bugs before they were evidence:
+
+- The fallback probe tested for the string `vh`, which occurs inside `dvh`. Every use therefore read `guarded` and
+  the tool could not have observed an unguarded one at any cost. Caught only because the break that deletes the
+  fallback printed MISSED — a check that cannot fail looks exactly like a check that passes, and this is the fourth
+  time that sentence has had to be written.
+- One break shortened "a reason" by replacing one sentence of a three-line comment, so the reason stayed long and the
+  tool was right to stay quiet. The break was wrong, not the rule.
+- And a multi-line anchor written with `\n` matched **0×** in this CRLF checkout, which the family now normalises
+  before it counts — otherwise a future break reports NOT APPLIED while the summary still prints healthy.
+
+**The same CSS rewrite orphaned a needle in a family that was not being run.** Re-running the four families whose
+target is the check I had to widen, `falsify-modal-stacking` printed `0 of 0 mutants caught; file restored.` and
+**exited 0** — its three needles all contained `inset:0`, so every one missed and the family tested nothing while
+looking like a pass. The aggregate would have caught it, because `falsify-all.cjs` already treats `applied === 0` as
+trouble, but the aggregate costs ~53 minutes and a family run alone is what a person actually does after editing one
+check. So the refusal now lives in the family too (`NO CONCLUSION: no needle matched the file`), the needles are
+re-pointed at the new spelling, and it reads **3 of 3** again. The general shape: `process.exit(caught === applied ?
+0 : 1)` is satisfied by `0 === 0`, and any summary line that compares two counts must say what an empty pair of
+counts means — this is the fifth time this repository has written down "a check that cannot fail looks exactly like a
+check that passes", and the first time it was a *count of checks*.
+
+**The gate caught the conversion, not just the code.** `every full-screen layer root carries the convention the
+keyboard walk reads` finds layer roots by matching the CSS spelling `position:fixed; inset:0`; converting the inline
+one dropped its population from 5 roots to 4 and the floor refused. The detector, not the application, was stale —
+and a root-finder that quietly under-counts is the exact failure that check exists to prevent, so it now matches
+either spelling. Verified both ways on the file as it stands: old pattern 4, new pattern 5, all five carrying
+`data-layer`.
+
+**The low-end leg is armed rather than owed.** `tools/device-edge-leg.cjs` used to exit before installing on
+anything below API 35, which made the question unanswerable on both handsets that exist here. It now prints the
+scope — below API 35 the framework may inset the window itself, so an inset cannot be credited to the shell — and
+judges the half that holds at every level: **does the page paint under a system bar**. Selftests 20 → 23, including
+one case from §121 **rewritten rather than deleted**, because the owner's decision changed the rule it encoded and a
+silently-dropped assertion is how coverage disappears.
+
+Measured after all of it: **8 of 8 phone corners clean** over the 82 screens the walk counts, and **all 566 gate
+checks passed**. Because the page changed, its four copies were re-made rather than left to drift — `dist/`, the
+staged Android asset and the APK bundle all read `bac09020…` now, which is what
+`node tools/audit-build-bytes.cjs` prints as `findings: 0` after a rebuild; the `3c78fdd…` quoted in §119–§121 is
+the same file at those dates, not a disagreement. What is still owed is one reading, not a decision: attach the vivo
+or the OPPO and `node tools/device-edge-leg.cjs` answers the API 29/30 branch that today's shell change touched and no
+instrument has yet seen run.
