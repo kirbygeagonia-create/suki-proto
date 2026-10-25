@@ -288,7 +288,15 @@ if (viewH && page) {
   else if (v.unattributedInset) console.log('  LIMIT: API ' + sdk + ' does not force edge-to-edge, so the '
     + v.unattributedInset + 'px the window lost cannot be credited to the shell. What was judged is the question'
     + ' that holds at any level: does the page paint under a system bar.');
-  else if (v.ok) console.log('  verdict: the shell inset the page from the bars — the page\'s content box is ' + Math.round(v.slack) + 'px shorter than a surface spanning the ' + screenH + 'px screen, and the platform reports system bars');
+  else if (v.ok) console.log(v.insetByShell
+    /* slack here is screen minus surface — the inset the shell applied. On the other ok path slack is surface
+       minus content, which is a different measurement wearing the same field name, so the two sentences are
+       printed by branch rather than by one template that is true in only one of them. */
+    ? '  verdict: the shell inset the page from the bars — the WebView surface is ' + v.slack + 'px shorter than the '
+      + screenH + 'px screen on a frame that forces edge-to-edge, and the page fills that inset box with '
+      + v.contentPx + 'px of content'
+    : '  verdict: the page leaves ' + Math.round(v.slack) + 'px of its ' + viewH + 'px surface clear of the bars'
+      + ' (content ' + v.contentPx + 'px inside a ' + viewH + 'px surface on a ' + screenH + 'px screen)');
   else v.reasons.forEach(r => findings.push(r));
 }
 console.log('findings: ' + findings.length);

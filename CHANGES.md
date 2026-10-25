@@ -7568,3 +7568,24 @@ Consequence for the aggregate's own numbers: the run in progress reports `commit
 row is the **pre-fix** reading. Re-run alone after the re-point it is 5 of 5, so the suite figure quoted for this
 pass carries one survivor that is known-stale in exactly this sense — stated here rather than smoothed over, because
 "re-run until green is not a fix" is the rule this section is standing on.
+
+## 124. Re-measured on the bytes that shipped: the same 202px, and a verdict line that named the wrong box
+
+§122 changed the page after §121 measured it, so the inset reading was, by this file's own standard, a measurement
+taken before the file's last edit — not wrong, just old, which is the one failure mode an assertion cannot express.
+Re-taken on `bac09020…` (the bytes in all four copies): `innerHeight 778`, `dpr 2.75`, surface **2138 of 2340**,
+slack **202px**, `findings: 0`, exit 0 — identical to §121. The scrim conversion did not disturb the compensation,
+and that is now a reading rather than an argument. Two runs, same numbers.
+
+**The frame still starves, and the leg still refuses correctly.** The first attempt after boot printed
+`NO CONCLUSION — no webview_devtools_remote socket appeared`, with `dumpsys meminfo` timing out and the device at
+96% CPU (75% kernel) 185 s after `Boot completed`. Waiting ~150 s and re-running produced the reading above. So the
+settle rule from §120 is not "60 s", it is "until the frame stops doing what it does after boot", and the refusal is
+the instrument being useful rather than precious: it named the input it never got instead of emitting a zero.
+
+**A printed verdict that misdescribes which quantity it holds is a defect, even when the number is right.** The pass
+line read "the page's content box is 202px shorter than **a surface spanning the 2340px screen**" — but after §121
+the surface is *not* spanning the screen; that is the whole finding. The cause is a field named `slack` carrying two
+different measurements on two branches (screen minus surface on the forced-edge-to-edge path, surface minus content
+on the normal one), and one template trying to be true for both. It now prints per branch, with a comment saying why
+the two are not the same quantity. Selftests still 23 of 23.
