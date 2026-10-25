@@ -7540,3 +7540,31 @@ staged Android asset and the APK bundle all read `bac09020…` now, which is wha
 the same file at those dates, not a disagreement. What is still owed is one reading, not a decision: attach the vivo
 or the OPPO and `node tools/device-edge-leg.cjs` answers the API 29/30 branch that today's shell change touched and no
 instrument has yet seen run.
+
+## 123. A break can decay into an equivalent one without any code changing — the repository's history moved under it
+
+The aggregate was re-run for §122 (the page, `verify.cjs`, `falsify-all.cjs` and `falsify-modal-stacking.cjs` had all
+changed, and a family that is not re-run after its target moves is the failure this file has named repeatedly). It
+found a survivor nobody had touched today: **`commit-subjects` applied 5, caught 4, missed 1** — the break that
+re-roots the audit's default walk onto `origin/main`.
+
+Read before being deleted, as usual, and the reading was surprising: the mutation still applies, the guard it
+represents is still needed, and the break is still *correct as written* — it simply no longer shrinks anything. Its
+needle was `['-n', N, 'HEAD']` → `['-n', N, 'origin/main']`, written when the branch ran far ahead of `main` and
+`origin/main..HEAD` was the three-commit population that let a reused subject through. **PR #10 has since been
+merged**, so `origin/main` is now one commit behind `HEAD`, and walking 120 commits back from either rev lands on
+essentially the same 120. The mutant became equivalent by history, not by edit, and the only durable thing that
+decays a mutation test is a merge.
+
+So the break was re-pointed at the defect the audit's own header records rather than at a rev: it now defaults
+`RANGE` to `'origin/main..HEAD'`, which is the actual narrow population, and `SCOPE_FLOOR` condemns it —
+`5 of 5 breaks caught, 0 not applied, 0 missed`, audit restored byte-for-byte, the failing row reading
+`set 0 vs 5, count 1/120`. The equivalent-mutant column already exists in this file's vocabulary (§"identity
+fallbacks", "reputation"), and every one of those was a mutation the *code* had absorbed. This is the first one the
+*branch* absorbed, and it generalises to every break whose premise is a distance in history: **a mutation test that
+depends on how far the branch is from `main` is a test that expires the next time someone merges.**
+
+Consequence for the aggregate's own numbers: the run in progress reports `commit-subjects 5 / 4 / 0 / 1`, and that
+row is the **pre-fix** reading. Re-run alone after the re-point it is 5 of 5, so the suite figure quoted for this
+pass carries one survivor that is known-stale in exactly this sense — stated here rather than smoothed over, because
+"re-run until green is not a fix" is the rule this section is standing on.
