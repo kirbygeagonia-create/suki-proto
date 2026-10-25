@@ -7298,3 +7298,39 @@ wrapper so that refusal path is reachable at all. 16 selftest cases still pass, 
 
 **What would settle the edge-to-edge question, concretely:** any handset at API 35+ — the two that have been attached are API 29 and API 30 and take the deprecated fallback, so they cannot answer it — or this AVD on a machine that is not also running a desktop
 session. The claim stays stated and unmeasured, and it is now stated as *attempted on three boots with these numbers*, not as an unexplored gap.
+
+## 119. The starver had a name in a config file: `hw.gpu.enabled=no`, `hw.cpu.ncore=2` — and fixing both still could not answer
+
+§118 stopped at “the emulator reports `ForceSwiftshader`”, which is a symptom with a source. Asked where,
+`~/.android/avd/suki_leg9.avd/config.ini` turned out to have been created with **`hw.gpu.enabled=no`** and
+**`hw.cpu.ncore=2`**, so every `-gpu host` argument was overridden before it took effect. That is the same
+shape as every other “the platform refuses” finding in this file: a configuration nobody had read, wearing the
+costume of a policy.
+
+Changed it and re-ran. With **four cores**, boot got *faster* — 100 s against 110–120 s — and the leg failed
+identically: `com.android.systemui` ANR’d and held focus across four consecutive reads, every
+`Runtime.evaluate` timed out, and `device-edge-leg.cjs` again printed its `findings` naming the two inputs it
+never got and exited 1. So the count is now **five boots, two core counts, two requested GPU backends**, and the
+conclusion is about this machine rather than about the attempt: it cannot host an API 35+ target that answers
+while also running a desktop session.
+
+**Machine state deliberately left half-changed, and therefore written down.** `hw.cpu.ncore=4` and
+`hw.gpu.enabled=yes` stay (they are strictly better and cost nothing); `hw.gpu.mode` is reverted from `host`
+back to `auto`, because `host` was never honoured and leaving it there makes the config assert something the
+frame does not do. A device-side or machine-side edit that nobody records is what turns the next session’s
+instrument into a haunted one — the same reason `DEVICE-PASS` exists for the Android shell that git will never
+show.
+
+**What can actually close the edge-to-edge item, in order of honesty:**
+1. **A handset at API 35 or above.** Neither attached phone qualifies (OPPO API 29, vivo API 30), and both take
+   the deprecated `getSystemWindowInset*` fallback, which is not the code path shipping at `targetSdk 36`. This
+   is the only route that measures the real thing.
+2. **A lighter image on this machine** — `google_apis` instead of `google_apis_playstore`, with a bigger RAM
+   allocation. Plausibly enough to stop the system-server ANRs. It costs a ~1 GB download and a new AVD, so it
+   needs an explicit yes rather than being assumed.
+3. **Accept it as stated-not-measured**, which is where it stands now: `applySystemBarInsets()` pads the WebView
+   in code, and no API 35+ target has ever confirmed the result on screen. That is the same treatment the owner
+   ruled for the shipped-file blind spot — name it, do not fabricate the reading.
+
+No application bytes changed; gate **all 566 checks passed**; frame killed, no `qemu` process, nothing on the
+USB bus, forwards cleared.
