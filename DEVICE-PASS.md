@@ -500,7 +500,10 @@ the only record.
    first record in the list for an id they do not hold.
 5. `app/src/debug/res/values/app.xml`: new, debug-only `app_name` = "Sukinnect · preview".
 6. `MainActivity.java`: `applySystemBarInsets()` added, plus the `Build` and `WindowInsets`
-   imports. This is the edge-to-edge compensation for item 4 and it is **device-unverified**.
+   imports. This is the edge-to-edge compensation for item 4 and it is **device-unverified**. *(Answered 2026-10-25 on the
+android-36 AVD at its native 1080x2340 skin, and the answer is a defect: the padding delivered zero on every edge
+while the window really is edge-to-edge — the status bar paints over the greeting and the gesture pill sits inside
+the bottom nav. `CHANGES.md` §120. The shell fix is the next action, not a further reading.)*
 7. `gradlew`, `gradlew.bat`, `gradle/wrapper/`: new, generated 2026-10-11.
 8. `tools/check-assets.cjs`, `tools/falsify-assets.cjs`: new. Both are about the artifact rather
    than the page, which is why they live here and not in `tools/` at the repo root.

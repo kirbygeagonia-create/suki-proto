@@ -7334,3 +7334,64 @@ show.
 
 No application bytes changed; gate **all 566 checks passed**; frame killed, no `qemu` process, nothing on the
 USB bus, forwards cleared.
+
+## 120. The API 36 frame finally answered, and what it answered with is a defect: the shell's inset padding delivered zero
+
+§119 closed with "five boots, two core counts, two requested GPU backends" and no reading. There is now a reading,
+and the frame was never the whole obstacle: **the leg was relaunching and re-attaching on every retry**, and each
+relaunch landed while `com.android.systemui`'s ANR dialog owned focus, so every `Runtime.evaluate` timed out. Left
+alone for sixty seconds after a cold start, the same socket answers. That is the same defect
+`reference-android-handset-automation-limits` records for the bench — a probe that relaunches per call — arriving on
+an emulator, and it was found by trying the read once instead of four times.
+
+**Measured on the android-36 AVD at its native phone skin** (`wm size` 1080x2340, `dpr 2.75` → 393x851 CSS px, the
+vivo's panel size; boot 147 s at `-memory 4096 -cores 4`):
+
+| reading | value |
+|---|---|
+| `innerHeight` / `screen.height` / `visualViewport.height` | **851 / 851 / 851.3** |
+| painted `.bottomnav` | top **777.5**, bottom **851.3**, height 73.7 |
+| `body` and `#app` `padding-bottom` | **0px**, and no `--safe-bottom` token exists |
+| status bar and gesture pill | both drawn **over** the app |
+
+The screenshot settles what the numbers imply: the clock and the status icons are painted **on top of the
+resident's greeting line** at the top, and the gesture pill sits **inside the bottom navigation row** at the bottom.
+So the two halves of the question get opposite answers, and both are now measured rather than assumed:
+
+1. **Edge-to-edge is in effect at API 36.** The WebView surface spans the whole display — `innerHeight` equals
+   `screen.height`, which is exactly what it would not do if the window were still being shortened by the bars.
+   `targetSdk 36` forcing it at API 35+ is confirmed on a framework that actually has the rule, which is the claim
+   `DEVICE-PASS` item 4 and item 6 could previously only assert from the manifest.
+2. **`applySystemBarInsets()` compensates for nothing.** `MainActivity.java:163` sets a listener on the WebView and
+   calls `v.setPadding(left, top, right, bottom)`; on this frame the padding is zero on every edge. The likely
+   cause, stated as a hypothesis and not as a finding: with the default `decorFitsSystemWindows(true)` the content
+   view consumes the insets before a child view's listener sees them, so the callback runs and hands the WebView
+   four zeros. The fix is to opt the window out (`WindowCompat.setDecorFitsSystemWindows(getWindow(), false)`) and
+   return `WindowInsets.CONSUMED` — **not applied yet**, because the shell is untracked and a rebuild, reinstall and
+   re-read is the next action. This section is written before that so the measurement survives it.
+
+**One candidate cause was tested and falsified on the same frame, twenty minutes later.** The first hypothesis was
+an ordering bug — `setOnApplyWindowInsetsListener` does not replay insets to a listener installed after the initial
+dispatch — so `view.requestApplyInsets()` was added after the listener, `:app:assembleDebug` rebuilt in 1m50s, the
+APK reinstalled (`Success`), the app cold-started, and the same read was taken. **It moved nothing**: `innerHeight
+851`, `screen.height 851`, `.bottomnav` bottom `851.3`, padding `0px` — byte-identical to the table above. The patch
+was then reverted rather than left in, because a no-op carrying a comment that names a cause is worse than no patch:
+it teaches the next reader that the cause is settled. What survives is the narrowed claim — the listener either is
+not being reached or is being handed zeros by the dispatch chain, which points at the window's
+`decorFitsSystemWindows` state rather than at the call order — and the discipline: **a fix that produces an
+identical reading is a falsified hypothesis, not a partial success.**
+
+**Three instrument facts that outlive this leg.** `adb root` is refused on a `google_apis_playstore` image
+(`adbd cannot run as root in production builds`), so a wedged `systemui` cannot be recovered from the bench at all —
+only a reboot, or a `google_apis` image. A `-skin 480x854` override makes the frame boot with the launcher focused
+and answers the same shape (311 CSS px against a 311 px screen), but a skin override is not a phone: the reading
+above was taken at the AVD's own 1080x2340 and the smaller one is kept only as the reproduction that showed the
+frame could answer. And the socket listed **five page targets for one WebView** — every reload leaves one behind —
+so the reader attaches to the newest, and the screenshot is what proves the target it read is the one being
+composited. Without that picture, "the app is on resident home with its nav at the bottom edge" was a sentence about
+a page nobody was looking at.
+
+**What this does not settle:** a physical API 35+ handset's density, its OEM bar heights, and whether a ColorOS or
+Funtouch shell reports the insets differently. This is a framework reading on Android 16, which is the thing the leg
+asked; the handset-parity caveat in `reference-avd-as-leg-target` still applies to anything about a specific phone.
+No application bytes changed. Gate: **all 566 checks passed** before this section.
