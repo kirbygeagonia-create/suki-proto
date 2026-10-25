@@ -7243,3 +7243,46 @@ Nothing in the application changed: gate **all 566 checks passed**, four on-disk
 `Sukinnect.html` identical to `origin/main` at 4,707 lines. One lane remains measurable and it is armed but
 unwalked: the edge-to-edge check on the android-36 frame (task #68), which could not start while the aggregate held
 the machine and now can.
+
+## 117. The edge-to-edge leg was walked on the only API 35+ target here, and that target cannot answer
+
+Everything else the handset pass owed is closed, so the last open measurement was the one DEVICE-PASS:362 says
+stays open **on both phones** — and it says so for the right reason: `targetSdk 36` forces edge-to-edge only at
+**API 35+**, while the OPPO is API 29 and the vivo API 30, where the shell takes its deprecated
+`getSystemWindowInset*` fallback. Measuring there would have described a path the shipped build no longer uses.
+The android-36 AVD `suki_leg9` is the only target on this machine at or above 35, so the leg was armed
+(`tools/device-edge-leg.cjs`, §113/§116 lineage), its judge proven by 16 offline cases, and then walked.
+
+**It did not reach a verdict, and it never claimed one.** The frame is too starved to service a WebView
+inspector: boot took 90–110 s, and `dumpsys window` came back dominated by ANR reports for
+`com.google.android.inputmethod.latin`, `com.google.android.gms` and `com.android.systemui`, with PSI
+`some avg10=93.34` on CPU and a per-process breakdown of `100% TOTAL: 15% user + 82% kernel`. Every
+`Runtime.evaluate` timed out across four retries, and the probe's own relaunches re-created the stale-target
+pile (2 → 5 targets on one socket) that §105 diagnosed on the OPPO. So the leg printed
+`findings: 2` — "the WebView surface height was never read" and "the page never answered with geometry" — and
+exited 1. **That is the guard earning its keep on a real target: the arithmetic would have been trivially
+satisfiable with a zero, and the instrument refused to produce one.**
+
+Three things the attempt did establish, none of them from the app:
+- `output-metadata.json` names its key **`outputFile`**, not `outputFileName`; the first version built a path
+  ending `/debug/undefined` and was caught by its own existence check rather than installing something wrong.
+- **API 36's `dumpsys window` does not print the rectangles this parser expected.** It says
+  `mStatusBar=Window{… StatusBar}`, `mNavigationBar=Window{… Taskbar}` and `mHasBottomNavigationBar=true`, so
+  a regex looking for a status-bar line followed by two bracketed coordinate pairs silently yields "no bars" —
+  the false clean in the exact shape §116 warns about. The tool now asserts bar *presence* from window
+  references and refuses when it can read none, rather than guessing sizes.
+- **`uiautomator dump` on this AVD answers `ERROR: null root node returned by UiTestAutomationBridge` even with
+  our own activity foreground** — the same bridge that refused the owner-only pause dialog on the OPPO, refusing
+  here for a different reason, and both are reader limits, not statements about the app. It is also the likely
+  cause of the first run's `Application Not Responding: system` that swallowed focus and would not accept
+  `KEYCODE_BACK`, which needed a cold frame restart. The rewritten leg does not call `uiautomator` at all.
+
+**What would close this lane, stated as an ask rather than pretended away:** a handset at API 35 or above —
+neither phone that has been attached qualifies — or the same AVD on a machine that is not also running a desktop
+session (`-gpu host`, dedicated cores). Until then the claim in the operating docs is **stated, not measured**:
+`MainActivity.applySystemBarInsets()` is the code that would pad the WebView, and no API 35+ target has ever
+confirmed it does. That is the same treatment the owner chose for the shipped-file gap in §31 — name the blind
+spot, do not fabricate the reading.
+
+The frame was shut down with `adb emu kill`, forwards removed, no devices left on the bus, no node processes
+running, and the working tree carries only the intended tool edit.

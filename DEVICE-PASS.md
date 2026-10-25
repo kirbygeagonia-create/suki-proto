@@ -360,6 +360,18 @@ palette; the bench could only measure the media-query half of that and rule the 
 
 **Android 10 does not unlock the edge-to-edge question.** `targetSdk 36` forces edge-to-edge at
 API 35+, and this device is API 29 — so that item stays open on both phones, not just the vivo.
+*(Still open after a real attempt, 2026-10-24, `CHANGES.md` §117. The leg was armed as
+`node tools/device-edge-leg.cjs` — judge proven by 16 offline cases, refuses before installing below API 35 —
+and walked on the only target here at or above 35, the android-36 AVD. That frame is too CPU-starved to service
+a WebView inspector: boot 90–110 s, ANRs in `inputmethod.latin`, `gms` and `com.android.systemui`,
+PSI `some avg10=93.34`, every `Runtime.evaluate` timing out across four retries, and stale targets piling 2 → 5.
+The leg printed `findings: 2` naming its two unread inputs and exited 1 — it did not manufacture a pass from
+zeros. Also learned about the frame, not the app: `uiautomator dump` answers `null root node` there even with
+our activity foreground (and is the likely cause of the `Application Not Responding: system` window that ate
+focus and would not take `KEYCODE_BACK`), and API 36's `dumpsys window` names bar **windows** rather than
+printing rectangles. What closes this is an API 35+ handset — neither phone qualifies — or the same AVD on a
+machine that is not also running a desktop. Until then the claim is stated, not measured:
+`applySystemBarInsets()` is the code that would pad the WebView, and no API 35+ target has confirmed it does.)*
 
 **Why the pass did not run, in the order it failed.**
 
