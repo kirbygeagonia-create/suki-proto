@@ -7700,3 +7700,29 @@ its inset box — instead of reusing the full-bleed rule, where "content fills t
 
 Machine state: `targetSdk` reverted to 36, the APK rebuilt and reinstalled, the AVD killed and forwards cleared.
 Selftests 23 of 23; gate: all 566 checks passed.
+
+## 128. The commit before this one claimed a selftest count from a run that was crashing
+
+§127 ends with `Selftests 23 of 23`. It was false when written. The command printed a Node crash banner, and the
+pipeline that ran it ended in `tail -1`, so what reached the log was the last line of a stack trace — which I read as
+the summary because I was looking for the number, not for the exit code. The tool still worked on the shipping
+configuration, so nothing downstream complained, and the commit went out claiming coverage that had died 20 lines
+earlier.
+
+**Two `ReferenceError`s, both mine, both from the §127 edit.** The unattributed branch returned
+`slack: m.viewH - contentPx` and `contentPx: Math.round(contentPx)` in a scope where `contentPx` is a `const`
+declared *after* that branch — a temporal-dead-zone read, so `node --check` passed happily and only executing the
+branch found it. That is the reason a syntax check is not a test: the file was valid and broken at the same time.
+
+**Three cases added, and one expectation rewritten rather than deleted.** The selftest now forces the unattributed
+path (28 cases, 0 failing, exit 0 read from the process, not from a grep). One §122-era case asserted that a 1px
+overflow is condemned; under the rule §127 introduced that assertion is wrong, because a `dpr` of 2.75 turns 778 CSS
+px into 2139.5 device px against a 2138 px surface — the healthy shipping reading *is* a 1.5px rounding overflow. So
+the case now straddles the boundary from both sides: 123px beyond the surface is condemned and named, sub-2px is
+rounding and passes. Deleting the failing case would have been the other option and is the one that loses coverage.
+
+**Standing rule this adds to the file:** a selftest or check whose summary line is grepped out of a pipeline must have
+its exit code read too, because a crash leaves the earlier `ok` lines on stdout and a count can be assembled from a
+run that never finished. The last live leg run in this session was on the shipping `targetSdk 36` build and exited 0
+with the shell-inset verdict; the edits since then touch only the unattributed branch, which that run did not take,
+and that is stated instead of implying a fresh device reading. Gate: all 566 checks passed.
