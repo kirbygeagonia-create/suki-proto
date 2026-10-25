@@ -142,7 +142,15 @@ node tools/audit-open-items.cjs     # every "still owed" sentence the present-te
 node tools/audit-camera-dialog-coverage.cjs   # profile dialogs the camera's walk has never opened
 node tools/audit-compat-floor.cjs   # the oldest WebView that can render this page, and which feature decides
 node tools/deploy-check.cjs         # what the live site actually serves, read from outside the repository
+node tools/device-dump-insets.cjs --file=<dump.xml> --screen=WxH --statusbar=N --navbar=N
+                                    # does any app content sit under a bar, judged from a uiautomator dump
 ```
+
+The last one is a device-artifact reader rather than a page probe, so `probe-all` deliberately does not auto-run it:
+a `uiautomator` dump of a WebView contains only the page's virtual hierarchy — zero foreign nodes — so it can never
+derive a bar band on its own, and the bands come from `dumpsys window`. It also excludes the window's own scaffolding
+(`android:id/statusBarBackground` and the decor exist to span the bars), and refuses rather than reporting zero when
+the dump, the screen size, or a band is missing.
 
 The third prints **two numbers on purpose**, because the one people repeat is the wrong one: the *raw* floor is the
 newest Chromium-version requirement anywhere in the file (today 108, from `dvh`), and the *breaking* floor is the same

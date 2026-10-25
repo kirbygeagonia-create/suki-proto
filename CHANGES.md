@@ -7589,3 +7589,38 @@ the surface is *not* spanning the screen; that is the whole finding. The cause i
 different measurements on two branches (screen minus surface on the forced-edge-to-edge path, surface minus content
 on the normal one), and one template trying to be true for both. It now prints per branch, with a comment saying why
 the two are not the same quantity. Selftests still 23 of 23.
+
+## 125. An accessibility dump contains the window's own scaffolding, and a reader that walks every node reports three false findings
+
+The remaining device item (§122, task #70) needs a handset, and none is on this bus — Windows enumerates no Android
+device at all, and the USB list is only the laptop's own cameras, keyboard and fingerprint reader, with no device in
+an error state. So the honest move was not to wait but to make the reader provable without one, and the recorded
+handset dumps in `.scratch/` turned out to be able to do that.
+
+**`node tools/device-dump-insets.cjs`** answers the low-end question from the platform side: given a `uiautomator` dump
+and a `--screen=WxH`, does any of the app's own content sit under a bar band? It refuses rather than reporting zero —
+no file, no screen size, no nodes with bounds (the null-root case), no node belonging to the package, and no band to
+test against are each a separate `NO CONCLUSION`. That last one fired on the real artifact first, and correctly: **a
+WebView's dump holds only the page's virtual hierarchy — zero foreign nodes — so it can never derive a bar band.**
+The bands must be supplied from `dumpsys window`, which still prints rects below API 35.
+
+Then the second lesson, which is the one worth keeping. Run with the true bands, the reader first reported
+**three findings on a correctly-inset app**: a `FrameLayout`, a `LinearLayout`, and `android:id/statusBarBackground`,
+all at `top 0`. All three are the window's own scaffolding — the decor wraps the whole window by definition, and
+`statusBarBackground` exists precisely to paint behind the status bar. The same dump already contained the refutation:
+the content node starts at `y=54`. So the judged population is now content, not nodes, and both controls pass on the
+recorded dump: true bands → `findings: 0`, with the content box named as **top 54, bottom 1423 of a 1544 px screen**
+(54 px and 121 px of bar space respected); a band planted 6 px too deep → 21 findings naming `android:id/content` and
+the WebView, which is what makes the clean line a measurement rather than a silence.
+
+**What this does and does not close.** The dump is from 2026-10-15, so it shows the app inset correctly on a handset
+*before* §121 moved the padding onto `android.R.id.content` — it validates the reader, not the current build. The
+reading still owed is two commands on a live device, and it is now a calibration rather than an expedition:
+
+```
+adb -s <serial> shell uiautomator dump /sdcard/wd.xml && adb -s <serial> pull /sdcard/wd.xml .scratch/wd.xml
+node tools/device-dump-insets.cjs --file=.scratch/wd.xml --screen=<wm size> --statusbar=<rect> --navbar=<rect>
+```
+
+with `node tools/device-edge-leg.cjs` still answering the renderer-side question in the same sitting. The OPPO (API 29)
+is the device that exercises the legacy `getSystemWindowInset*` branch; the vivo (API 30) takes the modern path.
