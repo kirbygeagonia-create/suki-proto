@@ -7650,3 +7650,32 @@ require the specific message that must appear when one is disabled.
 **Scope, stated plainly:** `uiautomator dump` captures the active window, so a full-screen app's dump may never contain
 the bars as foreign nodes. That makes this reader a secondary instrument — useful on split-screen, overlays and
 pickers — and `tools/device-edge-leg.cjs` the primary path for task #70. Gate: all 566 checks passed.
+
+## 126. A 401 is an answer, and the deploy checker reported it as a silence
+
+PR #11's checks came back with a live deploy preview, which is the first chance this repository has had to read a
+**deployment of the PR itself** rather than production. Pointing `tools/deploy-check.cjs` at
+`deploy-preview-11--sukinnecct.netlify.app` printed
+`NO CONCLUSION — the deployed page could not be read (offline, or https://… answered nothing).`
+
+It had not answered nothing. It answered **401** — Netlify protects deploy previews behind site auth — and the reader
+had thrown that number away at `if (!r.ok && r.status !== 200) return null;`. This is §110's defect pointing the other
+way: that pass fixed a tool for reading a silence (`status 0`) as a finding; this one was reading an **answer** as a
+silence, which sends a reader to debug their network instead of asking the site owner for the preview password. A
+refusal is only useful if it names the state that produced it.
+
+`readOutcome(status)` is now a pure function the selftest drives without a socket, and the refusal prints its verdict:
+`PROTECTED — it answered 401 — the deployment is there and locked, not missing`. Three selftest cases pin the
+distinctions that matter — 401/403 is never called offline, **only** status `0` counts as no answer, and a 500 is an
+error but still an answer — so the classifier cannot quietly collapse "locked" back into "missing" the next time
+someone tidies the message.
+
+**The same run demonstrated the other guard on real flakiness.** Production answered, but two of the seven leak paths
+came back `0`, and the tool refused outright: `NO CONCLUSION — 2 path(s) were not answered (/CHANGES.md -> 0,
+/README.md -> 0); 5 of 7 leak paths answered. The leak verdict is not computed from a partial scan.` That is the rule
+§110 installed after its first run counted seven unanswered requests as seven leaks, firing within the hour — which is
+the only way a guard like that earns its keep. Gate: all 566 checks passed; `deploy-check --selftest` all cases pass.
+
+**What stays true about the deployment surface:** production is still the deliberately-stale `3c73bfe` artifact by the
+owner's ruling, and PR #11's preview builds but is not readable from this machine without auth. So "does this branch
+deploy correctly" is verified only as far as Netlify's own build status, not as a byte comparison from here.
