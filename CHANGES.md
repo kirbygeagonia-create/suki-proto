@@ -7726,3 +7726,45 @@ its exit code read too, because a crash leaves the earlier `ok` lines on stdout 
 run that never finished. The last live leg run in this session was on the shipping `targetSdk 36` build and exited 0
 with the shell-inset verdict; the edits since then touch only the unattributed branch, which that run did not take,
 and that is stated instead of implying a fresh device reading. Gate: all 566 checks passed.
+
+## 129. Handset walk 12: the legacy inset branch ran on real hardware for the first time, and the page clears both bars
+
+The OPPO CPH2179 came onto the bus — `S4CUYTJB6HNNWC49`, **API 29**, WebView `155.0.8059.46`, `wm size` 720x1600,
+`dpr 2.25` → 320 CSS px, and the owner text scale at **1.35**, which was read and left exactly where it was.
+
+This is the reading task #70 existed for, and the reason it is the OPPO that matters: `Build.VERSION.SDK_INT` on that
+device is 29 and `Build.VERSION_CODES.R` is 30, so `applySystemBarInsets()` takes its **else** branch —
+`getSystemWindowInsetLeft/Top/Right/Bottom` — the path §121 moved onto `android.R.id.content` and that no instrument
+had ever seen execute. The vivo is API 30, which is `R`, so it uses the modern `getInsets` branch; the android-36 AVD
+does too. Every inset reading in this repository up to this minute was therefore made on the *new* API.
+
+`node tools/device-edge-leg.cjs --serial=S4CUYTJB6HNNWC49` → **exit 0, findings: 0**:
+
+| reading | value |
+|---|---|
+| screen (from `wm size`) | **1600 px** |
+| WebView surface (CDP target) | **1437 px** → 163 px of the screen belongs to the bars |
+| `innerHeight` × `dpr` | 638 × 2.25 = **1436 px**, so slack 1.5px — the page fills its own surface, it does not exceed it |
+| bars present per `dumpsys window` | status **true**, navigation **true** |
+| installed build proved from the package | `1.2-preview.39` / versionCode 41 |
+
+The verdict line reads `LIMIT: API 29 does not force edge-to-edge, so the 163px the window lost cannot be credited to
+the shell`, and that is the honest shape of it: below API 35 the framework insets the window whether or not the shell
+also pads, so attribution is not available. What *is* available, and is what a thumb experiences, is the thing that
+came back clean — **no part of the page is drawn under a system bar.**
+
+**Confirmed with pixels, because that is the half the numbers cannot carry.** The screenshot shows the status band
+(clock, notification icons, battery) with the app card starting well below it, and the three-button navigation band
+with the card ending above it. The sign-in renders correctly at 1.35: role segmented control, Email prefilled,
+masked password, Log in, New here? — no clipping, no overlap, controls at comfortable size. So §121 is verified on
+the legacy branch, on a 2020 mid-range handset, which is the low end this project actually ships into.
+
+**One instrument limit found while writing this up.** The leg proves the installed build by `versionName` and
+`versionCode`, and both were already 1.2-preview.39 / 41 from walk 11 — so the proof cannot distinguish the APK
+containing the old page from the one containing `bac09020`. The install itself was `Success` from the current file on
+disk and `audit-build-bytes` proves that file matches the source, so the reading is valid; but a versionName bump or
+a hash comparison of the bundled asset is what would make it provable from the device side. Recorded as a gap, not
+papered over.
+
+Device left as found: `font_scale` still 1.35 (read, never written), forwards cleared, no dumps left on the
+handset, the app sitting on its own sign-in screen unsigned-in. Gate: all 566 checks passed.

@@ -1852,7 +1852,7 @@ open. Nothing here is a defect the bench can close.
 
 **On the handset** — no open items as of 2026-10-24: item 1 closed by Handset walk 10 and item 2 by Handset
 walk 11, both on a real handset and both with `findings: 0`. Plus one closed note a later walk reopened.
-**Reopened 2026-10-25 — by a fix, not by a forgotten reading.** `CHANGES.md` §121 moved the shell's inset padding off
+**Reopened 2026-10-25 — by a fix, not by a forgotten reading.** **CLOSED the same day by Handset walk 12** on the OPPO at API 29 — the legacy `getSystemWindowInset*` branch ran, `CHANGES.md` §121 moved the shell's inset padding off
 the WebView and onto `android.R.id.content`, and the branch that only runs **below API 30** (`getSystemWindowInset*`)
 has therefore never been seen executing on any device: the android-36 AVD exercises the modern branch, and the legacy
 `getSystemWindowInset*` branch runs only **below API 30** — which on this bus means the **OPPO (API 29)** and not the
@@ -1860,7 +1860,7 @@ vivo (API 30 is `R`, so the vivo takes the modern path, just below the level whe
 `tools/device-edge-leg.cjs` is armed for both — §122 removed its refusal below API 35, so it now prints its scope and
 judges the question that holds at every level, whether the page paints under a system bar. Attach either phone, accept
 the USB-debugging prompt, run the command; the APK on disk already carries the current page (`1.2-preview.39`, four
-copies agreeing at `bac09020…`), so no rebuild is needed first.
+copies agreeing at `bac09020…`), so no rebuild is needed first. Walk 12 ran it: `findings: 0`, surface 1437 of a 1600px screen, page fills its own inset box, and the screenshot shows both bars clear. `CHANGES.md` §129.
 Item 1 was **CLOSED on 2026-10-24 by Handset walk 10** (`CHANGES.md` §107): ColorOS's picker does accept
 `input keyevent`, a document came back twice, and §75's name-only claim held on a real pick with the store
 actually present.
