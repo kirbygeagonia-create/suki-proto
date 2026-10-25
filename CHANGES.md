@@ -7213,3 +7213,33 @@ one is visible to a command rather than to a reader who happens to notice.
 
 Gate **all 566 checks passed**; no application bytes changed; four on-disk copies identical at `3c78fdd…`;
 `Sukinnect.html` identical to `origin/main` at 4,707 lines by `node tools/measure.cjs Sukinnect.html`.
+
+## 116. 248 mutants caught, and the paragraph that proved its own rule while writing itself
+
+`node tools/falsify-all.cjs` was re-run to close the gap §115 left open — the tree held 248 breaks while the
+last full pass had printed 247, because `falsify-commit-subjects` grew from 4 to 5 when its audit's population was
+widened. The run finished **49 families, 248 applied, 248 caught, 0 not applied, 0 missed**, no flagged row, the
+app hash back to `3c78fdd…` and `git status` empty afterwards, so every family restored what it mutated.
+
+The total was not taken on the runner's word. Its log was summed a second time with `awk` over the printed rows —
+**rows=49 applied=248 caught=248 not_applied=0 missed=0** — and the family set was cross-checked against the tree
+with `comm` between `ls tools/falsify-*.cjs` and the names the log printed, which answered that **no family is
+missing from the pass**. A summary line and a sum of its own rows are two different measurements; only agreeing
+with both makes the number a fact. That is the same discipline §115 used on the audit, arriving one level up.
+
+**Then the paragraph wrote itself badly, in exactly the way it exists to forbid.** Re-deriving the totals meant
+re-typing the per-family table, and the draft listed 46 of 49 families from memory: two numbers wrong
+(`camera-surfaces` is 3 breaks, not 5; `control-reach` is 3, not 4) and three families silently dropped
+(`credential-pair`, `empty-queue`, `modal-stacking`, 3 breaks each). Diffing the claim list against the log with
+`comm` is what found it — the same tool-and-second-derivation trick, now aimed at my own sentence. The table has
+been **deleted** rather than corrected: AGENTS.md now names the six families large enough to carry a class
+(`identity-fallbacks` 24, `profile-honesty` 11, `saved-claims` 10, `verification-records` 10,
+`insights-records` 7, `layer-modality` 7) and points at the command for everything else. A table that must be
+re-typed to stay true will be false the next time someone is careful and the time after that; the log is the
+artifact, and this file's oldest rule — a figure kept by hand in prose is the next figure that is wrong — applies
+to a paragraph *about* figures too.
+
+Nothing in the application changed: gate **all 566 checks passed**, four on-disk copies identical at `3c78fdd…`,
+`Sukinnect.html` identical to `origin/main` at 4,707 lines. One lane remains measurable and it is armed but
+unwalked: the edge-to-edge check on the android-36 frame (task #68), which could not start while the aggregate held
+the machine and now can.
