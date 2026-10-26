@@ -67,8 +67,8 @@ const BREAKS = [
      arriving in a family that had existed for an hour. */
   { name: 'every listed mention of one open row is taken out of the report',
     file: PLAN, re: /(\*\*|`)A11\1/g,
-    want: (f) => f >= 1, expect: 'A11 reported as a silent, non-AR row',
-    also: (out) => /silent: A11/.test(out) },
+    want: (f) => f >= 1, expect: 'A11 named in a LIST MISMATCH finding (its §4 class is CD)',
+    also: (out) => /LIST MISMATCH.*A11/.test(out) },
   { name: 'the class list goes, and every row it named falls silent at once',
     file: PLAN, drop: /^- \*\*(AR|CD|PR|PD|CV|NA) — /gm,
     want: (f) => f > 1, expect: 'findings greater than 1', also: null },
@@ -82,6 +82,15 @@ const BREAKS = [
     to: '  else if (inItem) { inItem = false; }',
     want: (f, code) => code !== 0 && f !== null && f > 0,
     expect: 'a refusal on a correct document (false findings)', also: null },
+  /* The headline number of this audit is 47 of 47 rows dispositioned, and until this break nothing had
+     ever made that figure move: a guard whose failure path has never been exercised is the class this
+     repository keeps meeting. Break 1 cannot do it, because the report mentions the id inside other
+     bullets' prose and the disposition rule credits any bullet that names it — so this one takes every
+     mention after the §17 heading, which is the only state in which the row really has no disposition. */
+  { name: 'one row is stripped from the whole report section, so nothing dispositions it',
+    file: PLAN, onlyAfter: /^## 17\b/m, re: /A11/g,
+    want: (f) => f >= 1, expect: 'the disposition tally itself reports the row missing',
+    also: (out) => /not dispositioned: [1-9]/.test(out) && /A11/.test(out) },
 ];
 
 let caught = 0, applied = 0, skipped = 0;
@@ -89,7 +98,14 @@ try {
   for (const b of BREAKS) {
     const source = b.file === PLAN ? planOriginal : auditOriginal;
     let mutated = source;
-    if (b.re || b.drop) {
+    if (b.onlyAfter) {
+      /* Delete every match after a heading and keep the rest of the file byte-identical, because the
+         report's own prose mentions ids in bullets that are not theirs — a global removal would take the
+         §4 row with it, and a row the plan no longer names cannot be an undispositioned row. */
+      const at = source.search(b.onlyAfter);
+      if (at < 0) { skipped++; console.log('SKIP  ' + b.name + '  (its section anchor matched nothing)'); continue; }
+      mutated = source.slice(0, at) + source.slice(at).replace(b.re, '');
+    } else if (b.re || b.drop) {
       const rx = b.re || b.drop;
       mutated = source.replace(rx, '');
       if (mutated === source) { skipped++; console.log('SKIP  ' + b.name + '  (its pattern matched nothing)'); continue; }

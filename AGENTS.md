@@ -3632,6 +3632,22 @@ table's first booking happened not to be at a movable stage, so "nothing opened,
 stayed true for an unrelated reason. The check was widened to make that row reschedulable first and to
 assert the lookup itself answers `null` — a positive control, not a softer needle.
 
+A BREAK THAT PRINTS MISSED CAN BE WRONG ABOUT THE INSTRUMENT, AND THE FIX IS TO APPLY THE BREAK YOURSELF
+AND READ THE WHOLE OUTPUT. §140's aggregate left one survivor: `falsify-report-coverage`'s break that strips
+every mention of one plan row, which reported `findings 3, exit 1` against an expectation of `silent: A11`. Re-run
+alone it reproduced, so it was not the load flake `chart-collide` had been. The cause was the break's own needle:
+the audit had never printed the word `silent`, it prints `LIST MISMATCH  CD list omits: A11` — and the row's §4
+class is CD, not the AR the break's sentence asserted. The guard was right and the expectation was invented. Two
+rules: when a break fails, run its mutation by hand and print the target's **entire** stdout before touching
+either file (a scratch script that applies the same edit, runs the tool, and restores in a `finally` answers the
+question in one minute and leaves nothing behind); and an `expect:` string is a claim about output, so it has to
+be copied from a real run rather than written from the intent behind it. The same minute found the family's
+headline number had never been exercised at all — `not dispositioned: 0` had no break that could make it climb,
+because deleting one row's *listed* mentions leaves the id named inside other bullets' prose, and the disposition
+rule credits any bullet that names it. The family now carries a section-scoped mutation (strip an id from
+everything after the `## 17` heading, leaving §4's row intact) and requires the tally itself to move: **5 breaks,
+5 caught, 0 not applied**. A guard whose failure path has never been reached is a number nobody has tested.
+
 THE FIGURES FOR THIS PASS ARE COMMANDS, NOT SENTENCES: `node tools/verify.cjs` prints the check total,
 `node tools/shot.cjs --list` prints the screens the walk reaches, and `node tools/falsify-all.cjs`
 prints one row per mutant family with applied / caught / not-applied / missed. Quote a run, not a

@@ -893,7 +893,9 @@ agreed time to move. Recorded in `CHANGES.md` §133.
 **§14 executed item by item, 2026-10-26.** The checklist above says "all runnable, none invented", so it was run
 as a checklist rather than quoted as one. Every result below is from a command executed against the committed
 build (`65e375e`, page bytes `2691a76c…`); the aggregate figures come from a single sequential pass, and the
-camera readings from runs after the last page edit.
+camera readings from runs after the last page edit. **Three rows have since been re-measured against the build
+that followed it (`f149390`, page bytes `fd176312…`) and each says so in place** — that is the whole difference
+between a dated table and a false one.
 
 | §14 item | Command run | Result |
 |---|---|---|
@@ -901,21 +903,17 @@ camera readings from runs after the last page edit.
 | Any new record family | `node tools/falsify-storage-truth.cjs` and `node tools/falsify-reschedule.cjs` (both through the aggregate) | storage-truth **5 of 5**, reschedule **20 of 20**, 0 not applied, 0 missed |
 | Reschedule wording | gate checks at `tools/verify.cjs:5627`–`:5628`; the two camera screens `reschedule-sheet` / `reschedule-answer` | **Deviation from the stated method:** no `--probe=@` file exists for this row. The rule is asserted by the gate against the rendered card and photographed by the walk, which answers the same question; recorded rather than papered over |
 | Screen coverage | `node tools/shot.cjs --list`, `node tools/audit-camera-dialog-coverage.cjs` | **88 screens**; 17 layer-raising profile controls, 17 clicked; **findings: 0** |
-| Painted layout | `node tools/shot.cjs --measure`, `--measure --focus`, `--measure --dark` | **Two of these three are
-  stale by seven page edits and are being re-run.** `--measure` and the 8-corner sweep ran *after* §139's page changes
-  (25 failure tallies at **0**, no console errors); the **855 keyboard stops over 88 screens** with all four focus
-  tallies **0**, and the dark sweep's **0** contrast failures, were measured on the build *before* the tertiary tier,
-  the sticky-bar wrap, the provider reorder and the `onRootTab()` rule. Quoting them against this build would be the
-  "measurement older than the change" defect this plan's own §90 lane names, so they are marked rather than trusted |
+| Painted layout | `node tools/shot.cjs --measure`, `--measure --focus`, `--measure --dark` | **Re-run against the current committed build (`f149390`, page bytes `fd176312…`) on 2026-10-26, and all three now agree:** `--measure` and the 8-corner sweep give 25 failure tallies at **0** with no console errors; **`--measure --focus` walked 856 keyboard stops over 88 screens with all four focus tallies at 0** (no ring, default ring, past the scrim, off the viewport); **`--measure --dark` reports 0 contrast failures over the same 88 screens** and no other failure line. The earlier figure this row carried was 855 stops on the pre-§139 build; it was superseded rather than re-quoted, which is what the §90 lane of this plan asks for |
 | Phone corners | `node tools/sweep-text-scale.cjs` | **8 of 8 corners, 25 tallies each, all clear** |
 | Alignment sweep | three `hygiene` checks, `node tools/falsify-figures.cjs`, the before/after pair in §135 | one alignment rule and one numeral rule in the page (`1` and `1`); **7 of 7 breaks caught** |
+| Money aggregation | `node tools/shot.cjs --probe=@tools/probe-money-sums.js` | **NOT PROVEN on this build, and the reason is not yet established.** Re-run today against `fd176312…`: the probe answered all **88** screens with `findings: 0` — and `cardsWithTotals: 0` on every one of them. Its own contract says those two characters must not mean the same thing, so the zero is the instrument inspecting nothing, not a clean bill. Two candidate causes, neither measured: no screen the walk reaches paints an aggregating card (the walked booking details are jobs that have not reached a final state, and this plan's own R7 rule omits a Receipt group whose records do not exist), or the probe's `.card > .row` selectors stopped matching. The next step is the one this probe was calibrated with — plant ₱10 on a receipt total, require the delta to appear, and only then quote its zero |
 | Keyboard / chat on a handset | — | **NOT VERIFIED, and not verifiable here.** `visualViewport` appears **0** times in the page (re-counted today); the owner has ruled the leg stays pending until a phone is attached |
 | Invariants | `machine`, `ledger`, `money` suites inside `verify.cjs` | unchanged behaviour — these are gate suites, not mutant families, so they are counted in the 643 |
 | Shipped file | `git diff --quiet origin/main -- Sukinnect.html` | silent — **unchanged from `origin/main`** |
 | Build copies | `node tools/audit-build-bytes.cjs` | **findings: 0**, four copies identical at `2691a76c…` |
 | Commit hygiene | `node tools/audit-commit-subjects.cjs --check-message <file>` before each commit | run before every commit in this pass; `65e375e` reported **unique** over 347 reachable commits |
 | **Matrix coverage** (added by this pass) | `node tools/audit-matrix-coverage.cjs` | **47/47 ids present exactly once**, every row classified: AR 21 · CD 9 · PR 12 · PD 1 · CV 2 · NA 2 |
-| **Report coverage** (added by this pass) | `node tools/audit-report-coverage.cjs` | **findings: 0** — every row dispositioned in §17, §17's class list matches §4 id for id, all 17 section headings present and ordered; proved by `node tools/falsify-report-coverage.cjs`, **4 of 4** |
+| **Report coverage** (added by this pass) | `node tools/audit-report-coverage.cjs` | **findings: 0** — every row dispositioned in §17, §17's class list matches §4 id for id, all 17 section headings present and ordered; proved by `node tools/falsify-report-coverage.cjs`, **5 of 5 breaks, 0 not applied, 0 missed** — its first break had printed MISSED and was wrong about the instrument, not about the guard: the audit names the row in a `LIST MISMATCH` finding and A11's §4 class is CD, so the needle `/silent: A11/` described output the tool never had. The family also gained the break that finally moves the headline number — stripping one id from the whole §17 section and requiring `not dispositioned` to climb — which had never been exercised in the audit's existence |
 
 **The answer to the question, stated once.** Of the plan's 47 concerns, **45 are built, ruled out of scope,
 or resolved by an earlier pass with an instrument behind them** — including the three rows this section reported
@@ -925,3 +923,10 @@ decided with a screenshot rather than an argument. **Two cannot be closed on thi
 one-to-three-minute number and R10's keyboard-open composer — both gated on a handset by standing ruling, and
 neither reported as passing. Nothing is pushed, no device was attached, and the deployment is left deliberately
 stale as ruled.
+
+**A fourth item is an instrument rather than a row, and it went quiet today.** `tools/probe-money-sums.js` — the
+sensor behind "the money adds up on every screen that can be checked" — answered all 88 screens with
+`findings: 0` *and* `cardsWithTotals: 0`, which by its own contract means it inspected nothing. That sentence is
+therefore **unproven on this build**, recorded in the table above as `NOT PROVEN` rather than carried forward as
+a passing claim; the repair is the calibration it was first proved with (plant ₱10 on a receipt total, require
+the delta, then quote the zero).

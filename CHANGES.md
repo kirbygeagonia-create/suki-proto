@@ -8720,3 +8720,38 @@ The page moved twice today and the build was re-cut and re-verified each time; t
 AGENTS already writes for every other figure applies to provenance too: **name the command, not the
 value.** What is owed is not a re-stage but a handset — nothing from `.40` onward has been installed
 on a phone, so no layout claim in this build is a device reading.
+
+## 141. The survivor is dead, the two camera legs are live, and the money sensor went quiet
+
+The one mutant §140 could not kill was in my own family, and killing it took a diagnostic rather than an edit.
+`falsify-report-coverage` break 1 strips every mention of plan row A11 and asserts the audit reports it; the
+aggregate said `findings 3, exit 1` against an expectation of `silent: A11`, and re-running the family alone
+reproduced it, so it was not the load artifact `chart-collide` had been. Applying the break by hand and printing
+the audit's whole stdout (`.scratch/diag-break1.js`: mutate, run, restore in a `finally`) answered it in one
+minute: the audit has never printed the word `silent`. It prints `LIST MISMATCH  CD list omits: A11` and
+`A11 is CD in §4 but absent from the §17 CD list`, and the row's class is CD, not the AR my break's sentence
+assumed. The guard was right; the expectation was invented. Repaired the same way, and the family now runs
+**5 breaks, 5 caught, 0 not applied**.
+
+Break 5 is the more useful half, because it exposed a gap in the audit's headline number. `not dispositioned: 0`
+is what §17's completeness claim rests on, and nothing had ever made it move: removing a row's listed mentions
+leaves the id named inside other bullets' prose, and the disposition rule credits any bullet that names it, so the
+tally could not fall. The family gained a section-scoped mutation — strip the id from everything after the `## 17`
+heading, leaving §4's row in place — and the tally does climb, `findings 9`, `not dispositioned` nonzero, naming
+the row. **A guard whose failure path has never been reached is a number nobody has tested**, which is the same
+sentence this file has written about screens, layers and seeds, arriving now in a documentation audit.
+
+The two §14 camera legs that were marked stale are re-measured against the current build (`f149390`, page bytes
+`fd176312…`), both with no failure line and no console errors: `--measure --focus` walked **856 keyboard stops
+across 88 screens**, all four tallies **0** (the pre-§139 figure of 855 is superseded, not re-quoted), and
+`--measure --dark` reports **0** contrast failures over the same 88 screens.
+
+**And the money sensor is now recorded as blind rather than clean.** `--probe=@tools/probe-money-sums.js` answered
+all 88 screens with `findings: 0` and `cardsWithTotals: 0` — the two characters its own contract says must not
+mean the same thing. So "the money adds up on every screen that can be checked" is **unproven on this build**,
+written into plan §14 as `NOT PROVEN` instead of carried forward as a passing claim. Two candidate causes, neither
+yet measured: no walked screen paints an aggregating card (the booking details the walk reaches are jobs that have
+not reached a final state, and this plan's own R7 rule deliberately omits a Receipt group whose records do not
+exist), or the probe's `.card > .row` selectors stopped matching. The next session's first command is the
+calibration the probe shipped with — plant ₱10 on a receipt total, require `painted … sumOfParts … delta 10`, and
+only then let it report a zero.
