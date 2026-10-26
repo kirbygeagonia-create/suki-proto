@@ -8347,3 +8347,20 @@ still owed. One rotted needle was found before it could report a healthy number:
 needles the focus-ring `compat-exception` comment to prove that a too-short reason is a finding, and that
 comment grew a fourth line when the legal sheet joined the focus list, so the break had silently stopped
 matching. The anchor now covers the whole block, and the family reads 7 of 7 with 0 not applied.
+
+**The before/after pair §14's alignment row asked for, and what the pixels actually showed.** The
+pre-P2 page was extracted with `git show 0382c91:Sukinnect-next.html` into a file at the repository root
+— root, not `.scratch/`, because the page's `fonts/fonts.css` resolves relative to itself and a copy in a
+subdirectory photographs a fallback face, which is the one thing this comparison must not do — shot on
+`admin-finance, provider-dash, offer-sheet, booking-detail`, archived, deleted, and the same four screens
+shot again against the committed page. What the pair settles: the Money screen's statement column reads
+**₱1,390.00 / ₱139.00 / ₱0.00 / ₱0.00 / ₱139.00 / ₱1,315.00** with the peso signs and the decimal
+points in one vertical line, which is the tabular rule doing the work alignment alone could not; the
+admin's bottom navigation now carries the bar-chart glyph where the shield used to be, with Providers,
+Help Desk and Account unchanged; and the resident's booking detail reads Schedule → Progress → Contact →
+Price with no Completion and no Receipt heading, because this job has not arrived and is not paid. Two
+things the pair proved about the *before* picture rather than the change: the wrapped "View Profile"
+button on the contact block is pre-existing (it wraps identically in both), and the pre-P2 detail screen
+put the payment-record card directly under the figures grid with nothing naming either — the grouping the
+brief asked for was missing in a way a source grep could not have shown, since every fact was present and
+correct in both pictures.

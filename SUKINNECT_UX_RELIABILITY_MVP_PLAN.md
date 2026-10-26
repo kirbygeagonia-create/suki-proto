@@ -657,7 +657,12 @@ lock/logout pair 2,054px, accepted), Marketplace Intelligence **128px** of 826px
 no content was cut · `node tools/audit-build-bytes.cjs` → **findings: 0**, four copies at `76338e39…`,
 shell at `versionCode 43 / 1.2-preview.41`. **The full `falsify-all` aggregate was not re-run in this
 pass**, so no mutant total is quoted for it; the five families whose needles this pass could have
-orphaned were run individually.
+orphaned were run individually. The §14 row asking for **screenshots before/after** the alignment sweep is
+closed too: the pre-P2 page was extracted to the repository root (a subdirectory copy would photograph a
+fallback face), four money-bearing screens were shot, the copy deleted, and the same four re-shot — the
+ledger column now lines its peso signs and decimal points vertically, the admin nav shows the chart glyph
+in place of the shield, and the booking detail carries four group headings and not the two whose records do
+not exist. `CHANGES.md` §135 carries the reading.
 
 **Closed after the first report.** `falsify-legal-truth` caught one of my own checks as a MISSED - it
 grepped the sign-in render, where the register fields are never painted - and was re-pointed at the
