@@ -1285,6 +1285,21 @@ suite('hygiene', async () => {
     'row-value painted: ' + /class="row-value"/.test(markupCode) +
       ' · inline right-align left: ' + (markupCode.match(/style="[^"]*text-align:\s*right/g) || []).length);
 
+  /* A card head is the one place a whole word and a count share a line, and a chip that refuses to
+     break hands the break to the heading instead. The rule is therefore on the row, not the chip, so
+     it has to be present at every head: count the pairs the markup actually paints and require each
+     one to sit in a wrapping row. The floor of ten is the positive control — a scan whose pattern
+     stopped matching would otherwise report "0 of 0 unwrapped" and read as clean. */
+  const heads = markupCode.match(/<div class="row([^"]*)"[^>]*>\s*<b class="card-title">[\s\S]{0,400}?<\/b>\s*<span class="chip"/g) || [];
+  const wrapped = heads.filter((h) => /class="row card-head"/.test(h));
+  c.check('every card head with a count beside its title is allowed to wrap',
+    heads.length >= 10 && wrapped.length === heads.length,
+    wrapped.length + ' of ' + heads.length + ' title+chip heads carry .card-head');
+  c.check('and the class that grants it is flex-wrap, not a chip that shrinks',
+    /\.card-head\s*\{[^}]*flex-wrap:\s*wrap/.test(cssCode) && /\.chip\s*\{[^}]*white-space:\s*nowrap/.test(cssCode),
+    '.card-head wraps: ' + /\.card-head\s*\{[^}]*flex-wrap:\s*wrap/.test(cssCode) +
+      ' · chip holds its word: ' + /\.chip\s*\{[^}]*white-space:\s*nowrap/.test(cssCode));
+
   /* A token declared in :root and never reached is the drift AGENTS.md §31 has been re-measuring by
      hand in prose for weeks — "95 tokens declared with 92 of them reached" is a figure that moves with
      every pass, which is why measure.cjs exists. The count is now a rule: the unreached set has to

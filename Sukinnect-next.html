@@ -400,6 +400,12 @@
   .chip{
     display:inline-flex; align-items:center; gap:5px; font-size:var(--t-caption); font-weight:600;
     padding:4px 10px; border-radius:999px; background:var(--verified-100); color:var(--success-ink);
+    /* A chip is a word, not a paragraph. Uppercased and squeezed by a flex row it broke mid-token —
+       "ACCEPTE / D" and "COMPLETE / D" on the provider's own booking list, seen in a screenshot and
+       invisible to every tally that asks about boxes: the text is not clipped, it does not overflow,
+       and it wraps inside the pill because a pill has no break opportunity of its own. The row gives
+       way before the word does. */
+    white-space:nowrap; flex-shrink:0;
   }
   /* A chip you can tap is a control, not a label: it gets the same floor as every
      other control, from one rule, wherever it is reused. */
@@ -412,6 +418,16 @@
   .badge-gold{background:var(--warning-100); color:var(--warning-ink);}
   .badge-alert{background:var(--alert-100); color:var(--error-ink);}
   .row{display:flex; align-items:center; justify-content:space-between;}
+  /* A card head is a title and a count, and the two have to take turns rather than fight.
+     `.chip` was given `white-space:nowrap` so a status word stops breaking mid-token ("ACCEPTE / D"),
+     and that moved the break instead of removing it: the head of the reschedule inbox painted
+     "Waitin / g for / the / residen / t to / answer" across six lines, because `overflow-wrap:anywhere`
+     makes the title's min-content width one character and a chip that cannot shrink therefore took the
+     row. No tally sees either one — the text is not clipped, it collides with nothing, it is on the
+     scale and its contrast is fine, which is the same blind spot AGENTS.md records for a figure broken
+     in half. The fix is the one a sentence has anyway: let the row wrap, so the count falls onto its
+     own line and the heading keeps whole words. */
+  .card-head{flex-wrap:wrap; gap:4px 10px;}
   /* One rule for every figure a reader compares. Money, counts, rates and dates used to be aligned
      ad hoc per screen — five `text-align:right` declarations in a 1,600-line stylesheet and no numeral
      treatment anywhere — so a receipt's ₱ column and a fee table's did not line up with each other,
@@ -4831,7 +4847,7 @@ function statementCard() {
   const all = BOOKINGS.filter(b => b.status === 'completed' && b.pricing);
   const cashJobs = all.filter(b => isCashJob(b));
   return `<div class="card card-lg">
-      <div class="row" style="margin-bottom:12px;">
+      <div class="row card-head" style="margin-bottom:12px;">
         <b class="card-title">Platform statement</b>
         <span class="chip">From the ledger</span>
       </div>
@@ -4852,7 +4868,7 @@ function ageingCard() {
   const rows = commissionReceivableAgeing();
   if (!rows.length) return '';
   return `<div class="card card-lg">
-      <div class="row" style="margin-bottom:10px;"><b class="card-title">Commission owed on cash jobs</b><span class="chip">Unbilled</span></div>
+      <div class="row card-head" style="margin-bottom:10px;"><b class="card-title">Commission owed on cash jobs</b><span class="chip">Unbilled</span></div>
       ${rows.map(r => `
         <div class="row" style="padding:8px 0; border-top:1px solid var(--line);">
           <span style="min-width:0; flex:1;">
@@ -4880,7 +4896,7 @@ function configPanel() {
     ['warrantyDays', 'Warranty window for raising a case', 'days']
   ];
   return `<div class="card card-lg">
-      <div class="row" style="margin-bottom:10px;"><b class="card-title">Fees and settlement</b><span class="chip">Pilot assumptions</span></div>
+      <div class="row card-head" style="margin-bottom:10px;"><b class="card-title">Fees and settlement</b><span class="chip">Pilot assumptions</span></div>
       <p style="font-size:var(--t-caption); color:var(--mist); line-height:1.55; margin:0 0 12px;">
         These are the deck's planning figures, not rates in force — the deck says launch monetization must
         not be assumed and take rates are validated per category during the pilot.
@@ -4974,7 +4990,7 @@ function disputeCard(d) {
   const held = accountBalance('dispute_hold', b.id);
   const open = caseIsOpen(d);
   return `<div class="card card-lg">
-      <div class="row" style="margin-bottom:8px;">
+      <div class="row card-head" style="margin-bottom:8px;">
         <b class="card-title">Case ${esc(d.id)}</b>
         <span class="chip" style="color:var(--${disputeTone(d.status) === 'warning' ? 'warning' : 'success'}-ink);">${esc(disputeLabel(d.status))}</span>
       </div>
@@ -6886,7 +6902,7 @@ function rescheduleAskCard(viewer){
   const heading = yours ? 'Waiting for your answer'
     : (viewer === 'provider' ? 'Waiting for the resident to answer' : 'Waiting for the provider to answer');
   return `<div class="card" data-reschedule-asks="${asks.length}" style="margin-bottom:12px;">
-    <div class="row" style="margin-bottom:6px;">
+    <div class="row card-head" style="margin-bottom:6px;">
       <b class="card-title">${heading}</b>
       <span class="chip">${asks.length} proposal${asks.length === 1 ? '' : 's'}</span>
     </div>
@@ -7112,7 +7128,7 @@ function rescheduleCard(b){
   if (!rows.length) return '';
   const actor = rescheduleActor();
   return `<div class="card" style="border:1px solid var(--line);">
-    <div class="row" style="margin-bottom:6px;">
+    <div class="row card-head" style="margin-bottom:6px;">
       <b class="card-title">Reschedule requests</b>
       <span class="chip">${rows.length} on this job</span>
     </div>
@@ -7267,7 +7283,7 @@ function receiptCard(b) {
   const rows = paymentsFor(b.id);
   const cash = isCashJob(b);
   return `<div class="card card-lg">
-      <div class="row" style="margin-bottom:10px;">
+      <div class="row card-head" style="margin-bottom:10px;">
         <b class="card-title">Payment record</b>
         <span class="chip">${esc(payStatusLabel(b))}</span>
       </div>
@@ -10015,7 +10031,7 @@ function adminDashboard(){
     </div>
 
     <div class="card" style="margin-top:14px">
-      <div class="row" style="margin-bottom:10px;"><b class="card-title">Marketplace analytics</b><span class="chip">From these records</span></div>
+      <div class="row card-head" style="margin-bottom:10px;"><b class="card-title">Marketplace analytics</b><span class="chip">From these records</span></div>
       <div style="display:flex; flex-direction:column; gap:10px; font-size:var(--t-caption); color:var(--ink-soft);">
         ${[
           { label:'Completed bookings', pct:rates.completion, tone:'var(--verified)',
@@ -10065,7 +10081,7 @@ function adminDashboard(){
       <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',14)}</span>
     </button>
     <div class="card">
-      <div class="row" style="margin-bottom:10px;"><b class="card-title">Operations workload</b><span class="chip">${work.total ? work.total + ' item' + (work.total === 1 ? '' : 's') + ' waiting' : 'Nothing waiting'}</span></div>
+      <div class="row card-head" style="margin-bottom:10px;"><b class="card-title">Operations workload</b><span class="chip">${work.total ? work.total + ' item' + (work.total === 1 ? '' : 's') + ' waiting' : 'Nothing waiting'}</span></div>
       ${work.total ? chartShare(work.parts.map(p => ({ label: p.label, value: p.items, tone: p.tone })),
           /* minSample is deliberately 1 here and 5 on the reviews ring. This is a
              census of the queue an admin is actually facing, not a sample being
@@ -10076,7 +10092,7 @@ function adminDashboard(){
         : chartEmpty('No booking is live, no application is waiting, and no case is open.')}
     </div>
     <div class="card">
-      <div class="row" style="margin-bottom:10px;"><b class="card-title">What the marketplace earned</b><span class="chip">From the ledger</span></div>
+      <div class="row card-head" style="margin-bottom:10px;"><b class="card-title">What the marketplace earned</b><span class="chip">From the ledger</span></div>
       ${(() => { const st = platformStatement(); return `
       <div class="row"><span>Commission earned on completed work</span><b>${peso(st.commissionEarnedCentavos)}</b></div>
       <div class="row"><span>Owed on jobs paid on site</span><b style="color:var(--warning-ink)">${peso(st.owedByCashProvidersCentavos)}</b></div>
@@ -10087,7 +10103,7 @@ function adminDashboard(){
       <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">Each line is a sum over ledger entries, so it can be traced to the job behind it.</div>
     </div>
     <div class="card">
-      <div class="row" style="margin-bottom:10px;"><b class="card-title">Weekly bookings</b><span class="chip">Completed vs open</span></div>
+      <div class="row card-head" style="margin-bottom:10px;"><b class="card-title">Weekly bookings</b><span class="chip">Completed vs open</span></div>
       <div class="chart-sub">Bookings created and completed each day · this week</div>
       ${(() => { const days = weeklyBookings();
         return chartColumns(days.map(d => ({ label: d.name, value: d.completed, value2: d.open })), {
@@ -10100,7 +10116,7 @@ function adminDashboard(){
       <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">Counted from the demo bookings on this device — not marketplace volume.</div>
     </div>
     <div class="card">
-      <div class="row" style="margin-bottom:10px;"><b class="card-title">Supply against demand</b><span class="chip">Demo roster</span></div>
+      <div class="row card-head" style="margin-bottom:10px;"><b class="card-title">Supply against demand</b><span class="chip">Demo roster</span></div>
       ${categorySupply().map(cat => `<div class="row" style="padding:6px 0; font-size:var(--t-body-sm);"><span>${esc(cat.label)}</span><b>${cat.supply} provider${cat.supply === 1 ? '' : 's'} · ${cat.demand} job${cat.demand === 1 ? '' : 's'}</b></div>`).join('')}
       <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">A category with demand and thin supply is where the pilot needs to recruit first.</div>
     </div>
@@ -10225,7 +10241,7 @@ function adminMarketplaceIntelligence(){  const f = state.adminIntFilters;
     </div>` : ''}
 
     <div class="card card-lg">
-      <div class="row" style="margin-bottom:10px;"><b class="card-title">Where the work went</b><span class="chip">${f.days ? f.days + ' days' : 'all time'}</span></div>
+      <div class="row card-head" style="margin-bottom:10px;"><b class="card-title">Where the work went</b><span class="chip">${f.days ? f.days + ' days' : 'all time'}</span></div>
       ${st.byCategory.length ? st.byCategory.map(row => `
         <div style="margin-bottom:9px;">
           <div class="row" style="font-size:var(--t-caption);"><span>${esc(row.label)}</span><b>${row.jobs} job${row.jobs === 1 ? '' : 's'} · ${pesoShort(row.centavos)}</b></div>
@@ -10233,7 +10249,7 @@ function adminMarketplaceIntelligence(){  const f = state.adminIntFilters;
         </div>`).join('') : `<div style="font-size:var(--t-caption); color:var(--mist);">Nothing matches this window and service yet. Widen the filter.</div>`}
     </div>
     <div class="card" style="padding:14px">
-      <div class="row" style="margin-bottom:8px;"><b class="card-title">Supply gaps</b><span class="chip">Demand without cover</span></div>
+      <div class="row card-head" style="margin-bottom:8px;"><b class="card-title">Supply gaps</b><span class="chip">Demand without cover</span></div>
       ${gaps.length ? gaps.map(g => `
         <div class="row" style="padding:8px 0; border-top:1px solid var(--line); font-size:var(--t-body-sm);">
           <span style="flex:1; min-width:0;"><b>${esc(g.label)}</b><br><span style="color:var(--mist); font-size:var(--t-caption);">${g.demand} job${g.demand === 1 ? '' : 's'} against ${g.supply} provider${g.supply === 1 ? '' : 's'}</span></span>
@@ -10514,7 +10530,7 @@ function adminAttentionSection(){
   const flagged = networkAttentionList().length;
   return `
     <div class="card">
-      <div class="row"><b class="card-title">Why a provider is here</b><span class="chip">${flagged} flagged</span></div>
+      <div class="row card-head"><b class="card-title">Why a provider is here</b><span class="chip">${flagged} flagged</span></div>
       <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:10px;">
         <!-- A pick, not a chip: a chip in this app is green, because a chip carries a verification
              claim, and §34 forbids borrowing that meaning for a control that is only switched on. A
@@ -10627,7 +10643,7 @@ function adminProviderInsights(){
       <div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:10px;">${services.length} trade${services.length === 1 ? '' : 's'} are on the roster. Counted from the provider records, not from the category list.</div>
     </div>
     <div class="card" style="margin-top:14px">
-      <div class="row" style="margin-bottom:10px;"><b class="card-title">Provider network health</b><span class="chip">From these records</span></div>
+      <div class="row card-head" style="margin-bottom:10px;"><b class="card-title">Provider network health</b><span class="chip">From these records</span></div>
       <div style="display:flex; flex-direction:column; gap:10px; font-size:var(--t-caption); color:var(--ink-soft);">
         ${health.map(row => `<div>
           <div class="row"><span>${row.label}</span><b>${row.pct === null ? '—' : row.pct + '%'}</b></div>
@@ -10734,11 +10750,11 @@ function adminVerifications(){
       ${watch.length ? watch.map(p => `<div style="font-size:var(--t-caption); line-height:1.55; margin-top:8px;"><b>${esc(p.name)}</b><br>${esc(p.credentials[0] || 'No credential on file')}<br><span style="color:var(--mist);">${esc(adminProviderMeta(p).credential)}</span></div>`).join('')
         : `<div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px;">Every credential on the roster is marked valid. Nothing is waiting on you.</div>`}
     </div>
-    ${picked ? `<div class="card"><div class="row"><b class="card-title">${esc(picked.name)}</b><span class="chip">${esc(adminProviderMeta(picked).credential)}</span></div>
+    ${picked ? `<div class="card"><div class="row card-head"><b class="card-title">${esc(picked.name)}</b><span class="chip">${esc(adminProviderMeta(picked).credential)}</span></div>
       <div style="font-size:var(--t-caption); line-height:1.7; margin-top:8px;">${esc(picked.service)} · Brgy. ${esc(picked.barangay)}<br>${(picked.badges || []).map(esc).join(' · ') || 'No verification badge recorded'}<br><span style="color:var(--mist);">Declared credentials: ${picked.credentials.length ? picked.credentials.map(esc).join(', ') : 'none on file'}</span></div>
       <button class="btn sm secondary btn-block" style="margin-top:10px;" onclick="openAdminProviderProfile('${picked.id}')">Open the full provider record</button>
     </div>` : ''}
-    <div class="card"><div class="row"><b class="card-title">How this works</b><span class="chip">No automatic action</span></div><div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:7px;">Nothing here suspends a provider. A credential is a document a person uploaded in the sample records; an administrator reads it and decides.</div></div>`;
+    <div class="card"><div class="row card-head"><b class="card-title">How this works</b><span class="chip">No automatic action</span></div><div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:7px;">Nothing here suspends a provider. A credential is a document a person uploaded in the sample records; an administrator reads it and decides.</div></div>`;
     })()}
     ` : category === 'decided' ? adminDecidedSection(decidedList) : category === 'verified' ? `
     <div style="display:flex; gap:8px; margin-bottom:10px;"><div style="flex:1; min-height:44px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md); padding:9px 10px; display:flex; align-items:center; gap:7px;"><span style="font-size:var(--t-input);">⌕</span><input value="${state.adminVerifiedSearch || ''}" aria-label="Search verified providers by name, service or barangay" oninput="state.adminVerifiedSearch=this.value; render();" placeholder="Search name, service, or barangay..." style="width:100%; min-height:var(--tap); border:0; outline:0; font:inherit; font-size:var(--t-caption); background:transparent;"></div><button class="btn sm secondary" style="padding:7px 10px;" onclick="state.adminVerifiedFiltersOpen=!state.adminVerifiedFiltersOpen; render();">Filter${state.adminVerifiedCredential !== 'all' ? ' (1)' : ''}</button></div>
@@ -10946,7 +10962,7 @@ function providerVerificationReview(){
 
     <details class="card"><summary style="font-weight:800; cursor:pointer;">Identity information</summary><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; font-size:var(--t-caption);"><div>Full name<br><b>${esc(app.name)}</b></div><div>Email<br><b>${esc(app.email)}</b></div><div>Mobile<br><b>${esc(app.phone)}</b></div><div>Barangay<br><b>${esc(app.barangay)}</b></div><div style="grid-column:1 / -1;">Address<br><b>${esc(app.address)}</b></div></div><div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px;">What the applicant filed is on the document list; this screen keeps no date of birth and no document image.</div></details>
 
-    <div class="card"><div class="row" style="margin-bottom:10px;"><b class="card-title">Submitted documents</b><span class="chip">${submitted} of ${docs.length} filed</span></div>${docs.map(d => { const s = docState(d); const flag = review.flags && review.flags[d.kind]; return '<div style="border-top:1px solid var(--line); padding:10px 0;"><div class="row"><div><b style="font-size:var(--t-body-sm);">' + esc(d.label) + '</b><div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">' + esc(d.detail) + '</div></div><span style="font-size:var(--t-caption); color:' + INK[s] + '; font-weight:800;">' + ic(s === 'missing' ? 'alert-triangle' : s === 'flagged' ? 'alert-circle' : 'check-circle', 13) + ' ' + esc(s === 'missing' ? 'Missing' : s === 'flagged' ? 'Flagged' : s === 'verified' ? 'Verified' : 'Submitted') + '</span></div><div class="row" style="margin-top:7px;"><span style="font-size:var(--t-caption); color:var(--mist);">' + (d.submittedAt ? 'Filed ' + esc(shortDate(d.submittedAt)) + (d.expiresAt ? ' · expires ' + esc(shortDate(d.expiresAt)) : '') : 'Required before approval') + '</span>' + (d.submittedAt ? '<button class="btn sm secondary" onclick="verificationAction(\'document\', \'' + d.kind + '\')">Open document</button>' : '<button class="btn sm secondary" onclick="state.verificationDocKind=\'' + d.kind + '\'; verificationAction(\'request\')">Request this</button>') + '</div>' + (flag ? '<div style="font-size:var(--t-caption); color:var(--warning-ink); margin-top:6px;">Flagged: ' + esc(flag) + '</div>' : '') + '</div>'; }).join('')}</div>
+    <div class="card"><div class="row card-head" style="margin-bottom:10px;"><b class="card-title">Submitted documents</b><span class="chip">${submitted} of ${docs.length} filed</span></div>${docs.map(d => { const s = docState(d); const flag = review.flags && review.flags[d.kind]; return '<div style="border-top:1px solid var(--line); padding:10px 0;"><div class="row"><div><b style="font-size:var(--t-body-sm);">' + esc(d.label) + '</b><div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">' + esc(d.detail) + '</div></div><span style="font-size:var(--t-caption); color:' + INK[s] + '; font-weight:800;">' + ic(s === 'missing' ? 'alert-triangle' : s === 'flagged' ? 'alert-circle' : 'check-circle', 13) + ' ' + esc(s === 'missing' ? 'Missing' : s === 'flagged' ? 'Flagged' : s === 'verified' ? 'Verified' : 'Submitted') + '</span></div><div class="row" style="margin-top:7px;"><span style="font-size:var(--t-caption); color:var(--mist);">' + (d.submittedAt ? 'Filed ' + esc(shortDate(d.submittedAt)) + (d.expiresAt ? ' · expires ' + esc(shortDate(d.expiresAt)) : '') : 'Required before approval') + '</span>' + (d.submittedAt ? '<button class="btn sm secondary" onclick="verificationAction(\'document\', \'' + d.kind + '\')">Open document</button>' : '<button class="btn sm secondary" onclick="state.verificationDocKind=\'' + d.kind + '\'; verificationAction(\'request\')">Request this</button>') + '</div>' + (flag ? '<div style="font-size:var(--t-caption); color:var(--warning-ink); margin-top:6px;">Flagged: ' + esc(flag) + '</div>' : '') + '</div>'; }).join('')}</div>
 
     <div class="card"><b class="card-title">What is still outstanding</b><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:8px;">${complete ? 'All ' + docs.length + ' documents are filed. ' + (review.status === 'verified' ? 'This application was approved — the decision and its time are in the activity list.' : 'Nothing is waiting on the applicant, so the decision is the administrator\'s to make.') : esc(app.name) + ' has filed ' + submitted + ' of ' + docs.length + '. Still outstanding: ' + esc(outstanding.map(d => d.label).join(', ')) + '.'}</div>${state.profileError ? '<div class="inline-error" role="alert">' + esc(state.profileError) + '</div>' : ''}</div>
 
@@ -11528,7 +11544,7 @@ function earningsCard(providerId) {
   const st = providerStatement(providerId);
   const owed = commissionReceivableAgeing().find(r => r.providerId === providerId);
   return `<div class="card card-lg">
-      <div class="row" style="margin-bottom:12px;">
+      <div class="row card-head" style="margin-bottom:12px;">
         <b class="card-title">Earnings and payouts</b>
         <span class="chip">${esc(CONFIG.payoutSchedule === 'weekly:monday' ? 'Weekly, Monday' : CONFIG.payoutSchedule)}</span>
       </div>
@@ -11561,7 +11577,7 @@ function earningsCard(providerId) {
 function listingsPanel(providerId) {
   const list = listingsOf(providerId);
   return `<div class="card card-lg">
-      <div class="row" style="margin-bottom:10px;">
+      <div class="row card-head" style="margin-bottom:10px;">
         <b class="card-title">Services and prices</b>
         <span class="chip">${list.length} listed</span>
       </div>
@@ -12322,7 +12338,7 @@ function providerProfileHub(){
   const pp = state.providerProfileData;
 const row = (id, title, detail) => settingsRow('providerProfileSection', id, title, detail);
   const modal = state.providerProfileModal;
-  return `<div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><button onclick="state.tab='dashboard'; render();" class="back-btn" aria-label="Back">${ic("chevron-left",18)}</button><h1>Provider Profile</h1></div></div><div class="pad" style="background:var(--cloud);"><div class="card" style="text-align:center">${photoAvatar('self', 56)}<div style="font-size:var(--t-lead); font-weight:800; margin-top:10px;">${esc(pp.name)}</div><div style="font-size:var(--t-caption); color:var(--mist); margin-top:3px;">${esc(pp.service)} - Brgy. ${esc(pp.barangay)}</div><div style="display:flex; justify-content:center; gap:6px; margin-top:10px;">${providerOf({providerId:CURRENT_PROVIDER_ID}).badges.map(b => '<span class="chip">' + esc(b) + '</span>').join('')}</div><button class="btn sm secondary" style="margin-top:10px;" onclick="providerProfileAction('edit')">Edit Professional Profile</button></div><div class="card"><div class="row"><b class="card-title">Professional status</b><span class="chip">Active</span></div><div style="font-size:var(--t-caption); line-height:1.8; margin-top:8px;">Availability: <b style="color:var(--success-ink);">${state.providerAvailability}</b><br>Trust Score: <button class="auth-switch" style="font-size:var(--t-body);" onclick="openProfileSection('provider','reputation','Reputation','Ratings, jobs and completion history')">${providerOf({providerId:CURRENT_PROVIDER_ID}).trustScore} / 100</button><br>Credentials: <b style="color:${credentialSummaryFor(CURRENT_PROVIDER_ID).tone};">${esc(credentialSummaryFor(CURRENT_PROVIDER_ID).label)}</b></div></div><div class="card"><div class="row" style="margin-bottom:9px;"><b class="card-title">Contact and service details</b><button class="btn sm secondary" onclick="providerProfileAction('edit')">Edit</button></div><div style="font-size:var(--t-caption); line-height:1.8;">Email: <b>${esc(pp.email)}</b><br>Phone: <b>${esc(pp.phone)}</b><br>Rate: <b>${rateLabel(pp.rateCentavos, pp.rateUnit)}</b><br>Service radius: <b>${esc(pp.serviceRadius)}</b><br>Working hours: <b>${esc(pp.workingHours)}</b><br>Emergency dispatch: <b>${state.providerEmergencyDispatch ? 'Enabled' : 'Disabled'}</b><br>Payout account: <b>${esc(pp.bankAccount)}</b></div></div>${capabilityCard(providerOf({providerId:CURRENT_PROVIDER_ID}))}<div class="section-label">Service settings</div>${row('services','Services Offered', listingsOf(CURRENT_PROVIDER_ID).filter(l=>l.isActive).map(l=>l.title).join(', ') || 'Nothing listed yet')}${row('pricing','Pricing & Rates',rateLabel(pp.rateCentavos, pp.rateUnit))}${row('area','Service Area',pp.serviceRadius)}${row('hours','Working Hours',pp.workingHours)}${row('dispatch','Emergency Dispatch',state.providerEmergencyDispatch?'Enabled':'Disabled')}<div class="section-label">Professional</div>${row('credentials', 'Credentials & Verification', credentialSummaryFor(CURRENT_PROVIDER_ID).label)}${row('reputation','Reputation & Trust Score', providerOf({providerId:CURRENT_PROVIDER_ID}).trustScore + ' / 100 · ' + providerOf({providerId:CURRENT_PROVIDER_ID}).rating + ' rating')}${row('portfolio','Work Portfolio','Service photos and examples')}${row('preview','Preview Public Profile','See what Residents see')}<div class="section-label">Financial</div>${row('payout', 'Payout & Earnings', pp.bankAccount)}<div class="section-label">Account</div>${row('security', 'Password & Sign-in', 'Not stored on this device')}${row('notifications','Notification Preferences','Service and security alerts')}<button class="btn" style="width:100%; margin-top:12px; background:var(--surface); color:var(--error-ink); border:1px solid var(--alert); box-shadow:none;" onclick="providerProfileAction('logout')">Log Out</button></div>${modal ? `<div class="modal-layer" data-layer="modal"><div class="card modal-card"  ><div class="row"><b>${modal==='edit'?'Edit service profile':modal==='logout'?'Log out?':modal==='payout'?'Payout account':modal==='dispatch'?'Enable emergency dispatch?':modal==='add_service'?((state.listingDraft&&state.listingDraft.id)?'Edit service':'NEW SERVICE'):modal==='portfolio_add'?'Add work':modal==='unchanged'?'No change to save':'Update'}</b><button aria-label="Close" onclick="state.providerProfileModal=null; render();" style="border:0; background:transparent; font-size:var(--t-title); min-width:var(--tap); min-height:var(--tap); display:inline-flex; align-items:center; justify-content:center;">&times;</button></div>${modal==='edit'?`<label class="form-label">Email (read-only)<input value="${esc(pp.email)}" readonly class="form-input-readonly"></label><label class="form-label-8">Phone Number<input id="provider-profile-phone" value="${esc(pp.phone)}" class="form-input"></label><label class="form-label-8">Service Rate (peso per unit)<input id="provider-profile-rate" type="number" min="0" step="1" inputmode="numeric" value="${toPesos(pp.rateCentavos)}" class="form-input"></label><label class="form-label-8">Service Radius<input id="provider-profile-radius" value="${esc(pp.serviceRadius)}" class="form-input"></label><label class="form-label-8">Working Hours<input id="provider-profile-hours" value="${esc(pp.workingHours)}" class="form-input"></label><button class="btn btn-block"   onclick="saveProviderProfessionalProfile()">Save Changes</button>`:modal==='dispatch'?`<div style="font-size:var(--t-caption); margin-top:12px;">You may receive urgent service requests during selected emergency hours.</div><button class="btn btn-block"   onclick="state.providerEmergencyDispatch=!state.providerEmergencyDispatch; state.providerProfileModal=null; render();">Enable</button>`:modal==='payout'?`<label class="form-label">Payout account<input id="provider-payout-account" class="form-input" style="margin-top:6px;" value="${esc(pp.bankAccount)}"></label><div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px; line-height:1.5;">This is where a payout would go. The prototype keeps it on this device and sends it nowhere.</div><button class="btn btn-block" onclick="savePayoutAccount()">Save payout account</button>`:modal==='logout'?`<div style="font-size:var(--t-caption); margin-top:12px;">Are you sure you want to log out of your Sukinnect provider account?</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm secondary" style="flex:1;" onclick="state.providerProfileModal=null; render();">Cancel</button><button class="btn sm danger" style="flex:1;" onclick="signOut()">Log Out</button></div>`:modal==='add_service'?`<label class="form-label">Service name<input id="listing-title" class="form-input" style="margin-top:6px;" placeholder="e.g. Water heater inspection" value="${esc((state.listingDraft||{}).title||'')}"></label><label class="form-label">Price in pesos<input id="listing-price" type="number" min="100" step="1" inputmode="numeric" class="form-input" style="margin-top:6px;" value="${(state.listingDraft||{}).pricePesos||''}"></label><label class="form-label">Typical duration, minutes<input id="listing-mins" type="number" min="5" step="5" inputmode="numeric" class="form-input" style="margin-top:6px;" value="${(state.listingDraft||{}).durationMin||45}"></label>${state.profileError?`<div class="inline-error" role="alert">${esc(state.profileError)}</div>`:''}<button class="btn btn-block" onclick="commitListingDraft()">Save service</button>`:modal==='portfolio_add'?`<input id="portfolio-service" class="form-input" aria-label="Which service this work was for" placeholder="Service" style="margin-top:12px;"><textarea id="portfolio-description" class="form-input" aria-label="Describe this piece of work" placeholder="Description" style="min-height:70px; margin-top:8px;"></textarea>${state.profileError?`<div class="inline-error" role="alert">${esc(state.profileError)}</div>`:''}<button class="btn btn-block" onclick="savePortfolioWork()">Save work</button>`:`<div style="font-size:var(--t-caption); color:${modal==='unchanged'?'var(--text-muted)':'var(--success-ink)'}; margin-top:12px;">${modal==='unchanged'?'Nothing on this form changed, so nothing was saved.' : 'Changes saved successfully.'}</div><button class="btn btn-block"   onclick="state.providerProfileModal=null; render();">Close</button>`}</div></div>`:''}`;
+  return `<div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><button onclick="state.tab='dashboard'; render();" class="back-btn" aria-label="Back">${ic("chevron-left",18)}</button><h1>Provider Profile</h1></div></div><div class="pad" style="background:var(--cloud);"><div class="card" style="text-align:center">${photoAvatar('self', 56)}<div style="font-size:var(--t-lead); font-weight:800; margin-top:10px;">${esc(pp.name)}</div><div style="font-size:var(--t-caption); color:var(--mist); margin-top:3px;">${esc(pp.service)} - Brgy. ${esc(pp.barangay)}</div><div style="display:flex; justify-content:center; gap:6px; margin-top:10px;">${providerOf({providerId:CURRENT_PROVIDER_ID}).badges.map(b => '<span class="chip">' + esc(b) + '</span>').join('')}</div><button class="btn sm secondary" style="margin-top:10px;" onclick="providerProfileAction('edit')">Edit Professional Profile</button></div><div class="card"><div class="row card-head"><b class="card-title">Professional status</b><span class="chip">Active</span></div><div style="font-size:var(--t-caption); line-height:1.8; margin-top:8px;">Availability: <b style="color:var(--success-ink);">${state.providerAvailability}</b><br>Trust Score: <button class="auth-switch" style="font-size:var(--t-body);" onclick="openProfileSection('provider','reputation','Reputation','Ratings, jobs and completion history')">${providerOf({providerId:CURRENT_PROVIDER_ID}).trustScore} / 100</button><br>Credentials: <b style="color:${credentialSummaryFor(CURRENT_PROVIDER_ID).tone};">${esc(credentialSummaryFor(CURRENT_PROVIDER_ID).label)}</b></div></div><div class="card"><div class="row" style="margin-bottom:9px;"><b class="card-title">Contact and service details</b><button class="btn sm secondary" onclick="providerProfileAction('edit')">Edit</button></div><div style="font-size:var(--t-caption); line-height:1.8;">Email: <b>${esc(pp.email)}</b><br>Phone: <b>${esc(pp.phone)}</b><br>Rate: <b>${rateLabel(pp.rateCentavos, pp.rateUnit)}</b><br>Service radius: <b>${esc(pp.serviceRadius)}</b><br>Working hours: <b>${esc(pp.workingHours)}</b><br>Emergency dispatch: <b>${state.providerEmergencyDispatch ? 'Enabled' : 'Disabled'}</b><br>Payout account: <b>${esc(pp.bankAccount)}</b></div></div>${capabilityCard(providerOf({providerId:CURRENT_PROVIDER_ID}))}<div class="section-label">Service settings</div>${row('services','Services Offered', listingsOf(CURRENT_PROVIDER_ID).filter(l=>l.isActive).map(l=>l.title).join(', ') || 'Nothing listed yet')}${row('pricing','Pricing & Rates',rateLabel(pp.rateCentavos, pp.rateUnit))}${row('area','Service Area',pp.serviceRadius)}${row('hours','Working Hours',pp.workingHours)}${row('dispatch','Emergency Dispatch',state.providerEmergencyDispatch?'Enabled':'Disabled')}<div class="section-label">Professional</div>${row('credentials', 'Credentials & Verification', credentialSummaryFor(CURRENT_PROVIDER_ID).label)}${row('reputation','Reputation & Trust Score', providerOf({providerId:CURRENT_PROVIDER_ID}).trustScore + ' / 100 · ' + providerOf({providerId:CURRENT_PROVIDER_ID}).rating + ' rating')}${row('portfolio','Work Portfolio','Service photos and examples')}${row('preview','Preview Public Profile','See what Residents see')}<div class="section-label">Financial</div>${row('payout', 'Payout & Earnings', pp.bankAccount)}<div class="section-label">Account</div>${row('security', 'Password & Sign-in', 'Not stored on this device')}${row('notifications','Notification Preferences','Service and security alerts')}<button class="btn" style="width:100%; margin-top:12px; background:var(--surface); color:var(--error-ink); border:1px solid var(--alert); box-shadow:none;" onclick="providerProfileAction('logout')">Log Out</button></div>${modal ? `<div class="modal-layer" data-layer="modal"><div class="card modal-card"  ><div class="row"><b>${modal==='edit'?'Edit service profile':modal==='logout'?'Log out?':modal==='payout'?'Payout account':modal==='dispatch'?'Enable emergency dispatch?':modal==='add_service'?((state.listingDraft&&state.listingDraft.id)?'Edit service':'NEW SERVICE'):modal==='portfolio_add'?'Add work':modal==='unchanged'?'No change to save':'Update'}</b><button aria-label="Close" onclick="state.providerProfileModal=null; render();" style="border:0; background:transparent; font-size:var(--t-title); min-width:var(--tap); min-height:var(--tap); display:inline-flex; align-items:center; justify-content:center;">&times;</button></div>${modal==='edit'?`<label class="form-label">Email (read-only)<input value="${esc(pp.email)}" readonly class="form-input-readonly"></label><label class="form-label-8">Phone Number<input id="provider-profile-phone" value="${esc(pp.phone)}" class="form-input"></label><label class="form-label-8">Service Rate (peso per unit)<input id="provider-profile-rate" type="number" min="0" step="1" inputmode="numeric" value="${toPesos(pp.rateCentavos)}" class="form-input"></label><label class="form-label-8">Service Radius<input id="provider-profile-radius" value="${esc(pp.serviceRadius)}" class="form-input"></label><label class="form-label-8">Working Hours<input id="provider-profile-hours" value="${esc(pp.workingHours)}" class="form-input"></label><button class="btn btn-block"   onclick="saveProviderProfessionalProfile()">Save Changes</button>`:modal==='dispatch'?`<div style="font-size:var(--t-caption); margin-top:12px;">You may receive urgent service requests during selected emergency hours.</div><button class="btn btn-block"   onclick="state.providerEmergencyDispatch=!state.providerEmergencyDispatch; state.providerProfileModal=null; render();">Enable</button>`:modal==='payout'?`<label class="form-label">Payout account<input id="provider-payout-account" class="form-input" style="margin-top:6px;" value="${esc(pp.bankAccount)}"></label><div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px; line-height:1.5;">This is where a payout would go. The prototype keeps it on this device and sends it nowhere.</div><button class="btn btn-block" onclick="savePayoutAccount()">Save payout account</button>`:modal==='logout'?`<div style="font-size:var(--t-caption); margin-top:12px;">Are you sure you want to log out of your Sukinnect provider account?</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm secondary" style="flex:1;" onclick="state.providerProfileModal=null; render();">Cancel</button><button class="btn sm danger" style="flex:1;" onclick="signOut()">Log Out</button></div>`:modal==='add_service'?`<label class="form-label">Service name<input id="listing-title" class="form-input" style="margin-top:6px;" placeholder="e.g. Water heater inspection" value="${esc((state.listingDraft||{}).title||'')}"></label><label class="form-label">Price in pesos<input id="listing-price" type="number" min="100" step="1" inputmode="numeric" class="form-input" style="margin-top:6px;" value="${(state.listingDraft||{}).pricePesos||''}"></label><label class="form-label">Typical duration, minutes<input id="listing-mins" type="number" min="5" step="5" inputmode="numeric" class="form-input" style="margin-top:6px;" value="${(state.listingDraft||{}).durationMin||45}"></label>${state.profileError?`<div class="inline-error" role="alert">${esc(state.profileError)}</div>`:''}<button class="btn btn-block" onclick="commitListingDraft()">Save service</button>`:modal==='portfolio_add'?`<input id="portfolio-service" class="form-input" aria-label="Which service this work was for" placeholder="Service" style="margin-top:12px;"><textarea id="portfolio-description" class="form-input" aria-label="Describe this piece of work" placeholder="Description" style="min-height:70px; margin-top:8px;"></textarea>${state.profileError?`<div class="inline-error" role="alert">${esc(state.profileError)}</div>`:''}<button class="btn btn-block" onclick="savePortfolioWork()">Save work</button>`:`<div style="font-size:var(--t-caption); color:${modal==='unchanged'?'var(--text-muted)':'var(--success-ink)'}; margin-top:12px;">${modal==='unchanged'?'Nothing on this form changed, so nothing was saved.' : 'Changes saved successfully.'}</div><button class="btn btn-block"   onclick="state.providerProfileModal=null; render();">Close</button>`}</div></div>`:''}`;
 }
 
 function bindTabHandlers(){

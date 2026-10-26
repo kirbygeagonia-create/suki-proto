@@ -8487,3 +8487,54 @@ re-staged and rebuilt as `versionCode 44 / 1.2-preview.42`, and `node tools/audi
 **findings: 0** with all four copies at `d7725e4a…`. Nothing was installed on a device and nothing was
 pushed.
 
+
+## 137. The first screenshot of two new screens found two defects, and the fix for one of them moved the break instead of removing it
+
+§136 put `resident-asks` and `provider-asks` into the camera's walk. That was the point of putting them
+there, and the first picture taken through them paid for the row immediately — twice.
+
+**The row painted nothing.** It signed in as the resident, raised a proposal on the resident's own
+upcoming job, then assigned `state.role='provider'` and expected the provider to be looking at it. The
+provider in this build is p1, Ramil Odiada, and a job belonging to another resident is not on his list —
+so the inbox card had no ask to render, the screen was an ordinary booking list, and all 25 tallies
+reported clean about a screen nobody can reach. The row now picks the booking the signed-in side can
+actually see (`bookingsForProvider().find(b => b.status === 'upcoming')`) and raises the ask on that one.
+This is the same fiction AGENTS.md names for a harness that assigns `state.*` to reach a screen — arrived
+at through the *identity* rather than the navigation, which is why the entry-point review of the row did
+not catch it: every handler it calls is a real one.
+
+**A chip is a word.** The picture that then did paint the card showed the booking rows beside it breaking
+their status pills mid-token — `ACCEPTE / D`, `COMPLETE / D` — uppercased, inside a flex row, with no
+break opportunity of their own. `.chip` took `white-space:nowrap; flex-shrink:0`. Correct in isolation,
+and the next screenshot showed what it had done: the card *head* is a title and a count in one `.row`, so
+with the count unable to give way, the title gave instead — `Waitin / g for / the / residen / t to /
+answer`, six lines for five words, at the **default** panel width, with the 8-corner sweep reading 25
+tallies all clear over the same file. A word alone on a line is not clipped, does not collide, sits on the
+scale and clears contrast; every question the camera asks about boxes answers "fine".
+
+The rule therefore sits on the row, not on either child: `.card-head{ flex-wrap:wrap; gap:4px 10px }`,
+applied to all 22 places the markup paints a title with a count beside it, by a script that prints the
+pair count it found and the number it rewrote so that a silent zero cannot pass as a clean run. Two gate
+checks hold it: every title+chip pair must sit in a wrapping row, behind a floor of ten pairs as the
+positive control (a pattern that stops matching would otherwise report "0 of 0 unwrapped"), and the class
+must still be `flex-wrap` while the chip is still `nowrap` — because the second is the first's failed
+attempt, and a build that keeps the class name and deletes the declaration is the regression arriving
+quietly. `node tools/falsify-coherence.cjs` grew from 8 breaks to 10 to prove exactly those two, and each
+fails a different check: one row loses the class and the pair count speaks; the class loses `flex-wrap`
+and the CSS speaks while all 22 rows still name a rule that no longer exists.
+
+**As printed at the end of this pass.** `node tools/verify.cjs` → **all 643 checks passed** (641 before
+the two head checks); `node tools/falsify-coherence.cjs` → **10 of 10 breaks caught, 0 not applied**;
+`node tools/sweep-text-scale.cjs` → **8 of 8 corners, 25 tallies each, all clear** after the wrap, with
+the inbox card and its count on their own line; `node tools/audit-build-bytes.cjs` → **findings: 0**, all
+four copies at `2691a76c…`. The shell was re-staged and rebuilt as `versionCode 45 / 1.2-preview.43`.
+
+Two things the build nearly cost, recorded because both are environment traps rather than app defects.
+The first two `assembleDebug` attempts died before compiling anything on
+`Could not create service of type FileLockContentionHandler … java.net.BindException: Address already in
+use: bind` — a wedged Gradle daemon holding the loopback port, cleared by `gradlew --stop` and nothing
+else. And the wrapper that reported that failure announced itself **completed, exit code 0**, because the
+command ended in a `tail` and the pipeline's exit is the last program's, not gradle's. The build log said
+`FAILURE` and `audit-build-bytes` said `findings: 1` against an APK still stamped `.42`; the exit code
+said nothing was wrong. **A background run's exit code is not a measurement of the thing it ran** — read
+the log, or ask the audit that inspects the artifact.

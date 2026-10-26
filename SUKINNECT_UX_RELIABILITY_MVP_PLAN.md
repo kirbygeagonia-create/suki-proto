@@ -715,6 +715,15 @@ ledger column now lines its peso signs and decimal points vertically, the admin 
 in place of the shield, and the booking detail carries four group headings and not the two whose records do
 not exist. `CHANGES.md` §135 carries the reading.
 
+**Re-printed the same day after `CHANGES.md` §137**, which is what the paragraph above is dated for rather
+than authoritative: `node tools/verify.cjs` → all **643** checks · `node tools/shot.cjs --list` → **88**
+screens, and this time the two inbox screens actually paint their card (the first version of those rows
+signed in as a provider who cannot see the job, so the walk photographed an ordinary list and every tally
+read clean) · `falsify-coherence` **10/10**, the two added breaks proving that a card head must wrap
+instead of letting a count crush its title · `sweep-text-scale` → **8 of 8** corners, 25 tallies each, all
+clear · `audit-build-bytes` → **findings: 0**, four copies at `2691a76c…`, shell at
+`versionCode 45 / 1.2-preview.43`. The aggregate remains un-run and unquoted.
+
 **Closed after the first report.** `falsify-legal-truth` caught one of my own checks as a MISSED - it
 grepped the sign-in render, where the register fields are never painted - and was re-pointed at the
 register-mode paint with a presence half, so the family now reads 8 of 8. A second audit against §9 of

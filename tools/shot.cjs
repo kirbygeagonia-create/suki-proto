@@ -1041,21 +1041,24 @@ const SCREENS = [
      unconditionally, and the second row died before painting: the app refuses a second proposal while one
      is waiting — that is one of the flow's own rules — so no draft was armed, and the next line reached
      for `state.rescheduleDraft.dayIdx` on a null draft. A camera row that depends on a clean slate is a
-     row that only works first; each of these now works on a page where the other has already run. */
+     row that only works first; each of these now works on a page where the other has already run. And a
+     row has to sign in as somebody who can see the job: the first `provider-asks` raised the ask as the
+     resident on the resident's booking and then called `applyProviderIdentity` for its provider, which
+     falls back to p1 for anyone without a demo profile — so the screenshot came back with no card at
+     all, and a walk that paints nothing measures nothing. */
   ['resident-asks', `state.view='app'; state.role='resident';
-                     const ra = BOOKINGS.find(b=>b.status==='upcoming');
+                     const ra = bookingsForResident().find(b=>b.status==='upcoming');
                      openBookingDetail(ra.id);
                      if (!pendingReschedule(ra.id)) { openRescheduleRequest(ra.id);
                        state.rescheduleDraft.dayIdx=1; state.rescheduleDraft.timeIdx=2;
                        submitRescheduleRequest(); }
                      state.sheet=null; state.tab='bookings'; render();`],
-  ['provider-asks', `state.view='app'; state.role='resident';
-                     const pa = BOOKINGS.find(b=>b.status==='upcoming');
-                     openBookingDetail(pa.id);
+  ['provider-asks', `state.view='app'; state.role='provider'; state.tab='bookings'; render();
+                     const pa = bookingsForProvider().find(b=>b.status==='upcoming');
+                     openProviderBooking(pa.id);
                      if (!pendingReschedule(pa.id)) { openRescheduleRequest(pa.id);
                        state.rescheduleDraft.dayIdx=1; state.rescheduleDraft.timeIdx=2;
                        submitRescheduleRequest(); }
-                     applyProviderIdentity(pa.providerId); state.role='provider';
                      state.sheet=null; state.tab='bookings'; render();`],
   /* The pilot category, reached the way a resident reaches it: pick the category's
      provider, open the sheet, choose a mode. Screens nobody can navigate to are

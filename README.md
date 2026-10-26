@@ -418,6 +418,11 @@ measurement rather than chosen for taste:
   receipt are separately labelled, in an order that puts what is happening now above everything else,
   and a group whose records do not exist yet is not painted at all rather than painted empty — which is
   why a job nobody has answered shows no completion time and no receipt.
+- **A word stays a word.** A status chip is a word, not a paragraph, so it never breaks mid-token
+  ("ACCEPTE / D"), and a card head — a title with a count beside it — is allowed to wrap so the count
+  falls onto its own line instead of crushing the heading. Both halves exist because of each other:
+  making the chip unbreakable on its own moved the break onto the title, and neither wording is visible
+  to a sensor that only asks about boxes, so the rule is pinned in the gate as a shape.
 
 ## Honest labelling
 

@@ -2228,10 +2228,20 @@ build that runs on no phone proves only that it builds.
 **Superseded again the same day by `1.2-preview.42` (`versionCode 44`), 2026-10-26.** The re-audit of the
 plan's own matrix (CHANGES §136) added the help-desk wording, the role-session documentation and the
 pending-proposal inbox to both booking lists. Asset re-copied with `cmp`, `dist/` rebuilt, build 7s,
-`node tools/audit-build-bytes.cjs` → **findings: 0** with all four copies at `d7725e4a…`. **Install `.42`,
-not `.41` or `.40`**, when a device arrives, and read the version back from `dumpsys package
+`node tools/audit-build-bytes.cjs` → **findings: 0** with all four copies at `d7725e4a…`. ~~Install `.42`~~
+— superseded immediately below, before any device was attached. Read the version back from `dumpsys package
 com.sukinnect.app` rather than from this file: three builds now carry the same bytes-in-name only if a
 reader trusts a filename, and the version pair is the sole thing that tells them apart on a phone.
+
+**Superseded within the hour by `1.2-preview.43` (`versionCode 45`), 2026-10-26.** The screenshot `.42`
+made possible found two defects on the two brand-new inbox screens — the camera's own row painted nothing,
+and the status chips broke mid-token — and the chip cure moved the break onto the card title beside it, so
+the head rows now wrap (CHANGES §137). Asset re-copied with `cmp`, `dist/` rebuilt,
+`node tools/audit-build-bytes.cjs` → **findings: 0** with all four copies at `2691a76c…`. **Install
+`.43`**, not `.42`, `.41` or `.40`, when a device arrives. Two notes for whoever runs the leg: the first
+two `assembleDebug` attempts died on a wedged daemon (`FileLockContentionHandler … Address already in
+use`) and only `gradlew --stop` cleared it, and the wrapper still reported that failed build as
+`completed, exit code 0` — so read the build log or ask `audit-build-bytes`, never the exit code.
 
 ## The browse → review → book walk (G11) — the method, armed and not yet run
 

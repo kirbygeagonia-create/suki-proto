@@ -2635,6 +2635,25 @@ a break, because a break that reads zero belongs in prose while a surviving muta
 aggregate's red column, and the nav-fit family already recorded what happens when the two are
 conflated.
 
+A FIX THAT MOVES A BREAK IS NOT A FIX, AND THE SCREEN IT BREAKS IS THE ONE BESIDE IT. The same
+`overflow-wrap:anywhere` min-content rule then bit the other half of a card head. A status chip was
+breaking mid-token — "ACCEPTE / D", "COMPLETE / D" on the provider's booking list, seen in a screenshot
+and invisible to every tally that asks about boxes — so `.chip` took `white-space:nowrap; flex-shrink:0`,
+which is right for a chip alone. In a `.row` head, where the chip sits beside the card title, it stopped
+the chip from giving way and handed the break to the heading instead: the reschedule inbox painted
+"Waitin / g for / the / residen / t to / answer" across six lines at the **default** panel width, and the
+8-corner sweep stayed silent at 25 tallies each, because a word on its own line is not clipped, does not
+collide, is on the scale, and clears contrast. The fix is on the row, not on either child —
+`.card-head{ flex-wrap:wrap }` on the 22 title+chip heads, so the count falls onto its own line and the
+title keeps whole words. Two rules follow. **When a flex row holds two things that must stay whole,
+wrap the row; making one of them unbreakable only chooses which one shatters.** And **a shape assertion
+belongs in the gate for any defect a screenshot shows and a tally cannot**: the check counts the
+title+chip pairs the markup paints and requires each to carry the class, behind a floor of ten pairs so a
+pattern that stops matching reports "0 of 0" rather than passing; its sibling pins that the class is
+`flex-wrap` and the chip is `nowrap`, because the second is the first's failed attempt. Proven by
+`node tools/falsify-coherence.cjs`, which grows to 10 breaks — one head loses the class, then the class
+loses `flex-wrap` while all 22 rows still name a rule that no longer exists.
+
 A SCREEN CAN SATISFY EVERY SENSOR AND STILL BE A DECORATIVE STATISTIC. `adminProviderInsights` — the
 Providers bar's "Insights" button — was missing from the camera's table until §81 added it, and once it
 was in, it read clean on all 25 tallies at every corner. That is the lesson worth keeping: the camera

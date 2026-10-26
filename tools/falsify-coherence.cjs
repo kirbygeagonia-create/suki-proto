@@ -1,6 +1,7 @@
-/* Proves the four coherence rules the P2 pass and the §13 re-audit built can fail: the icon semantic
+/* Proves the six coherence rules the P2 pass and the §13 re-audit built can fail: the icon semantic
    table (A3), the attention queue that must be the shared filter and not a second one (A4), the booking
-   detail's six named groups (R7/A9), and the help desk's ordering caption (A14).
+   detail's six named groups (R7/A9), the help desk's ordering caption (A14), and the card head that has
+   to wrap rather than let a count crush its title.
 
    Each break is the way the rule actually rots, not a cartoon of it:
      1 the shield goes back to work as a Dashboard icon — one mark meaning a document promise and a wall
@@ -19,7 +20,18 @@
        records carry none, and the plan's instruction was to say "unranked" rather than invent one, so the
        sentence IS the implementation and this break proves the check notices when it goes;
      8 a `priority` is typed onto the case record anyway — the §76 defect arriving as a field instead of a
-       number. The caption above the list is now false, and the check reads the BUILDER's text to catch it.
+       number. The caption above the list is now false, and the check reads the BUILDER's text to catch it;
+     9 one card head loses the wrapping class while its chip keeps `white-space:nowrap` — the way the
+       defect actually returns, which is a card written tomorrow rather than a stylesheet edited today. The
+       check counts the title+chip pairs the markup paints and requires every one to be allowed to wrap;
+    10 the row is told to shrink the chip instead of wrap. This is not a cartoon: it is the first fix, the
+       one that stopped "ACCEPTE / D" and put "Waitin / g for / the / residen / t to / answer" in its
+       place. No camera tally sees either wording — the text is not clipped, collides with nothing, sits
+       on the scale and clears contrast — so the only assertion available is the shape of the rule.
+
+   Breaks 9 and 10 are deliberately separate because the two halves of the rule fail apart: with the
+   class gone from one row the pair count speaks, and with `flex-wrap` gone from the class the CSS
+   speaks while all 22 rows still carry a name for a rule that no longer exists.
 
    Break 8 printed MISSED on this family's first run, and the break was right. The check had asked whether
    any record in `DISPUTES` carries a priority field — but the list is seeded empty on purpose (a sample
@@ -45,6 +57,8 @@ const ICONS = 'a glyph means one thing, and every glyph the app navigates by is 
 const QUEUE = 'the attention queue is the shared filter with a label on it, never a second list';
 const GROUPS = 'the booking detail names the six groups in order';
 const HELPDESK = 'the help desk orders by case state';
+const HEADS = 'every card head with a count beside its title is allowed to wrap';
+const HEAD_CSS = 'the class that grants it is flex-wrap, not a chip that shrinks';
 
 /* The anchors are read out of the file rather than typed a second time, because this family edits lines
    carrying template literals and nested quotes: a needle copied by hand is a needle that can go stale in
@@ -63,6 +77,8 @@ const receiptLine = findLine('const r = receiptCard(b); return r ?');
 const contactLine = findLine('<div class="section-label">Contact</div>');
 const captionLine = findLine('Open cases first, then closed');
 const claimLine = findLine('amountInClaimCentavos: b.pricing');
+const headLine = findLine('<b class="card-title">Why a provider is here</b>');
+const headCss = findLine('.card-head{flex-wrap:wrap;');
 
 const REAL = [
   { name: 'the shield is hired as a Dashboard icon again, so one mark means a document promise and a wall of figures',
@@ -89,6 +105,12 @@ const REAL = [
   { name: 'a priority is invented on the case record, which makes the caption a lie',
     check: HELPDESK,
     from: claimLine, to: claimLine ? claimLine.replace('amountInClaimCentavos:', "priority: 'High', amountInClaimCentavos:") : '' },
+  { name: 'one card head is written without the wrapping class — the chip holds its word and the title loses hers',
+    check: HEADS,
+    from: headLine, to: headLine ? headLine.replace('class="row card-head"', 'class="row"') : '' },
+  { name: 'the row is told to shrink the chip instead of wrap, which is the fix that moved the break',
+    check: HEAD_CSS,
+    from: headCss, to: headCss ? headCss.replace('flex-wrap:wrap; ', '') : '' },
 ];
 
 function gateOutput() {
@@ -113,12 +135,12 @@ if (missing.length) {
 }
 
 const out0 = gateOutput();
-for (const name of [ICONS, QUEUE, GROUPS, HELPDESK]) {
+for (const name of [ICONS, QUEUE, GROUPS, HELPDESK, HEADS, HEAD_CSS]) {
   const r = readCheck(out0, name);
   if (!r.seen) { console.log('BROKEN  no gate check named "' + name + '"'); process.exit(1); }
   if (r.failed) { console.log('BROKEN  baseline already red: ' + r.why); process.exit(1); }
 }
-console.log('baseline: all three coherence checks pass on the file as it stands');
+console.log('baseline: all six coherence checks pass on the file as it stands');
 
 let caught = 0, applied = 0, unmatched = 0;
 try {
