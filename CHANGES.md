@@ -8679,3 +8679,44 @@ links) and the one that asserts a destination; `node tools/shot.cjs --list` → 
 the provider profile re-photographed at 320×638 @135% with every word intact; the eight-corner sweep over these
 bytes → **8 of 8 corners, 25 tallies each, all clear** (`node tools/sweep-text-scale.cjs`); the full mutant
 aggregate is re-run after this section and its figures are quoted from that run, not from here.
+
+## 140. The aggregate over the §139 build, and the one mutant it could not kill
+
+`node tools/falsify-all.cjs` run 2026-10-26 against the build §139 committed, on a clean tree, one
+pass at a time: **60 families, 341 mutants applied, 340 caught, 0 not applied — 1 missed**. The rows
+were summed a second way with `awk` over the log (`.scratch/aggregate-60.log`) rather than trusting
+the runner's arithmetic, and the two agree: rows=60 applied=341 caught=340 not_applied=0 missed=1.
+The tree came back clean, `git status --porcelain` empty, and the page hashes `fd176312…`. The other
+figures, re-printed rather than remembered on the same file: `node tools/verify.cjs` **649 checks**,
+`node tools/shot.cjs --list` **88 screens**, `node tools/sweep-text-scale.cjs` **8 of 8 corners, 25
+tallies each, all clear**, `node tools/falsify-coherence.cjs` **15 of 15**.
+
+**What is deliberately not claimed.** This is the first full aggregate over the §139 page — the pass
+that ran earlier the same day stopped at §138's build, and §139's markup edits (the tertiary button
+tier, the sticky book-bar wrap, the §42 reorder of the provider's detail, the `onRootTab()` admin
+clause) could each have orphaned a needle in another family. `not applied: 0` is the column that
+answers that, and it answers it clean. Not re-run since §139 either: `--measure --focus`, `--measure
+--dark`, and `tools/probe-money-sums.js`. Their figures in §14 of the plan are marked stale and are
+not quoted as current; the argument for re-running them is that the measurement, not the reasoning,
+is the evidence (§76).
+
+**The survivor, read rather than deleted** — the eighth time this repository has met a break that
+printed MISSED and the rule has been "read it" each time. `falsify-report-coverage`, break *every
+listed mention of one open row is taken out of the report*: it removes every §17 disposition naming
+A11 and wants the audit to report A11 as a silently missing row. It got `findings 3, exit 1`. The
+refusal is real, so a row can still not vanish from the report without the audit going red — but the
+break cannot distinguish "the audit noticed A11" from "the audit noticed three unrelated things and
+exited 1 anyway", which is the §62 shape: a guard whose verdict is an exit code rather than a named
+finding stops being evidence of the specific thing it guards. The repair is to the break, not to the
+tool's needle: assert the A11 row by name and pin what the §4↔§17 cross-check counts, then re-run
+the family. Unfinished at the time of writing, and recorded as unfinished.
+
+**A hash quoted in prose went stale inside the hour that quoted it.** This paragraph first said the
+four copies now disagree, because it was written from `3c78fdd…` as recorded in §139 and AGENTS §31.
+`node tools/audit-build-bytes.cjs`, run seconds later, says all four — source, `dist/`, staged asset,
+and the bundle inside `Sukinnect-1.2-preview.44-debug.apk` — hold identical bytes, `findings: 0`.
+The page moved twice today and the build was re-cut and re-verified each time; the hashes are
+`fd176312…` for this build and `bac09020…` for §134's, and both were true when printed. The rule
+AGENTS already writes for every other figure applies to provenance too: **name the command, not the
+value.** What is owed is not a re-stage but a handset — nothing from `.40` onward has been installed
+on a phone, so no layout claim in this build is a device reading.
