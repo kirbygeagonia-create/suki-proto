@@ -116,7 +116,11 @@ function evidenceFor(id) {
   (hay.match(TOOLS) || []).forEach(t => { if (resolve(t) && !out.includes('tool:' + t)) out.push('tool:' + t); });
   (hay.match(/\*\*([^*]{12,})\*\*/g) || []).forEach(b => {
     const label = b.slice(2, -2).trim();
-    if (labelList.includes(label)) out.push('check:' + label.slice(0, 46));
+    /* Markdown wraps prose, so a bold-quoted label routinely spans physical lines with two spaces of
+       indentation in the middle. Comparing raw bytes made every wrapped pointer unresolved — three of the
+       five rows this file exists to credit read as naming nothing. Normalise whitespace on both sides. */
+    const flat = label.replace(/\s+/g, ' ').trim();
+    if (labelList.includes(flat)) out.push('check:' + flat.slice(0, 46));
   });
   if (/\bhonesty\b|\bmachine\b|\bstorage\b|\bhygiene\b|\bletter\b|\blogin\b|\bback\b|\breschedule\b|\blegal\b|\bdates\b|\bweighing\b/.test(hay))
     out.push('suite-name (not a specific check)');
