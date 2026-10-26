@@ -333,7 +333,17 @@
     padding:7px var(--s-3); margin-bottom:8px; cursor:pointer; font:inherit; color:var(--ink);
     min-height:var(--tap);
   }
-  .job-row .jr-time{ font-size:var(--t-body); font-weight:800; color:var(--deep); flex-shrink:0; min-width:60px; }
+  .job-row .jr-time, .job-row .jr-state, .job-row .jr-count{
+    font-size:var(--t-body); font-weight:800; color:var(--deep); flex-shrink:0; min-width:60px;
+  }
+  /* The 60px is a column gutter, not a size claim: every row's title has to start at the same
+     x or the list cannot be scanned down its left edge. What was wrong was the hue. Five
+     counts were painted red, amber or navy by an inline style, which made the colour the
+     only carrier of the state while the words beside it already said "Under review",
+     "Renewal due", "Nothing under review" — and §34 and §72 both refuse a colour-only
+     meaning. Its tabular digits come from the shared numeral rule, which lists `.jr-count`;
+     a second declaration of that property is the per-component override the rule prevents. */
+  .job-row .jr-state{ font-size:var(--t-caption); font-weight:700; color:var(--mist); }
   .job-row .jr-t{ display:block; font-size:var(--t-body); font-weight:700; }
   .job-row .jr-s{ display:block; font-size:var(--t-caption); color:var(--mist); margin-top:2px; }
   .job-row .jr-ic{
@@ -356,6 +366,9 @@
     margin:14px 0 7px; display:block; line-height:1.4;
   }
   h3.section-label, .section-label h3{ margin:14px 0 7px; font-weight:800; }
+  /* A label that opens a block, rather than following one. One value, from the spacing scale,
+     where five screens typed either 16px or 20px into the element itself. */
+  .section-label.spaced{ margin-top:var(--s-5); }
   /* Above .sheet-layer (60), not below it. Three profile modals are opened from a
      sheet, and a modal that sits under the sheet's scrim is not a modal: the scrim
      covers it entirely and its onclick closes the sheet, so every tap meant for the
@@ -453,9 +466,17 @@
      than only the alignment. The face was checked before the claim was made (AGENTS.md §68 forbids
      measuring layout on a font that never loaded): "Atkinson Next" alone renders exactly as the full
      stack does and differently from Plus Jakarta Sans (90.06px), so the reading is the shipped face. */
+  .row > b, .row-value, .offer-line .ol-v, .chart-value, input[type=number]{
+    text-align:right;
+  }
+  /* Two ideas, two rules. The list above is a column of figures, where the right edge is the
+     alignment. This one is any number that sits beside words, where only the digit widths
+     matter: `.stat .num` and `.jr-count` are single headline figures with nothing to line up
+     with, and inheriting `text-align:right` from the shared rule is what pushed the admin's
+     roster numbers into the corner of their own tiles. */
   .row > b, .row-value, .offer-line .ol-v, .chart-value, .stat-strip .f b, .stat .num,
-  input[type=number]{
-    text-align:right; font-variant-numeric:tabular-nums;
+  .job-row .jr-count, input[type=number]{
+    font-variant-numeric:tabular-nums;
   }
   .btn{min-height:var(--tap); 
     background:var(--deep); color:var(--text-on-brand); border:none; border-radius:var(--r-card);
@@ -1332,6 +1353,13 @@
   .screen[data-root="1"] .notif-btn{ background:var(--brand-tint-soft); color:var(--deep); }
   .screen[data-root="1"] .notif-btn:hover{ background:var(--brand-tint); }
   .screen[data-root="1"] .notif-dot{ border-color:var(--surface); }
+  /* An on-bar control is written for the brand gradient, and a root tab's bar is white. Without
+     this line the resident hub's "Log Out" is white text on a translucent white pill — the camera
+     reads it as 1:1 on rgb(255,255,255) at seven screens, because the same control is painted by
+     the hub, the household form, the payment modal, the edit form and the logout dialog. The
+     `.notif-btn` rule above is the precedent: the root tab inverts every control that lives in the
+     bar, because the bar itself inverts. */
+  .screen[data-root="1"] .btn.onbar{ background:var(--brand-tint-soft); color:var(--deep); }
 
   /* Cards — layered soft depth */
   .card{
@@ -6093,7 +6121,7 @@ function residentSectionBody(section){
           `<span style="color:var(--success-ink);">Warranty until ${esc(shortDate(warrantyEndsAt(b)))}</span>`)).join('')
         : emptyState('shield', 'Nothing under warranty',
             `A finished job stays covered for ${CONFIG.warrantyDays} days. None of the completed work on this account is inside that window right now.`))
-      + `<div class="section-label" style="margin-top:16px;">Open cases</div>`
+      + `<div class="section-label spaced">Open cases</div>`
       + (openCases.length ? openCases.map(d => {
           const b = bookingById(d.bookingId);
           return `<div class="card" data-booking="${b.id}" style="padding:var(--s-3) 13px; cursor:pointer;"
@@ -6953,7 +6981,7 @@ function rescheduleAskCard(viewer){
         <span class="jr-t">${esc(a.booking.summary || a.booking.request || 'A booked job')}</span>
         <span class="jr-s">Proposed ${esc(a.request.date)} at ${esc(a.request.time)} · the current time stays ${esc(a.request.fromDate)}, ${esc(a.request.fromTime)} ${a.mine ? (viewer === 'provider' ? 'until the resident answers' : 'until the provider answers') : 'until you answer'}</span>
       </span>
-      <span class="jr-time">Open</span>
+      <span class="jr-state">Open</span>
     </button>`).join('')}
     <div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px;">Nothing changes about a job until the answer is given — opening one of these is where the decision is made.</div>
   </div>`;
@@ -8934,7 +8962,7 @@ function residentHome(){
       </div>
     </div>` : ''}
 
-    <div class="section-label" style="margin-top:16px;">Browse by service</div>
+    <div class="section-label spaced">Browse by service</div>
     <div class="catgrid">
       ${SERVICES.map(s=>`<button type="button" class="cat" data-service="${s.id}"><span class="art">${catArt(s.id)}</span><span>${esc(s.label)}</span></button>`).join('')}
     </div>
@@ -8982,7 +9010,7 @@ function residentConcierge(){
     <!-- This is a caveat, not the headline of the screen. As a full-width dark
          gradient block it was the loudest thing here, and it said "this does not
          diagnose" — so the first and strongest impression was a disclaimer. -->
-    <div style="display:flex; gap:9px; align-items:flex-start; background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--brand-secondary); border-radius:var(--r-card); padding:11px 13px; margin-bottom:14px;">
+    <div style="display:flex; gap:9px; align-items:flex-start; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-card); padding:11px 13px; margin-bottom:14px;">
       <span style="color:var(--deep); display:inline-flex; flex:none; margin-top:1px;">${ic("lightbulb",15)}</span>
       <p style="font-size:var(--t-caption); line-height:1.5; color:var(--ink-soft); margin:0;">
         Describe the problem or attach a photo. This prototype sorts what you provide into a service category and prepares a job briefing for the provider &mdash; it does not diagnose the fault.
@@ -10039,32 +10067,32 @@ function adminDashboard(){
          on a device holding two disputes in total, and "6 applications" beside a
          queue of three. -->
     <button type="button" class="job-row" onclick="state.tab='admin_disputes'; render();" aria-label="Open disputes">
-      <span class="jr-time" style="color:${k.liveCases ? 'var(--error-ink)' : 'var(--mist)'};">${k.liveCases}</span>
+      <span class="jr-count">${k.liveCases}</span>
       <span style="min-width:0; flex:1;"><span class="jr-t">Cases open for review</span><span class="jr-s">${k.liveCases ? 'Under review' : 'Nothing under review'}</span></span>
       <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',14)}</span>
     </button>
     <button type="button" class="job-row" onclick="state.tab='admin_verifications'; state.adminProviderCategory='pending'; render();" aria-label="Open verification queue">
-      <span class="jr-time" style="color:var(--warning-ink);">${k.pendingVerification}</span>
+      <span class="jr-count">${k.pendingVerification}</span>
       <span style="min-width:0; flex:1;"><span class="jr-t">Provider applications need review</span><span class="jr-s">${k.missingDocs} still outstanding</span></span>
       <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',14)}</span>
     </button>
     <button type="button" class="job-row" onclick="state.tab='admin_verifications'; state.adminProviderCategory='credentials'; render();" aria-label="Open credential monitor">
-      <span class="jr-time" style="color:var(--warning-ink);">${k.expiringSoon}</span>
+      <span class="jr-count">${k.expiringSoon}</span>
       <span style="min-width:0; flex:1;"><span class="jr-t">Credentials expiring or expired</span><span class="jr-s">Renewal due</span></span>
       <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',14)}</span>
     </button>
     <button type="button" class="job-row" onclick="state.adminScreen='intelligence'; render();" aria-label="Open marketplace intelligence">
-      <span class="jr-time" style="color:var(--deep);">1</span>
+      <span class="jr-count">1</span>
       <span style="min-width:0; flex:1;"><span class="jr-t">Electrical supply gap in San Isidro</span><span class="jr-s">No nearby provider (sample)</span></span>
       <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',14)}</span>
     </button>
     <button type="button" class="job-row" onclick="state.adminScreen='categories'; render();" aria-label="Open the category catalogue">
-      <span class="jr-time" style="color:var(--deep);">${SERVICES.filter(s => s.pilot).length}</span>
+      <span class="jr-count">${SERVICES.filter(s => s.pilot).length}</span>
       <span style="min-width:0; flex:1;"><span class="jr-t">Pilot category under review</span><span class="jr-s">${SERVICES.length} categories live</span></span>
       <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',14)}</span>
     </button>
 
-    <h3 class="section-label" style="margin-top:20px;">Roster and volume</h3>
+    <h3 class="section-label spaced">Roster and volume</h3>
     <div class="statgrid">
       <button type="button" class="stat" onclick="state.tab='admin_verifications'; state.adminProviderCategory='verified'; render();"><div class="num">${k.verified}</div><div class="lbl">Verified providers, demo roster</div></button>
       <button type="button" class="stat" onclick="state.tab='admin_dashboard'; state.adminScreen='intelligence'; render();" aria-label="Bookings a provider has accepted and not finished: ${k.agreed}. Requests still waiting for an answer are counted separately below, and Marketplace Intelligence counts bookings inside a date window, which is a different question."><div class="num">${k.agreed}</div><div class="lbl">Bookings in progress</div></button>
@@ -10117,7 +10145,7 @@ function adminDashboard(){
         </div>`).join('')}
       </div>
     </div>
-    <h3 class="section-label" style="margin-top:20px;">Operations</h3>
+    <h3 class="section-label spaced">Operations</h3>
     <button type="button" class="job-row" onclick="state.adminScreen='intelligence'; render();">
       <span class="jr-ic">${ic("chart",16)}</span>
       <span style="min-width:0; flex:1;"><span class="jr-t">Supply &amp; demand</span><span class="jr-s">Where bookings and providers do not line up</span></span>
@@ -10614,7 +10642,7 @@ function adminAttentionSection(){
           <span class="jr-t">${esc(x.provider.name)}</span>
           <span class="jr-s">${esc(x.reasons.join(' · '))}</span>
         </span>
-        <span class="jr-time">Open</span>
+        <span class="jr-state">Open</span>
       </button>`).join('')
       : emptyState('shield', 'No provider is flagged', chosen
         ? 'Nothing here is ' + ATTENTION_KINDS[chosen].note + '. Choose Everyone to see every flagged provider.'
@@ -10724,7 +10752,7 @@ function adminProviderInsights(){
           <span class="jr-t">${esc(x.provider.name)}</span>
           <span class="jr-s">${esc(x.reasons.join(' · '))}</span>
         </span>
-        <span class="jr-time">Open</span>
+        <span class="jr-state">Open</span>
       </button>`).join('') : emptyState('shield', 'No provider is flagged', networkFlagSummary())}
       ${network.attention.length ? `<button class="btn sm secondary btn-block" style="margin-top:10px;" onclick="state.tab='admin_verifications'; state.adminProviderCategory='attention'; state.adminAttentionKind=null; render();">Filter this list by reason</button>` : ''}
     </div>`}
@@ -10853,7 +10881,7 @@ function adminDisputes(){  const open = DISPUTES.filter(d => caseIsOpen(d));
   <div class="pad" style="background:var(--cloud);">
     ${open.length + closed.length ? `<div style="font-size:var(--t-caption); color:var(--mist); margin-bottom:10px;">Open cases first, then closed, each in the order it was raised. Nothing here is ranked by urgency: a case record carries a reason, an amount, a date and its evidence, and no field says which one matters more.</div>` : ''}
     ${open.map(disputeCard).join('')}
-    ${closed.length ? `<h3 class="section-label" style="margin-top:20px;">Closed</h3>${closed.map(disputeCard).join('')}` : ''}
+    ${closed.length ? `<h3 class="section-label spaced">Closed</h3>${closed.map(disputeCard).join('')}` : ''}
     ${DISPUTES.length ? '' : emptyState('scale', 'Nothing to review', 'A case is raised against a completed booking. When one exists, its timeline, the money held and the outcomes appear here.', { id:'helpdesk-roster-btn', label:'Look at the roster' })}
   </div>`;
 }

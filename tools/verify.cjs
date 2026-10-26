@@ -1268,9 +1268,33 @@ suite('hygiene', async () => {
   const onbarUses = (src.match(/class="btn sm onbar"/g) || []).length;
   const onbarCopies = (src.match(/style="background:rgba\(255,255,255,0?\.12\)[^"]*"/g) || []).length
     + (src.match(/style="background:var\(--brand-navy-deep\); color:var\(--on-brand\)/g) || []).length;
+  /* The base rule is anchored at the start of a line on purpose: `.screen[data-root="1"]
+     .btn.onbar{` also contains the substring `.btn.onbar{`, so an unanchored test stayed green
+     when the family deleted the base rule — a break that prints MISSED, read as a defect in the
+     check rather than in the break. */
+  const baseRule = /(^|\n)[ \t]*\.btn\.onbar\{/.test(css);
   c.check('a control that sits in the brand bar takes the class, not a typed style',
-    onbarUses >= 5 && onbarCopies === 0 && /\.btn\.onbar\{/.test(css),
-    'uses=' + onbarUses + ' inlineCopies=' + onbarCopies + ' rule=' + (/\.btn\.onbar\{/.test(css) ? 1 : 0));
+    onbarUses >= 5 && onbarCopies === 0 && baseRule,
+    'uses=' + onbarUses + ' inlineCopies=' + onbarCopies + ' baseRule=' + (baseRule ? 1 : 0));
+
+  /* A root tab's bar is white — the app's own decision, stated beside the rule that makes it — so a
+     control that paints on-brand text onto the bar goes invisible there. The camera found this at
+     1:1 on rgb(255,255,255) across seven screens, on the resident hub's "Log Out". This check pins
+     the known bar controls so the next one cannot be added without its inverted twin; a control in
+     a bar that is NOT on this list is still caught, but by the camera's contrast tally at every
+     corner, which is what caught this one. The population is deliberately narrow: `.chat-head` and
+     the message bubbles also paint on-brand text and need no root variant, because they bring their
+     own dark surface with them. */
+  const BAR_CONTROLS = ['.onbar', '.back-btn', '.notif-btn'];
+  const onBrandCss = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const onBrand = (onBrandCss.match(/\.[a-z-]+\{[^{}]*color:var\(--on-brand\)/g) || [])
+    .map(r => /\.[a-z-]+\{/.exec(r)[0].slice(0, -1));
+  const needRoot = BAR_CONTROLS.filter(c => onBrand.includes(c));
+  const unrooted = needRoot.filter(c => !new RegExp('\\[data-root="1"\\][^{]*' + c.replace('.', '\\.')).test(onBrandCss));
+  c.check('every control painted for the brand bar has a root-tab variant, because that bar is white',
+    onBrand.includes('.onbar') && needRoot.length >= 1 && unrooted.length === 0,
+    'onBrand=' + onBrand.join(',') + ' barControlsChecked=' + needRoot.join(',')
+      + ' unrooted=[' + unrooted.join(', ') + ']');
 
   /* a button that reports success without changing anything is the bug class this
      whole rebuild was asked to remove */
@@ -1303,13 +1327,26 @@ suite('hygiene', async () => {
      because this rule's own comment names the string several times, and a needle that reads prose as
      code is how a check passes on the wrong evidence. */
   const cssCode = css.replace(/\/\*[\s\S]*?\*\//g, '');
-  const figureRule = /([^{}]*)\{([^}]*text-align:\s*right[^}]*font-variant-numeric:\s*tabular-nums[^}]*)\}/.exec(cssCode) || [];
+  /* Two rules, not one. The single rule that both aligned and tabulated every figure was correct
+     while every one of those figures was a column — and `.stat .num` is not: a headline number in a
+     tile has nothing to line up with, and inheriting `text-align:right` from the shared rule is what
+     pushed the admin's roster figures into the far corner of their own tiles with a void between the
+     number and the label under it. So the ideas are separated, and the relation that keeps them
+     honest is asserted here: anything right-aligned must also be tabulated, because a column of
+     proportional digits does not line up however it is aligned. The counts of each declaration stay
+     at exactly one, checked below, so neither half can be re-typed per component. */
+  const alignRule = /([^{}]*)\{[^}]*text-align:\s*right[^}]*\}/.exec(cssCode) || [];
+  const tabularRule = /([^{}]*)\{[^}]*font-variant-numeric[^}]*\}/.exec(cssCode) || [];
+  const sel = s => String(s || '').split(',').map(x => x.trim().replace(/\s+/g, ' ')).filter(Boolean);
+  const aligned = sel(alignRule[1]), tabulated = sel(tabularRule[1]);
+  const untabulated = aligned.filter(s => !tabulated.includes(s));
+  c.check('alignment and tabular digits are two rules, and every aligned figure is also tabulated',
+    aligned.length >= 4 && tabulated.length >= aligned.length && untabulated.length === 0
+      && /\.row > b/.test(alignRule[1] || '') && /input\[type=number\]/.test(tabularRule[1] || ''),
+    'aligned=' + aligned.length + ' tabulated=' + tabulated.length
+      + ' untabulated=[' + untabulated.join(', ') + ']');
   const alignCount = (cssCode.match(/text-align:\s*right/g) || []).length;
   const tabularCount = (cssCode.match(/font-variant-numeric/g) || []).length;
-  c.check('one stylesheet rule both aligns and tabulates the figures a reader compares',
-    /\.row > b/.test(figureRule[1] || '') && /\.row-value/.test(figureRule[1] || '') &&
-      /input\[type=number\]/.test(figureRule[1] || ''),
-    'selectors: ' + String(figureRule[1] || 'none').trim().replace(/\s+/g, ' ').slice(0, 140));
   c.check('no screen aligns its own numbers any more — one alignment and one numeral rule in the page',
     alignCount === 1 && tabularCount === 1,
     'text-align:right ' + alignCount + ' · font-variant-numeric ' + tabularCount +

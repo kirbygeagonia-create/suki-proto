@@ -25,7 +25,7 @@
    The control is what stops the pair passing on a build whose markup lost its headings, and a
    mutant that cannot change an answer raises the count without raising the coverage.
 
-     node tools/falsify-bar-titles.cjs    ~10 minutes, break 4 needs the machine's Chrome          */
+     node tools/falsify-bar-titles.cjs    ~12 minutes, break 4 needs the machine's Chrome          */
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -45,6 +45,7 @@ const PRISTINE = {
 const CHECK_POS = 'a screen name is sized by the bar it sits in, not by a class a screen can forget';
 const CHECK_SELF = 'no bar hand-types its own heading size';
 const CHECK_ONBAR = 'a control that sits in the brand bar takes the class, not a typed style';
+const CHECK_ROOT = 'every control painted for the brand bar has a root-tab variant, because that bar is white';
 
 const POS_RULE = '  .topbar h1{font-family:var(--font-display); font-size:var(--t-title); font-weight:600;}';
 const ROOT_RULE = '  .screen[data-root="1"] .topbar h1{ font-size:var(--t-title-lg); letter-spacing:-.3px; }';
@@ -52,9 +53,11 @@ const FIND_H1 = '      <h1>Find Services</h1>';
 const ONBAR_USE = '<button id="mark-all-notifs-btn" class="btn sm onbar"';
 const ONBAR_RULE = '  .btn.onbar{ background:rgba(255,255,255,0.12); color:var(--on-brand); box-shadow:none; }';
 /* The exact statement the camera now runs between clearModals() and the walk's own navigation. */
+const ROOT_ONBAR = '  .screen[data-root="1"] .btn.onbar{ background:var(--brand-tint-soft); color:var(--deep); }';
 const CLEAR_CHAT = '         try { state.isChatOpen = false; } catch (e) {}';
 
 [['app', POS_RULE], ['app', ROOT_RULE], ['app', FIND_H1], ['app', ONBAR_USE], ['app', ONBAR_RULE],
+  ['app', ROOT_ONBAR],
   ['camera', CLEAR_CHAT]].forEach(([which, needle]) => {
   const n = PRISTINE[which].split(needle).length - 1;
   if (n !== 1) throw new Error('pre-flight: ' + JSON.stringify(needle.slice(0, 56)) + ' matched ' + n + ' times in ' + which);
@@ -99,6 +102,11 @@ const BREAKS = [
     expect: CHECK_ONBAR },
   { name: 'the on-bar rule is deleted, so the six controls that take it paint nothing',
     file: 'app', from: ONBAR_RULE, to: '  /* no on-bar rule */', expect: CHECK_ONBAR },
+  /* The one this pass found in the pixels rather than the source: a root tab's bar is white,
+     so the translucent-white pill with white text painted 1:1 on rgb(255,255,255) at seven
+     screens. Deleting the inverted rule returns exactly that. */
+  { name: 'the root-tab variant of the on-bar control is deleted, so its text matches its own bar',
+    file: 'app', from: ROOT_ONBAR, to: '  /* no root variant */', expect: CHECK_ROOT },
 ];
 
 let applied = 0, caught = 0, notApplied = 0, missed = 0;

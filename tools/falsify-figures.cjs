@@ -41,7 +41,7 @@ const ROOT = path.join(__dirname, '..');
 const TARGET = path.join(ROOT, 'Sukinnect-next.html');
 const original = fs.readFileSync(TARGET, 'utf8');
 
-const SHARED = 'one stylesheet rule both aligns and tabulates the figures a reader compares';
+const SHARED = 'alignment and tabular digits are two rules, and every aligned figure is also tabulated';
 const COUNT = 'no screen aligns its own numbers any more — one alignment and one numeral rule in the page';
 const CLASS = 'the value blocks that typed their own alignment take the shared class';
 const TOKENS = 'every :root token is reached, except the ones this file names and justifies';
@@ -49,8 +49,8 @@ const TOKENS = 'every :root token is reached, except the ones this file names an
 const BREAKS = [
   { name: 'the tabular property is dropped, leaving right alignment alone to line up a column of proportional digits',
     check: SHARED,
-    from: '    text-align:right; font-variant-numeric:tabular-nums;',
-    to: '    text-align:right;' },
+    from: '    font-variant-numeric:tabular-nums;',
+    to: '    /* tabular dropped */' },
   { name: 'a component re-types its own alignment, so screens stop sharing the rule',
     check: COUNT,
     from: '  .chart-value{flex:0 0 auto; min-width:52px; font-size:var(--t-caption); color:var(--ink); font-weight:700;}',
@@ -61,8 +61,15 @@ const BREAKS = [
     to: '          <div style="text-align:right; flex-shrink:0;">' },
   { name: 'the rule stops covering the label-value rows, which is most of the money in the app',
     check: SHARED,
-    from: '  .row > b, .row-value, .offer-line .ol-v,',
-    to: '  .row-value, .offer-line .ol-v,' },
+    from: '  .row > b, .row-value, .offer-line .ol-v, .chart-value, input[type=number]{',
+    to: '  .row-value, .offer-line .ol-v, .chart-value, input[type=number]{' },
+  /* The relation the split introduces, and the only break that can see it: a figure can stay in
+     the alignment list and quietly leave the tabular one, which is exactly the state where right
+     alignment stops meaning anything, because the digits are proportional. */
+  { name: 'an aligned figure is dropped from the tabular list, so its column stops lining up',
+    check: SHARED,
+    from: '  .row > b, .row-value, .offer-line .ol-v, .chart-value, .stat-strip .f b, .stat .num,',
+    to: '  .row-value, .offer-line .ol-v, .chart-value, .stat-strip .f b, .stat .num,' },
   /* The token half of the same sweep: a scale step that goes back to a literal is invisible to every
      geometry tally (the pixel is identical) and visible only to the count, which is why it is asserted
      here rather than left to `measure.cjs` and a human reading its output. */
