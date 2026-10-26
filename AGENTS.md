@@ -3648,6 +3648,47 @@ rule credits any bullet that names it. The family now carries a section-scoped m
 everything after the `## 17` heading, leaving §4's row intact) and requires the tally itself to move: **5 breaks,
 5 caught, 0 not applied**. A guard whose failure path has never been reached is a number nobody has tested.
 
+A MEASUREMENT THAT RISES WHEN YOU PRAISE THE THING MEASURED IS MEASURING THE PRAISE. §17 of the improvement plan
+used to close with "Each is still backed by an instrument that runs — a named honesty/machine/storage check, a
+camera tally, or a probe — except P1e and A13", one sentence covering 21 rows and naming evidence for none. An
+instrument was written to test it — `tools/audit-row-instruments.cjs` reads the matrix and counts only evidence that
+resolves, a file under `tools/` that exists or a bold-quoted label equal to one of the 647 labels the gate prints — and
+it answered **15 of 47 rows traceable**. Then the sentence was improved to name real instrument files, and the
+count rose to **27**. Nothing about the application had changed: the sentence sits inside the bullet that lists all
+21 AR ids, so it became evidence for every one of them. The unit was the defect, not the arithmetic. A block naming
+more than two ids is now treated as a class list rather than a disposition, and the honest figure is **10 of 47 traceable,
+34 built-class rows naming nothing runnable, zero rows quoting a check label**. Two rules follow, and both are about
+scanners rather than prose: **state the scope unit a count was taken at, because line, bullet, and section give
+different answers from the same file**; and **be suspicious of a metric that improves when you edit the text the
+metric reads** — the fix is to narrow what counts as evidence, never to accept the lift.
+
+ASKED AND ANSWERED, THIS TIME WITHOUT A GATE: no `tools/*.cjs` or `tools/probe-*.js` names a plan row id at all
+— a grep for all 23 untraced ids hit only the tool that parses the table. So row-to-guard mapping cannot be
+recovered from the code, and section-scope attribution in the change log was tried and rejected: it credited every
+row discussed in §138 with `falsify-all`, and gave R6 the wrong family. A generous scope is not a truer one; it
+manufactures evidence, including against its author.
+
+A MODAL CHECK HAS TO RENDER TWICE, AND A FAMILY MUST NOT REWRITE A FILE IT DOES NOT OWN. `render()` clears every
+`*Modal` field when the destination changes, so a gate check that sets `state.adminAccountModal` and renders once
+reads "the dialog painted no Unlock button" about a correct build — measured in a sandbox against
+`git show HEAD:` bytes: one render, 4,913 chars and no button; settle-then-raise, 5,888 chars with the layer.
+Prove a new check there, before it enters the gate. In the same hour `tools/falsify-row-instruments.cjs` twice left
+622 of its own `c.check(`→`c.checkNote(` mutants inside `tools/verify.cjs` after its finally, turning the whole suite red
+about a tree with no application defect; the break was deleted, not hardened, because the channel it probed was
+already reported empty by the census it tested. Its self-report of a clean restore did not print on the last run
+even though the restore had happened — output written immediately before `process.exit` can be lost — so the
+standing rule is to check the target file with a grep rather than trust a tool's own sentence about itself.
+
+THREE INSTRUMENT TRAPS FROM THE SAME SESSION, ALL CHEAP TO AVOID. A regular expression built inside a JavaScript
+template literal loses its backslashes (`<\/button>` becomes `</button>`), which surfaces as a syntax error in the
+generated probe and looked like a test that had gone red rather than a test that never compiled; a needle containing
+a semicolon passed through a shell command line gets the command split, and it made a **baseline** read as failing,
+which is only visible if the baseline is required green before any mutant runs; and a relative `../tools/` path inside a
+script run from the repo root resolves one directory too high, producing a confident "0 of 29 resolved" that read as
+a finding about the change log and was a finding about a path. Bake needles into generated files, prefer string tests
+to regexes in generated probes, and assert that a scan's population equals the thing it claims to scan before its
+answer leaves the building.
+
 THE FIGURES FOR THIS PASS ARE COMMANDS, NOT SENTENCES: `node tools/verify.cjs` prints the check total,
 `node tools/shot.cjs --list` prints the screens the walk reaches, and `node tools/falsify-all.cjs`
 prints one row per mutant family with applied / caught / not-applied / missed. Quote a run, not a
