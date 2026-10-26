@@ -8203,3 +8203,147 @@ audit is what caught it, so `//c` is the form to use under Git Bash. And no hand
 `adb devices` is empty, so `preview.40` runs on nothing yet and the composer-under-the-IME question
 stays open with `visualViewport` at zero uses in the page. `DEVICE-PASS.md` carries the install-and-read
 step for when a phone is on the bus.
+
+## 135. The P2 coherence sweep: right-aligning numbers was the half-fix, and a green chip turned out to be a claim
+
+The owner approved the whole P2 block on 2026-10-26 ("Implement all of P2 now"), so this section is the
+nine items it named, each with the command that proves it. Nothing here adds a feature; the brief's P2
+sentence is that these are the changes that make the build read as one application.
+
+**The numerals were not mis-aligned, they were mis-scaled.** §13 asks twice whether figures line up, and
+the file answered with five separate `text-align:right` declarations across a 1,600-line stylesheet —
+`.offer-line .ol-v`, `.chart-value`, one typed into a number input's inline style, two on markup blocks —
+and no numeral rule anywhere. Alignment was never the whole defect: **Atkinson Hyperlegible Next paints
+proportional digits**. Measured in Chrome at 32px type, `111111` is **78.16px** wide against `000000` at
+**124.42px**, so a column of amounts leans whichever way its digits happen to fall; under
+`font-variant-numeric: tabular-nums` both strings measure **121.36px**. One rule now carries both halves
+and names the seven selectors whose figures a reader compares, and the gate pins that the page contains
+**exactly one** `text-align:right` and **exactly one** `font-variant-numeric`, so a per-screen override
+cannot come back quietly.
+
+**The property was measured before it was claimed, and the first attempt to confirm the face was blind.**
+AGENTS.md §68 warns what a layout measurement proves on a font that never loaded, so the reading had to
+be of the shipped WOFF2. `document.fonts` iterated **empty** on the live page — a FontFaceSet scan is not
+evidence a face loaded — and `document.fonts.check()` answered `true`, which it also does for a family it
+fell back on. What settled it was a comparison: `"Atkinson Next"` alone renders `111111` at exactly the
+same width as the full stack (78.16px) and differently from Plus Jakarta Sans (90.06px) and `sans-serif`
+(94.91px). **A silent instrument has to be pointed at something that could disagree with it.**
+
+**Three declared tokens were unreached, and one stays that way on purpose.** `measure.cjs` had been
+printing "95 declared, 92 reached" in prose for weeks. `--s-1` and `--s-8` were reached by converting the
+literals they already equalled (`padding:32px 12px` → `var(--s-8) var(--s-3)`, three `gap/padding:4px` →
+`var(--s-1)`) — no pixel moves, and the comment claiming "one 4pt rhythm" becomes a description instead
+of an intention. `--info` is kept unreached: §31 binds INFO to the deck's electric blue, §34 forbids
+dressing a brand surface as a status, and spending the token on a chip to make a count look tidy is
+exactly the trade §34 exists to prevent. The gate now asserts the whole rule rather than the number — the
+unreached set must equal the named exceptions and every exception must still be declared, so **deleting
+`--info` fails the same check as adding a dead token**, with a positive control on the declaration count
+so a scan that matched nothing cannot report cleanliness. One rotted needle surfaced before any run:
+`falsify-compat-floor` needles the old `padding:32px 12px` line to delete the `vh` fallback, so the scale
+edit orphaned that break — found by grepping the families for the strings being changed, which is the
+cheaper order than discovering it as `not applied` inside a 50-minute aggregate.
+
+**A filter has to change what is painted, in both directions.** Each of the four discovery axes has
+already had a shape that looked correct in a screenshot, so the gate narrows from the records themselves
+and compares the whole id set against an expectation it builds rather than reading the number back from
+the app: a filter that keeps a row it should have dropped is a wrong answer, and a filter that drops a row
+it should have kept is a *smaller wrong answer that still reads as a narrowing*. `activeFilterCount()` is
+tied to the same axes, because the Clear button beside that count promises a reset of a state the screen
+is not in. `node tools/falsify-filter-function.cjs` runs four breaks against it — one per axis plus the
+count.
+
+**The shield was doing two jobs.** It was the admin's Dashboard icon while the same glyph carried "Nothing
+under warranty" and "No provider is flagged": a promise about somebody's documents and a wall of figures
+in one shape. Dashboard now takes `chart`, which is what the provider's Dash already meant, and the shield
+stays on the trust surfaces; the sign-in badge keeps it deliberately, where it reads "the platform's own
+console" rather than a destination. The meanings are a constant, `ICON_MEANING`, and the gate reads it:
+every glyph a nav item or a role badge asks for must have a row, so an icon cannot be hired for a new job
+without somebody writing down what it means.
+
+**A count without a door is a decoration.** The Insights strip's "needing attention" figure and the card
+beside it have come from one shared filter since §82 closed the drift — which fixed the disagreement and
+still left a reader with a number and nowhere to ask *which* six. The queue is that filter with a label on
+it: a fifth segment on Providers, filterable by the three things a record can actually assert (a case open,
+a document off, an account not settled), reachable from the Insights card by a button. `attentionQueue(null)`
+is required to answer exactly what `networkAttentionList()` answers, so the day the queue computes its own
+membership is the day the check goes red rather than the day two screens start disagreeing. Reasons are
+sentences and kinds are their keys, produced in the same object and asserted to have the same length per
+provider. Its filtered-to-nothing branch is asserted by the gate and **deliberately not photographed**,
+because every kind on the seed has at least one provider and no tap can reach that wording.
+
+**A chip in this app is a claim, so the reason controls are not chips.** The first cut of the queue made
+its filter row out of `button.chip`, and `.chip` is green — `--verified-100` on `--success-ink` — because
+a chip carries a verification badge. A switched-on filter painted in the colour that means "this person was
+checked" is §34's forbidden trade, and a pressed chip painted no visible difference at all. They are
+`.pick` controls now, which the app already uses for exactly this: 44px, neutral surface, a fill when on,
+and `aria-pressed` for a platform that cannot see either.
+
+**Separate is a reading order, not a widget.** §10 asks that a booking's schedule, timeline, contact,
+price, completion and receipt be distinct things; the temptation is a tab control, the obligation is that
+a reader can tell which fact is which and never has to hunt for what a decision needs. The resident's
+detail names the six groups in the order the screen reads them — decision-first, because a household
+opening this on a job already on the calendar is asking where the plumber is. Two halves: the arrival and
+completion stamps moved out of the figures grid into their own block (they had printed "Arrived: Completed"
+beside a total), and a group whose records do not exist yet is not painted at all rather than painted
+empty, so the gate requires a `requested` job to *not* carry the Completion or Receipt heading.
+`BOOKING_GROUPS` is compared against the gate's own literal list, which stops the constant re-labelling
+itself into agreement.
+
+**Five empty kinds, and a census rather than a sentiment.** All five §10 names are painted, but by
+twenty-two calls that happened to word themselves differently, and the distinction is the point: "No
+bookings yet" and "No provider meets these filters" look identical in a screenshot and are opposite
+sentences to a person. Every literal title is now classified into a kind, every kind needs a
+representative, and the call-site count must equal the classified literals plus the **one** named site
+whose title is built by an expression — so a future empty state with a ternary title fails the census
+instead of drifting silently out of it. A kind losing its only member (the unavailable screen adopting
+"No requests yet") is a break in `node tools/falsify-empty-kinds.cjs`.
+
+**The walk method is written and its table is empty.** §10 asks whether browse → review → book takes one to
+three minutes; nothing in this repository has ever measured that. `DEVICE-PASS.md` now carries the
+procedure — the fixed five-step task, one named device, five runs, median with min and max, tap and back
+counts, a human thumb rather than an injected pointer — and the results row reads `not run`. A bench run
+in Chrome would be labelled a bench run if it were taken, because three separate handset findings already
+proved a desktop reading of a phone-shaped claim is worthless. **A time that was not measured does not go
+in this repository's documentation.**
+
+**The density line in the P2 block produced numbers, not cuts.** `node tools/shot.cjs
+--probe=@tools/probe-density.js --only=provider-dash,admin-dash,admin-intel` on the finished build: the
+provider dashboard's first pressable row sits at **181px** on a 1,598px scroll (1.1 screens of content);
+Marketplace Intelligence's at **128px** on 826px (0.1 screens); the admin console's at **121px** with its
+lock/logout pair 2,054px down, which belongs at the bottom of an account screen and was already ruled so
+when Phase A re-measured that screen. No dashboard got a content cut on the strength of a long scroll:
+the metric indicts an *action* below the fold, and the only screen where that was true — the admin's
+Money console — was fixed in P1-6. A number that indicts nothing is reported as a measurement rather than
+turned into work.
+
+**Verification, as printed.** `node tools/verify.cjs` → **all 638 checks passed**; `node tools/shot.cjs
+--list` → **86 screens** (the walk gained `admin-attention`, the queue's own row); `node
+tools/sweep-text-scale.cjs` → **8 of 8 corners, 25 tallies each, all clear**, including both device
+corners at 200% text; `falsify-figures` **7 of 7**, `falsify-coherence` **6 of 6**,
+`falsify-filter-function` **4 of 4**, `falsify-empty-kinds` **2 of 2**, `falsify-compat-floor` **7 of 7**
+— 0 not applied, 0 missed in each. The queue's numbers were read out of the harness before the camera saw
+it: 6 providers flagged, `cases` 1, `credential` 5, `account` 2, and every provider's sentence count
+equal to its kind count. Those five families are the ones this pass could have orphaned; **the full
+aggregate (`falsify-all`, now 56 families) was not re-run in this pass**, so what this section quotes is
+the check total and five family totals, not a fresh mutant aggregate.
+
+**A comment inside a template literal emptied the page, and three instruments refused instead of
+reporting clean.** The queue's reason controls were first written with backticks around `.pick` and
+`.chip` in the explanation above them — inside the string the function returns, so the page stopped
+parsing there. What followed is the part worth keeping: the gate printed **19 of 19 checks FAILED**, the
+camera printed `page threw: ReferenceError: resetDemoData is not defined`, three falsifiers each printed
+**BROKEN — no gate check named …** rather than grading breaks against a dead page, and
+`falsify-trust` refused on a red baseline. The sweep that had already been launched against those bytes
+reported its first corner as clean while measuring nothing, which is this file's oldest lesson arriving
+as a stack trace instead of a silent zero — and it is why every figure above comes from a re-run after
+the repair rather than from the run that was two corners deep when the breakage landed.
+
+**The shell was staged and rebuilt again, so the four copies agree.** `node tools/build-web-dist.cjs`,
+the asset copied with `cmp` proving it, `versionCode 43 / versionName 1.2-preview.41`, and `cmd.exe //c
+"gradlew.bat assembleDebug"` (7 seconds) took `node tools/audit-build-bytes.cjs` from **findings: 3** to
+**findings: 0** — source, `dist/`, the staged asset and the bundle inside the new APK all at
+`76338e39…`. No handset is on the bus, so `preview.41` runs on nothing and the keyboard leg P1-5 owes is
+still owed. One rotted needle was found before it could report a healthy number: `falsify-compat-floor`
+needles the focus-ring `compat-exception` comment to prove that a too-short reason is a finding, and that
+comment grew a fourth line when the legal sheet joined the focus list, so the break had silently stopped
+matching. The anchor now covers the whole block, and the family reads 7 of 7 with 0 not applied.

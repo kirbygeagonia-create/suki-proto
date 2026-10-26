@@ -52,8 +52,8 @@ const BREAKS = [
     from: '  :root{', to: '  :root:has(> b){ color:red }\n  :root{',
     want: r => r.code === 1 && /breaking floor: Chromium 105/.test(r.out) && /:has\(\)/.test(r.out) },
   { name: 'delete the vh fallback that makes dvh safe', file: 'app',
-    from: 'padding:32px 12px; min-height:100vh; min-height:100dvh;',
-    to: 'padding:32px 12px; min-height:100dvh;',
+    from: 'padding:var(--s-8) var(--s-3); min-height:100vh; min-height:100dvh;',
+    to: 'padding:var(--s-8) var(--s-3); min-height:100dvh;',
     /* The row has to stop reading `guarded` and start reading `used`. dvh is a benign feature, so the exit code
        stays 0 either way — the only observable is the state word and the disappearance of the fallback count. */
     want: r => /dynamic viewport units \(dvh\/svh\/lvh\)\s+used/.test(r.out)
@@ -63,9 +63,18 @@ const BREAKS = [
     from: '  :root{', to: '  /* compat-exception: color-mix() — a reason long enough to satisfy the length check. */\n  :root{',
     want: r => r.code === 1 && /uses it nowhere/.test(r.out) },
   { name: 'excuse a feature with no reason', file: 'app',
+    /* The whole comment block, to its closing slash-star: the audit reads the reason as the text between
+       the feature name and the end of the comment, so replacing anything less than the block leaves a
+       second half of the reason behind and the break tests nothing. It has to be the block as it stands
+       today — a fourth line went in when the legal sheet joined the focus list, and the anchor silently
+       stopped matching, which is this repository's orphaned-needle class arriving from the direction of
+       a comment growing rather than a rule moving. */
     from: ['  /* compat-exception: :is() / :where() — this selector list styles the keyboard focus ring only.',
     '     Below Chromium 88 the rule is dropped and the user-agent ring still paints, so a Tab user sees a ring that is',
-    '     not the brand one rather than no ring. tools/shot.cjs --focus is what checks that claim. */'].join('\n'),
+    '     not the brand one rather than no ring. tools/shot.cjs --focus is what checks that claim.',
+    '     `.sheet-body` is in the list because Chromium makes a scrollable region keyboard-focusable on its',
+    '     own, and the legal sheet is the tallest content in the app: a Tab user lands on that scroller by',
+    '     design, so the ring that meets them there should be the app\'s, not the user-agent\'s. */'].join('\n'),
     to: '  /* compat-exception: :is() / :where() — too short to be a reason. */',
     want: r => r.code === 1 && /-character reason/.test(r.out) },
   { name: 'blind the feature scan so nothing can match', file: 'tool',

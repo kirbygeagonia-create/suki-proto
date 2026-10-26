@@ -1195,6 +1195,12 @@ const SCREENS = [
   ['admin-categories', `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='categories'; render();`],
 
   ['admin-verifiers',  `state.view='app'; state.role='admin'; state.tab='admin_verifications'; state.adminProviderCategory='pending'; render();`],
+  /* The attention queue is a segment a thumb taps, so it is a destination: the fifth rail item on the
+     Providers screen, reached by the same state value the button writes. Its filtered-to-nothing branch
+     is deliberately not in this table, because every kind on the seed has at least one provider, so no
+     tap can reach that wording — the gate asserts it instead, which is the rule for a state nobody can
+     enter rather than a screen nobody has checked. */
+  ['admin-attention',  `state.view='app'; state.role='admin'; state.tab='admin_verifications'; state.adminProviderCategory='attention'; state.adminAttentionKind=null; render();`],
   /* The review screen was in no table at all — a whole destination, reached by tapping
      "Open verification" on a pending applicant, that had never been photographed. Its
      modals now carry checkboxes and selects, so they are reached by clicking the painted

@@ -142,6 +142,12 @@
     --success:#1f8a5f; --success-100:#e2f3ea;
     --warning:#ffb800; --warning-600:#e6a300; --warning-100:#fff3cd;
     --error:#d64545;   --error-100:#fbe6e6;
+    /* AGENTS.md §31 binds INFO to the deck's electric blue, and §34 says status must not be confused
+       with brand — so this name exists for a status surface. Measured, not assumed: no painted screen
+       uses it yet, because every informational chip in this build is brand-blue by way of
+       --brand-primary-light and the two semantic tones the app does paint are warning (the storage
+       notice) and success/error (statuses). The gate names it as the one declared-and-unreached token
+       so the day an info chip is built, it is built from here rather than from a new hex. */
     --info:#0E4DFF;
     /* State inks: the declared state hues above are fills and borders. Set as text on
        their own pale tint they measure 3.6-3.8:1, under 4.5:1 (AGENTS.md 72), so every
@@ -186,7 +192,7 @@
     display:flex; align-items:flex-start; justify-content:center;
     /* dvh tracks a mobile browser's real visible height as its address bar
        hides and shows; vh keeps the fallback for engines that lack it. */
-    padding:32px 12px; min-height:100vh; min-height:100dvh;
+    padding:var(--s-8) var(--s-3); min-height:100vh; min-height:100dvh;
   }
   h1,h2,h3{font-family:var(--font-display); margin:0;}
   .phone{
@@ -406,6 +412,20 @@
   .badge-gold{background:var(--warning-100); color:var(--warning-ink);}
   .badge-alert{background:var(--alert-100); color:var(--error-ink);}
   .row{display:flex; align-items:center; justify-content:space-between;}
+  /* One rule for every figure a reader compares. Money, counts, rates and dates used to be aligned
+     ad hoc per screen — five `text-align:right` declarations in a 1,600-line stylesheet and no numeral
+     treatment anywhere — so a receipt's ₱ column and a fee table's did not line up with each other,
+     and right alignment could not have made them: Atkinson Hyperlegible Next paints proportional
+     digits. Measured in the browser at 32px type, "111111" is 78.16px wide against "000000" at
+     124.42px, so a column of amounts leans whichever way its digits happen to fall. Under
+     `tabular-nums` both strings measure 121.36px, which is why this rule carries the property rather
+     than only the alignment. The face was checked before the claim was made (AGENTS.md §68 forbids
+     measuring layout on a font that never loaded): "Atkinson Next" alone renders exactly as the full
+     stack does and differently from Plus Jakarta Sans (90.06px), so the reading is the shipped face. */
+  .row > b, .row-value, .offer-line .ol-v, .chart-value, .stat-strip .f b, .stat .num,
+  input[type=number]{
+    text-align:right; font-variant-numeric:tabular-nums;
+  }
   .btn{min-height:var(--tap); 
     background:var(--deep); color:var(--text-on-brand); border:none; border-radius:12px;
     padding:12px 16px; font-weight:700; font-size:var(--t-body-sm); cursor:pointer; font-family:inherit;
@@ -524,7 +544,7 @@
      role model in AGENTS.md. The owner settled it toward one vocabulary on
      2026-10-21. */
   .auth-role{
-    display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:var(--s-5);
+    display:grid; grid-template-columns:1fr 1fr; gap:var(--s-1); margin-bottom:var(--s-5);
     padding:3px; background:var(--cloud); border-radius:var(--r-md);
     box-shadow:inset 0 0 0 1px var(--line);
   }
@@ -976,7 +996,7 @@
     display:flex; flex-direction:column; gap:8px; }
   .offer-line{ display:grid; grid-template-columns:1fr auto; gap:2px 10px; align-items:baseline; }
   .offer-line .ol-k{ font-size:var(--t-caption); color:var(--ink-soft); font-weight:700; }
-  .offer-line .ol-v{ font-size:var(--t-body-sm); font-weight:800; color:var(--deep); text-align:right; }
+  .offer-line .ol-v{ font-size:var(--t-body-sm); font-weight:800; color:var(--deep); }
   .offer-line .ol-s{ grid-column:1 / -1; font-size:var(--t-caption); color:var(--mist); line-height:1.45; }
   .offer-line .mut, .offer-line .ol-v.mut{ color:var(--text-muted); font-weight:700; }
   .offer-facts{ display:flex; flex-direction:column; gap:5px; margin-top:10px;
@@ -1111,7 +1131,7 @@
   .chart-label{flex:0 0 34%; font-size:var(--t-caption); color:var(--ink-soft); overflow-wrap:anywhere;}
   .chart-track{flex:1; height:12px; background:var(--cloud); border-radius:99px; overflow:hidden;}
   .chart-fill{display:block; height:100%; background:var(--brand-primary); border-radius:99px;}
-  .chart-value{flex:0 0 auto; min-width:52px; text-align:right; font-size:var(--t-caption); color:var(--ink); font-weight:700;}
+  .chart-value{flex:0 0 auto; min-width:52px; font-size:var(--t-caption); color:var(--ink); font-weight:700;}
   .chart-foot{font-size:var(--t-caption); color:var(--mist); margin-top:8px; line-height:1.5;}
   .chart-share{display:flex; align-items:center; gap:16px; margin:10px 0 4px;}
   .chart-ring{width:96px; height:96px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;}
@@ -1613,7 +1633,7 @@
      last label was cut mid-word with nothing to say the rail scrolls. The buttons now
      take the width their own text needs and still grow to fill the row when they can,
      and the rail scrolls when they cannot. */
-  .seg{ display:flex; gap:6px; background:var(--brand-tint-soft); padding:4px; border-radius:14px; overflow-x:auto; scrollbar-width:none; }
+  .seg{ display:flex; gap:6px; background:var(--brand-tint-soft); padding:var(--s-1); border-radius:14px; overflow-x:auto; scrollbar-width:none; }
   .seg::-webkit-scrollbar{ display:none; }
   .seg-btn{ flex:1 0 auto; white-space:nowrap; min-height:var(--tap); border:none; background:transparent; color:var(--brand-navy); font-weight:700; font-size:var(--t-body-sm); padding:9px 10px; border-radius:10px; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; justify-content:center; gap:6px; transition:background .16s ease, color .16s ease, box-shadow .16s ease; }
   .seg-btn.on{ background:var(--grad-brand-dark); color:var(--text-on-brand); box-shadow:0 3px 10px rgba(3,0,43,.28); }
@@ -1621,7 +1641,7 @@
      but not arriving at it half cut off — so this rail takes the space back from the
      padding instead of from the labels. */
   .seg-4{ gap:3px; }
-  .seg-4 .seg-btn{ padding:9px 5px; gap:4px; }
+  .seg-4 .seg-btn{ padding:9px 5px; gap:var(--s-1); }
   .seg-count{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px; border-radius:999px; background:rgba(3,0,43,.12); font-size:var(--t-caption); font-weight:800; }
   .seg-btn.on .seg-count{ background:rgba(255,255,255,.22); }
   .img-avatar{ border-radius:50%; object-fit:cover; flex-shrink:0; display:inline-block; vertical-align:middle; border:2px solid rgba(255,255,255,.92); box-shadow:0 2px 8px rgba(3,0,43,.22); background:var(--brand-tint-soft); }
@@ -4882,7 +4902,7 @@ function configPanel() {
           <span style="display:flex; align-items:center; gap:6px;">
             <input id="cfgcat-${cat.id}" type="number" min="0" max="40" step="1" inputmode="numeric"
                    aria-label="${esc(cat.label)} commission rate, percent"
-                   style="width:62px; min-height:var(--tap); padding:6px 8px; border:1px solid var(--line); border-radius:8px; font:inherit; font-size:var(--t-caption); text-align:right;"
+                   style="width:62px; min-height:var(--tap); padding:6px 8px; border:1px solid var(--line); border-radius:8px; font:inherit; font-size:var(--t-caption);"
                    value="${CONFIG.commissionRateByCategory[cat.id] !== undefined ? Math.round(CONFIG.commissionRateByCategory[cat.id] * 100) : ''}"
                    placeholder="${Math.round(CONFIG.commissionRateDefault * 100)}">
             <span style="font-size:var(--t-caption); color:var(--mist);">%</span>
@@ -5543,6 +5563,7 @@ let state = {
   bookingFilter:'all',
   providerBookingFilter:'all',
   adminProviderCategory:'verified',
+  adminAttentionKind:null,
   selectedVerificationId:null,
   verificationModal:null,
   verificationDocKind:null,
@@ -8080,8 +8101,30 @@ const DEMO_LOGIN = {
 };
 
 const AUTH_ROLE_LABEL = { resident:'Resident', provider:'Provider', admin:'Admin' };
-/* Same glyphs the bottom navigation uses, so a role looks like the place it
-   takes you: a home, a wrench, a shield. */
+/* What each glyph the app navigates by means. The brief asks for a stable semantic map, and the first
+   cut of this file had `shield` doing two jobs at once: it was the admin's Dashboard icon while the same
+   glyph carried "Nothing under warranty" and "No provider is flagged". A mark that means both a promise
+   about somebody's documents and a wall of figures means neither. Dashboard now takes the figure glyph
+   the provider's Dash already uses — two dashboards, one meaning — and the shield stays on the trust
+   surfaces. The sign-in badge keeps it deliberately: there it says this is the platform's own console,
+   which is the same trust claim rather than a destination. The gate reads this table, so a glyph cannot
+   be hired for a new job without somebody writing down what it means. */
+const ICON_MEANING = {
+  home: 'where you are - the root tab of a person, never a list of places',
+  calendar: 'a date somebody has to keep - bookings for both roles',
+  chat: 'a conversation about a job, which is why it is the Messages tab',
+  user: 'your own account - the profile hub, and the admin Account tab',
+  chart: 'figures counted from records - a dashboard, for either role',
+  route: 'the job pipeline: who is on the way and what happens next',
+  shield: 'a trust promise: verification, warranty, and the platform authority at sign-in',
+  'badge-check': 'providers whose verification was checked by a person',
+  scale: 'cases being read for evidence - the help desk',
+  wrench: 'the trade a provider works in',
+  'alert-triangle': 'something the device has to tell you about, never a destination',
+  lock: 'a session lock on this device, and not security in general',
+  inbox: 'a list with nothing in it'
+};
+/* Same glyphs the bottom navigation uses, so a role looks like the place it takes you. */
 const AUTH_ROLE_ICON = { resident:'home', provider:'wrench', admin:'shield' };
 
 /* ---- the documents a person agrees to --------------------------------------
@@ -8515,7 +8558,7 @@ function navHTML(){
     </div>`;
   }
   return `<div class="bottomnav">
-    ${navItem('admin_dashboard','shield','Dashboard')}
+    ${navItem('admin_dashboard','chart','Dashboard')}
     ${navItem('admin_verifications','badge-check','Providers')}
     ${navItem('admin_disputes','scale','Help Desk')}
     ${navItem('profile','user','Account')}
@@ -9120,7 +9163,7 @@ function residentResults(){
               </div>
             </div>
           </div>
-          <div style="text-align:right; flex-shrink:0;">
+          <div class="row-value" style="flex-shrink:0;">
             <div style="display:flex; align-items:center; justify-content:flex-end; gap:5px;">${stars(p.rating,12)}<span style="font-size:var(--t-body-sm); font-weight:800;">${p.rating.toFixed(1)}</span></div>
             <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${esc(p.service)}</div>
           </div>
@@ -9174,7 +9217,7 @@ function residentProviderDetail(){
             </div>
           </div>
         </div>
-        <div style="text-align:right;">
+        <div class="row-value">
           <span style="background:var(--brand-tint-soft); color:var(--brand-primary); font-size:var(--t-caption); font-weight:800; padding:4px 10px; border-radius:999px;">
             ${p.service}
           </span>
@@ -9506,6 +9549,13 @@ function ratingCell(b){
   return '<span style="color:var(--mist); font-weight:600;">After the service</span>';
 }
 
+/* The six things §10 asks a booking screen to keep apart. They are named in the order the screen reads
+   them, which is decision-first: what is happening now comes before who is coming, because the person
+   opening this screen on a job already on their calendar is asking "where is my plumber". Separation is
+   a reading order and a label, not a widget — nothing a decision needs goes behind a tap, and a group
+   whose records do not exist yet is not painted at all rather than painted empty. */
+const BOOKING_GROUPS = ['Schedule', 'Progress', 'Contact', 'Price', 'Completion', 'Receipt'];
+
 function residentBookingDetail(){
   /* An id this account does not hold used to fall back to the first booking in the
      list, so the screen painted one job's money, provider and payment state under a
@@ -9533,6 +9583,7 @@ function residentBookingDetail(){
     
     <div class="card card-hero" style=" margin-bottom:12px">
       <div style="font-size:var(--t-lead); font-weight:700; color:var(--ink);">${b.request}</div>
+      <div class="section-label">Schedule</div>
       <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px; margin-bottom:14px;">${b.status === 'requested' ? 'Requested for' : 'Scheduled'}: <b style="color:var(--ink);">${b.date}, ${b.time}</b></div>
 
       <!-- Status first, then who. The card used to open with the provider and
@@ -9540,10 +9591,12 @@ function residentBookingDetail(){
            happening to me, and what do I do" below the fold of the card, and its
            own action (withdraw a request) below that. -->
       ${offerCard(b)}
+      <div class="section-label">Progress</div>
       ${statusCard(b)}
       ${fruitCard(b, 'resident')}
       ${produceRow(b)}
 
+      <div class="section-label">Contact</div>
       <div style="background:var(--background); border:1px solid var(--line); border-radius:14px; padding:12px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;">
         <div style="display:flex; gap:12px; align-items:center;">
           ${serviceAvatar(providerOf(b), 42, '')}
@@ -9555,20 +9608,8 @@ function residentBookingDetail(){
         <button class="btn sm secondary" style="background:var(--surface); border:1px solid var(--line); border-radius:10px; font-weight:700; color:var(--ink); padding:7px 12px; box-shadow:none;" onclick="openBookingProvider('${b.id}')">View Profile</button>
       </div>
 
+      <div class="section-label">Price</div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; background:var(--background); padding:12px; border-radius:12px; font-size:var(--t-caption); margin-bottom:14px;">
-        <!-- Arrival comes from the stamp the machine writes, not from a string kept
-             on the record. This printed a hand-written field under an "Arrived:"
-             label, so a finished job read "Arrived: Completed" and a job the provider
-             had actually marked arrived read "Arrived: Awaiting provider". Before the
-             provider sets off there is nothing to say: the scheduled time is already
-             at the top of this card and the status row above carries the state. -->
-        ${b.arrivedAt ? `<div>
-          <span style="color:var(--mist); font-size:var(--t-caption);">Arrived:</span><br>
-          <b style="font-size:var(--t-body-sm); color:var(--ink);">${esc(clockText(b.arrivedAt))}</b>
-        </div>` : b.status === 'en_route' && b.eta ? `<div>
-          <span style="color:var(--mist); font-size:var(--t-caption);">Arriving:</span><br>
-          <b style="font-size:var(--t-body-sm); color:var(--ink);">in ${esc(b.eta)}</b>
-        </div>` : ''}
         <div>
           <span style="color:var(--mist); font-size:var(--t-caption);">Payment Status:</span><br>
           <b style="font-size:var(--t-body-sm); color:var(--ink);">${esc(payStatusLabel(b))}</b>
@@ -9586,7 +9627,29 @@ function residentBookingDetail(){
         </div>
       </div>
 
-      ${receiptCard(b)}
+      ${(b.arrivedAt || b.completedAt || (b.status === 'en_route' && b.eta)) ? `
+        <!-- Arrival and completion are the stamps the machine writes, not a string kept on the record.
+             This printed a hand-written field under an "Arrived:" label inside the figures grid, so a
+             finished job read "Arrived: Completed" beside the total; §10 asks the timeline and the price
+             to be separate things, so the stamps got their own heading and their own block. Before the
+             provider sets off there is nothing to say, and then the heading is not painted at all rather
+             than painted empty — the same rule that keeps the receipt off an unfinished job. -->
+        <div class="section-label">Completion</div>
+        <div style="background:var(--background); border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:14px; font-size:var(--t-caption);">
+          ${b.arrivedAt ? `<div>
+            <span style="color:var(--mist); font-size:var(--t-caption);">Arrived:</span><br>
+            <b style="font-size:var(--t-body-sm); color:var(--ink);">${esc(clockText(b.arrivedAt))}</b>
+          </div>` : ''}
+          ${!b.arrivedAt && b.status === 'en_route' && b.eta ? `<div>
+            <span style="color:var(--mist); font-size:var(--t-caption);">Arriving:</span><br>
+            <b style="font-size:var(--t-body-sm); color:var(--ink);">in ${esc(b.eta)}</b>
+          </div>` : ''}
+          ${b.completedAt ? `<div>
+            <span style="color:var(--mist); font-size:var(--t-caption);">Finished:</span><br>
+            <b style="font-size:var(--t-body-sm); color:var(--ink);">${esc(clockText(b.completedAt))}</b>
+          </div>` : ''}
+        </div>` : ''}
+      ${(() => { const r = receiptCard(b); return r ? `<div class="section-label">Receipt</div>${r}` : ''; })()}
       ${caseRow(b)}
       ${ratingBlock(b)}
 
@@ -10364,6 +10427,15 @@ function adminProviderMeta(provider){
       verified.status === 'suspended' ? 'a suspended account' : verified.status === 'pending' ? 'verification still pending' : null,
       !credentialsOf(provider.id).length ? 'no credentials on file' : null,
     ].filter(Boolean),
+    /* The same three judgements in the shape a filter needs. `reasons` is a sentence a person reads and
+       this is the key it is filed under, so the queue's chips and the card's wording cannot drift apart —
+       the gate requires the two to have the same length for every provider, and a fourth sentence added
+       above without a kind here fails that check rather than going unfiltered. */
+    reasonKinds: [
+      openCasesFor(provider.id).length ? 'cases' : null,
+      (worst === 'expired' || worst === 'expiring' || !credentialsOf(provider.id).length) ? 'credential' : null,
+      (verified.status === 'suspended' || verified.status === 'pending') ? 'account' : null,
+    ].filter(k => k),
   };
 }
 
@@ -10381,6 +10453,56 @@ function openAdminProviderProfile(id){
 function networkAttentionList(){
   return PROVIDERS.map(p => ({ provider: p, reasons: adminProviderMeta(p).reasons }))
     .filter(x => x.reasons.length);
+}
+/* A4: the strip counts this list and the card prints it, so the two cannot disagree. Counting and
+   printing is still not a door — a person reading "6 needing attention" had nowhere to go and ask which
+   six, so this is the same filter with a label on it rather than a second list somebody has to keep in
+   step. The kinds are three because the record can only assert three things: a case is open, a document
+   is off, or the account is not settled. `attentionQueue(null)` answers exactly what
+   `networkAttentionList()` answers, and the gate asserts that identity, because the moment the queue
+   computes its own membership the screen has two answers to one question again. */
+const ATTENTION_KINDS = {
+  cases:      { label: 'Open cases',    note: 'a case is being read for evidence' },
+  credential: { label: 'Documents',     note: 'a document expired, expires soon, or was never uploaded' },
+  account:    { label: 'Account state', note: 'the account is suspended or its verification is still pending' }
+};
+function attentionQueue(kind){
+  const list = networkAttentionList();
+  if (!kind || !ATTENTION_KINDS[kind]) return list;
+  return list.filter(x => adminProviderMeta(x.provider).reasonKinds.indexOf(kind) >= 0);
+}
+function adminAttentionSection(){
+  const chosen = ATTENTION_KINDS[state.adminAttentionKind] ? state.adminAttentionKind : null;
+  const rows = attentionQueue(chosen);
+  const flagged = networkAttentionList().length;
+  return `
+    <div class="card">
+      <div class="row"><b class="card-title">Why a provider is here</b><span class="chip">${flagged} flagged</span></div>
+      <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:10px;">
+        <!-- A pick, not a chip: a chip in this app is green, because a chip carries a verification
+             claim, and §34 forbids borrowing that meaning for a control that is only switched on. A
+             pressed reason also needs a state the reader can see, which pick.on supplies as a fill
+             and aria-pressed supplies to a platform that cannot see either. -->
+        <button type="button" class="pick ${chosen === null ? 'on' : ''}" aria-pressed="${chosen === null ? 'true' : 'false'}"
+          onclick="state.adminAttentionKind=null; render();">Everyone (${flagged})</button>
+        ${Object.keys(ATTENTION_KINDS).map(k => `<button type="button" class="pick ${chosen === k ? 'on' : ''}" aria-pressed="${chosen === k ? 'true' : 'false'}"
+          onclick="state.adminAttentionKind='${k}'; render();">${esc(ATTENTION_KINDS[k].label)} (${attentionQueue(k).length})</button>`).join('')}
+      </div>
+      <div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:9px;">${chosen
+        ? 'Showing the providers for whom ' + ATTENTION_KINDS[chosen].note + '.'
+        : 'A provider appears here for any reason a record can assert. Nothing suspends or deletes anybody.'}</div>
+    </div>
+    ${rows.length ? rows.map(x => `
+      <button type="button" class="job-row" style="margin-top:10px;" onclick="openAdminProviderProfile('${x.provider.id}')">
+        <span style="min-width:0; flex:1;">
+          <span class="jr-t">${esc(x.provider.name)}</span>
+          <span class="jr-s">${esc(x.reasons.join(' · '))}</span>
+        </span>
+        <span class="jr-time">Open</span>
+      </button>`).join('')
+      : emptyState('shield', 'No provider is flagged', chosen
+        ? 'Nothing here is ' + ATTENTION_KINDS[chosen].note + '. Choose Everyone to see every flagged provider.'
+        : networkFlagSummary())}`;
 }
 function networkSummary(){
   const roster = PROVIDERS.length;
@@ -10488,6 +10610,7 @@ function adminProviderInsights(){
         </span>
         <span class="jr-time">Open</span>
       </button>`).join('') : emptyState('shield', 'No provider is flagged', networkFlagSummary())}
+      ${network.attention.length ? `<button class="btn sm secondary btn-block" style="margin-top:10px;" onclick="state.tab='admin_verifications'; state.adminProviderCategory='attention'; state.adminAttentionKind=null; render();">Filter this list by reason</button>` : ''}
     </div>`}
   </div>`;
 }
@@ -10557,10 +10680,11 @@ function adminVerifications(){
     <div class="seg seg-4" style="margin-bottom:14px;">
       <button class="seg-btn ${category === 'verified' ? 'on' : ''}" onclick="state.adminProviderCategory='verified'; render();">Verified <span class="seg-count">${verifiedProviders.length}</span></button>
       <button class="seg-btn ${category === 'pending' ? 'on' : ''}" onclick="state.adminProviderCategory='pending'; render();">Pending <span class="seg-count">${pendingProviders.length}</span></button>
+      <button class="seg-btn ${category === 'attention' ? 'on' : ''}" onclick="state.adminProviderCategory='attention'; render();">Attention <span class="seg-count">${networkAttentionList().length}</span></button>
       <button class="seg-btn ${category === 'credentials' ? 'on' : ''}" onclick="state.adminProviderCategory='credentials'; render();">Credentials</button>
       <button class="seg-btn ${category === 'decided' ? 'on' : ''}" onclick="state.adminProviderCategory='decided'; render();">Decided <span class="seg-count">${decidedList.length}</span></button>
     </div>
-    ${category === 'credentials' ? `
+    ${category === 'attention' ? adminAttentionSection() : category === 'credentials' ? `
     <div style="font-size:var(--t-body); font-weight:800; margin:8px 0 10px;">Credential monitor</div>
     ${(() => {
       /* The chip on a provider's row names this screen, so the screen has to be

@@ -1194,8 +1194,10 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 11,836 lines, ONE :root block, 1,751 var() usages, 95 tokens declared with 92
-                    of them reached. Twenty-four hex-shaped strings sit outside :root, and the
+Sukinnect-next.html— 12,498 lines, ONE :root block, 1,798 var() usages, 95 tokens declared with 94
+                    of them reached — the one exception is `--info`, kept declared because §31 names it
+                    and §34 forbids spending it on a brand chip, and pinned as the sole exception by a
+                    gate check (see the token paragraph below). Twenty-four hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
                     (§45 — the seventh is Fruit Harvest & Buy); one is the <meta
@@ -1265,7 +1267,7 @@ official mark is a PNG, not an icon, and it is still the only brand image on the
 The rebuild also added a real verification surface, because reading the file cannot
 see a layout: `node tools/shot.cjs` drives the machine's own Chrome headless over the
 DevTools Protocol with no npm packages, and `--measure` runs an in-page instrument
-across every screen in the walk (82 as of §99; `node tools/shot.cjs --list` is the count) for tap
+across every screen in the walk (86 as of the P2 coherence sweep, which added the attention queue; `node tools/shot.cjs --list` is the count) for tap
 targets, WCAG contrast (sampling gradients at the text's
 own position), clipped text, off-scale fonts, content trapped under the nav, unnamed
 controls, form fields a screen reader cannot name, images that asked for a file and got no
@@ -3534,6 +3536,102 @@ widening a selector**, because a changed headline with no comparison is a vocabu
 as a finding; and navigate by the value a render branch answers, not the word printed on the button —
 `state.tab='dash'` painted nothing, and the check that inherited it failed loudly only because it
 requires each marker to exist before comparing positions.
+
+RIGHT-ALIGNED NUMBERS ARE NOT ALIGNED NUMBERS. §13 asks twice whether figures line up, and the file
+answered it with five separate `text-align:right` declarations across a 1,600-line stylesheet — two in
+component rules, one typed into a number input's inline style, two on markup blocks — and no numeral
+rule at all. Alignment was never the whole defect: **Atkinson Hyperlegible Next paints proportional
+digits**, measured in Chrome on the shipped face at 32px type — `111111` renders 78.16px against
+`000000` at 124.42px — so a column of amounts leans whichever way its digits fall. Under
+`font-variant-numeric: tabular-nums` both strings are 121.36px. One rule now carries both halves
+(`.row > b, .row-value, .offer-line .ol-v, .chart-value, .stat-strip .f b, .stat .num,
+input[type=number]`), the gate pins that it is *exactly one* of each declaration so a per-screen
+override cannot return, and `node tools/falsify-figures.cjs` proves it (7 breaks, 7 caught). The face
+was identified before the property was claimed, because §68 already warns what a measurement taken on a
+fallback proves: `"Atkinson Next"` alone renders identically to the full stack and differently from
+Plus Jakarta Sans (90.06px), so the reading is of the WOFF2 and not of a substitute. `document.fonts`
+iterated **empty** on the same page — a second instrument lesson: a FontFaceSet scan is not evidence
+the font loaded, and a width comparison against the families that would have stood in for it is.
+
+A SCALE TOKEN NOTHING ASKS FOR IS A LIE ABOUT THE SCALE. `measure.cjs` had been printing "95 tokens
+declared with 92 reached" for weeks, and three unreached names (`--s-1`, `--s-8`, `--info`) meant the
+comment above them — "one 4pt rhythm … so a component asks for a step instead of inventing a number" —
+described an intention rather than a file. Two of the three were reached by converting the literal they
+already equalled (`padding:32px 12px` → `var(--s-8) var(--s-3)`, three `gap/padding:4px` → `var(--s-1)`),
+which changes no pixel and makes the sentence true. The third is kept unreached and named: `--info` is
+the token §31's palette mapping mandates for INFO, and §34 forbids dressing a brand surface as a status,
+so it was not spent on a chip to make a count look clean. The gate now asserts the whole rule instead of
+the number: the unreached set must equal the exception list, and every exception must still be declared —
+so deleting `--info` fails exactly like adding a dead token does, and a positive control on the
+declaration count stops the scan passing because it matched nothing. One conversion cost a rotted needle:
+`falsify-compat-floor` needles the old `padding:32px 12px` line to delete the `vh` fallback, so the
+scale edit orphaned that break — found by grepping the families for the strings before running them,
+which is the cheaper order than reading `not applied` in the aggregate afterwards.
+
+AN ICON THAT NAMES TWO THINGS NAMES NEITHER. `shield` was the admin's Dashboard glyph while the same mark
+carried "Nothing under warranty" and "No provider is flagged" — a promise about somebody's documents and
+a wall of figures, in one shape. The admin Dashboard now takes `chart`, which is what the provider's Dash
+already meant, and the shield stays on the trust surfaces; the sign-in badge keeps it on purpose, where
+it reads "this is the platform's own console". The meanings are a constant (`ICON_MEANING`) and the gate
+reads it: every glyph a nav item or a role badge asks for must have a row, and `shield` must not appear
+in a `navItem`, so hiring an icon for a new job without writing down what it means fails the check
+rather than quietly doubling its meaning.
+
+A FILTER HAS TO CHANGE WHAT IS PAINTED, AND IN BOTH DIRECTIONS. The brief asks twice whether the discovery
+filters "actually work", and a screenshot cannot answer that: each of these four axes has already had a
+shape that looked correct in a picture. The gate now narrows from the records themselves and compares the
+whole id set against an expectation *it builds itself* — a filter that keeps a row it should have dropped
+is a wrong answer, and a filter that drops a row it should have kept is a smaller wrong answer that still
+reads as a narrowing, so a count alone cannot tell the two apart. `activeFilterCount()` must equal the
+number of axes that actually narrowed, because the Clear button beside that count promises a reset of a
+state the screen is not in. Proven by `node tools/falsify-filter-function.cjs`. The population guard
+(≥ 2 matchable rows, each axis a proper subset) is what stops the whole thing passing on a seed where no
+filter could narrow anything.
+
+A COUNT WITHOUT A DOOR IS A DECORATION. The stat strip's "needing attention" figure and the card beside
+it were once derived and typed separately; the fix was one shared filter (`networkAttentionList`), which
+closed the drift and still left a reader with a number and nowhere to ask which six. The queue is that
+filter with a label on it — a fifth segment on Providers, filterable by the three things a record can
+actually assert (a case open, a document off, an account not settled) — and `attentionQueue(null)` is
+required by the gate to answer exactly what the shared filter answers, so the day the queue computes its
+own membership is the day the check goes red rather than the day two screens start disagreeing. Reasons
+are sentences and kinds are their keys, produced in the same object, and asserted to have the same length
+per provider: the wording a person reads and the filter an admin taps cannot come apart. Its
+filtered-to-nothing branch is asserted by the gate and deliberately **not** photographed, because every
+kind on the seed has at least one provider and no tap can reach that wording.
+
+SEPARATE IS A READING ORDER, NOT A WIDGET. §10 asks that a booking's schedule, timeline, contact, price,
+completion and receipt be separate things. The temptation is a tab control; the obligation is that a
+reader can tell which fact is which *and* a decision never has to be hunted for. So the resident's detail
+names the six groups in the order the screen actually reads them — decision-first: what is happening now
+comes before who is coming, because a household opening this screen on a job already on the calendar is
+asking where the plumber is. Two halves of the rule: the arrival and completion stamps moved out of the
+figures grid into their own block (they had printed "Arrived: Completed" beside a total), and a group
+whose records do not exist yet is not painted at all rather than painted empty — the gate requires a
+`requested` job to *not* carry the Completion or Receipt heading, which is the same discipline that keeps
+the receipt off an unfinished job. `BOOKING_GROUPS` is checked against the gate's own literal list, so the
+order is not a constant that re-labels itself.
+
+FIVE EMPTY KINDS AND ONE CENSUS, BECAUSE "NOTHING YET" AND "NO MATCHES" LOOK IDENTICAL. §10 names five
+distinct empty states. All five are painted, and they were painted by twenty-two calls that happened to
+word themselves differently — nothing said which kind a screen was answering, and the distinction is the
+point: one sentence means the records are empty, the other means the screen is hiding something the reader
+asked for. The gate now classifies every literal empty-state title into a kind, requires all five to have
+a representative, and counts the call sites against the classified literals plus one named site whose
+title is built by an expression — so a new empty state with a ternary title fails the census instead of
+drifting out of it. Deleting a kind's only representative (the unavailable screen adopting "No requests
+yet") is a break in `node tools/falsify-empty-kinds.cjs`, because a tally of titles cannot tell those two
+sentences apart and the kind count can.
+
+A TIME THAT WAS NOT MEASURED DOES NOT GO IN THE DOCUMENTATION. §10 asks whether browse → review → book
+takes one to three minutes; no instrument in this repository has ever measured that, and the number is
+about a hand on a screen. The method is now written in `DEVICE-PASS.md` — the fixed five-step task, one
+named device, five runs, median with min and max, tap and back counts, a human thumb rather than an
+injected pointer — with the results table **empty** and the row reading `not run`. A bench run in Chrome
+is labelled a bench run, because a desktop engine has no soft keyboard, no text inflation and no tap
+latency; three separate handset findings already prove that a bench reading of a phone-shaped claim is
+worthless. An earlier section of this file refused to build a mechanism it could only demonstrate; the
+same rule applies to a metric: the method is the deliverable, the number waits for a phone.
 
 ---
 

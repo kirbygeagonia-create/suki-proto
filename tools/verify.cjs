@@ -1259,6 +1259,56 @@ suite('hygiene', async () => {
     /const scale = navFontScale\(\);/.test(body) && /function navFontScale/.test(body),
     'navFontScale() must exist and must be consulted before the property is written');
 
+  /* G7: one rule aligns and tabulates every figure a reader compares. Five ad-hoc `text-align:right`
+     declarations across a 1,600-line stylesheet meant a receipt's money column and a fee table's were
+     aligned by different hands — and right alignment alone could not have made either line up, because
+     Atkinson Hyperlegible Next paints proportional digits. The property was measured before it was
+     claimed, in the browser, on the shipped face: "111111" 78.16px against "000000" 124.42px under
+     `normal`, and 121.36px for both under `tabular-nums`. Comments are stripped before the count
+     because this rule's own comment names the string several times, and a needle that reads prose as
+     code is how a check passes on the wrong evidence. */
+  const cssCode = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const figureRule = /([^{}]*)\{([^}]*text-align:\s*right[^}]*font-variant-numeric:\s*tabular-nums[^}]*)\}/.exec(cssCode) || [];
+  const alignCount = (cssCode.match(/text-align:\s*right/g) || []).length;
+  const tabularCount = (cssCode.match(/font-variant-numeric/g) || []).length;
+  c.check('one stylesheet rule both aligns and tabulates the figures a reader compares',
+    /\.row > b/.test(figureRule[1] || '') && /\.row-value/.test(figureRule[1] || '') &&
+      /input\[type=number\]/.test(figureRule[1] || ''),
+    'selectors: ' + String(figureRule[1] || 'none').trim().replace(/\s+/g, ' ').slice(0, 140));
+  c.check('no screen aligns its own numbers any more — one alignment and one numeral rule in the page',
+    alignCount === 1 && tabularCount === 1,
+    'text-align:right ' + alignCount + ' · font-variant-numeric ' + tabularCount +
+      ' (both must be exactly 1: a second is a per-screen override returning)');
+  const markupCode = src.replace(/\/\*[\s\S]*?\*\//g, '');
+  c.check('the value blocks that typed their own alignment take the shared class',
+    /class="row-value"/.test(markupCode) && !/style="[^"]*text-align:\s*right/.test(markupCode),
+    'row-value painted: ' + /class="row-value"/.test(markupCode) +
+      ' · inline right-align left: ' + (markupCode.match(/style="[^"]*text-align:\s*right/g) || []).length);
+
+  /* A token declared in :root and never reached is the drift AGENTS.md §31 has been re-measuring by
+     hand in prose for weeks — "95 tokens declared with 92 of them reached" is a figure that moves with
+     every pass, which is why measure.cjs exists. The count is now a rule: the unreached set has to
+     equal the named exceptions, and the named exceptions have to still be declared. That second half is
+     what makes the exception a record rather than an escape hatch — deleting the token it names fails
+     the same check, so a token cannot quietly leave the palette while the sentence explaining it stays.
+     --info is the one exception today: §31 binds INFO to the deck's electric blue, and no surface in
+     this build paints an informational status tone, so the value is declared for the chip that will
+     use it and is measured as unreached rather than assumed to be in use.
+     The positive control is the declaration count: a scan that matched no token would report a clean
+     empty unreached list, which is this repository's named failure — a check that cannot fail looks
+     exactly like one that passes. */
+  const rootBlock = css.slice(css.indexOf(':root'), css.indexOf('}', css.indexOf(':root')));
+  const declaredTokens = [...rootBlock.matchAll(/(--[a-z0-9-]+)\s*:/g)].map(m => m[1]);
+  const unreachedTokens = declaredTokens.filter(d => !src.includes('var(' + d + ')'));
+  const TOKEN_EXCEPTIONS = ['--info'];
+  c.check('every :root token is reached, except the ones this file names and justifies',
+    declaredTokens.length > 80 &&
+      unreachedTokens.length === TOKEN_EXCEPTIONS.length &&
+      unreachedTokens.every(t => TOKEN_EXCEPTIONS.includes(t)) &&
+      TOKEN_EXCEPTIONS.every(t => declaredTokens.includes(t)),
+    'declared ' + declaredTokens.length + ' · unreached ' + JSON.stringify(unreachedTokens) +
+      ' · exceptions ' + JSON.stringify(TOKEN_EXCEPTIONS));
+
   /* Decided 2026-10-21: the app declares no dark theme, so it declares itself light. Without this the
      published web surface is exposed to Chrome for Android's Auto Dark Theme, which rewrites colours
      algorithmically — no media query fires, so no instrument in tools/ could see it happen. The paired
@@ -3596,6 +3646,198 @@ suite('honesty', async () => {
         : !atHome ? base.name + ' disappeared from their own barangay'
         : 'coverage does not drive discovery' };
   })());
+
+  /* A3: a glyph that names two different things names neither. `shield` was the admin's Dashboard icon
+     while the same glyph carried "Nothing under warranty" and "No provider is flagged" — so the mark
+     that means a promise about a document was also the mark for a wall of figures, and §5.5's stable
+     semantic map was a sentence nobody could point at. The admin's Dashboard now takes the figure glyph
+     the provider's Dash already uses, the shield stays on the trust surfaces, and the meanings live in
+     one table in the page which this check reads: every glyph the navigation or the sign-in asks for
+     has to have a row in it, so a new icon fails the gate until somebody writes down what it means. */
+  const iconTable = /(const ICON_MEANING = \{[\s\S]*?\n\});/.exec(app._source) || [];
+  const iconKeys = [...(iconTable[1] || '').matchAll(/^\s{2}'?([a-z0-9-]+)'?:/gm)].map(m => m[1]);
+  const navGlyphs = [...app._source.matchAll(/navItem\('([^']+)',\s*'([^']+)'/g)].map(m => m[2]);
+  const roleGlyphs = Object.values(app.AUTH_ROLE_ICON || {});
+  const unexplained = navGlyphs.concat(roleGlyphs).filter(g => iconKeys.indexOf(g) < 0);
+  c.check('a glyph means one thing, and every glyph the app navigates by is written down',
+    iconKeys.length > 8 && !unexplained.length &&
+      navGlyphs.indexOf('shield') < 0 && iconKeys.indexOf('shield') >= 0 &&
+      /shield:\s*'[^']*trust/i.test(iconTable[1] || '') &&
+      /shield:\s*'[^']*(warrant|verif|trust)/i.test(iconTable[1] || '') &&
+      navGlyphs.filter(g => g === 'chart').length === 2,
+    'table holds ' + iconKeys.length + ' names · unexplained ' + JSON.stringify(unexplained) +
+      ' · shield in nav: ' + (navGlyphs.indexOf('shield') >= 0) +
+      ' · chart used by: ' + navGlyphs.filter(g => g === 'chart').length + ' dashboards');
+
+  /* A4: the dashboard's "needs attention" number and the card beside it were once derived and typed
+     separately, and the fix was one shared filter. A shared filter that only counts is still a dead
+     end for the person reading it — the queue it names has to exist, and it has to be the same list,
+     not a second one that can drift. So the queue's unfiltered answer is compared to the filter's,
+     every kind is compared to the reasons it claims, and the row count on the tab is the number the
+     stat strip prints. The reasons and their kinds are two shapes of one judgement, so they are
+     required to agree per provider — with a positive control on the seed, because a roster where
+     nothing carries a flag would satisfy every clause above by saying nothing. */
+  const flagged = app.networkAttentionList();
+  const kinds = Object.keys(app.ATTENTION_KINDS || {});
+  const disagree = flagged.filter(x => (x.provider && app.adminProviderMeta(x.provider).reasons.length) !==
+    (x.provider && app.adminProviderMeta(x.provider).reasonKinds.length))
+    .map(x => (x.provider || {}).name);
+  const kindsSeenOnRoster = {};
+  app.PROVIDERS.forEach(p => app.adminProviderMeta(p).reasonKinds.forEach(k => { kindsSeenOnRoster[k] = 1; }));
+  const kindMismatch = kinds.filter(k => {
+    const byKind = app.attentionQueue(k).map(x => x.provider.id).sort();
+    const expected = app.PROVIDERS.filter(p => app.adminProviderMeta(p).reasonKinds.indexOf(k) >= 0)
+      .map(p => p.id).sort();
+    return byKind.join(',') !== expected.join(',');
+  });
+  c.check('the attention queue is the shared filter with a label on it, never a second list',
+    kinds.length >= 2 && flagged.length > 0 && !disagree.length && !kindMismatch.length &&
+      app.attentionQueue(null).map(x => x.provider.id).sort().join(',') === flagged.map(x => x.provider.id).sort().join(',') &&
+      Object.keys(kindsSeenOnRoster).length >= 2,
+    'flagged ' + flagged.length + ' · kinds ' + JSON.stringify(kinds) +
+      ' · seen on the roster ' + JSON.stringify(Object.keys(kindsSeenOnRoster)) +
+      (disagree.length ? ' · reasons and kinds disagree for ' + disagree.join(', ') : '') +
+      (kindMismatch.length ? ' · a kind filter answers a different set: ' + kindMismatch.join(', ') : ''));
+
+  /* R7/A9: §10 asks that a booking's timeline, contact, schedule, price, completion and receipt be
+     *separate* things. Separation is a reading order, not a widget: the six groups are named in the
+     markup in that order, each with content under it, and nothing a decision needs is put behind a
+     control. Two halves, because one alone is trivially gamed — all six labels painted for a job that
+     has no completion time and no receipt would be §63's decorative claim, so the requested job is
+     required NOT to carry the two groups whose records do not exist yet. */
+  const GROUP_ORDER = ['Schedule', 'Progress', 'Contact', 'Price', 'Completion', 'Receipt'];
+  const groups = app.BOOKING_GROUPS;
+  const finishedJob = app.bookingsForResident().find(b => b.status === 'completed' &&
+    ['captured', 'collected'].includes(b.payStatus));
+  app.state.selectedBookingId = finishedJob ? finishedJob.id : null;
+  const painted = String(app.residentBookingDetail());
+  const positions = GROUP_ORDER.map(g => painted.indexOf('>' + g + '<'));
+  const ordered = positions.every(p => p >= 0) &&
+    positions.every((p, i) => i === 0 || p > positions[i - 1]);
+  const roomAfter = positions.every((p, i) => i === positions.length - 1 ||
+    (positions[i + 1] - p) > 200);
+  const heldJob = app.bookingsForResident().find(b => b.status === 'requested');
+  app.state.selectedBookingId = heldJob ? heldJob.id : null;
+  const heldHtml = String(app.residentBookingDetail());
+  const premature = GROUP_ORDER.slice(4).filter(g => heldHtml.indexOf('>' + g + '<') >= 0);
+  c.check('the booking detail names the six groups in order, and only the ones the record supports',
+    !!finishedJob && groups.join(',') === GROUP_ORDER.join(',') && ordered && roomAfter &&
+      !premature.length,
+    'constant ' + JSON.stringify(groups) + ' · job ' + (finishedJob ? finishedJob.id : 'none') +
+      ' · label positions ' + JSON.stringify(positions) +
+      ' · a requested job already promises ' + JSON.stringify(premature));
+
+  /* G10: §10 asks for five *distinct* empty states, and this build already paints all five — but it
+     paints them because twenty-two separate calls happened to word themselves differently, not because
+     anything says which kind a screen is answering. The distinction is the point: "No bookings yet" and
+     "No provider meets these filters" look identical in a screenshot and are opposite sentences to a
+     person, one saying nothing has happened and the other saying the screen is hiding something the
+     reader asked for. So the kinds are named here, and every empty state in the file has to answer to
+     one of them by its own literal wording. The count guard is the half that keeps this from being a
+     list somebody maintains: it counts the call sites, and a site whose title is built by an expression
+     rather than a literal has to appear in the named dynamic list, so the next empty state added with a
+     ternary title fails the check instead of drifting out of the census. Measured 2026-10-26: no kind is
+     missing. The one that used to have no representative — a destination a role cannot reach — is
+     "That booking is not on this account" on the resident's detail and "No provider record behind this
+     sign-in" on the provider's dashboard, and both are reached by handing an unknown id to a screen. */
+  const EMPTY_KIND_TITLES = {
+    records: ['No requests yet', 'No bookings yet', 'No finished jobs yet', 'No saved providers',
+      'Nothing under warranty', 'No reminders', 'No receipts yet', 'No unread messages',
+      'This room has no thread on this device', 'Nobody is on the roster', 'No provider is flagged',
+      'No decisions recorded yet', 'No applications are waiting', 'Nothing to review'],
+    matches: ['No ', 'No provider meets these filters', 'No provider matches '],
+    unavailable: ['No provider is open here'],
+    notfound: ['That booking is not on this account', 'No provider carries that id',
+      'No application is open', 'That job is not on this account'],
+    access: ['No provider record behind this sign-in']
+  };
+  const KIND_OF = {};
+  Object.keys(EMPTY_KIND_TITLES).forEach(k => EMPTY_KIND_TITLES[k].forEach(t => { KIND_OF[t] = k; }));
+  const pageSrc = require('fs').readFileSync(require('./harness.cjs').APP, 'utf8');
+  const emptyTitles = [...pageSrc.matchAll(/emptyState\(\s*'[a-z0-9-]+',\s*\n?\s*'([^']*)'/g)].map(m => m[1]);
+  const unclassified = emptyTitles.filter(t => !KIND_OF[t]);
+  const siteCount = (pageSrc.match(/emptyState\(/g) || []).length - 1;
+  const DYNAMIC_SITES = 1;
+  const kindsSeen = new Set(emptyTitles.map(t => KIND_OF[t]).filter(Boolean));
+  c.check('every empty state answers to one of the five kinds §10 names, and all five are painted',
+    !unclassified.length && kindsSeen.size === 5 && siteCount === emptyTitles.length + DYNAMIC_SITES &&
+      Object.keys(EMPTY_KIND_TITLES).every(k => EMPTY_KIND_TITLES[k].some(t => pageSrc.includes("'" + t))),
+    'sites ' + siteCount + ' classified ' + emptyTitles.length + ' named-dynamic ' + DYNAMIC_SITES +
+      ' · kinds ' + JSON.stringify(Array.from(kindsSeen)) +
+      (unclassified.length ? ' · unclassified ' + JSON.stringify(unclassified) : ''));
+
+  /* A7/R3: a control that is painted is not yet a control that works. The brief asks twice whether the
+     filters "actually work"; the honest answer needed a reading per axis, because every one of these
+     four once had a shape that looked right in a screenshot: the barangay filter matched where a
+     provider lives rather than where they declared they serve, the wait filter read the same
+     `availabilityMin` the card prints as "can start in", and a query typed in the search field narrowed
+     the list while `activeFilterCount()` kept reporting zero filters active — so the Clear button the
+     screen offers beside the count was, on those axes, a button that cleared nothing. Each axis is
+     narrowed from the records themselves, every surviving row is re-read against the predicate, and
+     clear-all has to restore exactly the unfiltered count. The population guard is the positive
+     control: if the seed ever became one trade in one barangay with one wait time, no filter could
+     narrow anything and this check would have nothing to assert, so it says so instead of passing. */
+  verdict('every discovery filter narrows the set, and clearing restores it', (() => {
+    app.state.view = 'app'; app.state.role = 'resident'; app.state.tab = 'results';
+    app.state.searchQuery = ''; app.state.providerFilters = app.blankFilters();
+    const all = app.providerMatches();
+    const base = all.length;
+    const roster = app.PROVIDERS.filter(app.providerAccepting);
+    if (base < 2 || roster.length < 2)
+      return { ok: false, why: 'only ' + base + ' rows are matchable, so no filter can be shown narrowing' };
+    const bad = [];
+    const tryFilter = (label, patch, keeps) => {
+      app.state.providerFilters = app.blankFilters();
+      app.state.searchQuery = '';
+      patch();
+      const got = app.providerMatches();
+      /* Both halves, because each one breaks differently: a filter that keeps a row it should have
+         dropped is a wrong answer, and a filter that drops a row it should have kept is a smaller wrong
+         answer that still looks like a narrowing. The expected set is built here from the predicate, not
+         read back out of the app, or the comparison is a tautology. */
+      const expected = roster.filter(keeps).map(p => p.id).sort();
+      const seen = got.map(p => p.id).sort();
+      const wrong = got.filter(p => !keeps(p)).map(p => p.name);
+      const missing = expected.filter(id => seen.indexOf(id) < 0);
+      if (got.length === base) bad.push(label + ' narrowed nothing');
+      if (!got.length && expected.length) bad.push(label + ' emptied a list its own rule says has ' + expected.length);
+      if (wrong.length) bad.push(label + ' kept ' + wrong.join(', ') + ' which fails its own rule');
+      if (missing.length) bad.push(label + ' lost ' + missing.length + ' row(s) its own rule includes');
+    };
+    const service = roster.map(p => p.serviceId)
+      .filter((id, i, a) => a.indexOf(id) === i)
+      .find(id => roster.filter(p => p.serviceId === id).length < base);
+    if (!service) bad.push('no trade on the roster is a proper subset, so the trade filter cannot be tested');
+    else tryFilter('trade', () => { app.state.providerFilters.serviceId = service; },
+      p => p.serviceId === service);
+    const area = roster.map(p => (p.servesBarangays || [p.barangay])[0])
+      .filter((b, i, a) => a.indexOf(b) === i)
+      .find(b => roster.filter(p => app.providerServes(p, b)).length < base);
+    if (!area) bad.push('no declared barangay is a proper subset, so the area filter cannot be tested');
+    else tryFilter('barangay', () => { app.state.providerFilters.barangay = area; },
+      p => app.providerServes(p, area));
+    const waits = roster.map(p => p.availabilityMin).sort((a, b) => a - b);
+    const maxWait = waits.find(w => roster.filter(p => p.availabilityMin <= w).length < base);
+    if (!maxWait && maxWait !== 0) bad.push('every provider starts at the same minute, so the wait filter cannot be tested');
+    else tryFilter('start-within', () => { app.state.providerFilters.maxWait = maxWait; },
+      p => p.availabilityMin <= maxWait);
+    const word = (roster[0].service || '').toLowerCase();
+    tryFilter('query', () => { app.state.searchQuery = word; },
+      p => (p.name + ' ' + p.service + ' ' + p.barangay).toLowerCase().includes(word));
+    /* The count beside the Clear button has to be the number of axes that actually narrowed, or the
+       button promises a reset of a state the screen is not in. */
+    app.state.providerFilters = app.blankFilters(); app.state.searchQuery = '';
+    if (app.activeFilterCount() !== 0) bad.push('a clean filter set reports ' + app.activeFilterCount() + ' active');
+    if (service) { app.state.providerFilters.serviceId = service;
+      if (app.activeFilterCount() !== 1) bad.push('one axis narrowed reports ' + app.activeFilterCount()); }
+    if (area) { app.state.providerFilters.barangay = area;
+      if (app.activeFilterCount() !== 2) bad.push('two axes narrowed reports ' + app.activeFilterCount()); }
+    app.state.providerFilters = app.blankFilters(); app.state.searchQuery = '';
+    if (app.providerMatches().length !== base) bad.push('clearing the filters did not restore the ' + base + ' rows');
+    return { ok: !bad.length, why: bad.join(' · ') ||
+      base + ' rows unfiltered, every axis narrowed them and the survivors satisfy their own predicate' };
+  })());
+
 
   /* §27: "tapping a notification should open the object responsible for it". Measured in a real
      page first — `node tools/shot.cjs --probe=@tools/probe-notification-targets.js` walks every

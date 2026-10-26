@@ -30,7 +30,7 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'CREDENTIALS', 'LISTINGS'
   'CURRENT_CUSTOMER_ID', 'CURRENT_PROVIDER_ID', 'CONFIG_DEFAULTS', 'commissionRateFor',
   /* Discovery and the provider's own availability, pulled through so a suite can ask
      whether a filter actually changes what a resident is shown. */
-  'providerMatches', 'providerServes', 'providerAccepting', 'coverageLines',
+  'providerMatches', 'providerServes', 'providerAccepting', 'blankFilters', 'activeFilterCount', 'coverageLines',
   'setProviderAvailable', 'setProviderBusy', 'reputationSeedOf', 'refreshReputation',
   'adminCounts', 'marketplaceRates', 'opsWorkload', 'intelligenceStats', 'supplyGaps', 'disputeCard', 'statementCard', 'configPanel',
   'DISPUTE_STATES', 'disputeLabel', 'caseIsOpen', 'providerCases', 'resolveCase', 'resolveDispute', 'commitConfig', 'setIntFilter', 'runPayoutNow', 'openDispute',
@@ -39,7 +39,7 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'CREDENTIALS', 'LISTINGS'
   'adminProviderMeta', 'credentialState', 'credentialsOf', 'worstCredentialState', 'verifiedProviderList', 'expiringProviderCount', 'bookingsForProvider', 'providerSectionBody', 'adminSectionBody', 'openCasesFor', 'credentialSummaryFor', 'closedJobCount', 'networkSummary',
   'adminProviderInsights', 'networkAttentionList', 'networkServiceRows', 'networkHealthRows', 'networkFlagSummary',
   'PENDING_APPLICANTS', 'APPLICATION_DOCS', 'APPLICATION_DOC_KINDS', 'applicationDocs', 'applicationDocsSubmitted', 'applicationDocsOutstanding', 'applicationDocLabel', 'applicantWaitDays', 'applicantWaitLabel', 'applicantIssue', 'pendingApplicantList', 'reviewOf', 'reviewStatusLine', 'reviewTimeline', 'verificationApplication', 'verificationAction', 'openProviderVerification', 'reopenReview', 'docsOutstanding',
-  'loginHTML', 'AUTH_ROLE_LABEL', 'DEMO_LOGIN',
+  'loginHTML', 'AUTH_ROLE_LABEL', 'AUTH_ROLE_ICON', 'ICON_MEANING', 'BOOKING_GROUPS', 'ATTENTION_KINDS', 'attentionQueue', 'DEMO_LOGIN',
   /* Added after the audit: the guards, the money readers and the case door were
      unreachable from the suite, which is exactly how a severed entry point could
      render beautifully and still pass every check. */

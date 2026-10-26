@@ -2214,6 +2214,51 @@ showing up as the aggregate's one flagged row — runs for real: **4 of 4 breaks
 `preview.40` is installed nowhere and **the chat-composer-under-the-keyboard question is still
 unanswered** — `visualViewport` appears zero times in the page, and nothing measured on a bench can
 substitute for the IME. When a phone is attached the step is `adb install -r -t
-app/build/outputs/apk/debug/Sukinnect-1.2-preview.40-debug.apk`, then read it back from
+app/build/outputs/apk/debug/Sukinnect-1.2-preview.41-debug.apk`, then read it back from
 `dumpsys package com.sukinnect.app` rather than from this file, and open a chat room with the composer
 focused. Attach a **fresh** process to DevTools, never a resumed one.
+
+**Superseded the same day by `1.2-preview.41` (`versionCode 43`), 2026-10-26.** The P2 coherence sweep
+(CHANGES §135) moved the page again, so the asset was re-copied with `cmp` proving it, `dist/` was
+rebuilt, and `cmd.exe //c "gradlew.bat assembleDebug"` produced
+`Sukinnect-1.2-preview.41-debug.apk` in 7s. `node tools/audit-build-bytes.cjs` reads **findings: 0**,
+all four copies at `76338e39…`. Nothing was installed: the owed reading is still this leg's, and a
+build that runs on no phone proves only that it builds. Install `.41`, not `.40`, when a device arrives —
+and read the version from `dumpsys package`, because a version string is the only way to tell two builds
+apart that share bytes.
+
+## The browse → review → book walk (G11) — the method, armed and not yet run
+
+§10 of the improvement brief asks whether a person can go from opening the app to sending a request in
+one to three minutes. Nothing in this repository has ever measured that, and no instrument here can
+infer it from the source: the number is about a hand on a screen, not about a file. The method is
+written down now so the measurement is a procedure rather than an impression, and **the result table
+below stays empty until a run happens. A time that was not measured does not go in this file, in
+README, in AGENTS.md, or in a slide.**
+
+The task, fixed, because a different task is a different number:
+
+1. Open the app signed in as the resident (the sign-in is typed on the device, not scripted — the first
+   reading of the clock starts at the Home screen, so sign-in time is reported separately, not folded in).
+2. Find a provider for a kitchen faucet leak: type into the search field, submit, do not use a category tile.
+3. Review: open one provider from the results, read the profile down to the rate line, and return.
+4. Book: open the request sheet, describe the job, pick a day and a time, send.
+5. Confirm: land on the booking's own detail screen.
+
+Rules that make two runs comparable:
+
+- **One named device**, read out of `dumpsys package` / the page's own `innerWidth`, written in the row.
+  A bench run in Chrome is labelled as a bench run, because a desktop engine does not have the phone's
+  keyboard, its text inflation, or its tap latency.
+- **Five runs, median reported**, min and max beside it. The median of one walk is an anecdote.
+- **Elapsed from the Home screen to the booking detail**, plus a tap count and a back count, read from
+  the device where the keys are real. Backsteps are the part of "is this understandable" that a timer
+  hides: a walk can finish in ninety seconds and still have climbed out of a screen four times.
+- **One observer, no agent hand** on the phone. An injected tap is not a thumb (measured twice here: the
+  platform treats a synthetic pointer and a real one differently on the document picker, and Android
+  multiplies text after CSS resolves, which no bench emulates).
+- If the walk cannot be completed as written, that is the finding, and it is written in the row.
+
+| device | build | run | elapsed | taps | backs | where it stopped |
+|---|---|---|---|---|---|---|
+| — | — | 1 of 5 | — | — | — | not run |

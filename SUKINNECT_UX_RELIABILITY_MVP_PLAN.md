@@ -45,6 +45,13 @@ uses in a 1,189-line stylesheet; §5.1/§8.4 icon semantics: `navItem('admin_das
 8002 and `AUTH_ROLE_ICON.admin = 'shield'` at 7755) and **four are product decisions** the owner must make, listed in
 §15 with a recommended default each.
 
+> **Dated pointer, 2026-10-26.** Both of those two are closed: numerals now share one alignment-and-
+> tabular rule measured on the shipped face, and `shield` denotes trust while the admin Dashboard takes
+> `chart`. The whole P2 block landed the same day — see §17 for the per-item proof, and `CHANGES.md` §135
+> for the two findings that came out of doing it (a right-aligned column of proportional digits is not an
+> aligned column, and a `.chip` in this app is green because it carries a verification claim). The line
+> numbers quoted above are Phase A's and have since moved; `node tools/measure.cjs` is the command.
+
 **Recommended approach.** Do the two content gaps and the one new flow first (reschedule, legal documents,
 registration acceptance), because they are the only items where a user is silently denied an option or is not told the
 rules. Then the keyboard/viewport verification with a handset on the bus. Then the alignment and icon-semantics pass
@@ -614,7 +621,43 @@ nothing. The reason is a comment beside the constant and a paragraph in `CHANGES
 - **P1-6 buried primary actions** — the density probe is now `tools/probe-density.js` with a corrected
   selector (the Phase A version counted only `.btn`, which over-stated the problem on screens whose
   actions are tappable rows). Re-measure first, move content only where a real action is buried.
-- **All P2** — not approved, so not started.
+
+**P2 — built on 2026-10-26 after the owner approved the whole block.**
+
+| Item | What landed | Proof |
+|---|---|---|
+| G7/G8 numerals | One rule for every figure a reader compares: `text-align:right` **and** `font-variant-numeric:tabular-nums`, covering `.row > b`, `.row-value`, `.ol-v`, `.chart-value`, `.stat-strip .f b`, `.stat .num` and number inputs. The five scattered declarations are gone; the property was measured on the shipped face before it was claimed (`111111` 78.16px vs `000000` 124.42px proportional, both 121.36px tabular) | three `hygiene` checks; `node tools/falsify-figures.cjs` |
+| Token cleanup | `--s-1` and `--s-8` reached by converting the literals they already equalled; `--info` kept unreached and **named** in the gate's exception list, because §31 mandates it and §34 forbids spending it on a brand chip. The gate asserts the unreached set equals the exceptions and that each exception is still declared | the fourth `hygiene` check; same family |
+| A3 icons | `ICON_MEANING` in the page; the admin Dashboard takes `chart` (what the provider's Dash already meant) and `shield` is reserved for trust/warranty/verification and the sign-in console badge. Every glyph a nav item or role badge asks for must have a row in the table | `honesty` check; `node tools/falsify-coherence.cjs` |
+| A4 attention queue | A fifth segment on Providers, filterable by the three kinds a record can assert, reachable from the Insights card. `attentionQueue(null)` is asserted to answer exactly what `networkAttentionList()` answers; reasons and kinds are produced in one object and asserted equal in length per provider; the reason controls are `.pick`, not green `.chip`s | `honesty` check; same family |
+| A7 filters | Each axis is narrowed from the records and compared against an expectation the gate builds itself, in both directions (a row kept that should go, a row lost that should stay), and `activeFilterCount()` is tied to the axes that actually narrowed | `honesty` check; `node tools/falsify-filter-function.cjs` |
+| R7/A9 grouping | `BOOKING_GROUPS` names the six groups; the resident's detail paints them in the declared order with content under each, the arrival/completion stamps moved out of the figures grid into their own block, and a `requested` job asserted NOT to carry the Completion or Receipt heading. The provider's own profile already carried `.section-label` groups (Service settings / Professional / Financial / Account) and is unchanged | `honesty` check; same family |
+| G10 empty kinds | Every literal empty-state title classified into one of the five kinds, each kind needing a representative, with the call-site count tied to the classified literals plus one *named* expression-titled site — so a new ternary empty state fails the census instead of drifting out of it | `honesty` check; `node tools/falsify-empty-kinds.cjs` |
+| G11 walk method | The procedure is in `DEVICE-PASS.md`: fixed five-step task, one named device, five runs, median with min and max, tap and back counts, a human thumb. **The results table reads `not run`**, because nothing was measured | read the section |
+
+**P2 items deliberately not built, and why.**
+
+- **G11's number** — a bench run in Chrome is not a phone, and three handset findings in this repository
+  already proved that a desktop reading of a phone-shaped claim is worthless. The method is the
+  deliverable; the median waits for a device.
+- **A9 as a tab control** — §10's word is *separate*, and the constraint the same section carries is that
+  a decision never has to be hunted for. Labels and reading order satisfy both; tabs would hide the price
+  or the timeline behind a tap. Recorded as an interpretation, not as a skipped item.
+- **The density cuts on the three dashboards** — the metric is a committed instrument
+  (`tools/probe-density.js`) and the readings are taken per pass; content moves only where a real action
+  is buried, which Phase A measured as one screen (the admin's Money), already fixed.
+
+**As printed on the finished build (2026-10-26, after the repair described in `CHANGES.md` §135).**
+`node tools/verify.cjs` → all **638** checks passed · `node tools/shot.cjs --list` → **86** screens ·
+`node tools/sweep-text-scale.cjs` → **8 of 8** corners, 25 tallies each, all clear ·
+`falsify-figures` **7/7**, `falsify-coherence` **6/6**, `falsify-filter-function` **4/4**,
+`falsify-empty-kinds` **2/2**, `falsify-compat-floor` **7/7**, each with 0 not applied and 0 missed ·
+density: provider dashboard first pressable row **181px** of 1,598px, admin console **121px** (its
+lock/logout pair 2,054px, accepted), Marketplace Intelligence **128px** of 826px — no action buried, so
+no content was cut · `node tools/audit-build-bytes.cjs` → **findings: 0**, four copies at `76338e39…`,
+shell at `versionCode 43 / 1.2-preview.41`. **The full `falsify-all` aggregate was not re-run in this
+pass**, so no mutant total is quoted for it; the five families whose needles this pass could have
+orphaned were run individually.
 
 **Closed after the first report.** `falsify-legal-truth` caught one of my own checks as a MISSED - it
 grepped the sign-in render, where the register fields are never painted - and was re-pointed at the

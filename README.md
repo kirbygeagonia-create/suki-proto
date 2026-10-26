@@ -392,6 +392,30 @@ written to this device's storage before the typed name is applied to the profile
 which document version was agreed and does not silently store an account. It is a local record, not a
 server-side audit trail, and the screens say so.
 
+## What each mark and each number is for
+
+A short list of the conventions a reviewer is likely to test, because each of them was earned by a
+measurement rather than chosen for taste:
+
+- **Figures share one rule.** Every number a reader compares — money in a receipt row, a chart value, a
+  count in a stat strip, a rate in a form field — is right-aligned *and* set in tabular figures by a
+  single stylesheet rule. Right alignment alone was the half-fix: the interface face paints proportional
+  digits, so a column of amounts leaned whichever way its digits fell. The property was measured in a
+  browser on the font the app actually loads before it was claimed.
+- **An icon means one thing.** `chart` is a dashboard for either role, `calendar` is a date somebody has
+  to keep, `scale` is a case being read for evidence, and `shield` is a trust promise — verification,
+  warranty, and the platform's own authority at sign-in. The shield is deliberately not the admin's
+  Dashboard icon any more, and the meanings are a table in the page that the gate reads, so a glyph
+  cannot be hired for a second job without somebody writing down what it means.
+- **A count comes with a door.** The admin's "needing attention" figure, the card beside it and the
+  filterable queue under the Providers tab are one list, produced once; the queue can be narrowed by the
+  reason a provider is there, and the reason it prints is the reason it was counted. Nothing suspends or
+  deletes a provider from any of these screens.
+- **A booking detail is grouped, not paged.** Its schedule, progress, contact, price, completion and
+  receipt are separately labelled, in an order that puts what is happening now above everything else,
+  and a group whose records do not exist yet is not painted at all rather than painted empty — which is
+  why a job nobody has answered shows no completion time and no receipt.
+
 ## Honest labelling
 
 Demo data is `source:'demo'`, records you create in a session are `source:'live'`. Pilot
@@ -404,7 +428,7 @@ matches is a simulated flow, and the screens say so.
 | What | Where | Notes |
 |---|---|---|
 | Logo | `Sukinnect_Logo.png` | exact case. Official mark — never redrawn, recoloured, stretched or replaced. It has a white background, so change the surface around it, not the file. |
-| Icons | an inline SVG set inside `Sukinnect-next.html`; `reicon.js` (LFS) for `Sukinnect.html` | The rebuild loads no icon library: 43 glyphs are drawn in the file and every one of the 38 names the app can reach has one — whether the name is written in markup, carried by a service record, or passed to an empty state. Those two figures come from `node tools/measure.cjs`, not from a count kept in prose. The gate checks all three and fails if a new name arrives undrawn. Measured with reicon disabled, that set drew the same icons on every screen the camera walks — 73 now where the claim was made at 40, and `node tools/shot.cjs --list` is the count — so the rebuild dropped the 8 MB custom element and the four seconds of iconless paint it cost when registration lost the race. `Sukinnect.html` still uses reicon, so add a name to both files or neither. |
+| Icons | an inline SVG set inside `Sukinnect-next.html`; `reicon.js` (LFS) for `Sukinnect.html` | The rebuild loads no icon library: 43 glyphs are drawn in the file and every one of the 38 names the app can reach has one — whether the name is written in markup, carried by a service record, or passed to an empty state. Those two figures come from `node tools/measure.cjs`, not from a count kept in prose. The gate checks all three and fails if a new name arrives undrawn. Measured with reicon disabled, that set drew the same icons on every screen the camera walks — 86 now where the claim was made at 40, and `node tools/shot.cjs --list` is the count — so the rebuild dropped the 8 MB custom element and the four seconds of iconless paint it cost when registration lost the race. `Sukinnect.html` still uses reicon, so add a name to both files or neither. |
 | Type | `fonts/` | The two files differ here deliberately. `Sukinnect.html` uses Fraunces for display and Plus Jakarta Sans for UI. `Sukinnect-next.html` runs one sans family across every role — Atkinson Hyperlegible Next in four self-hosted weights, with Plus Jakarta Sans behind it for any glyph Atkinson does not carry — and its `--font-display` is an alias for `--font-ui`, so the serif paints nothing there (AGENTS.md §68). Self-hosted in both; no remote fonts. |
 | Photos | `avatars/` | local PNGs, mapped per persona in `PRO_PHOTOS`. Keep imagery local — the APK runs offline. |
 | Maps | `leaflet/` | vendored. Tiles come from OpenStreetMap, the one network dependency, so a map is blank with no connection. |
