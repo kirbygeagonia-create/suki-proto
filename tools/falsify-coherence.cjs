@@ -1,6 +1,6 @@
-/* Proves the three coherence rules the P2 pass built can fail: the icon semantic table (A3), the
-   attention queue that must be the shared filter and not a second one (A4), and the booking detail's six
-   named groups (R7/A9).
+/* Proves the four coherence rules the P2 pass and the §13 re-audit built can fail: the icon semantic
+   table (A3), the attention queue that must be the shared filter and not a second one (A4), the booking
+   detail's six named groups (R7/A9), and the help desk's ordering caption (A14).
 
    Each break is the way the rule actually rots, not a cartoon of it:
      1 the shield goes back to work as a Dashboard icon — one mark meaning a document promise and a wall
@@ -14,12 +14,24 @@
        start disagreeing about one question again — the exact drift the filter was created to close;
      5 the receipt keeps its card and loses its heading, so the six groups are no longer six;
      6 one heading is renamed, which breaks the order assertion rather than the presence assertion — the
-       half that a screen full of labels can satisfy while reading in the wrong sequence.
+       half that a screen full of labels can satisfy while reading in the wrong sequence;
+     7 the help desk keeps ordering open-then-closed and stops saying so. §13 asked for a priority, the
+       records carry none, and the plan's instruction was to say "unranked" rather than invent one, so the
+       sentence IS the implementation and this break proves the check notices when it goes;
+     8 a `priority` is typed onto the case record anyway — the §76 defect arriving as a field instead of a
+       number. The caption above the list is now false, and the check reads the BUILDER's text to catch it.
+
+   Break 8 printed MISSED on this family's first run, and the break was right. The check had asked whether
+   any record in `DISPUTES` carries a priority field — but the list is seeded empty on purpose (a sample
+   case would be a written record of a complaint nobody raised), so `some()` over it cannot fail whatever
+   the code writes. That is this repository's named class of a check that passes by being blind, arriving
+   the usual way: a green family, a red column nobody read. The assertion now scans `openDispute` itself,
+   with a positive control that the scan found the function, and the family re-runs to prove it.
 
    Anchors are single lines: the page is checked out with CRLF, so a needle carrying a bare newline
    matches nothing and the run reports a healthy gate for a mutation that never landed.
 
-     node tools/falsify-coherence.cjs    ~6 minutes                                 */
+     node tools/falsify-coherence.cjs    ~8 minutes                                 */
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -32,6 +44,7 @@ const original = fs.readFileSync(TARGET, 'utf8');
 const ICONS = 'a glyph means one thing, and every glyph the app navigates by is written down';
 const QUEUE = 'the attention queue is the shared filter with a label on it, never a second list';
 const GROUPS = 'the booking detail names the six groups in order';
+const HELPDESK = 'the help desk orders by case state';
 
 /* The anchors are read out of the file rather than typed a second time, because this family edits lines
    carrying template literals and nested quotes: a needle copied by hand is a needle that can go stale in
@@ -48,6 +61,8 @@ const kindsTail = findLine('].filter(k => k),');
 const queueHead = findLine('const list = networkAttentionList();');
 const receiptLine = findLine('const r = receiptCard(b); return r ?');
 const contactLine = findLine('<div class="section-label">Contact</div>');
+const captionLine = findLine('Open cases first, then closed');
+const claimLine = findLine('amountInClaimCentavos: b.pricing');
 
 const REAL = [
   { name: 'the shield is hired as a Dashboard icon again, so one mark means a document promise and a wall of figures',
@@ -68,6 +83,12 @@ const REAL = [
   { name: 'one heading is renamed, so the six no longer read in the declared order',
     check: GROUPS,
     from: contactLine, to: contactLine ? contactLine.replace('>Contact<', '>Payment<') : '' },
+  { name: 'the help desk keeps ordering cases and stops saying on what basis',
+    check: HELPDESK,
+    from: captionLine, to: captionLine ? captionLine.replace('open.length + closed.length', 'false') : '' },
+  { name: 'a priority is invented on the case record, which makes the caption a lie',
+    check: HELPDESK,
+    from: claimLine, to: claimLine ? claimLine.replace('amountInClaimCentavos:', "priority: 'High', amountInClaimCentavos:") : '' },
 ];
 
 function gateOutput() {
@@ -92,7 +113,7 @@ if (missing.length) {
 }
 
 const out0 = gateOutput();
-for (const name of [ICONS, QUEUE, GROUPS]) {
+for (const name of [ICONS, QUEUE, GROUPS, HELPDESK]) {
   const r = readCheck(out0, name);
   if (!r.seen) { console.log('BROKEN  no gate check named "' + name + '"'); process.exit(1); }
   if (r.failed) { console.log('BROKEN  baseline already red: ' + r.why); process.exit(1); }

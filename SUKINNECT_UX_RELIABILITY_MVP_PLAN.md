@@ -108,7 +108,8 @@ enforced in the kernel, not in screens.
 is counted automatically, and a page→shell depth bridge (`SukiShell.setBackDepth`) because a WebView's `canGoBack()`
 cannot see `pushState` entries. Root-tab taps pay Back debt explicitly.
 
-**Sheets/modals/screens.** 82 walked screens; sheets are `state.sheet` branches, modals `state.*Modal/*Confirm`.
+**Sheets/modals/screens.** 86 walked screens as of the P2 sweep (82 at Phase A; `node tools/shot.cjs --list`
+is the count); sheets are `state.sheet` branches, modals `state.*Modal/*Confirm`.
 Category art is 7 static PNGs; the AI concierge is an embedded Home row (`concierge-row`, line 8282) opening its own
 screen with a real file control.
 
@@ -522,8 +523,10 @@ taken in every case; the rulings that were *not* taken as written are marked. It
   rebuild means the admin route never renders a register form; there was nothing to restrict.
 - **3 Concierge as a floating button — recommendation stands (no), not built.**
 - **4 Session Lock — APPROVED: keep, honestly labelled.**
-- **5 Needs Attention — APPROVED: promote the existing shared filter; no second list.** (Queue work is
-  P2 and was not approved, so it is not built.)
+- **5 Needs Attention — APPROVED: promote the existing shared filter; no second list.** Built on
+  2026-10-26, when the owner approved the whole P2 block: a fifth segment on Providers, filterable by the
+  three conditions a record can assert, reachable from the Insights card, and asserted by the gate to
+  answer exactly what `networkAttentionList()` answers. No second list was created.
 - **6 Poppins vs Atkinson — APPROVED: keep Atkinson Hyperlegible Next.**
 - **7 Category art — APPROVED: no change until art exists.**
 - **8 "Optimizer" naming — APPROVED and BUILT.** The availability card now states what the switch does;
@@ -635,6 +638,52 @@ nothing. The reason is a comment beside the constant and a paragraph in `CHANGES
 | G10 empty kinds | Every literal empty-state title classified into one of the five kinds, each kind needing a representative, with the call-site count tied to the classified literals plus one *named* expression-titled site — so a new ternary empty state fails the census instead of drifting out of it | `honesty` check; `node tools/falsify-empty-kinds.cjs` |
 | G11 walk method | The procedure is in `DEVICE-PASS.md`: fixed five-step task, one named device, five runs, median with min and max, tap and back counts, a human thumb. **The results table reads `not run`**, because nothing was measured | read the section |
 
+**The §4 matrix re-audited row by row, 2026-10-26.** All **47** concerns were re-read against the current
+file rather than against this document's memory of them. The table's own coverage is now an instrument —
+`node tools/audit-matrix-coverage.cjs`, which prints one line per id and refuses with `NO CONCLUSION`
+rather than summarising a table it failed to parse — and today it reads **47/47 ids present exactly once**
+with the distribution **AR 20 · CD 8 · PR 11 · PD 5 · CV 2 · NA 1**. **20 AR** (each still backed by an
+instrument that runs — a named `honesty`/`machine`/`storage` check, a camera tally, or a probe), **8 CD**
+— G3, G5, G7, R3, R5, P1d, P1h, A3, **all eight now built**, **11 PR** — G4 (closed as already resolved),
+G8 and R9 (both were the numeral half, built), G9 (artwork: owner ruled no change until art exists), R7
+and A9 (built), P1a/A1/A6 (the density metric applied; nothing indicted, so nothing cut), P1c (guarded:
+the gate fails if FSM grows a second job list), A14 (built in this pass, below), **5 PD** — R8 (the
+floating concierge button stays unbuilt, as recommended), A2 (avatar stays), A4 (queue built), A13 (kept,
+honestly labelled), P1e (documented in this pass, below), **2 CV** — G11's number and R10's keyboard, both
+gated on hardware, and **1 NA** — A5's wide-screen sidebar, which the mobile-first sections rule out.
+
+**Three rules had never been executed and were closed in this pass**, each of them an instruction this
+document wrote for itself:
+
+- **A14** asked: *confirm a `priority` source exists; if not, say "unranked" rather than invent one.* No
+  case record carries a priority — `DISPUTES` holds `status`, `reason`, `bookingId`, `openedAt`,
+  `amountInClaimCentavos`, `frozenCentavos`, `evidence`, `resolution` — and the help desk orders open
+  before closed, which is a record state. What was missing was the sentence the row asked for, so the
+  screen now says *"Open cases first, then closed, each in the order it was raised. Nothing here is
+  ranked by urgency…"*, and a `honesty` check asserts both that the caption prints above a list and that
+  no case record grows a priority field while it claims there is none (`node
+  tools/falsify-coherence.cjs`, breaks 7 and 8).
+- **P1e** asked: *document that one session = one role.* `README.md`'s known-limitations list now states
+  the model explicitly — a provider signed in as a resident sees resident screens and none of their own
+  jobs, no dual-role identity exists, and none is implied — instead of leaving the boundary as an
+  implication of the sign-in screen.
+- **§9 rule 6 — *"no notification is invented: the resident sees it in their list, the provider in the
+  request inbox; each entry opens the booking."*** The records, the guards, both answer screens and the
+  flow's falsifier breaks were built; the *lists* were not. A provider with six accepted jobs had to open
+  each one to find the proposal waiting on them — a mechanism with no door. Both booking lists now render
+  a pending-ask card (`rescheduleAskCard`), each row opening the booking the ask was raised against, and a
+  decided ask appears nowhere. Two camera screens (`resident-asks`, `provider-asks`) raise the ask through
+  the app's own submit path and paint the lists, because a fix that has never been painted has never been
+  measured, and three new breaks in `node tools/falsify-reschedule.cjs` prove the check can fail — one of
+  them routing both lists' rows to the provider screen, which is the foreign-id substitution class
+  arriving through an inbox.
+
+One stale present-tense claim in this document was corrected the same day: §15 item 5 still read *"queue
+work is P2 and was not approved, so it is not built"* two sections after the queue landed, and §3's walk
+count read 82 where `--list` prints 86. The lesson is the one `tools/audit-open-items.cjs` exists for:
+**a row that was true when the plan was written becomes a claim about the present the moment the plan is
+implemented.**
+
 **P2 items deliberately not built, and why.**
 
 - **G11's number** — a bench run in Chrome is not a phone, and three handset findings in this repository
@@ -648,10 +697,12 @@ nothing. The reason is a comment beside the constant and a paragraph in `CHANGES
   is buried, which Phase A measured as one screen (the admin's Money), already fixed.
 
 **As printed on the finished build (2026-10-26, after the repair described in `CHANGES.md` §135).**
-`node tools/verify.cjs` → all **638** checks passed · `node tools/shot.cjs --list` → **86** screens ·
+`node tools/verify.cjs` → all **641** checks passed · `node tools/shot.cjs --list` → **88** screens (the
+walk gained `admin-attention` and the two inbox screens `resident-asks` / `provider-asks`) ·
 `node tools/sweep-text-scale.cjs` → **8 of 8** corners, 25 tallies each, all clear ·
-`falsify-figures` **7/7**, `falsify-coherence` **6/6**, `falsify-filter-function` **4/4**,
-`falsify-empty-kinds` **2/2**, `falsify-compat-floor` **7/7**, each with 0 not applied and 0 missed ·
+`falsify-figures` **7/7**, `falsify-coherence` **8/8**, `falsify-filter-function` **4/4**,
+`falsify-empty-kinds` **2/2**, `falsify-compat-floor` **7/7**, `falsify-reschedule` **20/20**, each with
+0 not applied and 0 missed · `audit-camera-dialog-coverage` and `audit-matrix-coverage` → findings: 0 ·
 density: provider dashboard first pressable row **181px** of 1,598px, admin console **121px** (its
 lock/logout pair 2,054px, accepted), Marketplace Intelligence **128px** of 826px — no action buried, so
 no content was cut · `node tools/audit-build-bytes.cjs` → **findings: 0**, four copies at `76338e39…`,

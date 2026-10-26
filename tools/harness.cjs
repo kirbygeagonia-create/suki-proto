@@ -37,9 +37,9 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'CREDENTIALS', 'LISTINGS'
   'categorySupply', 'weeklyBookings', 'providerWeeklyEarnings', 'providerDemandByBarangay', 'weekStart', 'MIN_SHARE_SAMPLE', 'chartShare', 'chartColumns', 'chartBars', 'chartEmpty', 'chartScale', 'chartSummary', 'adminFinanceScreen', 'ageingCard',
   'residentFinished', 'residentPaid', 'bookingTotal', 'residentSpendByService', 'warrantyEndsAt', 'shortDate', 'residentSectionBody',
   'adminProviderMeta', 'credentialState', 'credentialsOf', 'worstCredentialState', 'verifiedProviderList', 'expiringProviderCount', 'bookingsForProvider', 'providerSectionBody', 'adminSectionBody', 'openCasesFor', 'credentialSummaryFor', 'closedJobCount', 'networkSummary',
-  'adminProviderInsights', 'networkAttentionList', 'networkServiceRows', 'networkHealthRows', 'networkFlagSummary',
+  'adminProviderInsights', 'networkAttentionList', 'adminAttentionSection', 'adminDisputes', 'attentionQueue', 'networkServiceRows', 'networkHealthRows', 'networkFlagSummary',
   'PENDING_APPLICANTS', 'APPLICATION_DOCS', 'APPLICATION_DOC_KINDS', 'applicationDocs', 'applicationDocsSubmitted', 'applicationDocsOutstanding', 'applicationDocLabel', 'applicantWaitDays', 'applicantWaitLabel', 'applicantIssue', 'pendingApplicantList', 'reviewOf', 'reviewStatusLine', 'reviewTimeline', 'verificationApplication', 'verificationAction', 'openProviderVerification', 'reopenReview', 'docsOutstanding',
-  'loginHTML', 'AUTH_ROLE_LABEL', 'AUTH_ROLE_ICON', 'ICON_MEANING', 'BOOKING_GROUPS', 'ATTENTION_KINDS', 'attentionQueue', 'DEMO_LOGIN',
+  'loginHTML', 'AUTH_ROLE_LABEL', 'AUTH_ROLE_ICON', 'ICON_MEANING', 'BOOKING_GROUPS', 'ATTENTION_KINDS', 'attentionQueue', 'rescheduleAskCard', 'pendingRescheduleAsks', 'DEMO_LOGIN',
   /* Added after the audit: the guards, the money readers and the case door were
      unreachable from the suite, which is exactly how a severed entry point could
      render beautifully and still pass every check. */
@@ -95,7 +95,7 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'CREDENTIALS', 'LISTINGS'
   /* the operator's view of the pilot */
   'adminMarketplaceIntelligence', 'adminCategories', 'intelligenceStats', 'bookingsInWindow',
   'ADMIN_PRICING_WORDS', 'ADMIN_CAPABILITY_WORDS', 'ADMIN_SAFETY_WORDS',
-  'residentResults', 'residentProviderDetail', 'providerBookings', 'providerDashboard', 'providerFSM',
+  'residentResults', 'residentProviderDetail', 'residentBookings', 'providerBookings', 'providerDashboard', 'providerFSM',
   'openBookingRequest', 'submitBookingRequest', 'openProviderBooking', 'findProviderBooking',
   /* the reschedule flow: a proposal is a record, so the gate drives the real handlers and reads
      the booking back rather than trusting that a button was wired. */
@@ -232,6 +232,15 @@ function makeChecker() {
          and nine mutants walked through them. Fail loudly instead. */
       if (typeof cond === 'function') {
         throw new Error('check("' + label + '") was handed a function, not a verdict — invoke the body');
+      }
+      /* The same trap one shape over, found on 2026-10-26: a check whose condition is an IIFE returning
+         `{ ok, why }` is handed an OBJECT, and `!!{}` is true forever — the inbox check printed PASS
+         while all three of its falsifier breaks reported MISSED, twice over, through two rewrites.
+         `verdict(label, probe)` exists to unwrap that pair; a bare `check` has no business receiving
+         one. An array is rejected for the same reason: `!![]` is true, empty or not. */
+      if (cond !== null && typeof cond === 'object') {
+        throw new Error('check("' + label + '") was handed an object, not a verdict — ' +
+          'use verdict(label, {ok, why}) or pass a boolean');
       }
       results.push({ label, ok: !!cond, extra });
       console.log(`${cond ? 'PASS' : 'FAIL'}  ${label}${cond ? '' : '   ' + (extra || '')}`);

@@ -8364,3 +8364,126 @@ button on the contact block is pre-existing (it wraps identically in both), and 
 put the payment-record card directly under the figures grid with nothing naming either — the grouping the
 brief asked for was missing in a way a source grep could not have shown, since every fact was present and
 correct in both pictures.
+
+
+## 136. Re-reading the plan's own 47-row audit found two rows whose fixes had never been executed
+
+Asked whether everything in the Markdown plan is implemented, the honest method was not to re-read §17 —
+which is this repository's own account of what it did — but to re-read all **47** rows of §4's matrix
+against the code. The distribution, now printed by an instrument rather than counted in prose: **AR 20 ·
+CD 8 · PR 11 · PD 5 · CV 2 · NA 1**, with every id present exactly once. All eight CD rows are built; the
+PD rows are all ruled and recorded in §15; the two CV rows are gated on hardware. **Two rows' fixes had
+never been done**, and both were instructions the plan wrote for itself:
+
+- **A14 — *"confirm a `priority` source exists; if not, say 'unranked' rather than invent one."*** The
+  records carry no priority: a case holds `status`, `reason`, `bookingId`, `openedAt`,
+  `amountInClaimCentavos`, `frozenCentavos`, `evidence`, `resolution`. The help desk orders open before
+  closed, which is a record state, and it said nothing about the basis. Now it says
+  *"Open cases first, then closed, each in the order it was raised. Nothing here is ranked by urgency…"*,
+  and a `honesty` check asserts the caption prints above a list, stays off an empty one, and that no
+  priority field ever arrives on the builder while the sentence claims there is none.
+- **P1e — *"document that one session = one role."*** Nothing did. `README.md`'s known-limitations list
+  now states the model and the reason for it: a provider signed in as a resident sees resident screens
+  and none of their own jobs, there is no dual-role identity, and the brief leaves "which bookings may a
+  provider see" open, so the prototype keeps the sessions separate rather than inventing a merge a later
+  authorisation model would have to undo.
+
+**The break that caught the check, again.** The A14 check first asserted that no record in `DISPUTES`
+carries a priority — and `DISPUTES` is seeded **empty on purpose**, because a sample case would be a
+written record of a complaint nobody raised. `some()` over an empty array cannot fail, so the family's new
+break (typing `priority: 'High'` into `openDispute`) printed **MISSED** while the check reported clean.
+That is the same class this file has named several times, arriving the same way: a green family and a
+column nobody read. The assertion now scans the builder's own text, with a positive control that the scan
+found the function at all (1,368 characters, `status: 'open'` present), and the break reads CAUGHT.
+
+**A countability claim in a plan is a claim, so it got an instrument.** §4 says the brief's §13 holds 47
+bullets and the matrix carries 47 rows. Nothing had ever checked that: a row deleted in an edit, an id
+skipped (G9 then G11), or a class cell emptied would have left the sentence standing while the table
+quietly stopped covering the brief. `node tools/audit-matrix-coverage.cjs` prints one line per id, the
+family totals and the class distribution, and **refuses with `NO CONCLUSION`** rather than summarising a
+table it failed to parse — the same shape as every other audit here, because a scan that matched nothing
+and a table that is genuinely complete must not print the same sentence.
+
+**Four present-tense sentences the re-read found stale, corrected rather than left.** §15 item 5 still
+read *"queue work is P2 and was not approved, so it is not built"* two sections after the queue landed;
+§3's walk count read 82 where `--list` prints 86; README said the staged bytes *"went out as
+`1.2-preview.39` and were read on two handsets"* when the staged file is now `preview.41` and has been run
+on nothing; and README still offered `md5sum` on two files as the four-copy check, which is now the
+instrument named `audit-build-bytes`. The lesson is the one `tools/audit-open-items.cjs` exists for and
+this pass re-learned from the other direction: **a sentence that was true when the plan was written
+becomes a false claim about the present the moment the plan is implemented**, and the correction is a
+dated pointer, not a quiet rewrite.
+
+**The third thing the re-read found was not a stale sentence but a missing door.** §9's rule 6 says a
+proposal reaches the resident's list and the provider's request inbox, and each entry opens the booking.
+The records, the guards, both answer screens and every break in the reschedule family were built — and no
+list rendered an ask, so a provider with six accepted jobs had to open each one to find the proposal
+waiting on them. That is the same defect as a stat strip counting six flagged providers with no list
+behind them, and it survived because **every check in the suite asked what happens *inside* the flow and
+none asked how a person gets into it**. Both booking lists now paint a pending-ask card whose rows open
+the booking the ask was raised against, a decided ask appears nowhere, and three new breaks prove it — one
+deleting the card, one dropping the status filter so an answered proposal keeps asking, and one routing
+both lists' rows to the provider screen, which is the foreign-id substitution class arriving through an
+inbox.
+
+**A camera row that depends on a clean slate is a row that only works first.** The two screens written to
+paint those lists (`resident-asks`, `provider-asks`) each call the app's own submit path — deliberately,
+because a setup that pushes a record measures a state nobody can produce. The first row passed; the second
+produced no screenshot at all, and the reason was one of the flow's own rules: the app **refuses a second
+proposal while one is waiting**, so no draft was armed and the next line reached for
+`state.rescheduleDraft.dayIdx` on a null draft. Both rows now ask `pendingReschedule(bookingId)` first and
+reuse whatever is already on the record, which is what lets each of them work in any order and under
+`--only=`. The general form: **a camera row's setup must be idempotent, because the walk's order is not
+part of its contract.**
+
+**A check that could not fail, found by its own breaks refusing to fire — and the cause was the checker.**
+The inbox check was rewritten once already (the first version asserted that the rendered booking *list*
+contained the heading and the opener call, which a booking list satisfies by existing), and the second
+version, reading the card's own markup, *still* passed under all three breaks. Measured rather than
+argued: forcing the check's own `ok` to `false` printed **PASS**. The condition handed to `c.check` was the
+**object** `{ ok, why }` returned by the IIFE, and `makeChecker` coerces its condition with `!!` — an
+object is always truthy, empty or not. `verdict(label, probe)` exists precisely to unwrap that pair; the
+check had been written in `verdict`'s shape but called through `check`, so it could never fail, and the
+gate's own PASS line was the evidence a green column would have trusted. **The harness now throws when a
+check is handed an object**, beside the guard that already refuses a function — the 2026-10-13 lesson
+arriving one shape over, six years of checks later, in code written this session.
+
+Two further things the fix exposed, both real and both now asserted: the behavioural half also depended
+on *which* asks were on the books when the suite reached it — earlier checks leave a genuine pending
+proposal, so the card held two rows and the heading was chosen by the leftover — so each phase now runs
+against an emptied list and restores the device's own records afterwards. And a shape half was added
+beside it, reading the two list functions' bodies to require each calls the card, requiring the filter to
+test `status === 'pending'`, and requiring the opener to be chosen by role rather than hardcoded, with a
+positive control that each function body was found at all. With those three changes the family reads
+**20 of 20 breaks caught, 0 not applied** — including the three that had printed MISSED twice.
+
+**A `git checkout --` destroyed the day's uncommitted page work, and this is the entry that records it.**
+While diagnosing the above, a scratch experiment wrote a mutant into `Sukinnect-next.html` and cleaned up
+after itself with `git checkout -- Sukinnect-next.html`. That restores the last *commit*, so it removed the
+mutant and, with it, the uncommitted work of the session: the help-desk caption, both inbox functions and
+both list insertions. All three were re-applied from this conversation, and the re-application is why the
+family had to be run again from a clean baseline. The repo's own documented recovery — save the bytes,
+`git checkout --`, re-run the gate — is written for a file that is clean except for a killed mutant, and
+that precondition was never checked. **In a tree with uncommitted work, restore from a copy taken inside
+the same script; `checkout` is for committed states only.**
+
+**What is genuinely still not implemented, with the reason for each.** G9's category artwork (P3 — the
+owner ruled no change until real art exists, and the seven tiles are static PNGs with three checks proving
+they never move); A5's wide-screen sidebar (P3, and §36/§91 make the app mobile-first); R8's floating
+concierge button (ruled no: a FAB is the control a keyboard buries, and R10 is unresolved for exactly that
+reason); A2's admin header avatar (ruled leave until the wide-screen question); G11's 1–3 minute number and
+R10's keyboard behaviour (both need a handset; the method is written and its table reads `not run`); and
+the full `falsify-all` aggregate, which this pass again did not re-run — the families it could have
+orphaned were run individually, and the rest of the suite is owed its next pass.
+
+**As printed at the end of this pass.** `node tools/verify.cjs` → **all 641 checks passed** (639 before the
+inbox work, and the count moved once the harness began refusing an object verdict); `node
+tools/shot.cjs --list` → **88 screens** (`resident-asks`, `provider-asks` joined the walk); `node
+tools/sweep-text-scale.cjs` → **8 of 8 corners, 25 tallies each, all clear** with the inbox card and the
+help-desk caption painted; `node tools/falsify-reschedule.cjs` → **20 of 20 breaks caught, 0 not applied**;
+`node tools/falsify-coherence.cjs` → **8 of 8**; `node tools/audit-camera-dialog-coverage.cjs` →
+**findings: 0**; `node tools/audit-matrix-coverage.cjs` → **47/47 ids, findings: 0**. The shell was
+re-staged and rebuilt as `versionCode 44 / 1.2-preview.42`, and `node tools/audit-build-bytes.cjs` reads
+**findings: 0** with all four copies at `d7725e4a…`. Nothing was installed on a device and nothing was
+pushed.
+

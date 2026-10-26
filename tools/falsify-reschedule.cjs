@@ -109,6 +109,20 @@ const BREAKS = [
     check: 'an answer whose schedule has moved on is refused',
     from: "    r.status = 'stale';",
     to: "    r.status = 'pending';" },
+  /* The three entry-point breaks. §9's rule 6 was the one the whole suite missed — every other check
+     asks what happens inside the flow, so an unrendered inbox passed 17 breaks untouched. */
+  { name: 'the provider list stops rendering the pending proposals at all',
+    check: 'a pending proposal reaches both booking lists, and a decided one reaches neither',
+    from: "    ${rescheduleAskCard('provider')}",
+    to: '    ' },
+  { name: 'the inbox stops filtering on status, so an answered proposal keeps asking',
+    check: 'a pending proposal reaches both booking lists, and a decided one reaches neither',
+    from: "    .filter(r => r.status === 'pending' && visible.indexOf(r.bookingId) >= 0)",
+    to: '    .filter(r => visible.indexOf(r.bookingId) >= 0)' },
+  { name: 'both lists route their rows to the provider screen, so a resident lands on a job that is not theirs',
+    check: 'a pending proposal reaches both booking lists, and a decided one reaches neither',
+    from: "  const opener = viewer === 'provider' ? 'openProviderBooking' : 'openBookingDetail';",
+    to: "  const opener = 'openProviderBooking';" },
 ];
 
 function gateOutput() {

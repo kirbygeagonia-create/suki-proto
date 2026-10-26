@@ -1267,7 +1267,7 @@ official mark is a PNG, not an icon, and it is still the only brand image on the
 The rebuild also added a real verification surface, because reading the file cannot
 see a layout: `node tools/shot.cjs` drives the machine's own Chrome headless over the
 DevTools Protocol with no npm packages, and `--measure` runs an in-page instrument
-across every screen in the walk (86 as of the P2 coherence sweep, which added the attention queue; `node tools/shot.cjs --list` is the count) for tap
+across every screen in the walk (88 as of the re-audit that added the two inbox screens; `node tools/shot.cjs --list` is the count) for tap
 targets, WCAG contrast (sampling gradients at the text's
 own position), clipped text, off-scale fonts, content trapped under the nav, unnamed
 controls, form fields a screen reader cannot name, images that asked for a file and got no
@@ -3446,6 +3446,38 @@ unanswered request has no agreed time to move. Recorded, not smoothed over.
 that moves the appointment while the message says it did not), and the two structural breaks — the
 event writer ignoring the handed instant, the timeline printing the label — exist because a behavioural
 check cannot pin a race that usually does not happen.
+
+A FLOW THAT WORKS ONLY IF YOU ALREADY KNOW WHERE TO LOOK IS HALF BUILT. Re-reading the plan's own audit
+matrix a day after the reschedule flow shipped found that rule 6 of §9 — "the resident sees it in their
+list, the provider in the request inbox; each entry opens the booking" — had never been implemented. Every
+check in the `reschedule` suite asked what happens *inside* the flow; none asked how a person
+*gets into* it. So a provider with six accepted jobs had to open each one to discover which carried a
+proposal, which is the same defect as a stat strip that counts six flagged providers with no list behind
+it: the mechanism existed and the door did not. Both booking lists now render the pending asks, each row
+opening the booking it was raised against, and the check reads the rendered lists with a fixture pushed
+inside the test (the seed ships an empty request set on purpose, so a scan of the seed could not have
+found this) and asserts a decided ask appears nowhere. **When a flow is added, audit its entry points the
+same way as its guards.**
+
+That check was vacuous twice, and its own three breaks are what said so — all three printed MISSED while
+the check reported clean. The first version asserted that the rendered booking *list* contained the
+heading and `openBookingDetail('b3')`; a booking list contains that call on every row, so **the page
+satisfied the assertion by being a booking list.** The second version read the card's own markup and still
+passed, and the real cause was the checker: the condition handed to `c.check` was the object
+`{ ok, why }` returned by the IIFE, and the checker coerces with `!!`, so an object is truthy forever.
+`verdict(label, probe)` exists to unwrap that pair — the check was written in `verdict`'s shape and called
+through `check`. **`makeChecker` now throws on an object condition beside the function guard it already
+had**, which is the 2026-10-13 lesson arriving one shape over in code written months later. Only forcing
+`ok: false` by hand and watching it print PASS settled the question; the check's own green line had been
+the evidence, and it was worth nothing.
+
+Two more findings from the same minute: each phase of a behavioural check has to own the world it asserts
+about — earlier checks leave a real pending ask on the books, so the card held two rows and a heading
+chosen by the leftover — so the phases empty the list and restore it; and a camera row that submits
+through the app's own path must be idempotent, because the flow refuses a second proposal while one is
+waiting and the next line then reached for a null draft, so the row produced no screenshot at all —
+**the walk's order is not part of a row's contract**. And an inbox filtered by *who raised* the ask hides
+a provider's own open question from them, so it filters by whose job it is.
 
 A SCHEMA BUMP IS FOR AN AMBIGUITY, NOT FOR A NEW KEY. The approved plan said this feature would move
 `SCHEMA_VERSION`; it does not. A v16 dump simply has no `rescheduleRequests` key, and an absent key

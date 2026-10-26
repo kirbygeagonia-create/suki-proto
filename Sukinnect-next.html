@@ -6864,6 +6864,42 @@ const RESCHEDULE_REQUESTS = [];
 function reschedulable(b){ return !!b && b.status === 'upcoming'; }
 function rescheduleBooking(bookingId){ return BOOKINGS.find(b => b.id === bookingId) || null; }
 function rescheduleHistory(bookingId){ return RESCHEDULE_REQUESTS.filter(r => r.bookingId === bookingId); }
+/* §9's rule 6: the resident sees a proposal in their list, the provider in theirs, and each entry opens
+   the booking it was raised against. The guards, the answer screens and the record were all built and
+   checked — and none of that mattered for a provider with six accepted jobs, who had to open each one to
+   find out which carried an ask. A mechanism with no door is the same defect as a count with no list
+   beside it, so the asks are rendered where each side already looks. */
+function pendingRescheduleAsks(viewer){
+  /* Whose job it is decides who sees it — not who raised it. A provider who proposed a new hour still has
+     an open question on their own job, and hiding it from them because they are the proposer would put
+     the answer's waiting room back to "open each booking and find out". */
+  const visible = (viewer === 'provider' ? bookingsForProvider() : bookingsForResident()).map(b => b.id);
+  return RESCHEDULE_REQUESTS
+    .filter(r => r.status === 'pending' && visible.indexOf(r.bookingId) >= 0)
+    .map(r => ({ request: r, booking: rescheduleBooking(r.bookingId), mine: r.raisedBy === viewer }));
+}
+function rescheduleAskCard(viewer){
+  const asks = pendingRescheduleAsks(viewer);
+  if (!asks.length) return '';
+  const opener = viewer === 'provider' ? 'openProviderBooking' : 'openBookingDetail';
+  const yours = asks.filter(a => !a.mine).length;
+  const heading = yours ? 'Waiting for your answer'
+    : (viewer === 'provider' ? 'Waiting for the resident to answer' : 'Waiting for the provider to answer');
+  return `<div class="card" data-reschedule-asks="${asks.length}" style="margin-bottom:12px;">
+    <div class="row" style="margin-bottom:6px;">
+      <b class="card-title">${heading}</b>
+      <span class="chip">${asks.length} proposal${asks.length === 1 ? '' : 's'}</span>
+    </div>
+    ${asks.map(a => `<button type="button" class="job-row" onclick="${opener}('${a.booking.id}')">
+      <span style="min-width:0; flex:1;">
+        <span class="jr-t">${esc(a.booking.summary || a.booking.request || 'A booked job')}</span>
+        <span class="jr-s">Proposed ${esc(a.request.date)} at ${esc(a.request.time)} · the current time stays ${esc(a.request.fromDate)}, ${esc(a.request.fromTime)} ${a.mine ? (viewer === 'provider' ? 'until the resident answers' : 'until the provider answers') : 'until you answer'}</span>
+      </span>
+      <span class="jr-time">Open</span>
+    </button>`).join('')}
+    <div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px;">Nothing changes about a job until the answer is given — opening one of these is where the decision is made.</div>
+  </div>`;
+}
 function pendingReschedule(bookingId){
   return RESCHEDULE_REQUESTS.find(r => r.bookingId === bookingId && r.status === 'pending') || null;
 }
@@ -9693,6 +9729,7 @@ function residentBookings(){
       <button class="seg-btn ${filter==='completed'?'on':''}" onclick="state.bookingFilter='completed'; render();">Completed</button>
       <button class="seg-btn ${filter==='cancelled'?'on':''}" onclick="state.bookingFilter='cancelled'; render();">Cancelled</button>
     </div>
+    ${rescheduleAskCard('resident')}
 
     ${filtered.length === 0 ? bookingListEmpty(filter, 'resident') : ''}
 
@@ -10735,6 +10772,7 @@ function adminDisputes(){  const open = DISPUTES.filter(d => caseIsOpen(d));
   return `
   <div class="topbar"><div class="hb"><div><h1>Help desk</h1><div class="sub">${open.length} reading, ${closed.length} closed</div></div></div></div>
   <div class="pad" style="background:var(--cloud);">
+    ${open.length + closed.length ? `<div style="font-size:var(--t-caption); color:var(--mist); margin-bottom:10px;">Open cases first, then closed, each in the order it was raised. Nothing here is ranked by urgency: a case record carries a reason, an amount, a date and its evidence, and no field says which one matters more.</div>` : ''}
     ${open.map(disputeCard).join('')}
     ${closed.length ? `<h3 style="font-size:var(--t-body); margin:20px 0 8px;">Closed</h3>${closed.map(disputeCard).join('')}` : ''}
     ${DISPUTES.length ? '' : emptyState('scale', 'Nothing to review', 'A case is raised against a completed booking. When one exists, its timeline, the money held and the outcomes appear here.', { id:'helpdesk-roster-btn', label:'Look at the roster' })}
@@ -12144,6 +12182,7 @@ function providerBookings(){
         <button class="seg-btn ${filter === status ? 'on' : ''}"${status === 'requested' && waiting ? ' aria-label="Requested, ' + waiting + ' waiting for you"' : ''} onclick="state.providerBookingFilter='${status}'; render();">${status === 'all' ? 'All' : label(status)}${status === 'requested' && waiting ? ' (' + waiting + ')' : ''}</button>
       `).join('')}
     </div>
+    ${rescheduleAskCard('provider')}
     ${filtered.length === 0 ? bookingListEmpty(filter, 'provider') : filtered.map(b => `
       <div class="card" data-provider-booking-id="${b.id}" style="cursor:pointer; border-radius:14px; padding:14px; margin-bottom:12px; border:1px solid var(--line); background:var(--surface);">
         <div class="row" style="align-items:flex-start; margin-bottom:8px;">

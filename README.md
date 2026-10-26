@@ -371,7 +371,10 @@ is refused and retired as no longer current instead of overwriting that change. 
 proposing side never sees an accept button on its own request, one proposal at a time is allowed per
 booking, and an unknown booking id resolves to nothing rather than to the first job in the table.
 Requests and decisions survive a reload; the record family is additive, so `SCHEMA_VERSION` stayed
-where it was.
+where it was. Neither side has to hunt for an open question: **both booking lists carry a pending card**
+— a provider sees "Waiting for your answer", the resident sees the same proposal marked as waiting for the
+provider, and each row opens the booking it was raised against. The card reads the same records the detail
+screen reads, so it cannot disagree with them, and an answered proposal disappears from both.
 
 ## Legal drafts and the acceptance record
 
@@ -439,7 +442,11 @@ To swap an image, replace the file and keep the name. To add a trade, add a row 
 ## Known limitations
 
 - No authentication: role is chosen on a demo sign-in screen and there is no session, so
-  nothing enforces a boundary between roles.
+  nothing enforces a boundary between roles. **One session is one role, deliberately.** A provider who
+  signs in as a resident sees resident screens and nothing of their own jobs, and the reverse holds too;
+  there is no dual-role identity in this build and none is implied anywhere in it. The brief lists "which
+  bookings may a provider see" as an open product question, so the prototype keeps the sessions separate
+  rather than inventing a merge that a later authorisation model would have to undo.
 - No server, so nothing runs while the app is closed — due transitions (a lapsed request, an
   auto-confirmed completion) are evaluated on open, with their real timestamps.
 - Storage can be unavailable (`file://` on some browsers, private windows), can refuse a write
@@ -451,9 +458,10 @@ To swap an image, replace the file and keep the name. To add a trade, add a row 
 - `Sukinnect-Android/app/src/main/assets/` holds a **separate copy** of the web files. Any
   accepted change must be re-synced there before it reaches a device build. It currently holds the
   rebuild — `assets/Sukinnect.html` carries the same bytes as `Sukinnect-next.html`, and
-  `md5sum` on both answering one hash is the whole check — staged under the name the shell loads, and
-  those bytes went out as `1.2-preview.39` and were read on **two** handsets (the OPPO CPH2179 at 320 CSS px
-  and the vivo 1906 at 450). The comparison is now an instrument rather than a habit:
+  `node tools/audit-build-bytes.cjs` is the check — staged under the name the shell loads, and those bytes
+  went out as `1.2-preview.41`. **`preview.41` has been installed on nothing**: the last build read on real
+  handsets was `preview.39`, on the OPPO CPH2179 at 320 CSS px and the vivo 1906 at 450. The comparison is
+  now an instrument rather than a habit:
   `node tools/audit-build-bytes.cjs` prints one row per copy — source, `dist/`, staged asset, and the file
   extracted back out of the built APK — reports `findings: N` when they disagree, and **refuses** with
   `NO CONCLUSION` when an artifact cannot be read or fewer than four were compared. See

@@ -2223,9 +2223,15 @@ focused. Attach a **fresh** process to DevTools, never a resumed one.
 rebuilt, and `cmd.exe //c "gradlew.bat assembleDebug"` produced
 `Sukinnect-1.2-preview.41-debug.apk` in 7s. `node tools/audit-build-bytes.cjs` reads **findings: 0**,
 all four copies at `76338e39…`. Nothing was installed: the owed reading is still this leg's, and a
-build that runs on no phone proves only that it builds. Install `.41`, not `.40`, when a device arrives —
-and read the version from `dumpsys package`, because a version string is the only way to tell two builds
-apart that share bytes.
+build that runs on no phone proves only that it builds.
+
+**Superseded again the same day by `1.2-preview.42` (`versionCode 44`), 2026-10-26.** The re-audit of the
+plan's own matrix (CHANGES §136) added the help-desk wording, the role-session documentation and the
+pending-proposal inbox to both booking lists. Asset re-copied with `cmp`, `dist/` rebuilt, build 7s,
+`node tools/audit-build-bytes.cjs` → **findings: 0** with all four copies at `d7725e4a…`. **Install `.42`,
+not `.41` or `.40`**, when a device arrives, and read the version back from `dumpsys package
+com.sukinnect.app` rather than from this file: three builds now carry the same bytes-in-name only if a
+reader trusts a filename, and the version pair is the sole thing that tells them apart on a phone.
 
 ## The browse → review → book walk (G11) — the method, armed and not yet run
 

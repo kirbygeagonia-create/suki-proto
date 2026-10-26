@@ -3727,6 +3727,46 @@ suite('honesty', async () => {
       ' · label positions ' + JSON.stringify(positions) +
       ' · a requested job already promises ' + JSON.stringify(premature));
 
+  /* A14: §13 asks the help desk to work around status, priority, summary, linked booking, history and a
+     next action. Five of the six are records — a case carries `status`, `reason`, `bookingId`,
+     `openedAt`/`resolvedAt` and an evidence list, and the card links the booking and shows the money the
+     books froze. The sixth, priority, is the one the records do NOT carry, so the screen says so instead
+     of ordering by a field nobody owns: the plan's own instruction for this row was "if no priority
+     source exists, say unranked rather than invent one". Both halves are asserted, and the fixture is
+     built inside the check because the seed ships an empty case list — a render of nothing would let the
+     caption check pass by never running. */
+  verdict('the help desk orders by case state and names the absence of a priority rather than inventing one', (() => {
+    const before = app.DISPUTES.length;
+    const empty = String(app.adminDisputes());
+    app.DISPUTES.push({ id: 'ZZ-audit-fixture', bookingId: (app.BOOKINGS[0] || {}).id,
+      openedBy: 'customer', reason: 'an audit fixture, not a real case', amountInClaimCentavos: 0,
+      frozenCentavos: 0, status: 'open', openedAt: new Date().toISOString(),
+      evidence: [], resolution: null, resolvedAt: null });
+    let painted = '';
+    try { painted = String(app.adminDisputes()); }
+    finally { app.DISPUTES.length = before; }
+    /* The record-shape half has to read the BUILDER, not the list. `DISPUTES` is seeded empty on
+       purpose — a sample case would be a written record of a complaint nobody raised — so
+       `DISPUTES.some(d => d.priority)` cannot fail on the seed no matter what the code writes, which is
+       exactly what its own falsifier caught: the break that types `priority: 'High'` into
+       `openDispute` printed MISSED while this check reported clean. The builder's own text is the
+       evidence now, with a positive control that the scan found the function at all. */
+    const NL = String.fromCharCode(10);
+    const builder = (app._source.match(new RegExp('function openDispute\\([\\s\\S]{0,1800}?' + NL + '\\}')) || [''])[0];
+    const invented = /(priority|urgency|severity|rank)\s*:/.test(builder) ||
+      app.DISPUTES.some(d => d.priority || d.urgency || d.severity || d.rank);
+    const saysIt = /Nothing here is ranked by urgency/.test(painted) &&
+      /Open cases first, then closed/.test(painted);
+    /* The "caption stays off an empty list" half only applies when the list really is empty — on a
+       device that has raised its own cases the caption is correct and must still print. */
+    return { ok: saysIt && !invented && builder.includes("status: 'open'") &&
+        (before > 0 || !empty.includes('Nothing here is ranked')),
+      why: !saysIt ? 'the screen orders cases without saying on what basis'
+        : !builder.includes("status: 'open'") ? 'the case builder was not found, so the shape scan is blind'
+        : invented ? 'a case record carries a priority field, so the caption is now false'
+        : 'the caption prints above a list with nothing in it' };
+  })());
+
   /* G10: §10 asks for five *distinct* empty states, and this build already paints all five — but it
      paints them because twenty-two separate calls happened to word themselves differently, not because
      anything says which kind a screen is answering. The distinction is the point: "No bookings yet" and
@@ -5496,6 +5536,119 @@ suite('reschedule', async () => {
       && (b6.date !== b6Was.date || b6.time !== b6Was.time),
     'booking ' + b6.date + ' ' + b6.time + ' vs asked ' + r6.date + ' ' + r6.time);
 
+  /* §9's rule 6: "the resident sees it in their list, the provider in the request inbox; each entry
+     opens the booking." The records, the guards and both answer screens were built with 17 breaks to
+     prove them; the lists were not, and no check noticed, because every check asked what happens inside
+     the flow. So the card is asserted here — on both sides, from the card's own markup — and both lists
+     are asked only whether they carry it. A fixture is pushed because the seed ships an empty request
+     set on purpose: a sample proposal would record an agreement nobody proposed. */
+  c.check('a pending proposal reaches both booking lists, and a decided one reaches neither', (() => {
+    /* One side at a time, because the demo provider and the demo resident do not share a booking at
+       every stage: the first version pushed one ask and asserted it on both lists, so the provider
+       card rendered empty (its booking belongs to a provider whose identity this device cannot even
+       switch to — `applyProviderIdentity` falls back to p1 for anybody without a demo profile) and
+       every assertion about the other side's markup still held. A check that passes because a
+       different screen contains a similar string is not a check, which is what all three of its
+       falsifier breaks printing MISSED said. */
+    const providerJob = app.bookingsForProvider().find(b => b.status === 'upcoming');
+    const residentJob = app.bookingsForResident().find(b => b.status === 'upcoming');
+    if (!providerJob || !residentJob)
+      return { ok: false, why: 'one side has no movable booking, so its inbox cannot be exercised' };
+    const ask = (booking, raisedBy, status) => ({ id: 'rs-gate-' + raisedBy, bookingId: booking.id,
+      raisedBy, date: 'Mon', time: '9:00 AM', fromDate: booking.date, fromTime: booking.time,
+      reason: null, status: status || 'pending', createdAt: Date.now(),
+      decidedAt: status ? Date.now() : null, decidedBy: status ? 'gate' : null });
+    const read = () => {
+      app.state.view = 'app'; app.state.role = 'provider';
+      const providerCard = String(app.rescheduleAskCard('provider'));
+      const providerList = String(app.providerBookings());
+      app.state.role = 'resident';
+      return { providerCard, providerList,
+        residentCard: String(app.rescheduleAskCard('resident')),
+        residentList: String(app.residentBookings()) };
+    };
+    /* Each phase runs against an EMPTY ask list and puts the device's own records back afterwards. The
+       first version only restored the length it found at the start, and the suite is not the first
+       visitor: earlier checks leave a real pending ask on the books, so the card held two rows, the
+       heading was chosen by the leftover, and the phase that expected nothing expected it of a list that
+       was not empty. A behavioural check must own the world it asserts about. */
+    const savedAsks = app.RESCHEDULE_REQUESTS.slice();
+    const phase = (fixture, fn) => {
+      app.RESCHEDULE_REQUESTS.length = 0;
+      if (fixture) app.RESCHEDULE_REQUESTS.push(fixture);
+      let out = null;
+      try { out = read(); }
+      finally {
+        app.RESCHEDULE_REQUESTS.length = 0;
+        savedAsks.forEach(r => app.RESCHEDULE_REQUESTS.push(r));
+      }
+      return fn(out);
+    };
+    const problems = [];
+    /* Phase 1: an ask raised by a resident has to reach the provider as the provider's own decision. */
+    problems.push.apply(problems, phase(ask(providerJob, 'resident'), r => {
+      const p = [];
+      if (!/data-reschedule-asks="1"/.test(r.providerCard)) p.push('the provider card does not render the ask');
+      if (!/Waiting for your answer/.test(r.providerCard)) p.push('the provider card does not say the answer is theirs');
+      if (r.providerCard.indexOf("openProviderBooking('" + providerJob.id + "')") < 0)
+        p.push('the provider row does not open ' + providerJob.id);
+      if (r.providerCard.indexOf('until you answer') < 0) p.push('the provider card does not say what stays unchanged');
+      if (r.providerList.indexOf('data-reschedule-asks=') < 0) p.push('the provider list does not carry the card');
+      return p;
+    }));
+    /* Phase 2: the same kind of ask raised by a provider has to reach the resident, worded the other
+       way round, and a decided one has to disappear from both. */
+    problems.push.apply(problems, phase(ask(residentJob, 'provider'), r => {
+      const p = [];
+      if (!/Waiting for your answer/.test(r.residentCard)) p.push('the resident card does not say the answer is theirs');
+      if (r.residentCard.indexOf("openBookingDetail('" + residentJob.id + "')") < 0)
+        p.push('the resident row does not open ' + residentJob.id);
+      if (r.residentCard.indexOf('until you answer') < 0) p.push('the resident card does not say what stays unchanged');
+      if (r.residentList.indexOf('data-reschedule-asks=') < 0) p.push('the resident list does not carry the card');
+      return p;
+    }));
+    problems.push.apply(problems, phase(ask(residentJob, 'resident'), r => {
+      const p = [];
+      if (!/Waiting for the provider to answer/.test(r.residentCard)) p.push('an ask the resident raised is not marked as waiting on the provider');
+      if (r.residentCard.indexOf('until the provider answers') < 0) p.push('the waiting-on-them wording is missing');
+      return p;
+    }));
+    problems.push.apply(problems, phase(ask(residentJob, 'resident', 'accepted'), r => {
+      const p = [];
+      if (r.residentCard.trim() !== '' || r.providerCard.trim() !== '') p.push('a decided proposal still renders a card');
+      if (r.residentList.indexOf('data-reschedule-asks=') >= 0 || r.providerList.indexOf('data-reschedule-asks=') >= 0)
+        p.push('a decided proposal still prints in a list');
+      return p;
+    }));
+    /* The shape half. The behavioural half above depends on which booking each list happens to be able
+       to see at the moment the suite reaches it — earlier suites move bookings through the machine — and
+       that is not a stable premise: three falsifier breaks printed MISSED while every assertion above
+       held, so the check was reading a state rather than the rule. A list function that never calls the
+       card cannot render it on any state, so that is asserted directly, with a positive control that
+       each function body was found at all. */
+    const bodyOf = name => {
+      const i = app._source.indexOf('function ' + name + '(');
+      if (i < 0) return '';
+      const j = app._source.indexOf('\n}', i);
+      return j < 0 ? '' : app._source.slice(i, j);
+    };
+    const pBody = bodyOf('providerBookings'), rBody = bodyOf('residentBookings');
+    const askBody = bodyOf('pendingRescheduleAsks'), cardBody = bodyOf('rescheduleAskCard');
+    if (!pBody || !rBody || !askBody || !cardBody) problems.push('a function the inbox needs could not be read, so the shape scan is blind');
+    if (pBody && pBody.indexOf("rescheduleAskCard('provider')") < 0) problems.push('the provider list does not call the inbox card at all');
+    if (rBody && rBody.indexOf("rescheduleAskCard('resident')") < 0) problems.push('the resident list does not call the inbox card at all');
+    if (askBody && !/r\.status === 'pending'/.test(askBody)) problems.push('the inbox does not filter on the ask still being open');
+    if (cardBody && cardBody.indexOf("viewer === 'provider' ? 'openProviderBooking' : 'openBookingDetail'") < 0)
+      problems.push('one opener is hardcoded, so a row can route to the wrong person');
+    const okInbox = !problems.length;
+    return c.check('a pending proposal reaches both booking lists, and a decided one reaches neither',
+      okInbox, problems.join(' · ') ||
+        'provider sees ' + providerJob.id + ', resident sees ' + residentJob.id + ', and a decided one is nowhere');
+    /* The shape of this call is the lesson. The first version returned `{ ok, why }` from the IIFE into
+       `c.check`, and the checker coerces its condition with `!!` — an object is always truthy, so the
+       check could not fail no matter what the page did. That is the same trap this file recorded for a
+       function handed without its parentheses, arriving one shape over: an object is not a verdict. */
+  })());
   return c;
 });
 

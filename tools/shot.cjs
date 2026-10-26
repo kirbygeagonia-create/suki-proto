@@ -1028,6 +1028,35 @@ const SCREENS = [
                         submitRescheduleRequest();
                         applyProviderIdentity(ans.providerId); state.role='provider';
                         openProviderBooking(ans.id); render();`],
+  /* §9's rule 6 — the pending proposal has to reach each side's own list — is only proved on a screen
+     the camera paints. Both rows raise a real ask through the app's own submit path (not by pushing a
+     record), then render the list that should carry it, so the inbox card, its row and its tap target
+     are measured like any other markup rather than asserted only in Node. */
+  /* §9's rule 6 — the pending proposal has to reach each side's own list — is only proved on a screen
+     the camera paints. Both rows raise the ask through the app's own submit path (not by pushing a
+     record), then paint the list that should carry it, so the inbox card, its row and its tap target are
+     measured like any other markup rather than asserted only in Node.
+
+     The `pendingReschedule` guard is not decoration. The first version of these two rows each submitted
+     unconditionally, and the second row died before painting: the app refuses a second proposal while one
+     is waiting — that is one of the flow's own rules — so no draft was armed, and the next line reached
+     for `state.rescheduleDraft.dayIdx` on a null draft. A camera row that depends on a clean slate is a
+     row that only works first; each of these now works on a page where the other has already run. */
+  ['resident-asks', `state.view='app'; state.role='resident';
+                     const ra = BOOKINGS.find(b=>b.status==='upcoming');
+                     openBookingDetail(ra.id);
+                     if (!pendingReschedule(ra.id)) { openRescheduleRequest(ra.id);
+                       state.rescheduleDraft.dayIdx=1; state.rescheduleDraft.timeIdx=2;
+                       submitRescheduleRequest(); }
+                     state.sheet=null; state.tab='bookings'; render();`],
+  ['provider-asks', `state.view='app'; state.role='resident';
+                     const pa = BOOKINGS.find(b=>b.status==='upcoming');
+                     openBookingDetail(pa.id);
+                     if (!pendingReschedule(pa.id)) { openRescheduleRequest(pa.id);
+                       state.rescheduleDraft.dayIdx=1; state.rescheduleDraft.timeIdx=2;
+                       submitRescheduleRequest(); }
+                     applyProviderIdentity(pa.providerId); state.role='provider';
+                     state.sheet=null; state.tab='bookings'; render();`],
   /* The pilot category, reached the way a resident reaches it: pick the category's
      provider, open the sheet, choose a mode. Screens nobody can navigate to are
      not screens — they are markup. */
