@@ -8892,3 +8892,11 @@ Three things this step did NOT fix, named so the next one is not a surprise: the
 reuses `.jr-time`, a job-row's time slot, as a number badge; the "What this console does not manage" card
 still carries the accent-bar heading, so a third heading construct survives; and the stat tiles still place
 the figure top-right over a label that wraps to two lines, which is why the two tiles are different heights.
+
+**Two corrections to §147, both mine.** The count "20 hand-written topbars" overstates by one: the page holds
+20 `topbar` divs and one of them is the output template inside `screenHeader()` itself, so 19 screens write
+the bar by hand against 13 calls to the component. And the accent-bar removal in §147's follow-up was
+incomplete: two `border-left` bars remain (one 4px navy, one 3px brand cyan) and the admin card heading "What
+this console does not manage" still shows a bar in `.shots/design-d/admin-dash.png` after the global
+`h3::before` was deleted — so that heading's bar comes from a source not yet identified, and it is named as
+open rather than written off as fixed.
