@@ -49,14 +49,15 @@ const CHECK_ROOT = 'every control painted for the brand bar has a root-tab varia
 
 const POS_RULE = '  .topbar h1{font-family:var(--font-display); font-size:var(--t-title); font-weight:600;}';
 const ROOT_RULE = '  .screen[data-root="1"] .topbar h1{ font-size:var(--t-title-lg); letter-spacing:-.3px; }';
-const FIND_H1 = '      <h1>Find Services</h1>';
+const COMPONENT_H1 = '<div><h1 class="title">${title}</h1>';
+const COMPONENT_H1_SIZED = '<div><h1 class="title" style="font-size:var(--t-lead)">${title}</h1>';
 const ONBAR_USE = '<button id="mark-all-notifs-btn" class="btn sm onbar"';
 const ONBAR_RULE = '  .btn.onbar{ background:rgba(255,255,255,0.12); color:var(--on-brand); box-shadow:none; }';
 /* The exact statement the camera now runs between clearModals() and the walk's own navigation. */
 const ROOT_ONBAR = '  .screen[data-root="1"] .btn.onbar{ background:var(--brand-tint-soft); color:var(--deep); }';
 const CLEAR_CHAT = '         try { state.isChatOpen = false; } catch (e) {}';
 
-[['app', POS_RULE], ['app', ROOT_RULE], ['app', FIND_H1], ['app', ONBAR_USE], ['app', ONBAR_RULE],
+[['app', POS_RULE], ['app', ROOT_RULE], ['app', COMPONENT_H1], ['app', ONBAR_USE], ['app', ONBAR_RULE],
   ['app', ROOT_ONBAR],
   ['camera', CLEAR_CHAT]].forEach(([which, needle]) => {
   const n = PRISTINE[which].split(needle).length - 1;
@@ -93,8 +94,8 @@ const BREAKS = [
     file: 'app', from: POS_RULE, to: POS_RULE.replace('.topbar h1{', '.topbar .title{'), expect: CHECK_POS },
   { name: 'the root-tab step is deleted, so every bar shares one size regardless of destination',
     file: 'app', from: ROOT_RULE, to: '  /* no root step */', expect: CHECK_POS },
-  { name: 'the results bar types its own heading size back into its markup',
-    file: 'app', from: FIND_H1, to: '      <h1 style="font-family:var(--font-display); font-size:var(--t-title); font-weight:600;">Find Services</h1>',
+  { name: 'the component itself starts typing a size into the heading it emits for every bar',
+    file: 'app', from: COMPONENT_H1, to: COMPONENT_H1_SIZED,
     expect: CHECK_SELF },
   { name: 'the notifications action goes back to a style typed into its own markup',
     file: 'app', from: ONBAR_USE,

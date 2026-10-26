@@ -1255,10 +1255,19 @@ suite('hygiene', async () => {
     'positional=' + positional + ' rootStep=' + rootStep + ' classKeyed=' + classKeyed + ' h1InMarkup=' + headings);
 
   /* The inline copy of the rule was the proof: one bar typed font-family, font-size and weight
-     into its own heading because the class it needed was optional. */
+     into its own heading because the class it needed was optional.
+       The control counts the component's call sites, not the <h1> tags in the file. It used to
+     require ten of those, and it failed twice on correct builds - once at eight, once at five - as
+     bars moved into the component, which is the change this file asked for. Counting how a thing is
+     written is not counting the thing: the heading guarantee is that the component emits one and
+     that every bar goes through it, and the painted population is the camera's
+     (tools/probe-bar-titles.js reports 83 titles and names every screen with none). */
   const selfSized = (src.match(/<h1[^>]*style="[^"]*font-size/g) || []).length;
-  c.check('no bar hand-types its own heading size', selfSized === 0 && headings >= 10,
-    'selfSized=' + selfSized + ' headings=' + headings);
+  const componentHeading = /<h1 class="title">\$\{title\}/.test(src);
+  const headerCalls = (src.match(/screenHeader\(/g) || []).length - 1;
+  c.check('no bar hand-types its own heading size',
+    selfSized === 0 && componentHeading && headerCalls >= 30,
+    'selfSized=' + selfSized + ' componentHeading=' + (componentHeading ? 1 : 0) + ' headerCalls=' + headerCalls);
 
   /* The same drift one element over: five bars typed the identical translucent action style into
      their markup and a sixth typed a different one — a filled navy pill — so the same "leave the
@@ -1612,8 +1621,13 @@ suite('hygiene', async () => {
   ];
   const missingTap = tapRules.filter(([, re]) => !re.test(src)).map(([n]) => n);
   c.check('every control raised to the tap floor still declares it', missingTap.length === 0, missingTap.join(' | '));
+  /* The control names the admin's return-to-roster handler, which is a real behaviour of a real bar,
+     and it accepts either spelling. It used to require the attribute form, so converting that bar
+     into the shared component - the change this file has been asking for - failed the check while
+     the button worked exactly as before. An instrument's assumption about how code is shaped is part
+     of what the code has to respect, and that is a cost worth naming rather than absorbing. */
   c.check('no hand-rolled 30px back button survives', !/width:30px; height:30px/.test(src)
-    && /class="back-btn" onclick="state\.tab='admin_verifications'; state\.adminProviderCategory='verified'/.test(src));
+    && /(class="back-btn" onclick="|back: ")[^"]*adminProviderCategory='verified'/.test(src));
   /* Scoped to a style attribute on purpose: the first cut of this pattern let [^"]* run across
      whole CSS rules and reported two false hits, because a rule that sets width and a later
      media query that overrides it are not "the same attribute declaring a size twice". */

@@ -47,8 +47,11 @@ const MUTANTS = [
     to: 'used to read the old word —' },
   { name: 'the provider dashboard types one provider’s identity onto every sign-in',
     label: HEADER,
-    from: '        <h1>${esc(dashPp.name || me.name)}</h1>',
-    to: '        <h1>Ramil Odiada (Pro)</h1>' },
+    /* The bar goes through the component now, so the typed identity has to be planted in the
+       argument rather than in a tag: the defect this break reproduces is a name written into a
+       screen instead of read from the signed-in record, and that is the same fact in either form. */
+    from: "${screenHeader(esc(dashPp.name || me.name), { avatar:'self'",
+    to: "${screenHeader('Ramil Odiada (Pro)', { avatar:'self'" },
 ];
 
 function plant(s, m) {

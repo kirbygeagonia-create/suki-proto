@@ -31,7 +31,11 @@ const metrics = [
   { key: 'bar_titles_self_sized', what: 'headings that type their own font-size into the bar', n: count(/<h1[^>]*style="[^"]*font-size/g) },
   { key: 'bar_left_groups_handwritten', what: "a bar's title group typed as flex pixels instead of .hb", n: count(/<div style="display:flex; align-items:center; gap:(8|10)px;">/g) },
   { key: 'bar_action_styles_inline', what: 'an on-bar control typed its own background instead of .btn.onbar', n: count(/style="background:rgba\(255,255,255,0?\.12\)/g) + count(/style="background:var\(--brand-navy-deep\); color:var\(--on-brand\)/g) },
-  { key: 'screenheader_calls', what: 'screens that do use the shared header', n: count(/screenHeader\(/g) - 1 },
+  /* Direction matters for a ratchet. Every other metric here is a count of ways to say one thing,
+     so more is worse; this one is the opposite, and ratcheting it would refuse the fix. It is
+     printed for context and held to a floor instead, so the shared header cannot quietly stop
+     being used. */
+  { key: 'screenheader_calls', what: 'screens that do use the shared header (a floor, not a ceiling)', n: count(/screenHeader\(/g) - 1, floor: 13 },
   { key: 'chip_tone_rules', what: 'rules that give a chip its colour', n: count(/\.chip\.[a-z-]+\b[^{]*\{/g) + count(/\.badge-[a-z]+\{/g) },
   { key: 'section_heading_constructs', what: 'distinct ways a section title is expressed', n: (count(/class="section-label"/g) > 0 ? 1 : 0) + distinct(/<h3[^>]*style="[^"]*font-size[^"]*"/g).length + count(/\.card-quiet[^{]*\{[^}]*border-left/g) },
   { key: 'stat_tile_systems', what: 'competing stat-tile classes', n: (count(/\.stat-strip\b/g) ? 1 : 0) + (count(/\.statgrid\b/g) ? 1 : 0) + (count(/\.stat\{/g) ? 1 : 0) },
@@ -50,8 +54,11 @@ let worse = 0;
 console.log('file: Sukinnect-next.html   ' + src.split(/\r?\n/).length + ' lines');
 metrics.forEach(m => {
   const ceil = base[m.key];
-  const flag = ceil === undefined ? 'new' : (m.n > ceil ? 'RISEN from ' + ceil : (m.n < ceil ? 'down from ' + ceil : 'at ceiling'));
-  if (ceil !== undefined && m.n > ceil) worse++;
+  const flag = m.floor !== undefined
+    ? (m.n >= m.floor ? 'floor ' + m.floor + ' held' : 'BELOW FLOOR ' + m.floor)
+    : (ceil === undefined ? 'new' : (m.n > ceil ? 'RISEN from ' + ceil : (m.n < ceil ? 'down from ' + ceil : 'at ceiling')));
+  if (m.floor !== undefined) { if (m.n < m.floor) worse++; }
+  else if (ceil !== undefined && m.n > ceil) worse++;
   console.log('  ' + m.key.padEnd(26) + String(m.n).padStart(5) + '  [' + flag + ']  ' + m.what);
 });
 if (bless) {
