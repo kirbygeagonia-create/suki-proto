@@ -471,7 +471,7 @@ To swap an image, replace the file and keep the name. To add a trade, add a row 
   will read is not a warning.
 - `Sukinnect-Android/app/src/main/assets/` holds a **separate copy** of the web files. Any
   accepted change must be re-synced there before it reaches a device build. It currently holds the
-  rebuild — `assets/Sukinnect.html` carries the same bytes as `Sukinnect-next.html`, and
+  rebuild — `Sukinnect-Android/app/src/main/assets/Sukinnect.html` carries the same bytes as `Sukinnect-next.html`, and
   `node tools/audit-build-bytes.cjs` is the check — staged under the name the shell loads, and those bytes
   went out as `1.2-preview.44`. **`preview.44` has been installed on nothing**: the last build read on real
   handsets was `preview.39`, on the OPPO CPH2179 at 320 CSS px and the vivo 1906 at 450, and five builds have

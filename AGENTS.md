@@ -2704,8 +2704,10 @@ a phantom file finding, because a check that invents defects teaches the reader 
 surfaced are worth more than the tool. **The brief this work was commissioned under,
 `SUKINNECT_UX_RELIABILITY_MVP_PROMPT.md`, is not in the workspace and has never been committed** — so the
 plan's §13 matrix is the only surviving record of what was asked, and "is everything in the Markdown file
-implemented?" can only ever be answered against the plan. And **a citation a reader cannot run is a false
-citation**: the §14 table named a family as `…-reschedule.cjs`, which no one can type.
+implemented?" can only ever be answered against the plan. *(citation-exempt: SUKINNECT_UX_RELIABILITY_MVP_PROMPT.md — absent by
+fact, stated here so the audit reports it as exempt rather than letting a true absence read as a phantom
+file.)* And **a citation a reader cannot run is a false
+citation**: the §14 table named a family with an ellipsis standing in for its prefix, which no one can type.
 
 THE ANSWER TO "IS EVERYTHING IMPLEMENTED?", STATED SO THE NEXT SESSION DOES NOT RE-DERIVE IT. Of the plan's
 47 concerns: 45 are built, ruled out of scope, or resolved by an earlier pass with an instrument behind

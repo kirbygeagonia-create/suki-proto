@@ -29,8 +29,24 @@ catch (err) { console.log('NO CONCLUSION  the plan could not be read: ' + err.me
 const files = new Set();
 for (const m of doc.matchAll(/`([^`\s]*\.(?:cjs|js|md|html|css|gradle|json))`/g)) files.add(m[1]);
 for (const m of doc.matchAll(/node\s+((?:tools|Sukinnect-Android\/tools)\/[A-Za-z0-9._/-]+\.cjs)/g)) files.add(m[1]);
+/* A glob is not a citation. `tools/falsify-*.cjs` and `probe-*.js` name a family of files to list, and a
+   resolver that reports them as missing is inventing findings — the direction this repository has decided
+   is worse than a miss. */
 const cmdFiles = [];
 for (const m of doc.matchAll(/node\s+(tools\/[A-Za-z0-9._/-]+\.cjs)/g)) cmdFiles.push(m[1]);
+for (const f of [...files]) if (f.includes('*')) files.delete(f);
+/* An ellipsis is not a glob: `…-reschedule.cjs` names nothing a reader can run, so it is reported — under
+   its own heading, because the fix is to spell the name out, not to delete the citation. */
+/* An ellipsis is only a broken citation when it stands in for part of a *name*. `Math.max(0, …)` and
+   `setTimeout(…, 900)` are elisions inside quoted code — legitimate, and the first version of this rule
+   flagged 39 of them across two documents, which is the tool inventing work instead of finding it. So: no
+   whitespace inside the token, and it must look like a path or a filename. */
+const unrunnable = [...new Set([...doc.matchAll(/`([^\s`]*…[^\s`]*)`/g)]
+  .map((m) => m[1])
+  /* Extension only. `clickPainted(/…/)` and `…/legislative+issuances/…` are elisions inside a call and a URL
+     respectively — a reader who needs them has the surrounding sentence, and a rule that flags them is a
+     rule that will be ignored within a week. `…-reschedule.cjs` is different in kind: it names a file. */
+  .filter((t) => /\.(cjs|js|md|html|css|json|gradle)$/.test(t)))];
 
 if (files.size === 0 && cmdFiles.length === 0) {
   console.log('NO CONCLUSION  no file citations parsed — the scan is blind, not the plan clean.');
@@ -40,11 +56,15 @@ if (files.size === 0 && cmdFiles.length === 0) {
 const missing = [];
 /* A bare filename is only checkable if it is unique in tools/, or is one of the tracked root files. */
 function existsAnywhere(f) {
-  if (f.startsWith('tools/') || f.startsWith('Sukinnect-Android/') || f.startsWith('assets/') ||
-      f.startsWith('fonts/') || f.startsWith('avatars/') || f.startsWith('leaflet/') || f.includes('/'))
-    return fs.existsSync(path.join(ROOT, f));
-  if (fs.existsSync(path.join(ROOT, 'tools', f)) || fs.existsSync(path.join(ROOT, f))) return true;
-  /* Root-level files are not the only ones a plan names: `ASSET-LICENSES.md` lives under the art directory,
+  /* The shell tree is written about from inside itself — `app/build.gradle`, `tools/falsify-assets.cjs` — and
+     the same file is also named with the `--probe=@` prefix the camera's flag carries. Both resolve; neither
+     is a phantom. */
+  const candidates = [f, f.replace(/^--probe=@/, ''),
+    'Sukinnect-Android/' + f, path.join('Sukinnect-Android', f)];
+  for (const c of candidates) if (c.includes('*')) return true;
+  for (const c of candidates) if (fs.existsSync(path.join(ROOT, c))) return true;
+  if (f.includes('/')) return false;
+  /* Root-level files are not the only ones a doc names: `ASSET-LICENSES.md` lives under the art directory,
      and a resolver that cannot see it reports a real file as a phantom — the false-positive direction this
      repository has repeatedly called the worse one. So search the tracked tree, skipping build output. */
   const stack = [ROOT];
@@ -68,9 +88,30 @@ for (const f of [...files].sort()) {
 
 /* Quoted gate-check labels: the plan quotes a check by name in double quotes; if no such check exists,
    the sentence is citing an instrument that was never written. */
-const verifySrc = fs.readFileSync(path.join(ROOT, 'tools', 'verify.cjs'), 'utf8');
-const quoted = [...doc.matchAll(/\*\*"([^"]{25,140})"\*\*/g)].map((m) => m[1]);
-const phantomChecks = quoted.filter((q) => verifySrc.indexOf(q) < 0);
+/* A bold-quoted string is only a check label if the prose around it says so. Without that, `"Analyze the
+   text and photo"` — a button caption AGENTS.md quotes while explaining why it was wrong — reads as a
+   citation of a check nobody wrote. The tool would then be in the business of inventing findings. */
+const quoted = [];
+for (const m of doc.matchAll(/\*\*"([^"]{25,140})"\*\*/g)) {
+  const window = doc.slice(Math.max(0, m.index - 220), m.index + m[0].length + 220);
+  if (/\b(check|checks|gate|assert|assertion|fails|refus|pin[sned]?)\b/i.test(window)) quoted.push(m[1]);
+}
+/* A quoted label is a phantom only if no instrument anywhere carries it. Searching verify.cjs alone made
+   device-tool strings read as invented checks, so the whole of tools/ is the haystack. */
+let toolSrc = '';
+try {
+  for (const f of fs.readdirSync(path.join(ROOT, 'tools'))) {
+    if (!/\.(cjs|js)$/.test(f)) continue;
+    try { toolSrc += fs.readFileSync(path.join(ROOT, 'tools', f), 'utf8'); } catch (err) { /* unreadable tool */ }
+  }
+} catch (err) { console.log('NO CONCLUSION  tools/ could not be read, so no citation can be checked.'); process.exit(1); }
+const phantomChecks = quoted.filter((q) => toolSrc.indexOf(q) < 0);
+
+/* `CHANGES.md` is a dated log: a file it names may have been renamed or deleted since the entry was written,
+   and the house rule for a superseded row is a dated note, not a rewrite. So its unresolved citations are
+   reported but do not fail the run — the same scoping `audit-open-items.cjs` applies to the log by design.
+   `DEVICE-PASS.md` speaks in the present tense and stays strict. */
+const isLog = /(^|[\/\\])CHANGES\.md$/.test(PLAN);
 
 console.log('plan: ' + path.relative(ROOT, PLAN));
 console.log('file citations: ' + files.size + ' distinct, plus ' + cmdFiles.length + ' `node tools/...` commands');
@@ -82,12 +123,16 @@ for (const q of phantomChecks) console.log('  PHANTOM CHECK  "' + q.slice(0, 90)
    uses for a CSS feature the page keeps on purpose. An exemption that no longer matches a missing file is
    itself a finding, so the list cannot rot into a way of silencing the audit. */
 const exempt = new Set([...doc.matchAll(/citation-exempt:\s*([A-Za-z0-9._-]+)/g)].map((m) => m[1]));
-const unexplained = missing.filter((f) => exempt.has(f));
+const unexplained = missing.filter((f) => exempt.has(f) || unrunnable.indexOf(f) >= 0);
 const staleExemptions = [...exempt].filter((f) => missing.indexOf(f) < 0);
-const findings = (missing.length - unexplained.length) + staleExemptions.length + phantomChecks.length;
+const findings = (missing.length - unexplained.length) + staleExemptions.length + phantomChecks.length + unrunnable.length;
+for (const u of unrunnable) console.log('  UNRUNNABLE CITATION  `' + u + '` has an ellipsis in it — no reader can run or open it');
 for (const f of unexplained) console.log('  EXEMPT  ' + f + ' — absent, and the plan says why');
 for (const f of staleExemptions) console.log('  STALE EXEMPTION  ' + f + ' is exempted but is not missing');
-console.log('findings: ' + findings);
-console.log(findings ? 'the plan cites something that is not there and has not said so.'
-  : 'every file and every quoted check the plan cites resolves, or is absent with a stated reason.');
-process.exit(findings ? 1 : 0);
+console.log('findings: ' + findings + (isLog && findings ? '  (dated log — reported, not gated)' : ''));
+console.log(findings
+  ? (isLog
+      ? 'the log names files that no longer resolve. A dated entry is allowed to, so this does not fail the run.'
+      : 'the document cites something that is not there and has not said why.')
+  : 'every file and every quoted check the document cites resolves, or is absent with a stated reason.');
+process.exit(findings && !isLog ? 1 : 0);
