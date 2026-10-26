@@ -2987,6 +2987,32 @@ suite('honesty', async () => {
     app.state.adminAccountModal = null;
     return { ok: why.length === 0, why: why.join(' \u00b7 ') };
   })());
+  /* G6 asks for progressive disclosure that does not hide what matters, and §4 claims the privacy gate is
+     "enforced in code". It is — providerBookingDetail() prints 'Withheld' unless the job is on — but nothing
+     asserted it, so the row was the one AR claim the traceability census could not point at. This is the
+     assertion, with both halves required: a requested job leaks nothing AND an accepted job still shows the
+     number the provider needs to do the work. A guard that only checks the withhold passes by hiding
+     everything. */
+  verdict('the provider is given the customer phone only for a job they actually have', (() => {
+    const why = [];
+    app.state.view = 'app'; app.state.role = 'provider';
+    if (typeof app.applyProviderIdentity === 'function') app.applyProviderIdentity('p1');
+    const req = app.BOOKINGS.find(b => b.providerId === 'p1' && b.status === 'requested');
+    const job = app.BOOKINGS.find(b => b.providerId === 'p1' && ['upcoming', 'ongoing'].includes(b.status));
+    if (!req) return { ok: false, why: 'the seed holds no requested p1 job, so the withhold has no case' };
+    if (!job) return { ok: false, why: 'the seed holds no accepted p1 job, so the disclosure has no case' };
+    app.state.selectedProviderBookingId = req.id;
+    const reqHtml = String(app.providerBookingDetail());
+    if (reqHtml.includes(app.customerOf(req).phone)) why.push('a requested job printed ' + app.customerOf(req).phone);
+    if (!/Withheld/.test(reqHtml)) why.push('the requested job painted no withheld marker at all');
+    const jobPhone = app.customerOf(job).phone;
+    app.state.selectedProviderBookingId = job.id;
+    const jobHtml = String(app.providerBookingDetail());
+    if (!jobHtml.includes(jobPhone)) why.push('an accepted job hid the number its provider needs');
+    app.state.selectedProviderBookingId = null;
+    return { ok: why.length === 0, why: why.join(' \u00b7 ') };
+  })());
+
   /* The payout account was typed into three places and held in a fourth: the profile
      field the payout itself reads. Signed in as the fruit buyer it still showed the
      plumber's number. A field a keyboard can write has to be the one the screen shows. */

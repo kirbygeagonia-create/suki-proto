@@ -8813,3 +8813,22 @@ true and useless while the real cause was indentation). **Fix the shape of the w
 recogniser** — a scanner adjusted until it accepts new evidence will end by accepting any evidence, and the 42
 proved it. `node tools/verify.cjs` 650 green; `audit-citations`, `audit-report-coverage`, `audit-matrix-coverage`
 all `findings: 0`.
+
+## 143. G6 was true of the code and unasserted by the gate, so the gate got one
+
+§4 claims the privacy gate is "documented and enforced in code", and it is: `providerBookingDetail()` prints
+`Withheld` for the client phone unless `onJob` covers the state. Nothing asserted it, which is why G6 was the
+single built-class row the census could not point at. It is asserted now — **the provider is given the customer
+phone only for a job they actually have** — and the check requires both halves, because a guard that only looks
+for a leak passes on a screen that hides everything: a `requested` job must not print the number and must show
+the marker, and an accepted job must show the number. `tools/falsify-profile-honesty.cjs` grew two breaks for
+the two ways the sentence can stop being true and runs **15 mutants, 15 caught**; `node tools/verify.cjs`
+answers **651 checks**, and the census reaches **42 of 47 traced with no built-class row unpointed**.
+
+Two of this hour’s failures are about breaks that go quiet rather than breaks that fail. The negation break
+first SKIPped once every row had a pointer, because it was written to plant a denial on an untraced row — a
+break that depends on a defect still existing goes silent when the work succeeds; it now rewrites a row that IS
+traced and requires the count to drop by exactly one. And it anchored on `**G6**` when the bullet reads
+`**G6 — the one AR row…**`, the id inside the bold with an em dash after it; the anchor missed and the family
+said NOT PROVEN instead of pretending. Both times the honest signal was the refusal, which is the only reason
+they were noticed.

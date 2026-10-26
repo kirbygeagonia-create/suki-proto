@@ -79,16 +79,29 @@ try {
      appears zero times there, and the token read as a pointer, giving 42 traced with zero built-class rows
      unpointed. This plants that shape on a row the census already calls untraced and requires the count to
      stay where it was. */
-  const untracedRow = (/^ {2}([A-Z][0-9A-Za-z]*)\s+\[/m.exec((run().out.split('=== built-class rows a reader cannot trace to anything runnable ===')[1] || '').split('===')[0]) || [])[1];
+  /* The first version of this break planted a negated citation for whichever row the census still called
+     untraced — and once every row had a pointer, there was no such row, so it SKIPped and the family
+     reported NOT PROVEN. A break that depends on a defect still existing is a break that goes quiet when
+     the work succeeds. Now it rewrites a row that IS traced into a negated citation and requires the count
+     to drop by exactly one: the negation must contribute nothing. */
+  const target = (process.env.TARGET_ROW || 'G6');
+  /* The bullet is `- **G6 — the one AR row…**`, i.e. the id is inside the bold with an em dash after it, so
+     anchoring on `**G6**` matched nothing and the break SKIPped — a break that silently skips is the same
+     failure as a break that never applied, which is why the family reports NOT PROVEN rather than 2 of 2. */
+  const lineRe = new RegExp('^- \\*\\*' + target + '\\b[^\\n]*(?:\\n(?:  [^\\n]*)*)', 'm');
+  const saved = planOrig.match(lineRe);
   let negated = null;
-  if (untracedRow) {
-    fs.writeFileSync(PLAN, planOrig + '\n- **' + untracedRow + '** — `Withheld` appears zero times in `tools/verify.cjs`, so nothing guards it.\n');
+  if (saved) {
+    const swapped = planOrig.replace(lineRe,
+      '- **' + target + '** — `Withheld` appears zero times in `tools/verify.cjs`, so nothing guards this row.\n');
+    fs.writeFileSync(PLAN, swapped);
     const r4 = run();
     const tr4 = num(/traced to a runnable name: (\d+)/, r4.out);
-    negated = (tr4 === bTraced);
-    console.log((negated ? 'CAUGHT   ' : 'MISSED   ') + 'a negated citation for ' + untracedRow + ' must not be credited → traced ' + tr4 + ' (baseline ' + bTraced + ')');
+    negated = (tr4 === bTraced - 1);
+    console.log((negated ? 'CAUGHT   ' : 'MISSED   ') + target + "'s pointer replaced by a negated citation → traced " +
+      tr4 + ' (baseline ' + bTraced + ', expected ' + (bTraced - 1) + ': the negation credits nothing)');
     fs.writeFileSync(PLAN, planOrig);
-  } else console.log('SKIP  no untraced row available to plant a negated citation in');
+  } else console.log('SKIP  ' + target + ' has no pointer line to rewrite (set TARGET_ROW to a traced row)');
 
   const ok = !!moved && refused && negated === true;
   console.log('\n' + (ok ? 'the census is falsifiable: a broken citation and a lost row are both detected'

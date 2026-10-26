@@ -24,6 +24,7 @@ const BADGES = 'the profile card shows the badges its provider actually holds';
 const PREF = 'the preferences card offers no switch it cannot turn';
 const NOTFOUND = 'an id outside the account shows nothing rather than someone else';
 const LOCK = 'the admin lock dialog says what Unlock does, and Unlock does only that';
+const PRIVACY = 'the provider is given the customer phone only for a job they actually have';
 
 
 const mutants = [
@@ -43,6 +44,18 @@ const mutants = [
      restores the promising label while leaving the dialog otherwise intact — the exact regression the
      row closed by hand. The second leaves the honest sentence and makes Unlock actually sign the
      administrator out, which is the same lie arriving from the handler's side. */
+  /* G6 claimed the privacy gate was enforced in code. It was, and nothing said so: these two breaks are
+     the two ways that sentence can stop being true — disclose always, or withhold always. The second is
+     the one a check that only looks for the leak would miss, which is why the check also requires the
+     accepted job to print the number. */
+  { name: 'the provider detail prints the phone whatever the job state is',
+    from: `onJob ? esc(customerOf(booking).phone) : 'Withheld'`,
+    to: `esc(customerOf(booking).phone)`,
+    expect: PRIVACY },
+  { name: 'the provider detail withholds the phone even on a job in progress',
+    from: `onJob ? esc(customerOf(booking).phone) : 'Withheld'`,
+    to: `'Withheld'`,
+    expect: PRIVACY },
   { name: 'the lock dialog promises "PIN to continue" again',
     from: 'so no PIN is checked: Unlock closes this screen and leaves the app signed in.',
     to: 'Enter PIN to continue.',
