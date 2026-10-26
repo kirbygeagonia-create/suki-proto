@@ -424,7 +424,13 @@ measurement rather than chosen for taste:
   ("ACCEPTE / D"), and a card head — a title with a count beside it — is allowed to wrap so the count
   falls onto its own line instead of crushing the heading. Both halves exist because of each other:
   making the chip unbreakable on its own moved the break onto the title, and neither wording is visible
-  to a sensor that only asks about boxes, so the rule is pinned in the gate as a shape.
+  to a sensor that only asks about boxes, so the rule is pinned in the gate as a shape. The same squeeze
+  has now been found in four row shapes — a sticky action bar's primary button, a ratings label, a score
+  pill and a service badge — and the fix is always the row, never the word.
+- **A button's weight says its rank.** PRIMARY, SECONDARY, TERTIARY and DESTRUCTIVE are four classes, and
+  tertiary exists because two screens painted a chat control and the platform's phone number as
+  byte-identical buttons: the system had no low-priority tier, so the rule could not be expressed. A
+  tertiary control is quieter and still a full 44px target — the demotion is mass, not reach.
 
 ## Honest labelling
 
@@ -438,7 +444,7 @@ matches is a simulated flow, and the screens say so.
 | What | Where | Notes |
 |---|---|---|
 | Logo | `Sukinnect_Logo.png` | exact case. Official mark — never redrawn, recoloured, stretched or replaced. It has a white background, so change the surface around it, not the file. |
-| Icons | an inline SVG set inside `Sukinnect-next.html`; `reicon.js` (LFS) for `Sukinnect.html` | The rebuild loads no icon library: 43 glyphs are drawn in the file and every one of the 38 names the app can reach has one — whether the name is written in markup, carried by a service record, or passed to an empty state. Those two figures come from `node tools/measure.cjs`, not from a count kept in prose. The gate checks all three and fails if a new name arrives undrawn. Measured with reicon disabled, that set drew the same icons on every screen the camera walks — 86 now where the claim was made at 40, and `node tools/shot.cjs --list` is the count — so the rebuild dropped the 8 MB custom element and the four seconds of iconless paint it cost when registration lost the race. `Sukinnect.html` still uses reicon, so add a name to both files or neither. |
+| Icons | an inline SVG set inside `Sukinnect-next.html`; `reicon.js` (LFS) for `Sukinnect.html` | The rebuild loads no icon library: 43 glyphs are drawn in the file and every one of the 38 names the app can reach has one — whether the name is written in markup, carried by a service record, or passed to an empty state. Those two figures come from `node tools/measure.cjs`, not from a count kept in prose. The gate checks all three and fails if a new name arrives undrawn. Measured with reicon disabled, that set drew the same icons on every screen the camera walks — 88 now where the claim was made at 40, and `node tools/shot.cjs --list` is the count — so the rebuild dropped the 8 MB custom element and the four seconds of iconless paint it cost when registration lost the race. `Sukinnect.html` still uses reicon, so add a name to both files or neither. |
 | Type | `fonts/` | The two files differ here deliberately. `Sukinnect.html` uses Fraunces for display and Plus Jakarta Sans for UI. `Sukinnect-next.html` runs one sans family across every role — Atkinson Hyperlegible Next in four self-hosted weights, with Plus Jakarta Sans behind it for any glyph Atkinson does not carry — and its `--font-display` is an alias for `--font-ui`, so the serif paints nothing there (AGENTS.md §68). Self-hosted in both; no remote fonts. |
 | Photos | `avatars/` | local PNGs, mapped per persona in `PRO_PHOTOS`. Keep imagery local — the APK runs offline. |
 | Maps | `leaflet/` | vendored. Tiles come from OpenStreetMap, the one network dependency, so a map is blank with no connection. |
@@ -466,8 +472,10 @@ To swap an image, replace the file and keep the name. To add a trade, add a row 
   accepted change must be re-synced there before it reaches a device build. It currently holds the
   rebuild — `assets/Sukinnect.html` carries the same bytes as `Sukinnect-next.html`, and
   `node tools/audit-build-bytes.cjs` is the check — staged under the name the shell loads, and those bytes
-  went out as `1.2-preview.41`. **`preview.41` has been installed on nothing**: the last build read on real
-  handsets was `preview.39`, on the OPPO CPH2179 at 320 CSS px and the vivo 1906 at 450. The comparison is
+  went out as `1.2-preview.44`. **`preview.44` has been installed on nothing**: the last build read on real
+  handsets was `preview.39`, on the OPPO CPH2179 at 320 CSS px and the vivo 1906 at 450, and five builds have
+  been cut since without a phone on the bus — so nothing in this file's layout claims is a device reading.
+  The comparison is
   now an instrument rather than a habit:
   `node tools/audit-build-bytes.cjs` prints one row per copy — source, `dist/`, staged asset, and the file
   extracted back out of the built APK — reports `findings: N` when they disagree, and **refuses** with

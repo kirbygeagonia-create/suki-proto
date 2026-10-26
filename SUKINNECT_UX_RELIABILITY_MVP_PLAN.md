@@ -873,7 +873,12 @@ camera readings from runs after the last page edit.
 | Any new record family | `node tools/falsify-storage-truth.cjs`, `…-reschedule.cjs` (through the aggregate) | storage-truth **5 of 5**, reschedule **20 of 20**, 0 not applied, 0 missed |
 | Reschedule wording | gate checks at `tools/verify.cjs:5627`–`:5628`; the two camera screens `reschedule-sheet` / `reschedule-answer` | **Deviation from the stated method:** no `--probe=@` file exists for this row. The rule is asserted by the gate against the rendered card and photographed by the walk, which answers the same question; recorded rather than papered over |
 | Screen coverage | `node tools/shot.cjs --list`, `node tools/audit-camera-dialog-coverage.cjs` | **88 screens**; 17 layer-raising profile controls, 17 clicked; **findings: 0** |
-| Painted layout | `node tools/shot.cjs --measure`, `--measure --focus`, `--measure --dark` | 25 failure tallies at **0**; focus walked **855 keyboard stops over 88 screens** with all four focus tallies **0**; dark sweep **0** contrast failures; no console errors |
+| Painted layout | `node tools/shot.cjs --measure`, `--measure --focus`, `--measure --dark` | **Two of these three are
+  stale by seven page edits and are being re-run.** `--measure` and the 8-corner sweep ran *after* §139's page changes
+  (25 failure tallies at **0**, no console errors); the **855 keyboard stops over 88 screens** with all four focus
+  tallies **0**, and the dark sweep's **0** contrast failures, were measured on the build *before* the tertiary tier,
+  the sticky-bar wrap, the provider reorder and the `onRootTab()` rule. Quoting them against this build would be the
+  "measurement older than the change" defect this plan's own §90 lane names, so they are marked rather than trusted |
 | Phone corners | `node tools/sweep-text-scale.cjs` | **8 of 8 corners, 25 tallies each, all clear** |
 | Alignment sweep | three `hygiene` checks, `node tools/falsify-figures.cjs`, the before/after pair in §135 | one alignment rule and one numeral rule in the page (`1` and `1`); **7 of 7 breaks caught** |
 | Keyboard / chat on a handset | — | **NOT VERIFIED, and not verifiable here.** `visualViewport` appears **0** times in the page (re-counted today); the owner has ruled the leg stays pending until a phone is attached |
