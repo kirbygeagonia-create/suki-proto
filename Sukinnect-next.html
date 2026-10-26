@@ -102,7 +102,7 @@
        a component asks for a step instead of inventing a number (65). */
     --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px;
     --s-5:20px; --s-6:24px; --s-7:28px; --s-8:32px;
-    --r-sm:10px; --r-md:14px; --r-lg:20px; --r-sheet:28px; --r-pill:999px;
+    --r-xs:8px; --r-sm:10px; --r-card:12px; --r-md:14px; --r-lg:20px; --r-sheet:28px; --r-pill:999px;
     --tap:44px; --field-h:48px; --cta-h:50px; --nav-h:62px;
     /* The room a column chart's axis labels need, now that they are HTML sitting to the
        left of the drawing rather than text inside its scaled viewBox. 56px is the widest
@@ -269,7 +269,7 @@
      scroller has to end above it. Screens used to hand-write `padding-bottom:40px`
      — less than the bar — which is how a real control (the case button, a profile
      row, a config field) could end up permanently behind the nav. */
-  .pad{ padding:12px 14px calc(var(--nav-h) + var(--s-7) + var(--sab)); }
+  .pad{ padding:var(--s-3) 14px calc(var(--nav-h) + var(--s-7) + var(--sab)); }
   /* Screens that end in a sticky action bar need the bar cleared as well — 62px
      of nav plus a 50px call-to-action, which is what two screens were hand-tuning
      as 80px and 130px. */
@@ -283,10 +283,10 @@
      with more air, named once (69). */
   .card-lg{ padding:14px; margin-bottom:14px; }
   /* The one object a screen is about. Three call sites had typed
-     `border-radius:18px; padding:16px` — an 18px radius that is neither --r-md nor
+     `border-radius:18px; padding:var(--s-4)` — an 18px radius that is neither --r-md nor
      --r-lg and was almost certainly meant to be the larger step. It is now the
      token, so the size comes from the scale rather than from three guesses. */
-  .card-hero{ border-radius:var(--r-lg); padding:16px; }
+  .card-hero{ border-radius:var(--r-lg); padding:var(--s-4); }
   /* A card is not the same thing as a subject. Read-only records and panels that
      only explain something currently carry the same elevation as the one control
      you are meant to use, so the screen offers no place to start looking (40).
@@ -400,7 +400,7 @@
   .btn-block{ width:100%; margin-top:var(--s-3); }
   .chip{
     display:inline-flex; align-items:center; gap:5px; font-size:var(--t-caption); font-weight:600;
-    padding:4px 10px; border-radius:var(--r-pill); background:var(--background); color:var(--text-muted);
+    padding:var(--s-1) 10px; border-radius:var(--r-pill); background:var(--background); color:var(--text-muted);
     box-shadow:inset 0 0 0 1px var(--line);
     /* A chip is a word, not a paragraph. Uppercased and squeezed by a flex row it broke mid-token —
        "ACCEPTE / D" and "COMPLETE / D" on the provider's own booking list, seen in a screenshot and
@@ -445,8 +445,8 @@
     text-align:right; font-variant-numeric:tabular-nums;
   }
   .btn{min-height:var(--tap); 
-    background:var(--deep); color:var(--text-on-brand); border:none; border-radius:12px;
-    padding:12px 16px; font-weight:700; font-size:var(--t-body-sm); cursor:pointer; font-family:inherit;
+    background:var(--deep); color:var(--text-on-brand); border:none; border-radius:var(--r-card);
+    padding:var(--s-3) 16px; font-weight:700; font-size:var(--t-body-sm); cursor:pointer; font-family:inherit;
     box-shadow:0 4px 12px rgba(3, 82, 174, 0.2); transition:all 0.15s ease;
   }
   .btn:active{transform:scale(0.98); box-shadow:none;}
@@ -577,7 +577,7 @@
      read as a broken control (40, 71). */
   .auth-admin-bar{
     display:flex; align-items:center; justify-content:space-between; gap:8px;
-    margin-bottom:var(--s-5); padding:4px 4px 4px 12px;
+    margin-bottom:var(--s-5); padding:var(--s-1) 4px 4px 12px;
     background:var(--cloud); border-radius:var(--r-md);
     box-shadow:inset 0 0 0 1px var(--line);
     font-size:var(--t-caption); font-weight:700; color:var(--ink-soft);
@@ -684,8 +684,8 @@
   }
   .splash-spine i{width:4px; height:4px; border-radius:50%; background:var(--brand-secondary); flex-shrink:0;}
   .splash-status{ width:220px; margin-top:28px; animation:splashRise .5s .2s cubic-bezier(.22,.9,.32,1.18) both; }
-  .splash-bar{ height:3px; border-radius:99px; background:rgba(255,255,255,.26); overflow:hidden; }
-  .splash-bar i{ display:block; width:38%; height:100%; border-radius:99px; background:var(--surface); animation:splashSlide 1.15s ease-in-out infinite; }
+  .splash-bar{ height:3px; border-radius:var(--r-pill); background:rgba(255,255,255,.26); overflow:hidden; }
+  .splash-bar i{ display:block; width:38%; height:100%; border-radius:var(--r-pill); background:var(--surface); animation:splashSlide 1.15s ease-in-out infinite; }
   .splash-loading{ margin-top:9px; font-size:var(--t-caption); font-weight:600; }
   .splash-tag{
     position:absolute; bottom:20px; left:16px; right:16px;
@@ -702,7 +702,7 @@
     padding:26px 20px; text-align:center; box-shadow:var(--shadow-xs);
   }
   .empty-icon{
-    width:46px; height:46px; border-radius:14px; margin:0 auto 12px;
+    width:46px; height:46px; border-radius:var(--r-md); margin:0 auto 12px;
     display:flex; align-items:center; justify-content:center;
     background:var(--deep-100); color:var(--brand-primary);
   }
@@ -714,7 +714,7 @@
      search never collapses into a blank panel. Under prefers-reduced-motion the
      shared rule stops the shimmer sweep; the layout still holds. */
   .skel{
-    background:var(--brand-tint-soft); border-radius:8px; position:relative; overflow:hidden;
+    background:var(--brand-tint-soft); border-radius:var(--r-xs); position:relative; overflow:hidden;
     display:block;
   }
   .skel::after{
@@ -723,7 +723,7 @@
     animation:skelShimmer 1.2s ease-in-out infinite;
   }
   .skel-card{
-    background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md);
     padding:14px; margin-bottom:12px;
   }
   .skel-row{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
@@ -777,13 +777,13 @@
   }
 
   .notif-item{
-    background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:14px;
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md); padding:14px;
     margin-bottom:10px; display:flex; gap:12px; align-items:flex-start; cursor:pointer;
     width:100%; text-align:left; font:inherit; color:var(--ink);
   }
   .notif-item.unread{border-left:4px solid var(--deep); background:var(--background);}
   .notif-icon{
-    width:36px; height:36px; border-radius:10px; display:flex; align-items:center;
+    width:36px; height:36px; border-radius:var(--r-sm); display:flex; align-items:center;
     justify-content:center; font-size:var(--t-input); flex-shrink:0;
   }
 
@@ -815,7 +815,7 @@
   }
   .search-btn:active{filter:saturate(1.15) brightness(.94);}
   .filter-icon-btn{
-    background:var(--surface); border:1px solid var(--line); border-radius:12px; width:44px; height:44px;
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--r-card); width:44px; height:44px;
     display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--deep);
     flex-shrink:0; position:relative;
   }
@@ -824,7 +824,7 @@
      visible without opening the sheet, or a filter you forgot is a mystery. */
   .filter-badge, .nav-badge{
     position:absolute; top:-5px; right:-5px; min-width:17px; height:17px; padding:0 4px;
-    border-radius:999px; background:var(--brand-secondary); color:var(--brand-navy);
+    border-radius:var(--r-pill); background:var(--brand-secondary); color:var(--brand-navy);
     font-size:var(--t-caption); font-weight:800; line-height:1; display:flex; align-items:center;
     justify-content:center; box-shadow:0 0 0 2px var(--surface);
   }
@@ -899,7 +899,7 @@
   }
   .case-textarea:focus{ background:var(--surface); border-color:var(--deep); }
   .sheet-grab{ width:38px; height:4px; border-radius:var(--r-pill); background:var(--border-strong); margin:9px auto 0; flex-shrink:0; }
-  .sheet-head{ padding:12px 18px 10px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-shrink:0; }
+  .sheet-head{ padding:var(--s-3) 18px 10px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-shrink:0; }
   .sheet-title{ font-family:var(--font-display); font-size:var(--t-title); font-weight:600; color:var(--ink); }
   .sheet-sub{ font-size:var(--t-body); color:var(--ink-soft); margin-top:2px; line-height:1.45; }
   .sheet-close{
@@ -929,7 +929,7 @@
     color:var(--ink-soft); margin-bottom:7px;
   }
   .sheet-foot{
-    padding:12px 18px calc(16px + var(--sab)); border-top:1px solid var(--line);
+    padding:var(--s-3) 18px calc(16px + var(--sab)); border-top:1px solid var(--line);
     background:var(--surface);
     display:flex; align-items:center; gap:8px; flex-shrink:0;
   }
@@ -957,13 +957,13 @@
   .pick.on{background:var(--deep); border-color:var(--deep); color:var(--text-on-brand);}
   .req-rail{display:flex; gap:8px;}
   .req-addr{display:flex; flex-direction:column; gap:8px;}
-  .req-addr .pick{width:100%; justify-content:flex-start; text-align:left; white-space:normal; border-radius:12px;}
+  .req-addr .pick{width:100%; justify-content:flex-start; text-align:left; white-space:normal; border-radius:var(--r-card);}
   .req-provider{
     display:flex; align-items:center; gap:10px; padding:10px;
-    background:var(--background); border:1px solid var(--line); border-radius:14px;
+    background:var(--background); border:1px solid var(--line); border-radius:var(--r-md);
   }
   .req-field{
-    width:100%; box-sizing:border-box; border:1px solid var(--line); border-radius:12px;
+    width:100%; box-sizing:border-box; border:1px solid var(--line); border-radius:var(--r-card);
     padding:11px 12px; font-family:inherit; font-size:var(--t-body-sm); color:var(--ink);
     background:var(--surface); outline:none; resize:none; line-height:1.45;
   }
@@ -976,7 +976,7 @@
     display:flex; flex-direction:column; align-items:flex-start; gap:2px; width:100%;
     min-height:var(--tap); padding:11px 13px; text-align:left; cursor:pointer;
     font-family:inherit; background:var(--surface); border:1px solid var(--line);
-    border-radius:12px; color:var(--ink);
+    border-radius:var(--r-card); color:var(--ink);
   }
   .mode-opt:active{ background:var(--cloud); }
   .mode-opt.on{ border-color:var(--deep); background:var(--deep-100); }
@@ -995,7 +995,7 @@
   .fruit-check input{ flex-shrink:0; width:18px; height:18px; margin-top:1px; accent-color:var(--deep); }
   .fruit-photo{
     position:relative; display:flex; align-items:center; justify-content:center; gap:7px;
-    margin-top:8px; min-height:var(--tap); border:1px dashed var(--line); border-radius:12px;
+    margin-top:8px; min-height:var(--tap); border:1px dashed var(--line); border-radius:var(--r-card);
     background:var(--background); color:var(--ink-soft); cursor:pointer;
     font-size:var(--t-caption); font-weight:700;
   }
@@ -1009,7 +1009,7 @@
     flex-shrink:0;
   }
   .req-terms{
-    background:var(--background); border:1px solid var(--line); border-radius:12px; padding:12px;
+    background:var(--background); border:1px solid var(--line); border-radius:var(--r-card); padding:var(--s-3);
     font-size:var(--t-body-sm); color:var(--ink-soft);
   }
   /* An offer is money the resident has to decide about, so its lines are set like
@@ -1028,13 +1028,13 @@
   .offer-note{ margin:9px 0 0; font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; }
   .offer-when{ margin-top:7px; font-size:var(--t-caption); color:var(--mist); }
   .offer-answer{ display:flex; gap:8px; margin-top:12px; }
-  .offer-answer .btn{ flex:1; min-height:var(--tap); border-radius:10px; }
-  .produce-card{ padding:12px 13px; }
+  .offer-answer .btn{ flex:1; min-height:var(--tap); border-radius:var(--r-sm); }
+  .produce-card{ padding:var(--s-3) 13px; }
   .produce-ic{ display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px;
-    border-radius:10px; background:var(--background); color:var(--deep); flex-shrink:0; }
+    border-radius:var(--r-sm); background:var(--background); color:var(--deep); flex-shrink:0; }
   .produce-note{ margin:9px 0 0; font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; }
   .produce-voided{ display:flex; gap:7px; align-items:flex-start; margin:9px 0 0; padding:9px 11px;
-    background:var(--warning-100); border-radius:10px; font-size:var(--t-caption); line-height:1.5;
+    background:var(--warning-100); border-radius:var(--r-sm); font-size:var(--t-caption); line-height:1.5;
     color:var(--warning-ink); }
   /* Five tones, each written once. The names that arrived before this file had a vocabulary —
      .badge-gold, .badge-alert, .status-upcoming, .status-completed — are aliased into the same rules
@@ -1052,7 +1052,7 @@
   /* A note that explains why a button is missing is part of the action group, not
      a caption under it. */
   .move-note{ font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5;
-    background:var(--background); border:1px solid var(--line); border-radius:10px; padding:9px 11px; }
+    background:var(--background); border:1px solid var(--line); border-radius:var(--r-sm); padding:9px 11px; }
   .offer-fields{ display:flex; flex-direction:column; gap:2px; }
   .offer-fields .sheet-label{ display:block; }
   .cap-rows{ display:flex; flex-direction:column; gap:7px; margin-top:10px; }
@@ -1066,14 +1066,14 @@
      quieter than the money cards above it: it is something to do, not a figure to
      read. Once a reading exists it keeps the same shell so the screen does not jump
      under the provider's thumb. */
-  .finalise-card{ padding:12px 13px; }
+  .finalise-card{ padding:var(--s-3) 13px; }
   .finalise-sub{ font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:3px; }
   .finalise-delta{ display:flex; gap:6px; align-items:flex-start; margin-top:9px; padding-top:9px;
     border-top:1px solid var(--line); font-size:var(--t-caption); line-height:1.5; color:var(--text-muted); }
   /* An implausible reading is warned about, never refused — the people on the site know
      the load and the platform has not stood under the tree (63). */
   .finalise-warn{ display:flex; gap:7px; align-items:flex-start; margin-top:9px; padding:9px 11px;
-    background:var(--warning-100); border-radius:10px; font-size:var(--t-caption); line-height:1.5;
+    background:var(--warning-100); border-radius:var(--r-sm); font-size:var(--t-caption); line-height:1.5;
     color:var(--warning-ink); }
   .fruit-card .cap-rows{ margin-top:11px; }
   .fruit-said{ font-size:var(--t-caption); color:var(--mist); line-height:1.45; margin-top:2px; }
@@ -1082,10 +1082,10 @@
   .fruit-own.warn{ color:var(--warning-ink); }
   .fruit-tall{ display:flex; gap:7px; align-items:flex-start; margin-top:8px;
     font-size:var(--t-caption); line-height:1.5; color:var(--ink-soft);
-    background:var(--background); border:1px solid var(--line); border-radius:10px; padding:9px 11px; }
+    background:var(--background); border:1px solid var(--line); border-radius:var(--r-sm); padding:9px 11px; }
 
 
-  .review-item{padding:12px 0; border-bottom:1px solid var(--line);}
+  .review-item{padding:var(--s-3) 0; border-bottom:1px solid var(--line);}
   .review-item:last-child{border-bottom:none;}
   .book-bar{
     display:flex; align-items:center; justify-content:space-between;
@@ -1097,7 +1097,7 @@
        information kept and a cut label is information lost. */
     flex-wrap:wrap; gap:6px 12px;
     background:var(--surface); border-top:1px solid var(--line);
-    padding:12px 18px calc(12px + var(--sab));
+    padding:var(--s-3) 18px calc(12px + var(--sab));
     position:sticky; bottom:0; left:0; right:0; z-index:20;
   }
 
@@ -1155,7 +1155,7 @@
   .rate-star{
     background:transparent; border:none; cursor:pointer; color:var(--ink-soft);
     min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center;
-    border-radius:12px; padding:0;
+    border-radius:var(--r-card); padding:0;
   }
   .rate-star:hover{ color:var(--gold); }
   .rate-star:active{transform:scale(.9);}
@@ -1168,8 +1168,8 @@
   .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; border:0;}
   .chart-row{display:flex; align-items:center; gap:9px; margin:8px 0;}
   .chart-label{flex:0 0 34%; font-size:var(--t-caption); color:var(--ink-soft); overflow-wrap:anywhere;}
-  .chart-track{flex:1; height:12px; background:var(--cloud); border-radius:99px; overflow:hidden;}
-  .chart-fill{display:block; height:100%; background:var(--brand-primary); border-radius:99px;}
+  .chart-track{flex:1; height:12px; background:var(--cloud); border-radius:var(--r-pill); overflow:hidden;}
+  .chart-fill{display:block; height:100%; background:var(--brand-primary); border-radius:var(--r-pill);}
   .chart-value{flex:0 0 auto; min-width:52px; font-size:var(--t-caption); color:var(--ink); font-weight:700;}
   .chart-foot{font-size:var(--t-caption); color:var(--mist); margin-top:8px; line-height:1.5;}
   .chart-share{display:flex; align-items:center; gap:16px; margin:10px 0 4px;}
@@ -1181,7 +1181,7 @@
   .chart-legend-row{display:flex; align-items:center; gap:7px;}
   .chart-swatch{display:inline-block; width:9px; height:9px; border-radius:3px; flex-shrink:0;}
   .chart-pct{color:var(--mist);}
-  .chart-empty{display:flex; align-items:center; gap:9px; min-height:64px; margin:6px 0; padding:12px;
+  .chart-empty{display:flex; align-items:center; gap:9px; min-height:64px; margin:6px 0; padding:var(--s-3);
     background:var(--cloud); border:1px dashed var(--line); border-radius:var(--r-sm);
     font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5;}
   .chart-title{font-weight:700; font-size:var(--t-body-sm); color:var(--ink);}
@@ -1209,7 +1209,7 @@
   .chart-val.l,.chart-cat.l{transform:translate(0,-100%);}
   .chart-val.r,.chart-cat.r{transform:translate(-100%,-100%);}
   .devicebar{
-    display:flex; justify-content:space-between; padding:8px 24px 2px; font-size:var(--t-caption); font-weight:600; letter-spacing:0.4px; color:var(--ink); flex-shrink:0;
+    display:flex; justify-content:space-between; padding:var(--s-2) 24px 2px; font-size:var(--t-caption); font-weight:600; letter-spacing:0.4px; color:var(--ink); flex-shrink:0;
   }
 
   /* ============================================================
@@ -1338,7 +1338,7 @@
   }
   .card > b:first-child::before{
     content:""; position:absolute; left:0; top:.12em; width:3px; height:1em;
-    border-radius:99px; background:var(--grad-accent);
+    border-radius:var(--r-pill); background:var(--grad-accent);
   }
   .card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-md); }
 
@@ -1394,7 +1394,7 @@
 
   /* Bottom navigation — glass bar, animated active state */
   .bottomnav{
-    padding:4px 10px calc(6px + var(--sab));
+    padding:var(--s-1) 10px calc(6px + var(--sab));
     min-height:calc(var(--nav-h) + var(--sab));
     gap:2px;
     background:rgba(255,255,255,.92);
@@ -1402,14 +1402,14 @@
     border-top:1px solid var(--border);
     box-shadow:0 -6px 20px rgba(3,0,43,.06);
   }
-  .navitem{ position:relative; border-radius:14px; padding:8px 4px 9px; transition:color .18s ease; }
+  .navitem{ position:relative; border-radius:var(--r-md); padding:var(--s-2) 4px 9px; transition:color .18s ease; }
   .navitem:hover{ color:var(--deep-600); }
   .navitem .ic{ transition:transform .22s var(--ease-spring); filter:grayscale(.35); opacity:.85; }
   .navitem.active{ color:var(--deep); }
   .navitem.active .ic{ filter:none; opacity:1; transform:translateY(-1px) scale(1.14); }
   .navitem.active::after{
     content:""; position:absolute; bottom:3px; left:50%; transform:translateX(-50%);
-    width:18px; height:3px; border-radius:99px;
+    width:18px; height:3px; border-radius:var(--r-pill);
     background:var(--grad-accent);
     box-shadow:0 1px 5px var(--brand-glow);
   }
@@ -1547,7 +1547,7 @@
     display:flex; align-items:center; gap:9px;
     background:var(--brand-navy); color:var(--text-on-brand);
     font-size:var(--t-body); font-weight:600; line-height:1.35;
-    padding:12px var(--s-4); border-radius:var(--r-md);
+    padding:var(--s-3) var(--s-4); border-radius:var(--r-md);
     border:1px solid rgba(255,255,255,.08);
     box-shadow:0 10px 30px rgba(0,0,0,.32);
     animation:toastIn .32s var(--ease-spring) both;
@@ -1622,7 +1622,7 @@
   /* The room's header is the one brand-gradient surface in messaging: it says who
      you are talking to, and nothing else competes with the thread below it. */
   .chat-head{
-    background:var(--grad-hero); color:var(--on-brand); padding:16px 18px;
+    background:var(--grad-hero); color:var(--on-brand); padding:var(--s-4) 18px;
     display:flex; align-items:center; justify-content:space-between; gap:10px;
     border-bottom:1px solid rgba(255,255,255,.1);
   }
@@ -1637,7 +1637,7 @@
   }
   .chat-head-tag{
     background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.32); color:var(--on-brand);
-    font-size:var(--t-caption); font-weight:700; padding:4px 10px; border-radius:var(--r-pill);
+    font-size:var(--t-caption); font-weight:700; padding:var(--s-1) 10px; border-radius:var(--r-pill);
     white-space:nowrap;
     /* The name of the person you are talking to outranks the distance to them, so
        the tag gives way first rather than pushing the name into an ellipsis. */
@@ -1645,7 +1645,7 @@
   }
   .chat-list{
     display:flex; flex-direction:column; gap:12px; overflow-y:auto; flex:1;
-    padding:16px 16px 78px; overscroll-behavior:none;
+    padding:var(--s-4) 16px 78px; overscroll-behavior:none;
     -ms-overflow-style:none; scrollbar-width:none;
   }
   .chat-list::-webkit-scrollbar{ display:none; width:0; height:0; }
@@ -1655,7 +1655,7 @@
   .chat-in{ justify-content:flex-start; }
   .chat-avatar{ flex:none; margin-top:2px; }
   .chat-bubble{
-    max-width:76%; padding:12px 14px; font-size:var(--t-body); line-height:1.45;
+    max-width:76%; padding:var(--s-3) 14px; font-size:var(--t-body); line-height:1.45;
     border-radius:var(--r-md); overflow-wrap:anywhere; animation:riseIn .28s ease both;
   }
   .chat-bubble-in{
@@ -1668,26 +1668,26 @@
   .chat-when{ display:block; margin-top:4px; font-size:var(--t-caption); font-weight:600; opacity:.72; }
   .chat-empty{
     text-align:center; color:var(--mist); font-size:var(--t-caption);
-    padding:24px 12px; line-height:1.6;
+    padding:var(--s-6) 12px; line-height:1.6;
   }
   #chat-msg-list{ overflow-x:hidden; }
   ::-webkit-scrollbar{ width:9px; height:9px; }
-  ::-webkit-scrollbar-thumb{ background:var(--brand-tint); border-radius:99px; border:2px solid transparent; background-clip:content-box; }
+  ::-webkit-scrollbar-thumb{ background:var(--brand-tint); border-radius:var(--r-pill); border:2px solid transparent; background-clip:content-box; }
   ::-webkit-scrollbar-thumb:hover{ background:var(--text-secondary); background-clip:content-box; }
   /* Four tabs no longer fit in a phone width with flex:1 and a shrinking basis: the
      last label was cut mid-word with nothing to say the rail scrolls. The buttons now
      take the width their own text needs and still grow to fill the row when they can,
      and the rail scrolls when they cannot. */
-  .seg{ display:flex; gap:6px; background:var(--brand-tint-soft); padding:var(--s-1); border-radius:14px; overflow-x:auto; scrollbar-width:none; }
+  .seg{ display:flex; gap:6px; background:var(--brand-tint-soft); padding:var(--s-1); border-radius:var(--r-md); overflow-x:auto; scrollbar-width:none; }
   .seg::-webkit-scrollbar{ display:none; }
-  .seg-btn{ flex:1 0 auto; white-space:nowrap; min-height:var(--tap); border:none; background:transparent; color:var(--brand-navy); font-weight:700; font-size:var(--t-body-sm); padding:9px 10px; border-radius:10px; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; justify-content:center; gap:6px; transition:background .16s ease, color .16s ease, box-shadow .16s ease; }
+  .seg-btn{ flex:1 0 auto; white-space:nowrap; min-height:var(--tap); border:none; background:transparent; color:var(--brand-navy); font-weight:700; font-size:var(--t-body-sm); padding:9px 10px; border-radius:var(--r-sm); cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; justify-content:center; gap:6px; transition:background .16s ease, color .16s ease, box-shadow .16s ease; }
   .seg-btn.on{ background:var(--grad-brand-dark); color:var(--text-on-brand); box-shadow:0 3px 10px rgba(3,0,43,.28); }
   /* Four tabs, one phone width. The rail scrolls now, which fixes reaching the last one
      but not arriving at it half cut off — so this rail takes the space back from the
      padding instead of from the labels. */
   .seg-4{ gap:3px; }
   .seg-4 .seg-btn{ padding:9px 5px; gap:var(--s-1); }
-  .seg-count{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px; border-radius:999px; background:rgba(3,0,43,.12); font-size:var(--t-caption); font-weight:800; }
+  .seg-count{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px; border-radius:var(--r-pill); background:rgba(3,0,43,.12); font-size:var(--t-caption); font-weight:800; }
   .seg-btn.on .seg-count{ background:rgba(255,255,255,.22); }
   .img-avatar{ border-radius:50%; object-fit:cover; flex-shrink:0; display:inline-block; vertical-align:middle; border:2px solid rgba(255,255,255,.92); box-shadow:0 2px 8px rgba(3,0,43,.22); background:var(--brand-tint-soft); }
   body.app-mode{ background:var(--cloud); display:block; padding:0; min-height:100vh; }
@@ -4202,7 +4202,7 @@ function finaliseCard(booking){
             and it leaves the service fee exactly as it was accepted.</div>
         </div>
       </div>
-      <button type="button" class="btn sm" style="width:100%; margin-top:11px; border-radius:10px;"
+      <button type="button" class="btn sm" style="width:100%; margin-top:11px; border-radius:var(--r-sm);"
         onclick="openFinalise('${booking.id}')">Enter ${esc(basisWord)}</button>
     </div>`;
   return `<div class="card finalise-card">
@@ -4214,7 +4214,7 @@ function finaliseCard(booking){
           ${f.revisedFrom ? `<div class="finalise-sub">An earlier reading of ${esc(pesoShort(f.revisedFrom.amountCentavos))} was replaced, not erased.</div>` : ''}
         </div>
       </div>
-      <button type="button" class="btn sm secondary" style="width:100%; margin-top:10px; border-radius:10px;"
+      <button type="button" class="btn sm secondary" style="width:100%; margin-top:10px; border-radius:var(--r-sm);"
         onclick="openFinalise('${booking.id}')">Correct the reading</button>
     </div>`;
 }
@@ -4899,7 +4899,7 @@ function ageingCard() {
   return `<div class="card card-lg">
       <div class="row card-head" style="margin-bottom:10px;"><b class="card-title">Commission owed on cash jobs</b><span class="chip">Unbilled</span></div>
       ${rows.map(r => `
-        <div class="row" style="padding:8px 0; border-top:1px solid var(--line);">
+        <div class="row" style="padding:var(--s-2) 0; border-top:1px solid var(--line);">
           <span style="min-width:0; flex:1;">
             <span style="display:block; font-size:var(--t-body-sm); font-weight:700;">${esc(providerOf({ providerId: r.providerId }).name)}</span>
             <span style="display:block; font-size:var(--t-caption); color:var(--mist); margin-top:1px;">${r.jobs} job${r.jobs === 1 ? '' : 's'} · oldest ${esc(agoText(r.oldest))}</span>
@@ -4947,13 +4947,13 @@ function configPanel() {
           <span style="display:flex; align-items:center; gap:6px;">
             <input id="cfgcat-${cat.id}" type="number" min="0" max="40" step="1" inputmode="numeric"
                    aria-label="${esc(cat.label)} commission rate, percent"
-                   style="width:62px; min-height:var(--tap); padding:6px 8px; border:1px solid var(--line); border-radius:8px; font:inherit; font-size:var(--t-caption);"
+                   style="width:62px; min-height:var(--tap); padding:6px 8px; border:1px solid var(--line); border-radius:var(--r-xs); font:inherit; font-size:var(--t-caption);"
                    value="${CONFIG.commissionRateByCategory[cat.id] !== undefined ? Math.round(CONFIG.commissionRateByCategory[cat.id] * 100) : ''}"
                    placeholder="${Math.round(CONFIG.commissionRateDefault * 100)}">
             <span style="font-size:var(--t-caption); color:var(--mist);">%</span>
           </span>
         </div>`).join('')}
-      <button type="button" class="btn" style="width:100%; margin-top:12px; border-radius:12px;" onclick="commitConfig()">Save changes</button>
+      <button type="button" class="btn" style="width:100%; margin-top:12px; border-radius:var(--r-card);" onclick="commitConfig()">Save changes</button>
       <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">
         Saved rates apply to bookings made after the change. Jobs already accepted keep the terms frozen
         when the provider accepted them.
@@ -5028,7 +5028,7 @@ function disputeCard(d) {
         ${esc(b.summary)} · ${esc(b.date)} · ${peso(d.amountInClaimCentavos)}<br>
         Opened ${esc(agoText(d.openedAt))} by the ${esc(d.openedBy)}
       </div>
-      <div style="margin-top:10px; padding:10px 12px; background:var(--background); border-radius:12px; font-size:var(--t-caption); color:var(--ink-soft); line-height:1.55;">
+      <div style="margin-top:10px; padding:10px 12px; background:var(--background); border-radius:var(--r-card); font-size:var(--t-caption); color:var(--ink-soft); line-height:1.55;">
         <b>${esc(d.reason)}</b>
       </div>
       <details style="margin-top:10px;" ${open ? '' : 'open'}>
@@ -5042,9 +5042,9 @@ function disputeCard(d) {
         ${ic('lock', 12)} ${peso(held)} owed to ${esc(p.name.split(' ')[0])} is held while this is read. Holding it is not a finding against them.</div>` : ''}
       ${open ? `
         <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
-          <button type="button" class="btn sm secondary" style="border-radius:10px;" onclick="resolveCase('${d.id}','upheld')">Close — the booking stands</button>
-          <button type="button" class="btn sm secondary" style="border-radius:10px;" onclick="resolveCase('${d.id}','partial')">Close — refund part of it</button>
-          <button type="button" class="btn sm danger" style="border-radius:10px;" onclick="resolveCase('${d.id}','refunded')">Close — refund the customer</button>
+          <button type="button" class="btn sm secondary" style="border-radius:var(--r-sm);" onclick="resolveCase('${d.id}','upheld')">Close — the booking stands</button>
+          <button type="button" class="btn sm secondary" style="border-radius:var(--r-sm);" onclick="resolveCase('${d.id}','partial')">Close — refund part of it</button>
+          <button type="button" class="btn sm danger" style="border-radius:var(--r-sm);" onclick="resolveCase('${d.id}','refunded')">Close — refund the customer</button>
         </div>
         <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">
           A refund takes money back out of the holding, the provider's share and our own fee, pro rata to
@@ -6050,7 +6050,7 @@ function residentSectionBody(section){
   const mine = bookingsForResident(state.customerId);
   const openCases = DISPUTES.filter(d => mine.some(b => b.id === d.bookingId) && d.status === 'open');
   const covered = finished.filter(b => warrantyEndsAt(b) > new Date());
-  const row = (b, extra) => `<div class="card" data-booking="${b.id}" style="cursor:pointer; padding:12px 13px;"
+  const row = (b, extra) => `<div class="card" data-booking="${b.id}" style="cursor:pointer; padding:var(--s-3) 13px;"
       aria-label="${esc(b.summary)}, ${esc(shortDate(b.completedAt || b.date))}, ${esc(pesoShort(bookingTotal(b)))}">
       <div class="row" style="align-items:flex-start; gap:10px;">
         ${photoAvatar(providerOf(b), 36)}
@@ -6083,7 +6083,7 @@ function residentSectionBody(section){
       + `<div class="section-label" style="margin-top:16px;">Open cases</div>`
       + (openCases.length ? openCases.map(d => {
           const b = bookingById(d.bookingId);
-          return `<div class="card" data-booking="${b.id}" style="padding:12px 13px; cursor:pointer;"
+          return `<div class="card" data-booking="${b.id}" style="padding:var(--s-3) 13px; cursor:pointer;"
               aria-label="Case ${esc(d.id)}, ${esc(b.summary)}, ${esc(disputeLabel(d.status))}">
               <div class="row" style="align-items:flex-start; gap:10px;">
                 <div style="min-width:0; flex:1;">
@@ -6293,7 +6293,7 @@ function providerSkeletons(){
           <span class="skel" style="width:34%; height:10px; margin-top:7px;"></span>
         </span>
       </div>
-      <span class="skel" style="width:100%; height:44px; border-radius:10px;"></span>
+      <span class="skel" style="width:100%; height:44px; border-radius:var(--r-sm);"></span>
     </div>`).join('');
   return `<div class="skel-note"><span class="spinner on-light"></span> Finding nearby providers&hellip;</div>${rows}`;
 }
@@ -6336,8 +6336,8 @@ function providerFiltersSheet(){
       </div>
     </div>
     <div class="sheet-foot">
-      <button type="button" class="btn secondary" style="flex:1; border-radius:12px;" onclick="resetProviderFilters()">Reset</button>
-      <button type="button" class="btn" style="flex:1.3; border-radius:12px;" onclick="applyProviderFilters()">${count} match${count === 1 ? '' : 'es'}</button>
+      <button type="button" class="btn secondary" style="flex:1; border-radius:var(--r-card);" onclick="resetProviderFilters()">Reset</button>
+      <button type="button" class="btn" style="flex:1.3; border-radius:var(--r-card);" onclick="applyProviderFilters()">${count} match${count === 1 ? '' : 'es'}</button>
     </div>`;
 }
 
@@ -6873,7 +6873,7 @@ function cancelRow(b) {
   const late = b.status !== 'requested';
   return `<div style="margin-top:12px;">
         ${cancelWarning(b)}
-        <button type="button" class="btn sm ${late || currentOffer(b.id) ? 'secondary' : 'danger'}" style="width:100%; margin-top:10px; border-radius:10px;" onclick="cancelBookingRequest('${b.id}')">
+        <button type="button" class="btn sm ${late || currentOffer(b.id) ? 'secondary' : 'danger'}" style="width:100%; margin-top:10px; border-radius:var(--r-sm);" onclick="cancelBookingRequest('${b.id}')">
           ${late ? 'Cancel this booking' : 'Withdraw this request'}
         </button>
       </div>`;
@@ -7031,8 +7031,8 @@ function rescheduleSheet(){
       ${state.rescheduleError ? `<div class="inline-error" role="alert">${esc(state.rescheduleError)}</div>` : ''}
     </div>
     <div class="sheet-foot">
-      <button type="button" class="btn secondary" style="flex:1; border-radius:12px;" onclick="closeSheet()">Keep ${esc(b.time)}</button>
-      <button type="button" class="btn" style="flex:1.3; border-radius:12px;" onclick="submitRescheduleRequest()">Send the request</button>
+      <button type="button" class="btn secondary" style="flex:1; border-radius:var(--r-card);" onclick="closeSheet()">Keep ${esc(b.time)}</button>
+      <button type="button" class="btn" style="flex:1.3; border-radius:var(--r-card);" onclick="submitRescheduleRequest()">Send the request</button>
     </div>`;
 }
 
@@ -7161,7 +7161,7 @@ function rescheduleCard(b){
       <b class="card-title">Reschedule requests</b>
       <span class="chip">${rows.length} on this job</span>
     </div>
-    ${rows.map(r => `<div style="padding:8px 0; border-top:1px solid var(--line); min-width:0;">
+    ${rows.map(r => `<div style="padding:var(--s-2) 0; border-top:1px solid var(--line); min-width:0;">
       <div style="font-size:var(--t-body-sm); font-weight:700;">${r.fromDate ? esc(r.fromDate) + ' at ' + esc(r.fromTime) + ' → ' : ''}${esc(r.date)} at ${esc(r.time)}</div>
       <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">
         ${r.raisedBy === actor.side ? 'You asked' : (r.raisedBy === 'provider' ? 'The provider asked' : 'The resident asked')} · ${RESCHEDULE_STATES[r.status].label}${r.decidedAt ? ' · ' + agoText(new Date(r.decidedAt).toISOString()) : ''}
@@ -7169,12 +7169,12 @@ function rescheduleCard(b){
       ${r.reason ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:4px; line-height:1.5;">“${esc(r.reason)}”</div>` : ''}
       ${r.status === 'pending' && r.raisedBy !== actor.side ? `
         <div style="display:flex; gap:6px; margin-top:8px;">
-          <button type="button" class="btn sm" style="flex:1; border-radius:10px;" onclick="answerReschedule('${r.id}','accepted')">Accept the new time</button>
-          <button type="button" class="btn sm secondary" style="flex:1; border-radius:10px;" onclick="answerReschedule('${r.id}','declined')">Decline</button>
+          <button type="button" class="btn sm" style="flex:1; border-radius:var(--r-sm);" onclick="answerReschedule('${r.id}','accepted')">Accept the new time</button>
+          <button type="button" class="btn sm secondary" style="flex:1; border-radius:var(--r-sm);" onclick="answerReschedule('${r.id}','declined')">Decline</button>
         </div>
-        <button type="button" class="btn sm secondary" style="width:100%; margin-top:6px; border-radius:10px;" onclick="counterReschedule('${r.id}')">Counter with another time</button>` : ''}
+        <button type="button" class="btn sm secondary" style="width:100%; margin-top:6px; border-radius:var(--r-sm);" onclick="counterReschedule('${r.id}')">Counter with another time</button>` : ''}
       ${r.status === 'pending' && r.raisedBy === actor.side ? `
-        <button type="button" class="btn sm secondary" style="width:100%; margin-top:8px; border-radius:10px;" onclick="withdrawReschedule('${r.id}')">Withdraw this request</button>` : ''}
+        <button type="button" class="btn sm secondary" style="width:100%; margin-top:8px; border-radius:var(--r-sm);" onclick="withdrawReschedule('${r.id}')">Withdraw this request</button>` : ''}
     </div>`).join('')}
     <div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px;">
       The booking still reads ${esc(b.date)} at ${esc(b.time)}. A proposed time becomes the appointment only when the other side accepts it.
@@ -7197,7 +7197,7 @@ function rescheduleRow(b){
     <div style="font-size:var(--t-caption); color:var(--mist); line-height:1.5; margin-bottom:8px;">
       Something came up? Propose another time instead of cancelling — the agreed hour stays as it is until the other side answers.
     </div>
-    <button type="button" class="btn sm secondary" style="width:100%; border-radius:10px;" onclick="openRescheduleRequest('${b.id}')">Request a new time</button>
+    <button type="button" class="btn sm secondary" style="width:100%; border-radius:var(--r-sm);" onclick="openRescheduleRequest('${b.id}')">Request a new time</button>
   </div>`;
 }
 
@@ -7478,7 +7478,7 @@ function statusCard(b) {
       : offerIsOpen(offered) ? 'Your answer is needed on ' + first + "'s offer"
       : offered.status === 'accepted' ? 'Waiting for ' + first + ' to confirm the visit'
       : 'You declined ' + first + "'s offer";
-    return `<div style="background:var(--background); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:14px;">
+    return `<div style="background:var(--background); border:1px solid var(--line); border-radius:var(--r-md); padding:14px; margin-bottom:14px;">
           <div class="row" style="margin-bottom:10px;">
             <span style="font-size:var(--t-caption); font-weight:800; color:var(--ink-soft); display:flex; align-items:center; gap:5px;">
               ${offered && offerIsOpen(offered) ? ic('inbox', 12) + ' ' + waitingOn
@@ -7600,7 +7600,7 @@ function bookingRequestSheet(){
       </div>
 
       ${d.asap
-        ? `<div class="sheet-group"><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; padding:10px 12px; background:var(--background); border:1px solid var(--line); border-radius:12px;">${ic('clock', 12)} ${esc(p.name.split(' ')[0])} is shown as able to start in about ${p.availabilityMin} minutes. A time is agreed with you before anyone comes.</div></div>`
+        ? `<div class="sheet-group"><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; padding:10px 12px; background:var(--background); border:1px solid var(--line); border-radius:var(--r-card);">${ic('clock', 12)} ${esc(p.name.split(' ')[0])} is shown as able to start in about ${p.availabilityMin} minutes. A time is agreed with you before anyone comes.</div></div>`
         : `<div class="sheet-group">
         <div class="sheet-label">Preferred time</div>
         <div class="hscroll req-rail">
@@ -7614,7 +7614,7 @@ function bookingRequestSheet(){
         <div class="req-addr">
           ${addrs.length
             ? addrs.map((a, i) => requestPick(d.addrIdx === i, ic('map-pin',12) + ' ' + esc(a), `pickRequest('addrIdx',${i})`)).join('')
-            : `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; padding:10px 12px; background:var(--background); border:1px solid var(--line); border-radius:12px;">${ic('alert-triangle',12)} No address is on this account, so there is nowhere to choose. Add one under Profile before sending this request — a job is never booked to an address the app has invented.</div>`}
+            : `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; padding:10px 12px; background:var(--background); border:1px solid var(--line); border-radius:var(--r-card);">${ic('alert-triangle',12)} No address is on this account, so there is nowhere to choose. Add one under Profile before sending this request — a job is never booked to an address the app has invented.</div>`}
         </div>
       </div>
 
@@ -7632,8 +7632,8 @@ function bookingRequestSheet(){
       </div>
     </div>
     <div class="sheet-foot">
-      <button type="button" class="btn secondary" style="flex:1; border-radius:12px;" onclick="closeSheet()">Cancel</button>
-      <button type="button" class="btn" style="flex:1.5; border-radius:12px;" ${state.requestSubmitting ? 'disabled' : ''} onclick="submitBookingRequest()">
+      <button type="button" class="btn secondary" style="flex:1; border-radius:var(--r-card);" onclick="closeSheet()">Cancel</button>
+      <button type="button" class="btn" style="flex:1.5; border-radius:var(--r-card);" ${state.requestSubmitting ? 'disabled' : ''} onclick="submitBookingRequest()">
         ${state.requestSubmitting
           ? '<span class="spinner"></span> Sending your request&hellip;'
           : 'Send request ' + ic('arrow-right',12)}
@@ -8344,7 +8344,7 @@ function legalDocSheet(){
       <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close">${ic("x",15)}</button>
     </div>
     <div class="sheet-body">
-      <div style="font-size:var(--t-caption); color:var(--warning-ink); background:var(--warning-100); border-radius:12px; padding:10px 12px; line-height:1.5; margin-bottom:10px;">
+      <div style="font-size:var(--t-caption); color:var(--warning-ink); background:var(--warning-100); border-radius:var(--r-card); padding:10px 12px; line-height:1.5; margin-bottom:10px;">
         ${ic('alert-triangle',12)} <b>Draft — not reviewed by Philippine counsel.</b> Placeholders in square brackets are facts the business has not decided yet; none of them is a claim.
       </div>
       ${accepted.length ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin-bottom:10px;">${ic('check',12)} This device recorded your acceptance of the ${esc(d.label)} ${esc(LEGAL_VERSION)} on ${esc(shortDate(new Date(accepted[accepted.length-1].at)))}.</div>` : ''}
@@ -8354,7 +8354,7 @@ function legalDocSheet(){
       </div>`).join('')}
     </div>
     <div class="sheet-foot">
-      <button type="button" class="btn" style="flex:1; border-radius:12px;" onclick="closeSheet()">Close</button>
+      <button type="button" class="btn" style="flex:1; border-radius:var(--r-card);" onclick="closeSheet()">Close</button>
     </div>`;
 }
 function legalLinks(){
@@ -8883,7 +8883,7 @@ function residentHome(){
          first screen. With nothing live the grid simply moves up into its place. -->
     ${active? `
     <div class="section-label">Active booking</div>
-    <div class="card card-lg" data-booking="${active.id}" style="cursor:pointer; padding:12px 13px;">
+    <div class="card card-lg" data-booking="${active.id}" style="cursor:pointer; padding:var(--s-3) 13px;">
       <div class="row" style="align-items:flex-start; gap:10px;">
         <div style="display:flex; gap:10px; align-items:center; min-width:0;">
           ${photoAvatar(providerOf(active), 36)}
@@ -8905,7 +8905,7 @@ function residentHome(){
 
     ${awaiting ? `
     <div class="section-label">Needs your answer</div>
-    <div class="card" data-booking="${awaiting.b.id}" style="cursor:pointer; padding:12px 13px;">
+    <div class="card" data-booking="${awaiting.b.id}" style="cursor:pointer; padding:var(--s-3) 13px;">
       <div class="row" style="align-items:flex-start; gap:10px;">
         ${photoAvatar(providerOf(awaiting.b), 36)}
         <div style="min-width:0; flex:1;">
@@ -8938,7 +8938,7 @@ function residentHome(){
     <div class="section-label">${repeat.length ? 'Book again' : 'Highly rated nearby'}</div>
     <div class="hscroll" style="display:flex; gap:8px;">
       ${repeat.map(({ p, last }) => `
-        <div class="card" style="min-width:116px; text-align:center; cursor:pointer; margin-bottom:0; padding:12px 8px" data-provider="${p.id}">
+        <div class="card" style="min-width:116px; text-align:center; cursor:pointer; margin-bottom:0; padding:var(--s-3) 8px" data-provider="${p.id}">
           <div style="display:flex; justify-content:center; margin-bottom:7px;">${photoAvatar(p, 46)}</div>
           <div style="font-size:var(--t-body); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(p.name.split(' ')[0])}</div>
           <div style="font-size:var(--t-caption); color:var(--mist); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(p.service)}</div>
@@ -8969,20 +8969,20 @@ function residentConcierge(){
     <!-- This is a caveat, not the headline of the screen. As a full-width dark
          gradient block it was the loudest thing here, and it said "this does not
          diagnose" — so the first and strongest impression was a disclaimer. -->
-    <div style="display:flex; gap:9px; align-items:flex-start; background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--brand-secondary); border-radius:12px; padding:11px 13px; margin-bottom:14px;">
+    <div style="display:flex; gap:9px; align-items:flex-start; background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--brand-secondary); border-radius:var(--r-card); padding:11px 13px; margin-bottom:14px;">
       <span style="color:var(--deep); display:inline-flex; flex:none; margin-top:1px;">${ic("lightbulb",15)}</span>
       <p style="font-size:var(--t-caption); line-height:1.5; color:var(--ink-soft); margin:0;">
         Describe the problem or attach a photo. This prototype sorts what you provide into a service category and prepares a job briefing for the provider &mdash; it does not diagnose the fault.
       </p>
     </div>
 
-    <div class="card" style="border-radius:16px; padding:16px; margin-bottom:14px">
+    <div class="card" style="border-radius:16px; padding:var(--s-4); margin-bottom:14px">
       <label for="concierge-input-field" style="font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:block; margin-bottom:8px;">Describe the issue</label>
-      <textarea id="concierge-input-field" rows="4" oninput="conciergeInput(this)" style="width:100%; border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:14px; font-family:inherit; font-size:var(--t-body-sm); color:var(--ink); resize:none;" placeholder="Describe what is broken, leaking, or needs maintenance...">${esc(state.conciergeInput)}</textarea>
+      <textarea id="concierge-input-field" rows="4" oninput="conciergeInput(this)" style="width:100%; border:1px solid var(--line); border-radius:var(--r-card); padding:var(--s-3); margin-bottom:14px; font-family:inherit; font-size:var(--t-body-sm); color:var(--ink); resize:none;" placeholder="Describe what is broken, leaking, or needs maintenance...">${esc(state.conciergeInput)}</textarea>
 
       <label style="font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:block; margin-bottom:8px;">Attach a photo of the problem</label>
       
-      <button class="btn secondary" style="width:100%; background:var(--surface); border:1.5px solid var(--line); border-radius:12px; padding:12px; font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:12px; box-shadow:0 2px 5px rgba(0,0,0,0.02);" onclick="document.getElementById('hidden-file-input').click()">
+      <button class="btn secondary" style="width:100%; background:var(--surface); border:1.5px solid var(--line); border-radius:var(--r-card); padding:var(--s-3); font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:12px; box-shadow:0 2px 5px rgba(0,0,0,0.02);" onclick="document.getElementById('hidden-file-input').click()">
         <input type="file" id="hidden-file-input" accept="image/*" style="display:none;" onchange="handlePhotoUpload(event)">
         ${ic("camera",16)}
         <span>${state.conciergePhotoAttached ? esc(state.conciergePhotoName) : 'Upload or take a photo'}</span>
@@ -8996,7 +8996,7 @@ function residentConcierge(){
       </div>
 
       ${state.conciergeError ? `<div class="inline-error" id="concierge-error" role="alert">${ic("alert-triangle",12)} ${state.conciergeError}</div>` : ''}
-      <button class="btn" style="width:100%; border-radius:12px; padding:14px; font-size:var(--t-body);" id="concierge-analyze-btn" ${state.conciergeAnalyzing ? 'disabled' : ''}>
+      <button class="btn" style="width:100%; border-radius:var(--r-card); padding:14px; font-size:var(--t-body);" id="concierge-analyze-btn" ${state.conciergeAnalyzing ? 'disabled' : ''}>
         ${state.conciergeAnalyzing
           ? '<span class="spinner"></span> Preparing the job briefing&hellip;'
           : 'Prepare the job briefing ' + ic("arrow-right",12)}
@@ -9006,10 +9006,10 @@ function residentConcierge(){
     ${(state.conciergeAnalyzed && sort && sorted) ? `
       <div class="card card-hero" style=" border:2px solid var(--brand-navy); box-shadow:0 6px 20px rgba(0,0,0,0.06)">
         <div class="row" style="margin-bottom:12px;">
-          <span style="background:${sorted.bg}; color:${sorted.fg}; font-size:var(--t-caption); font-weight:800; padding:5px 12px; border-radius:999px; display:inline-flex; align-items:center; gap:5px;">
+          <span style="background:${sorted.bg}; color:${sorted.fg}; font-size:var(--t-caption); font-weight:800; padding:5px 12px; border-radius:var(--r-pill); display:inline-flex; align-items:center; gap:5px;">
             ${ic(sorted.icon,12)} ${sorted.label}
           </span>
-          <span style="background:var(--background); color:var(--ink-soft); font-size:var(--t-caption); font-weight:700; padding:5px 12px; border-radius:999px; border:1px solid var(--line);">
+          <span style="background:var(--background); color:var(--ink-soft); font-size:var(--t-caption); font-weight:700; padding:5px 12px; border-radius:var(--r-pill); border:1px solid var(--line);">
             Sorted from your description
           </span>
         </div>
@@ -9022,14 +9022,14 @@ function residentConcierge(){
           The prototype only groups what you reported under one service category &mdash; nobody has inspected the fault, so the provider confirms the cause and price on site.
         </p>
 
-        <div style="background:var(--background); border-radius:12px; padding:12px; margin-bottom:14px; border:1px solid var(--line);">
+        <div style="background:var(--background); border-radius:var(--r-card); padding:var(--s-3); margin-bottom:14px; border:1px solid var(--line);">
           <div style="font-size:var(--t-caption); font-weight:700; color:var(--ink); margin-bottom:4px;">Clarifying question:</div>
           <div style="font-size:var(--t-caption); color:var(--ink-soft); font-style:italic; margin-bottom:10px;">
             "${sort.ask}"
           </div>
           <div style="display:flex; gap:8px;">
-            <button class="btn sm secondary" style="flex:1; background:var(--surface); border:1px solid var(--line); border-radius:10px; font-weight:700; font-size:var(--t-caption); color:var(--ink); padding:8px;" onclick="addConciergeAnswer('${sort.id}',0)">${sort.ans[0]}</button>
-            <button class="btn sm secondary" style="flex:1; background:var(--surface); border:1px solid var(--line); border-radius:10px; font-weight:700; font-size:var(--t-caption); color:var(--ink); padding:8px;" onclick="addConciergeAnswer('${sort.id}',1)">${sort.ans[1]}</button>
+            <button class="btn sm secondary" style="flex:1; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-sm); font-weight:700; font-size:var(--t-caption); color:var(--ink); padding:var(--s-2);" onclick="addConciergeAnswer('${sort.id}',0)">${sort.ans[0]}</button>
+            <button class="btn sm secondary" style="flex:1; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-sm); font-weight:700; font-size:var(--t-caption); color:var(--ink); padding:var(--s-2);" onclick="addConciergeAnswer('${sort.id}',1)">${sort.ans[1]}</button>
           </div>
         </div>
 
@@ -9037,11 +9037,11 @@ function residentConcierge(){
           Sent with your request:
         </div>
         
-        <div style="background:var(--surface); border:1px dashed var(--line); border-radius:10px; padding:10px; font-size:var(--t-caption); color:var(--ink); font-style:italic; margin-bottom:16px;">
+        <div style="background:var(--surface); border:1px dashed var(--line); border-radius:var(--r-sm); padding:10px; font-size:var(--t-caption); color:var(--ink); font-style:italic; margin-bottom:16px;">
           "Customer reports: '${esc(state.conciergeInput) || '(no description typed)'}'. ${state.conciergePhotoAttached ? 'A photo came with it.' : 'No photo was attached.'} Filed under ${sorted.label} &mdash; confirm the scope and price with the provider before booking."
         </div>
 
-        <button class="btn" style="width:100%; border-radius:12px; padding:14px; font-size:var(--t-body);" onclick="conciergeFindMatches()">
+        <button class="btn" style="width:100%; border-radius:var(--r-card); padding:14px; font-size:var(--t-body);" onclick="conciergeFindMatches()">
           Show ${sorted.label} providers ${ic("arrow-right",12)}
         </button>
       </div>
@@ -9231,7 +9231,7 @@ function residentResults(){
     ) : list.map(p => `
       <div class="card" data-provider-detail="${p.id}" style="cursor:pointer;">
         <div class="row" style="margin-bottom:10px;">
-          <span style="background:var(--brand-tint-soft); color:var(--brand-primary); font-size:var(--t-caption); font-weight:800; padding:4px 9px; border-radius:6px; display:inline-flex; align-items:center; gap:3px;">
+          <span style="background:var(--brand-tint-soft); color:var(--brand-primary); font-size:var(--t-caption); font-weight:800; padding:var(--s-1) 9px; border-radius:6px; display:inline-flex; align-items:center; gap:3px;">
             ${ic("zap",12)} ${p.smartMatch.score}% Match
           </span>
           ${(p.badges && p.badges.length) ? `<span class="chip" style="background:var(--success-100); color:var(--success-ink);">${ic("badge-check",12)} Verified</span>` : ''}
@@ -9306,7 +9306,7 @@ function residentProviderDetail(){
           </div>
         </div>
         <div class="row-value" style="white-space:nowrap;">
-          <span style="background:var(--brand-tint-soft); color:var(--brand-primary); font-size:var(--t-caption); font-weight:800; padding:4px 10px; border-radius:999px; white-space:nowrap;">
+          <span style="background:var(--brand-tint-soft); color:var(--brand-primary); font-size:var(--t-caption); font-weight:800; padding:var(--s-1) 10px; border-radius:var(--r-pill); white-space:nowrap;">
             ${p.service}
           </span>
           <div style="font-size:var(--t-caption); color:var(--mist); margin-top:6px; font-weight:500;">
@@ -9338,7 +9338,7 @@ function residentProviderDetail(){
         <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
           ${credentialsOf(p.id).map(c => {
             const st = credentialLine(c);
-            return `<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--background); border:1px solid var(--line); border-radius:8px; padding:6px 10px; font-size:var(--t-caption); color:var(--ink);">
+            return `<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--background); border:1px solid var(--line); border-radius:var(--r-xs); padding:6px 10px; font-size:var(--t-caption); color:var(--ink);">
               <span style="min-width:0;">${esc(c.name)}<br><span style="color:var(--mist); font-weight:500;">${esc(c.issuer)} · ${esc(st.when)}</span></span>
               <span style="color:${st.tone}; font-weight:700; white-space:nowrap; flex-shrink:0;">${esc(st.label)}</span>
             </div>`;
@@ -9350,10 +9350,10 @@ function residentProviderDetail(){
     ${capabilityCard(p)}
 
     <div style="display:flex; gap:10px; margin-bottom:12px;">
-      <button class="btn secondary" style="flex:1; background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px; font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.04);" data-chat-provider-id="${p.id}">
+      <button class="btn secondary" style="flex:1; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md); padding:var(--s-3); font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.04);" data-chat-provider-id="${p.id}">
         ${ic("chat",14)} Chat Inquiries
       </button>
-      <a class="btn tertiary" href="tel:${DEMO_HOTLINE}" style="flex:1; border-radius:14px; padding:12px; font-size:var(--t-body-sm); display:flex; align-items:center; justify-content:center; gap:6px; text-decoration:none;">
+      <a class="btn tertiary" href="tel:${DEMO_HOTLINE}" style="flex:1; border-radius:var(--r-md); padding:var(--s-3); font-size:var(--t-body-sm); display:flex; align-items:center; justify-content:center; gap:6px; text-decoration:none;">
         ${ic("phone",14)} Contact the Sukinnect line
       </a>
     </div>
@@ -9366,7 +9366,7 @@ function residentProviderDetail(){
         <b class="card-title">Service area</b>
         <span class="chip">${(p.servesBarangays || []).length} barangays declared</span>
       </div>
-      <div id="leafletmap" style="height:130px; border-radius:12px; border:1px solid var(--line); width:100%;"></div>
+      <div id="leafletmap" style="height:130px; border-radius:var(--r-card); border:1px solid var(--line); width:100%;"></div>
     </div>
 
     <div class="card" style="padding:14px; margin-bottom:12px">
@@ -9390,12 +9390,12 @@ function residentProviderDetail(){
     </div>
   </div>
 
-  <div class="book-bar" style="background:var(--surface); border-top:1px solid var(--line); padding:12px 18px; display:flex; align-items:center; justify-content:space-between; position:sticky; bottom:0; z-index:20;">
+  <div class="book-bar" style="background:var(--surface); border-top:1px solid var(--line); padding:var(--s-3) 18px; display:flex; align-items:center; justify-content:space-between; position:sticky; bottom:0; z-index:20;">
     <div>
       <div style="font-size:var(--t-caption); color:var(--mist); font-weight:600;">Indicative rate</div>
       <div style="font-size:var(--t-input); font-weight:800; color:var(--deep);">${pesoShort(cheapestListing(p))} <span style="font-size:var(--t-caption); font-weight:500; color:var(--mist);">starting, per job</span></div>
     </div>
-    <button class="btn" style="background:var(--brand-primary); color:var(--on-brand); border-radius:12px; padding:11px 20px; font-weight:700; font-size:var(--t-body-sm); cursor:pointer;" onclick="openBookingRequest()">
+    <button class="btn" style="background:var(--brand-primary); color:var(--on-brand); border-radius:var(--r-card); padding:11px 20px; font-weight:700; font-size:var(--t-body-sm); cursor:pointer;" onclick="openBookingRequest()">
       Book Appointment
     </button>
   </div>`;
@@ -9418,7 +9418,7 @@ function residentMessagesList(){
     </div>
 
     ${shownThreads.length === 0 ? emptyState('mail', 'No unread messages', 'You have caught up on every conversation here. Open All to read the full threads.', {id:'msgs-show-all-btn', label:'Show all conversations'}) : shownThreads.map(m => `
-      <div class="card" data-open-chat-id="${m.id}" data-thread-kind="${m.kind}" data-thread-booking="${m.bookingId}" style="cursor:pointer; padding:14px; margin-bottom:10px; border-radius:14px; border:1px solid var(--line); display:flex; align-items:flex-start; gap:12px; background:var(--surface);">
+      <div class="card" data-open-chat-id="${m.id}" data-thread-kind="${m.kind}" data-thread-booking="${m.bookingId}" style="cursor:pointer; padding:14px; margin-bottom:10px; border-radius:var(--r-md); border:1px solid var(--line); display:flex; align-items:flex-start; gap:12px; background:var(--surface);">
         ${serviceAvatar(m.id, 44, '')}
         <div style="flex:1; min-width:0;">
           <div class="row" style="margin-bottom:2px;">
@@ -9577,7 +9577,7 @@ function residentChatRoom(){
       <div style="flex:1; min-height:var(--field-h); background:var(--background); border:1px solid var(--line); border-radius:var(--r-pill); padding:0 16px; display:flex; align-items:center;">
         <input type="text" id="chat-input" aria-label="Write a message" placeholder="Type a message to ${firstName}..." style="width:100%; min-height:var(--tap); border:none; background:transparent; font-family:inherit; font-size:var(--t-body-sm); padding:11px 0; color:var(--ink);">
       </div>
-      <button class="btn" style="border-radius:999px; padding:10px 22px; font-size:var(--t-body-sm);" onclick="sendChatMessage()">Send</button>
+      <button class="btn" style="border-radius:var(--r-pill); padding:10px 22px; font-size:var(--t-body-sm);" onclick="sendChatMessage()">Send</button>
     </div>
   </div>`;
 }
@@ -9629,7 +9629,7 @@ function ratingBlock(b){
             <div style="font-size:var(--t-body-sm); font-weight:700; color:var(--ink);">You rated this ${b.myRating} out of 5</div>
             <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">Kept with the booking record, not published as a review.</div>
           </div>
-          <button type="button" id="change-rating-btn" style="background:transparent; border:1px solid var(--line); border-radius:10px; min-height:var(--tap); padding:7px 12px; font-size:var(--t-caption); font-weight:700; color:var(--ink); cursor:pointer;">Change</button>
+          <button type="button" id="change-rating-btn" style="background:transparent; border:1px solid var(--line); border-radius:var(--r-sm); min-height:var(--tap); padding:7px 12px; font-size:var(--t-caption); font-weight:700; color:var(--ink); cursor:pointer;">Change</button>
         </div>
         <div style="margin-top:8px;">${stars(b.myRating, 16)}</div>
       </div>`;
@@ -9678,7 +9678,7 @@ function residentBookingDetail(){
        hand-rolled around it, so this screen and the provider's job screen — the same
        booking seen from two sides — cannot drift in casing, in spacing, or in whether
        the title is a heading at all. They had already done all three. */
-    action: `<span style="background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.32); color:var(--on-brand); font-size:var(--t-caption); font-weight:800; padding:4px 12px; border-radius:999px; text-transform:uppercase; letter-spacing:0.5px; flex-shrink:0;">${statusText}</span>`
+    action: `<span style="background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.32); color:var(--on-brand); font-size:var(--t-caption); font-weight:800; padding:var(--s-1) 12px; border-radius:var(--r-pill); text-transform:uppercase; letter-spacing:0.5px; flex-shrink:0;">${statusText}</span>`
   })}
 
   <div class="pad" style="background:var(--cloud);">
@@ -9699,7 +9699,7 @@ function residentBookingDetail(){
       ${produceRow(b)}
 
       <div class="section-label">Contact</div>
-      <div style="background:var(--background); border:1px solid var(--line); border-radius:14px; padding:12px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;">
+      <div style="background:var(--background); border:1px solid var(--line); border-radius:var(--r-md); padding:var(--s-3); margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;">
         <div style="display:flex; gap:12px; align-items:center;">
           ${serviceAvatar(providerOf(b), 42, '')}
           <div>
@@ -9707,11 +9707,11 @@ function residentBookingDetail(){
             <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${providerOf(b).service} · Barangay ${providerOf(b).barangay}</div>
           </div>
         </div>
-        <button class="btn sm secondary" style="background:var(--surface); border:1px solid var(--line); border-radius:10px; font-weight:700; color:var(--ink); padding:7px 12px; box-shadow:none;" onclick="openBookingProvider('${b.id}')">View Profile</button>
+        <button class="btn sm secondary" style="background:var(--surface); border:1px solid var(--line); border-radius:var(--r-sm); font-weight:700; color:var(--ink); padding:7px 12px; box-shadow:none;" onclick="openBookingProvider('${b.id}')">View Profile</button>
       </div>
 
       <div class="section-label">Price</div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; background:var(--background); padding:12px; border-radius:12px; font-size:var(--t-caption); margin-bottom:14px;">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; background:var(--background); padding:var(--s-3); border-radius:var(--r-card); font-size:var(--t-caption); margin-bottom:14px;">
         <div>
           <span style="color:var(--mist); font-size:var(--t-caption);">Payment Status:</span><br>
           <b style="font-size:var(--t-body-sm); color:var(--ink);">${esc(payStatusLabel(b))}</b>
@@ -9737,7 +9737,7 @@ function residentBookingDetail(){
              provider sets off there is nothing to say, and then the heading is not painted at all rather
              than painted empty — the same rule that keeps the receipt off an unfinished job. -->
         <div class="section-label">Completion</div>
-        <div style="background:var(--background); border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:14px; font-size:var(--t-caption);">
+        <div style="background:var(--background); border:1px solid var(--line); border-radius:var(--r-card); padding:var(--s-3); margin-bottom:14px; font-size:var(--t-caption);">
           ${b.arrivedAt ? `<div>
             <span style="color:var(--mist); font-size:var(--t-caption);">Arrived:</span><br>
             <b style="font-size:var(--t-body-sm); color:var(--ink);">${esc(clockText(b.arrivedAt))}</b>
@@ -9756,16 +9756,16 @@ function residentBookingDetail(){
       ${ratingBlock(b)}
 
       <div style="display:flex; gap:10px; margin-bottom: ${b.status === 'completed' ? '12px' : '0'};">
-        <button class="btn secondary" style="flex:1; background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px; font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.04);" data-chat-booking-provider-id="${providerOf(b).id}">
+        <button class="btn secondary" style="flex:1; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md); padding:var(--s-3); font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.04);" data-chat-booking-provider-id="${providerOf(b).id}">
           ${ic("chat",14)} Chat with ${esc(providerOf(b).name.split(' ')[0])}
         </button>
-        <a class="btn tertiary" href="tel:${DEMO_HOTLINE}" style="flex:1; border-radius:14px; padding:12px; font-size:var(--t-body-sm); display:flex; align-items:center; justify-content:center; gap:6px; text-decoration:none;">
+        <a class="btn tertiary" href="tel:${DEMO_HOTLINE}" style="flex:1; border-radius:var(--r-md); padding:var(--s-3); font-size:var(--t-body-sm); display:flex; align-items:center; justify-content:center; gap:6px; text-decoration:none;">
           ${ic("phone",14)} Call the Sukinnect line
         </a>
       </div>
 
       ${b.status === 'completed' ? `
-        <button class="btn" style="width:100%; border-radius:14px; padding:14px; font-size:var(--t-body); display:flex; align-items:center; justify-content:center; gap:6px;" onclick="rebookProvider('${providerOf(b).id}')">
+        <button class="btn" style="width:100%; border-radius:var(--r-md); padding:14px; font-size:var(--t-body); display:flex; align-items:center; justify-content:center; gap:6px;" onclick="rebookProvider('${providerOf(b).id}')">
           ${ic("refresh-cw",13)} Book Again (${pesoShort(b.amountCentavos)})
         </button>
       ` : ''}
@@ -9803,7 +9803,7 @@ function residentBookings(){
       const sc = statusColors(b.status);
 
       return `
-        <div class="card" role="button" tabindex="0" onclick="openBookingDetail('${b.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openBookingDetail('${b.id}')}" style="cursor:pointer; border-radius:14px; padding:14px; margin-bottom:12px; border:1px solid var(--line); background:var(--surface);">
+        <div class="card" role="button" tabindex="0" onclick="openBookingDetail('${b.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openBookingDetail('${b.id}')}" style="cursor:pointer; border-radius:var(--r-md); padding:14px; margin-bottom:12px; border:1px solid var(--line); background:var(--surface);">
           <div class="row" style="align-items:flex-start; margin-bottom:8px;">
             <div style="display:flex; gap:12px; align-items:center;">
               ${serviceAvatar(providerOf(b), 40, '')}
@@ -9812,7 +9812,7 @@ function residentBookings(){
                 <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${providerOf(b).name} · ${b.date}, ${b.time}</div>
               </div>
             </div>
-            <span style="background:${sc.bg}; color:${sc.fg}; font-size:var(--t-caption); font-weight:800; padding:3px 9px; border-radius:999px; text-transform:uppercase; letter-spacing:0.5px;">
+            <span style="background:${sc.bg}; color:${sc.fg}; font-size:var(--t-caption); font-weight:800; padding:3px 9px; border-radius:var(--r-pill); text-transform:uppercase; letter-spacing:0.5px;">
               ${b.status}
             </span>
           </div>
@@ -10001,7 +10001,7 @@ function residentProfileHub(){
   const rp = state.profileData;
 const row = (id, title, detail) => settingsRow('residentProfileSection', id, title, detail);
   const modal = state.residentProfileModal;
-  return `<div class="topbar" style="display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:10px;"><button onclick="state.tab='home'; render();" class="back-btn" aria-label="Back">${ic("chevron-left",18)}</button><h1>Resident Profile</h1></div><button class="btn sm" style="background:var(--brand-navy-deep); color:var(--on-brand); box-shadow:none;" onclick="residentProfileAction('logout')">Log Out</button></div><div class="pad" style="background:var(--cloud);"><div class="card" style="text-align:center">${photoAvatar('resident', 56)}<div style="font-size:var(--t-lead); font-weight:800; margin-top:10px;">${esc(rp.name)}</div><div style="font-size:var(--t-caption); color:var(--mist); margin-top:3px;">${esc(rp.email)}<br>${esc(rp.phone)}<br><span style="color:var(--success-ink);">Verified - Brgy. ${esc(rp.barangay)}</span></div><button class="btn sm secondary" style="margin-top:10px;" onclick="residentProfileAction('edit')">Edit Profile</button></div><div class="card card-quiet"><div style="font-size:var(--t-body-sm); font-weight:800; margin-bottom:9px;">Account &amp; residence details</div><div style="font-size:var(--t-caption); line-height:1.8;">Home Address: <b>${esc(rp.address)}</b><br>Barangay District: <b>Brgy. ${esc(rp.barangay)}</b><br>Emergency Contact: <b>${esc(rp.emergencyContact)}</b><br>Preferred Payment: <b>${esc(rp.preferredPayment)}</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="residentProfileAction('edit')">Edit Profile</button></div><div style="background:var(--brand-navy); border-radius:18px; padding:16px; color:var(--on-brand); margin-bottom:16px;"><div style="font-size:var(--t-caption); font-weight:800; color:var(--brand-secondary); margin-bottom:12px;">Account activity</div><div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;"><button onclick="openProfileSection('resident','history','Service history','Jobs finished on this account')" style="text-align:left; background:transparent; border:0; color:var(--on-brand); cursor:pointer;"><div style="font-family:var(--font-display); font-size:var(--t-title-lg);">${residentFinished().length}</div><div style="font-size:var(--t-caption);">Completed bookings</div></button><button onclick="openProfileSection('resident','spending','Spending summary','Paid, by service')" style="text-align:left; background:transparent; border:0; color:var(--on-brand); cursor:pointer;"><div style="font-family:var(--font-display); font-size:var(--t-title-lg);">${esc(pesoShort(residentPaid().reduce((s, b) => s + bookingTotal(b), 0)))}</div><div style="font-size:var(--t-caption);">Paid so far</div></button></div></div><div class="section-label">My services</div>${row('history','Service History','Jobs finished on this account')}${row('saved','Saved Providers','Not part of this prototype yet')}${row('warranty','Warranties & Disputes','Covered work and open cases')}<div class="section-label">My home</div>${row('home','Home & Maintenance Profile','Items you add on this device')}${row('reminders','Maintenance Reminders','Built from the items above')}<div class="section-label">Payments</div>${row('payments','Payment Methods','A label you choose, not an account')}${row('receipts','Receipts & Transactions','Jobs whose payment has settled')}<div class="section-label">Account</div>${row('notifications','Notifications','Alerts you choose to receive')}${row('privacy','Privacy & Security','How your details are shared')}</div>${modal ? `<div class="modal-layer" data-layer="modal"><div class="card modal-card"  ><div class="row"><b>${modal==='edit'?'Edit profile':modal==='add_item'?'Add household item':modal==='add_payment'?'Change payment method':modal==='logout'?'Log out?':modal==='unchanged'?'No change to save':'Update'}</b><button aria-label="Close" onclick="state.residentProfileModal=null; render();" style="border:0; background:transparent; font-size:var(--t-title); min-width:var(--tap); min-height:var(--tap); display:inline-flex; align-items:center; justify-content:center;">&times;</button></div>${modal==='edit'?`<label class="form-label">Full Name<input id="resident-profile-name" value="${esc(rp.name)}" class="form-input"></label><label class="form-label-8">Email (read-only)<input value="${esc(rp.email)}" readonly class="form-input-readonly"></label><label class="form-label-8">Phone Number<input id="resident-profile-phone" value="${esc(rp.phone)}" class="form-input"></label><label class="form-label-8">Home Address<input id="resident-profile-address" value="${esc(rp.address)}" class="form-input"></label><label class="form-label-8">Barangay<input id="resident-profile-barangay" value="${esc(rp.barangay)}" class="form-input"></label><label class="form-label-8">Emergency Contact<input id="resident-profile-emergency" value="${esc(rp.emergencyContact)}" class="form-input"></label><button class="btn btn-block"   onclick="saveResidentProfile()">Save Changes</button>`:modal==='add_item'?`<label class="form-label">Item Type<select id="household-type" aria-label="What kind of place this address is" style="width:100%; padding:9px; margin-top:4px;"><option>Air Conditioner</option><option>Refrigerator</option><option>Water Pump</option><option>Kitchen Plumbing</option><option>Water Heater</option><option>Other</option></select></label><label class="form-label-8">Nickname<input id="household-nickname" class="form-input"></label><label class="form-label-8">Brand / Model (Optional)<input id="household-brand" class="form-input"></label><button class="btn btn-block"   onclick="saveHouseholdItem()">Save Item</button>`:modal==='logout'?`<div style="font-size:var(--t-caption); margin-top:12px;">Are you sure you want to log out of your Sukinnect account?</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm secondary" style="flex:1;" onclick="state.residentProfileModal=null; render();">Cancel</button><button class="btn sm danger" style="flex:1;" onclick="signOut()">Log Out</button></div>`:modal==='add_payment'?`<label class="form-label">Preferred payment method<select id="resident-preferred-payment" aria-label="Preferred payment method" style="width:100%; min-height:var(--tap); padding:9px; margin-top:6px; border:1px solid var(--line); border-radius:8px; font:inherit; font-size:var(--t-caption);">${preferredPaymentOptions()}</select></label><div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px; line-height:1.5;">A label for the provider to work against. No account is linked and no money moves here.</div><button class="btn btn-block" onclick="savePreferredPayment()">Save method</button>`:`<div style="font-size:var(--t-caption); color:${modal==='unchanged'?'var(--text-muted)':'var(--success-ink)'}; margin-top:12px;">${modal==='unchanged'?'Nothing on this form changed, so nothing was saved.' : 'Changes saved successfully.'}</div><button class="btn btn-block"   onclick="state.residentProfileModal=null; render();">Close</button>`}</div></div>`:''}`;
+  return `<div class="topbar" style="display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:10px;"><button onclick="state.tab='home'; render();" class="back-btn" aria-label="Back">${ic("chevron-left",18)}</button><h1>Resident Profile</h1></div><button class="btn sm" style="background:var(--brand-navy-deep); color:var(--on-brand); box-shadow:none;" onclick="residentProfileAction('logout')">Log Out</button></div><div class="pad" style="background:var(--cloud);"><div class="card" style="text-align:center">${photoAvatar('resident', 56)}<div style="font-size:var(--t-lead); font-weight:800; margin-top:10px;">${esc(rp.name)}</div><div style="font-size:var(--t-caption); color:var(--mist); margin-top:3px;">${esc(rp.email)}<br>${esc(rp.phone)}<br><span style="color:var(--success-ink);">Verified - Brgy. ${esc(rp.barangay)}</span></div><button class="btn sm secondary" style="margin-top:10px;" onclick="residentProfileAction('edit')">Edit Profile</button></div><div class="card card-quiet"><div style="font-size:var(--t-body-sm); font-weight:800; margin-bottom:9px;">Account &amp; residence details</div><div style="font-size:var(--t-caption); line-height:1.8;">Home Address: <b>${esc(rp.address)}</b><br>Barangay District: <b>Brgy. ${esc(rp.barangay)}</b><br>Emergency Contact: <b>${esc(rp.emergencyContact)}</b><br>Preferred Payment: <b>${esc(rp.preferredPayment)}</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="residentProfileAction('edit')">Edit Profile</button></div><div style="background:var(--brand-navy); border-radius:18px; padding:var(--s-4); color:var(--on-brand); margin-bottom:16px;"><div style="font-size:var(--t-caption); font-weight:800; color:var(--brand-secondary); margin-bottom:12px;">Account activity</div><div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;"><button onclick="openProfileSection('resident','history','Service history','Jobs finished on this account')" style="text-align:left; background:transparent; border:0; color:var(--on-brand); cursor:pointer;"><div style="font-family:var(--font-display); font-size:var(--t-title-lg);">${residentFinished().length}</div><div style="font-size:var(--t-caption);">Completed bookings</div></button><button onclick="openProfileSection('resident','spending','Spending summary','Paid, by service')" style="text-align:left; background:transparent; border:0; color:var(--on-brand); cursor:pointer;"><div style="font-family:var(--font-display); font-size:var(--t-title-lg);">${esc(pesoShort(residentPaid().reduce((s, b) => s + bookingTotal(b), 0)))}</div><div style="font-size:var(--t-caption);">Paid so far</div></button></div></div><div class="section-label">My services</div>${row('history','Service History','Jobs finished on this account')}${row('saved','Saved Providers','Not part of this prototype yet')}${row('warranty','Warranties & Disputes','Covered work and open cases')}<div class="section-label">My home</div>${row('home','Home & Maintenance Profile','Items you add on this device')}${row('reminders','Maintenance Reminders','Built from the items above')}<div class="section-label">Payments</div>${row('payments','Payment Methods','A label you choose, not an account')}${row('receipts','Receipts & Transactions','Jobs whose payment has settled')}<div class="section-label">Account</div>${row('notifications','Notifications','Alerts you choose to receive')}${row('privacy','Privacy & Security','How your details are shared')}</div>${modal ? `<div class="modal-layer" data-layer="modal"><div class="card modal-card"  ><div class="row"><b>${modal==='edit'?'Edit profile':modal==='add_item'?'Add household item':modal==='add_payment'?'Change payment method':modal==='logout'?'Log out?':modal==='unchanged'?'No change to save':'Update'}</b><button aria-label="Close" onclick="state.residentProfileModal=null; render();" style="border:0; background:transparent; font-size:var(--t-title); min-width:var(--tap); min-height:var(--tap); display:inline-flex; align-items:center; justify-content:center;">&times;</button></div>${modal==='edit'?`<label class="form-label">Full Name<input id="resident-profile-name" value="${esc(rp.name)}" class="form-input"></label><label class="form-label-8">Email (read-only)<input value="${esc(rp.email)}" readonly class="form-input-readonly"></label><label class="form-label-8">Phone Number<input id="resident-profile-phone" value="${esc(rp.phone)}" class="form-input"></label><label class="form-label-8">Home Address<input id="resident-profile-address" value="${esc(rp.address)}" class="form-input"></label><label class="form-label-8">Barangay<input id="resident-profile-barangay" value="${esc(rp.barangay)}" class="form-input"></label><label class="form-label-8">Emergency Contact<input id="resident-profile-emergency" value="${esc(rp.emergencyContact)}" class="form-input"></label><button class="btn btn-block"   onclick="saveResidentProfile()">Save Changes</button>`:modal==='add_item'?`<label class="form-label">Item Type<select id="household-type" aria-label="What kind of place this address is" style="width:100%; padding:9px; margin-top:4px;"><option>Air Conditioner</option><option>Refrigerator</option><option>Water Pump</option><option>Kitchen Plumbing</option><option>Water Heater</option><option>Other</option></select></label><label class="form-label-8">Nickname<input id="household-nickname" class="form-input"></label><label class="form-label-8">Brand / Model (Optional)<input id="household-brand" class="form-input"></label><button class="btn btn-block"   onclick="saveHouseholdItem()">Save Item</button>`:modal==='logout'?`<div style="font-size:var(--t-caption); margin-top:12px;">Are you sure you want to log out of your Sukinnect account?</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm secondary" style="flex:1;" onclick="state.residentProfileModal=null; render();">Cancel</button><button class="btn sm danger" style="flex:1;" onclick="signOut()">Log Out</button></div>`:modal==='add_payment'?`<label class="form-label">Preferred payment method<select id="resident-preferred-payment" aria-label="Preferred payment method" style="width:100%; min-height:var(--tap); padding:9px; margin-top:6px; border:1px solid var(--line); border-radius:var(--r-xs); font:inherit; font-size:var(--t-caption);">${preferredPaymentOptions()}</select></label><div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px; line-height:1.5;">A label for the provider to work against. No account is linked and no money moves here.</div><button class="btn btn-block" onclick="savePreferredPayment()">Save method</button>`:`<div style="font-size:var(--t-caption); color:${modal==='unchanged'?'var(--text-muted)':'var(--success-ink)'}; margin-top:12px;">${modal==='unchanged'?'Nothing on this form changed, so nothing was saved.' : 'Changes saved successfully.'}</div><button class="btn btn-block"   onclick="state.residentProfileModal=null; render();">Close</button>`}</div></div>`:''}`;
 }
 
 function adminDashboard(){
@@ -10099,7 +10099,7 @@ function adminDashboard(){
             note: rates.casesTotal ? rates.casesResolved + ' of ' + rates.casesTotal + ' cases closed' : 'no case has been opened yet' }
         ].map(row => `<div>
           <div class="row"><span>${row.label}</span><b>${row.pct === null ? '—' : row.pct + '%'}</b></div>
-          <div style="height:7px; margin-top:4px; background:var(--line); border-radius:999px; overflow:hidden;"><div style="width:${row.pct || 0}%; height:100%; background:${row.tone}; border-radius:999px;"></div></div>
+          <div style="height:7px; margin-top:4px; background:var(--line); border-radius:var(--r-pill); overflow:hidden;"><div style="width:${row.pct || 0}%; height:100%; background:${row.tone}; border-radius:var(--r-pill);"></div></div>
           <div style="font-size:var(--t-caption); color:var(--mist); margin-top:4px;">${row.note}</div>
         </div>`).join('')}
       </div>
@@ -10149,7 +10149,7 @@ function adminDashboard(){
       <div class="row"><span>Refunds reversed against revenue</span><b>${peso(st.refundsReversedCentavos)}</b></div>
       <div class="row" style="border-top:1px solid var(--line); padding-top:8px; margin-top:4px;">
         <span style="font-weight:800; color:var(--ink);">Net revenue</span><b style="font-size:var(--t-body-lg);">${peso(st.netRevenueCentavos)}</b></div>
-      <button type="button" class="btn sm secondary" style="width:100%; margin-top:12px; border-radius:10px;" onclick="state.adminScreen='finance'; render();">Open the money console</button>`; })()}
+      <button type="button" class="btn sm secondary" style="width:100%; margin-top:12px; border-radius:var(--r-sm);" onclick="state.adminScreen='finance'; render();">Open the money console</button>`; })()}
       <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">Each line is a sum over ledger entries, so it can be traced to the job behind it.</div>
     </div>
     <div class="card">
@@ -10184,8 +10184,8 @@ function thisDeviceCard() {
   Records live in ${Store.isPersistent() ? 'this browser’s local storage — nothing leaves the device' : 'memory only, because this browser refuses storage for a file:// page — a reload restores the sample set'}.
   There is no server in this prototype, so no figure here is a live marketplace count.
   </div>
-  <button type="button" class="btn sm secondary" style="width:100%; margin-top:12px; border-radius:10px;" onclick="runPayoutNow()">Run this week’s payouts</button>
-  <button type="button" class="btn sm secondary" style="width:100%; margin-top:8px; border-radius:10px;" onclick="resetDemoData()">Restore the sample records</button>
+  <button type="button" class="btn sm secondary" style="width:100%; margin-top:12px; border-radius:var(--r-sm);" onclick="runPayoutNow()">Run this week’s payouts</button>
+  <button type="button" class="btn sm secondary" style="width:100%; margin-top:8px; border-radius:var(--r-sm);" onclick="resetDemoData()">Restore the sample records</button>
   </div>
   `;
 }
@@ -10295,13 +10295,13 @@ function adminMarketplaceIntelligence(){  const f = state.adminIntFilters;
       ${st.byCategory.length ? st.byCategory.map(row => `
         <div style="margin-bottom:9px;">
           <div class="row" style="font-size:var(--t-caption);"><span>${esc(row.label)}</span><b>${row.jobs} job${row.jobs === 1 ? '' : 's'} · ${pesoShort(row.centavos)}</b></div>
-          <div style="height:7px; margin-top:4px; background:var(--line); border-radius:999px; overflow:hidden;"><div style="width:${Math.round(row.centavos / Math.max(1, st.grossCentavos) * 100)}%; height:100%; background:var(--brand-primary); border-radius:999px;"></div></div>
+          <div style="height:7px; margin-top:4px; background:var(--line); border-radius:var(--r-pill); overflow:hidden;"><div style="width:${Math.round(row.centavos / Math.max(1, st.grossCentavos) * 100)}%; height:100%; background:var(--brand-primary); border-radius:var(--r-pill);"></div></div>
         </div>`).join('') : `<div style="font-size:var(--t-caption); color:var(--mist);">Nothing matches this window and service yet. Widen the filter.</div>`}
     </div>
     <div class="card" style="padding:14px">
       <div class="row card-head" style="margin-bottom:8px;"><b class="card-title">Supply gaps</b><span class="chip">Demand without cover</span></div>
       ${gaps.length ? gaps.map(g => `
-        <div class="row" style="padding:8px 0; border-top:1px solid var(--line); font-size:var(--t-body-sm);">
+        <div class="row" style="padding:var(--s-2) 0; border-top:1px solid var(--line); font-size:var(--t-body-sm);">
           <span style="flex:1; min-width:0;"><b>${esc(g.label)}</b><br><span style="color:var(--mist); font-size:var(--t-caption);">${g.demand} job${g.demand === 1 ? '' : 's'} against ${g.supply} provider${g.supply === 1 ? '' : 's'}</span></span>
           <!-- A label, not a call to action: this prototype has no recruitment flow,
                and a chip reading "recruit here" looked like the one thing to press. -->
@@ -10460,7 +10460,7 @@ function adminCategories(){
         and in this pilot they are still being validated rather than configured.
         The platform fee on services is editable, and audited, under Money.
       </div>
-      <button type="button" class="btn sm secondary" style="width:100%; margin-top:10px; border-radius:10px;" onclick="state.adminScreen='finance'; render();">Open the fee and payout settings</button>
+      <button type="button" class="btn sm secondary" style="width:100%; margin-top:10px; border-radius:var(--r-sm);" onclick="state.adminScreen='finance'; render();">Open the fee and payout settings</button>
     </div>
   </div>`;
 }
@@ -10697,7 +10697,7 @@ function adminProviderInsights(){
       <div style="display:flex; flex-direction:column; gap:10px; font-size:var(--t-caption); color:var(--ink-soft);">
         ${health.map(row => `<div>
           <div class="row"><span>${row.label}</span><b>${row.pct === null ? '—' : row.pct + '%'}</b></div>
-          <div style="height:7px; margin-top:4px; background:var(--line); border-radius:999px; overflow:hidden;"><div style="width:${row.pct || 0}%; height:100%; background:var(--brand-primary); border-radius:999px;"></div></div>
+          <div style="height:7px; margin-top:4px; background:var(--line); border-radius:var(--r-pill); overflow:hidden;"><div style="width:${row.pct || 0}%; height:100%; background:var(--brand-primary); border-radius:var(--r-pill);"></div></div>
           <div style="font-size:var(--t-caption); color:var(--mist); margin-top:4px;">${row.note}</div>
         </div>`).join('')}
       </div>
@@ -10739,7 +10739,7 @@ function adminProviderManagementProfile(){
         return rows.length ? `<div style="font-size:var(--t-caption); line-height:1.9; margin-top:9px;">${rows.map(b =>
           `${esc(b.summary || b.request)} — ${esc(customerOf(b).name)} — ${esc(shortDate(b.completedAt || b.date))} — ${esc(pesoShort(bookingTotal(b)))} — <b>${esc(label(b.status))}</b>`
         ).join('<br>')}</div>` : `<div style="font-size:var(--t-caption); color:var(--mist); margin-top:9px;">No bookings recorded for this provider on this device.</div>`;
-      })()}</div>`:''}${section==='reviews'?`<div class="card"><b class="card-title">Reviews &amp; complaints</b><div class="stat-strip" style="margin-top:10px;"><span class="f"><b>${provider.rating}</b><span>rating</span></span><span class="f"><b>${(provider.reviews || []).length}</b><span>reviews on file</span></span><span class="f"><b>${meta.complaints}</b><span>complaints</span></span><span class="f"><b>${providerCases(provider.id).filter(caseIsOpen).length}</b><span>cases open</span></span></div></div>`:''}${section==='activity'?`<div class="card"><b class="card-title">Activity</b><div style="font-size:var(--t-caption); line-height:2; margin-top:9px;">${adminActivityRows(provider)}</div></div>`:''}${section==='notes'?`<div class="card"><b class="card-title">Internal admin notes</b><textarea id="provider-admin-note" aria-label="Internal admin note about this provider" placeholder="Add internal note about this provider..." style="width:100%; min-height:80px; margin-top:9px; padding:9px; border:1px solid var(--line); border-radius:8px; font:inherit;">${note}</textarea><button class="btn sm secondary" style="margin-top:10px;" onclick="saveAdminProviderNote('${provider.id}', '${provider.name}')">Save note</button></div>`:''}<div class="card">${state.adminFlagged.includes(provider.id) ? `<div class="row"><b class="card-title">Account status</b><span class="chip badge-gold">Flagged for review</span></div><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:8px;">Recorded in the audit log. This prototype does not restrict, suspend or remove accounts - a decision needs a reason and a second administrator.</div>` : `<b class="card-title">Account status</b><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:6px;">Restrictive actions are not available here: they require a written reason and confirmation.</div><button class="btn sm secondary btn-block" style="margin-top:10px;" onclick="flagAccountReview('${provider.id}', '${provider.name}')">Flag for status review</button>`}</div></div>`;
+      })()}</div>`:''}${section==='reviews'?`<div class="card"><b class="card-title">Reviews &amp; complaints</b><div class="stat-strip" style="margin-top:10px;"><span class="f"><b>${provider.rating}</b><span>rating</span></span><span class="f"><b>${(provider.reviews || []).length}</b><span>reviews on file</span></span><span class="f"><b>${meta.complaints}</b><span>complaints</span></span><span class="f"><b>${providerCases(provider.id).filter(caseIsOpen).length}</b><span>cases open</span></span></div></div>`:''}${section==='activity'?`<div class="card"><b class="card-title">Activity</b><div style="font-size:var(--t-caption); line-height:2; margin-top:9px;">${adminActivityRows(provider)}</div></div>`:''}${section==='notes'?`<div class="card"><b class="card-title">Internal admin notes</b><textarea id="provider-admin-note" aria-label="Internal admin note about this provider" placeholder="Add internal note about this provider..." style="width:100%; min-height:80px; margin-top:9px; padding:9px; border:1px solid var(--line); border-radius:var(--r-xs); font:inherit;">${note}</textarea><button class="btn sm secondary" style="margin-top:10px;" onclick="saveAdminProviderNote('${provider.id}', '${provider.name}')">Save note</button></div>`:''}<div class="card">${state.adminFlagged.includes(provider.id) ? `<div class="row"><b class="card-title">Account status</b><span class="chip badge-gold">Flagged for review</span></div><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:8px;">Recorded in the audit log. This prototype does not restrict, suspend or remove accounts - a decision needs a reason and a second administrator.</div>` : `<b class="card-title">Account status</b><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:6px;">Restrictive actions are not available here: they require a written reason and confirmation.</div><button class="btn sm secondary btn-block" style="margin-top:10px;" onclick="flagAccountReview('${provider.id}', '${provider.name}')">Flag for status review</button>`}</div></div>`;
 }
 
 /* The queue filters decided applicants out, so the console needs a place that still
@@ -10821,14 +10821,14 @@ function adminVerifications(){
     <div style="font-size:var(--t-body); font-weight:800; margin-bottom:8px;">Pending verifications</div>
     ${pendingDetails.map((provider, index) => `
       <div class="card" style="padding:10px; margin-bottom:10px">
-        <div class="row" style="align-items:flex-start;"><div style="display:flex; gap:10px; align-items:center;"><img class="img-avatar" src="${VERIF_PHOTOS[provider.id]}" alt="${provider.name}" style="width:38px; height:38px;"><div><b class="card-title">${provider.name}</b><div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${provider.service}</div></div></div><div style="display:flex; gap:5px; align-items:center;"><span style="font-size:var(--t-caption); background:${provider.priorityColor}; color:${provider.priorityText}; padding:4px 7px; border-radius:999px;">${provider.priority}</span><span class="chip" style="font-size:var(--t-caption);">Review</span></div></div>
+        <div class="row" style="align-items:flex-start;"><div style="display:flex; gap:10px; align-items:center;"><img class="img-avatar" src="${VERIF_PHOTOS[provider.id]}" alt="${provider.name}" style="width:38px; height:38px;"><div><b class="card-title">${provider.name}</b><div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${provider.service}</div></div></div><div style="display:flex; gap:5px; align-items:center;"><span style="font-size:var(--t-caption); background:${provider.priorityColor}; color:${provider.priorityText}; padding:var(--s-1) 7px; border-radius:var(--r-pill);">${provider.priority}</span><span class="chip" style="font-size:var(--t-caption);">Review</span></div></div>
         <div style="display:flex; gap:12px; font-size:var(--t-caption); color:var(--mist); margin:8px 0;"><span>Submitted ${applicantWaitLabel(provider)}</span><span>${provider.barangay}</span></div>
-        <div style="display:flex; justify-content:space-between; align-items:center; font-size:var(--t-caption); margin-bottom:5px;"><span>Documents ${applicationDocsSubmitted(provider.id)} of ${APPLICATION_DOC_KINDS.length}</span><span style="background:${applicantIssue(provider).bg}; color:${applicantIssue(provider).ink}; padding:4px 7px; border-radius:999px;">${applicantIssue(provider).label}</span></div>
-        <div style="height:6px; background:var(--line); border-radius:99px; overflow:hidden; margin-bottom:8px;"><div style="width:${Math.round(applicationDocsSubmitted(provider.id) / APPLICATION_DOC_KINDS.length * 100)}%; height:100%; background:${applicationDocsOutstanding(provider.id).length ? 'var(--gold)' : 'var(--deep)'};"></div></div>
-        <div style="display:flex; gap:6px;">${state.adminDocRequests.includes(provider.id) ? `<div style="flex:1; font-size:var(--t-caption); color:var(--warning-ink); background:var(--warning-100); border-radius:8px; padding:9px 10px; font-weight:700;">${ic('clock',12)} Documents requested · awaiting upload</div>` : `<button class="btn sm" style="flex:1;" onclick="openProviderVerification('${provider.id}')">Open verification</button><button class="btn sm secondary" style="flex:1;" onclick="askForDocuments('${provider.id}', '${provider.name}')">Request documents</button>`}</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:var(--t-caption); margin-bottom:5px;"><span>Documents ${applicationDocsSubmitted(provider.id)} of ${APPLICATION_DOC_KINDS.length}</span><span style="background:${applicantIssue(provider).bg}; color:${applicantIssue(provider).ink}; padding:var(--s-1) 7px; border-radius:var(--r-pill);">${applicantIssue(provider).label}</span></div>
+        <div style="height:6px; background:var(--line); border-radius:var(--r-pill); overflow:hidden; margin-bottom:8px;"><div style="width:${Math.round(applicationDocsSubmitted(provider.id) / APPLICATION_DOC_KINDS.length * 100)}%; height:100%; background:${applicationDocsOutstanding(provider.id).length ? 'var(--gold)' : 'var(--deep)'};"></div></div>
+        <div style="display:flex; gap:6px;">${state.adminDocRequests.includes(provider.id) ? `<div style="flex:1; font-size:var(--t-caption); color:var(--warning-ink); background:var(--warning-100); border-radius:var(--r-xs); padding:9px 10px; font-weight:700;">${ic('clock',12)} Documents requested · awaiting upload</div>` : `<button class="btn sm" style="flex:1;" onclick="openProviderVerification('${provider.id}')">Open verification</button><button class="btn sm secondary" style="flex:1;" onclick="askForDocuments('${provider.id}', '${provider.name}')">Request documents</button>`}</div>
       </div>
     `).join('')}
-    ${pendingDetails.length ? `<div style="background:var(--deep-100); color:var(--success-ink); padding:8px 10px; border-radius:8px; font-size:var(--t-caption);">Tip: Prioritize applications with complete documents to faster onboarding.</div>` : emptyState('shield', 'No applications are waiting', 'Every provider who applied has been decided. A new one appears here the moment it arrives.')}
+    ${pendingDetails.length ? `<div style="background:var(--deep-100); color:var(--success-ink); padding:var(--s-2) 10px; border-radius:var(--r-xs); font-size:var(--t-caption);">Tip: Prioritize applications with complete documents to faster onboarding.</div>` : emptyState('shield', 'No applications are waiting', 'Every provider who applied has been decided. A new one appears here the moment it arrives.')}
     `}
   </div>`;
 }
@@ -11008,7 +11008,7 @@ function providerVerificationReview(){
   <div class="pad pad-cta" style="background:var(--cloud);">
     <div class="card"><div class="row"><div style="display:flex; gap:10px; align-items:center;"><img class="img-avatar" src="${VERIF_PHOTOS[app.id] || 'avatars/avatar-10.png'}" alt="${esc(app.name)}" style="width:42px; height:42px;"><div><b style="font-size:var(--t-input);">${esc(app.name)}</b><div style="font-size:var(--t-caption); color:var(--mist);">${esc(app.service)}</div></div></div><span class="chip ${chipTone}">${esc(reviewStatusLine(review.status))}</span></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; font-size:var(--t-caption);"><div><span style="color:var(--mist);">Barangay</span><br><b>${esc(app.barangay)}</b></div><div><span style="color:var(--mist);">Submitted</span><br><b>${esc(shortDate(app.submittedAt))} · ${esc(applicantWaitLabel(app))}</b></div><div><span style="color:var(--mist);">Priority</span><br><b style="color:var(--gold-600);">${esc(app.priority)}</b></div><div><span style="color:var(--mist);">Contact on file</span><br><b>${esc(app.phone)}</b></div></div></div>
 
-    <div class="card"><div class="row"><b class="card-title">Verification progress</b><b>${submitted} of ${docs.length}</b></div><div style="height:9px; background:var(--line); border-radius:99px; overflow:hidden; margin:10px 0 12px;"><div style="width:${progress}%; height:100%; background:${complete ? 'var(--verified)' : 'var(--gold)'};"></div></div><div style="display:flex; flex-direction:column; gap:7px; font-size:var(--t-caption);">${docs.map(d => { const s = docState(d); return '<div style="color:' + INK[s] + '; display:flex; align-items:center; gap:6px;">' + ic(s === 'missing' ? 'alert-triangle' : s === 'flagged' ? 'alert-circle' : 'check-circle', 13) + ' ' + esc(d.label) + ' — ' + esc(WORD[s]) + '</div>'; }).join('')}</div><div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">Counted from the documents on this application. The prototype runs no automated check of its own — a mark below is something an administrator made.</div></div>
+    <div class="card"><div class="row"><b class="card-title">Verification progress</b><b>${submitted} of ${docs.length}</b></div><div style="height:9px; background:var(--line); border-radius:var(--r-pill); overflow:hidden; margin:10px 0 12px;"><div style="width:${progress}%; height:100%; background:${complete ? 'var(--verified)' : 'var(--gold)'};"></div></div><div style="display:flex; flex-direction:column; gap:7px; font-size:var(--t-caption);">${docs.map(d => { const s = docState(d); return '<div style="color:' + INK[s] + '; display:flex; align-items:center; gap:6px;">' + ic(s === 'missing' ? 'alert-triangle' : s === 'flagged' ? 'alert-circle' : 'check-circle', 13) + ' ' + esc(d.label) + ' — ' + esc(WORD[s]) + '</div>'; }).join('')}</div><div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">Counted from the documents on this application. The prototype runs no automated check of its own — a mark below is something an administrator made.</div></div>
 
     <details class="card"><summary style="font-weight:800; cursor:pointer;">Identity information</summary><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; font-size:var(--t-caption);"><div>Full name<br><b>${esc(app.name)}</b></div><div>Email<br><b>${esc(app.email)}</b></div><div>Mobile<br><b>${esc(app.phone)}</b></div><div>Barangay<br><b>${esc(app.barangay)}</b></div><div style="grid-column:1 / -1;">Address<br><b>${esc(app.address)}</b></div></div><div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px;">What the applicant filed is on the document list; this screen keeps no date of birth and no document image.</div></details>
 
@@ -11016,7 +11016,7 @@ function providerVerificationReview(){
 
     <div class="card"><b class="card-title">What is still outstanding</b><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:8px;">${complete ? 'All ' + docs.length + ' documents are filed. ' + (review.status === 'verified' ? 'This application was approved — the decision and its time are in the activity list.' : 'Nothing is waiting on the applicant, so the decision is the administrator\'s to make.') : esc(app.name) + ' has filed ' + submitted + ' of ' + docs.length + '. Still outstanding: ' + esc(outstanding.map(d => d.label).join(', ')) + '.'}</div>${state.profileError ? '<div class="inline-error" role="alert">' + esc(state.profileError) + '</div>' : ''}</div>
 
-    <div class="card"><b class="card-title">Internal review notes</b><textarea id="verification-note" aria-label="Internal note about this verification" placeholder="Add notes about this verification..." style="width:100%; min-height:70px; border:1px solid var(--line); border-radius:8px; padding:9px; margin-top:8px; font:inherit; resize:vertical;">${esc(review.note)}</textarea><button class="btn sm secondary" style="margin-top:8px;" onclick="verificationAction('note', document.getElementById('verification-note').value)">Save Note</button>${review.note ? '<div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px;">Saved on this device. It is not shown to the applicant.</div>' : ''}</div>
+    <div class="card"><b class="card-title">Internal review notes</b><textarea id="verification-note" aria-label="Internal note about this verification" placeholder="Add notes about this verification..." style="width:100%; min-height:70px; border:1px solid var(--line); border-radius:var(--r-xs); padding:9px; margin-top:8px; font:inherit; resize:vertical;">${esc(review.note)}</textarea><button class="btn sm secondary" style="margin-top:8px;" onclick="verificationAction('note', document.getElementById('verification-note').value)">Save Note</button>${review.note ? '<div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px;">Saved on this device. It is not shown to the applicant.</div>' : ''}</div>
 
     <details class="card"><summary style="font-weight:800; cursor:pointer;">Application activity</summary><div style="display:flex; flex-direction:column; gap:8px; margin-top:12px; font-size:var(--t-caption); color:var(--ink-soft);">${reviewTimeline(app.id).map(e => '<div>• ' + esc(shortDate(e.at)) + ' ' + esc(clockText(e.at)) + ' — ' + esc(e.text) + '</div>').join('')}</div>${review.activity.length ? '' : '<div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px;">These entries come from the application and document dates. Anything you do on this screen is added with the time it happened.</div>'}</details>
 
@@ -11029,7 +11029,7 @@ function providerVerificationReview(){
     + '<button class="btn sm secondary" style="width:100%; min-width:0; height:52px;" onclick="verificationAction(\'request\')">Request update</button>'
     + '<button class="btn sm" style="width:100%; min-width:0; height:52px; opacity:' + (complete ? '1' : '0.5') + ';" ' + (complete ? 'onclick="verificationAction(\'approve_confirm\')"' : 'disabled aria-describedby="approve-why"') + '>Approve</button>'
     + '</div></div>'}
-  ${modal ? `<div data-layer="modal" style="position:fixed; top:0; right:0; bottom:0; left:0; background:var(--scrim); z-index:50; display:flex; align-items:center; justify-content:center; padding:18px;"><div class="card" style="width:100%; max-width:350px; max-height:85vh; overflow:auto"><div class="row"><b style="font-size:var(--t-body-lg);">${modal === 'document' ? (about ? esc(about.label) : 'Document') : modal === 'request' ? 'Request outstanding documents' : modal === 'flag' ? 'Flag this document' : modal === 'reject' ? 'Reject this application' : modal === 'approve_confirm' ? 'Approve this applicant?' : modal === 'approved' ? 'Approved' : modal === 'rejected' ? 'Rejected' : modal === 'request_sent' ? 'Request recorded' : 'Note saved'}</b><button onclick="state.verificationModal=null; render();" aria-label="Close" style="border:0; background:transparent; font-size:var(--t-title); cursor:pointer; min-width:var(--tap); min-height:var(--tap); display:inline-flex; align-items:center; justify-content:center;">&times;</button></div>${modal === 'document' ? `<div style="height:110px; background:var(--brand-tint-soft); border:1px solid var(--line); border-radius:8px; margin:12px 0; display:flex; align-items:center; justify-content:center; text-align:center; padding:12px; color:var(--mist); font-size:var(--t-caption);">No image is stored in this prototype.<br>What follows is the record of the filing, not the document itself.</div><div style="font-size:var(--t-caption); line-height:1.7;">${about ? 'Document: <b>' + esc(about.label) + '</b><br>Filed as: <b>' + esc(about.detail) + '</b><br>Filed on: <b>' + esc(about.submittedAt ? shortDate(about.submittedAt) : 'not filed') + '</b>' + (about.expiresAt ? '<br>Expires: <b>' + esc(shortDate(about.expiresAt)) + '</b>' : '') + '<br>Your mark: <b>' + esc(WORD[docState(about)]) + '</b><br>Applicant: <b>' + esc(app.name) + '</b>' : 'Open a document from the list to review it.'}</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm" onclick="verificationAction('doc_state')">Mark as verified</button><button class="btn sm secondary" onclick="verificationAction('flag', ${about ? "'" + about.kind + "'" : 'null'})">Flag an issue</button></div>` : modal === 'flag' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0;">What is wrong with ${about ? esc(about.label) : 'this document'}?</div><select id="flag-issue" aria-label="Possible issue with this document" style="width:100%; min-height:var(--tap); padding:9px; border:1px solid var(--line); border-radius:8px;"><option>Information does not match the application</option><option>Document has expired</option><option>Image is unreadable</option><option>Wrong document type</option><option>Other</option></select><textarea id="flag-note" aria-label="Administrator note about this document" placeholder="What the applicant should fix" style="width:100%; min-height:70px; margin-top:10px; padding:8px; border:1px solid var(--line); border-radius:8px; font:inherit;"></textarea><button class="btn danger btn-block" style="margin-top:10px;" onclick="flagDocument()">Flag document</button>` : modal === 'approve_confirm' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin:12px 0;">${esc(app.name)}, ${esc(app.service)}. All ${docs.length} documents are filed and none is flagged. Approving records the decision on this device with your name and the time, and takes the application out of the pending queue.</div><div style="display:flex; gap:6px;"><button class="btn sm secondary" style="flex:1;" onclick="state.verificationModal=null; render();">Cancel</button><button class="btn sm" style="flex:1;" onclick="verificationAction('approved')">Confirm approval</button></div>` : modal === 'request' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0 8px;">Pick what you need back from ${esc(app.name)}. Only documents still outstanding are listed.</div>${outstanding.length ? outstanding.map(d => '<label class="row" style="font-size:var(--t-caption); padding:8px 0; min-height:var(--tap);">' + esc(d.label) + '<input type="checkbox" id="request-' + d.kind + '" checked style="width:20px; height:20px; accent-color:var(--deep); flex-shrink:0;"></label>').join('') : '<div style="font-size:var(--t-caption); color:var(--mist);">Nothing is outstanding on this application.</div>'}<label class="form-label" style="margin-top:10px;">Note to attach<div style="font-size:var(--t-caption); color:var(--mist); margin-top:4px;">Kept with the review record. This prototype has no applicant inbox, so nothing is delivered.</div></label><textarea id="request-message" aria-label="Note attached to the document request" style="width:100%; min-height:70px; border:1px solid var(--line); border-radius:8px; padding:8px; margin-top:6px; font:inherit;">Please upload the outstanding document to continue verification.</textarea><button class="btn btn-block" style="margin-top:10px;" onclick="sendDocumentRequest()">Record request</button>` : modal === 'reject' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0 8px;">A reason is required — it is what the record will show.</div><select id="reject-reason" aria-label="Reason for rejecting this application" style="width:100%; padding:9px; min-height:var(--tap); border:1px solid var(--line); border-radius:8px;"><option>Invalid required document</option><option>Unable to verify identity</option><option>Required qualification not met</option><option>Other</option></select><textarea id="reject-note" aria-label="Reason for rejecting this application" placeholder="What the applicant should know" style="width:100%; min-height:70px; margin-top:10px; padding:8px; border:1px solid var(--line); border-radius:8px; font:inherit;"></textarea><button class="btn danger btn-block" style="margin-top:10px;" onclick="rejectApplication()">Record rejection</button>` : `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin:12px 0;">${modal === 'approved' ? esc(app.name) + ' is approved as of ' + esc(shortDate(review.decidedAt)) + ' ' + esc(clockText(review.decidedAt)) + ' and no longer appears in the pending queue.' : modal === 'rejected' ? esc(app.name) + ' is rejected' + (review.reason ? ': ' + esc(review.reason) : '.') + ' The application stays on this device with that reason.' : modal === 'request_sent' ? 'The request is recorded against this application. The pending queue now shows it as awaiting upload.' + (review.requestMessage ? ' Your note: ' + esc(review.requestMessage) + '.' : '') : 'Your note is saved with this application on this device.'}</div><button class="btn" style="width:100%;" onclick="state.verificationModal=null; render();">Close</button>`}</div></div>` : ''}`;
+  ${modal ? `<div data-layer="modal" style="position:fixed; top:0; right:0; bottom:0; left:0; background:var(--scrim); z-index:50; display:flex; align-items:center; justify-content:center; padding:18px;"><div class="card" style="width:100%; max-width:350px; max-height:85vh; overflow:auto"><div class="row"><b style="font-size:var(--t-body-lg);">${modal === 'document' ? (about ? esc(about.label) : 'Document') : modal === 'request' ? 'Request outstanding documents' : modal === 'flag' ? 'Flag this document' : modal === 'reject' ? 'Reject this application' : modal === 'approve_confirm' ? 'Approve this applicant?' : modal === 'approved' ? 'Approved' : modal === 'rejected' ? 'Rejected' : modal === 'request_sent' ? 'Request recorded' : 'Note saved'}</b><button onclick="state.verificationModal=null; render();" aria-label="Close" style="border:0; background:transparent; font-size:var(--t-title); cursor:pointer; min-width:var(--tap); min-height:var(--tap); display:inline-flex; align-items:center; justify-content:center;">&times;</button></div>${modal === 'document' ? `<div style="height:110px; background:var(--brand-tint-soft); border:1px solid var(--line); border-radius:var(--r-xs); margin:12px 0; display:flex; align-items:center; justify-content:center; text-align:center; padding:var(--s-3); color:var(--mist); font-size:var(--t-caption);">No image is stored in this prototype.<br>What follows is the record of the filing, not the document itself.</div><div style="font-size:var(--t-caption); line-height:1.7;">${about ? 'Document: <b>' + esc(about.label) + '</b><br>Filed as: <b>' + esc(about.detail) + '</b><br>Filed on: <b>' + esc(about.submittedAt ? shortDate(about.submittedAt) : 'not filed') + '</b>' + (about.expiresAt ? '<br>Expires: <b>' + esc(shortDate(about.expiresAt)) + '</b>' : '') + '<br>Your mark: <b>' + esc(WORD[docState(about)]) + '</b><br>Applicant: <b>' + esc(app.name) + '</b>' : 'Open a document from the list to review it.'}</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm" onclick="verificationAction('doc_state')">Mark as verified</button><button class="btn sm secondary" onclick="verificationAction('flag', ${about ? "'" + about.kind + "'" : 'null'})">Flag an issue</button></div>` : modal === 'flag' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0;">What is wrong with ${about ? esc(about.label) : 'this document'}?</div><select id="flag-issue" aria-label="Possible issue with this document" style="width:100%; min-height:var(--tap); padding:9px; border:1px solid var(--line); border-radius:var(--r-xs);"><option>Information does not match the application</option><option>Document has expired</option><option>Image is unreadable</option><option>Wrong document type</option><option>Other</option></select><textarea id="flag-note" aria-label="Administrator note about this document" placeholder="What the applicant should fix" style="width:100%; min-height:70px; margin-top:10px; padding:var(--s-2); border:1px solid var(--line); border-radius:var(--r-xs); font:inherit;"></textarea><button class="btn danger btn-block" style="margin-top:10px;" onclick="flagDocument()">Flag document</button>` : modal === 'approve_confirm' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin:12px 0;">${esc(app.name)}, ${esc(app.service)}. All ${docs.length} documents are filed and none is flagged. Approving records the decision on this device with your name and the time, and takes the application out of the pending queue.</div><div style="display:flex; gap:6px;"><button class="btn sm secondary" style="flex:1;" onclick="state.verificationModal=null; render();">Cancel</button><button class="btn sm" style="flex:1;" onclick="verificationAction('approved')">Confirm approval</button></div>` : modal === 'request' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0 8px;">Pick what you need back from ${esc(app.name)}. Only documents still outstanding are listed.</div>${outstanding.length ? outstanding.map(d => '<label class="row" style="font-size:var(--t-caption); padding:var(--s-2) 0; min-height:var(--tap);">' + esc(d.label) + '<input type="checkbox" id="request-' + d.kind + '" checked style="width:20px; height:20px; accent-color:var(--deep); flex-shrink:0;"></label>').join('') : '<div style="font-size:var(--t-caption); color:var(--mist);">Nothing is outstanding on this application.</div>'}<label class="form-label" style="margin-top:10px;">Note to attach<div style="font-size:var(--t-caption); color:var(--mist); margin-top:4px;">Kept with the review record. This prototype has no applicant inbox, so nothing is delivered.</div></label><textarea id="request-message" aria-label="Note attached to the document request" style="width:100%; min-height:70px; border:1px solid var(--line); border-radius:var(--r-xs); padding:var(--s-2); margin-top:6px; font:inherit;">Please upload the outstanding document to continue verification.</textarea><button class="btn btn-block" style="margin-top:10px;" onclick="sendDocumentRequest()">Record request</button>` : modal === 'reject' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0 8px;">A reason is required — it is what the record will show.</div><select id="reject-reason" aria-label="Reason for rejecting this application" style="width:100%; padding:9px; min-height:var(--tap); border:1px solid var(--line); border-radius:var(--r-xs);"><option>Invalid required document</option><option>Unable to verify identity</option><option>Required qualification not met</option><option>Other</option></select><textarea id="reject-note" aria-label="Reason for rejecting this application" placeholder="What the applicant should know" style="width:100%; min-height:70px; margin-top:10px; padding:var(--s-2); border:1px solid var(--line); border-radius:var(--r-xs); font:inherit;"></textarea><button class="btn danger btn-block" style="margin-top:10px;" onclick="rejectApplication()">Record rejection</button>` : `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin:12px 0;">${modal === 'approved' ? esc(app.name) + ' is approved as of ' + esc(shortDate(review.decidedAt)) + ' ' + esc(clockText(review.decidedAt)) + ' and no longer appears in the pending queue.' : modal === 'rejected' ? esc(app.name) + ' is rejected' + (review.reason ? ': ' + esc(review.reason) : '.') + ' The application stays on this device with that reason.' : modal === 'request_sent' ? 'The request is recorded against this application. The pending queue now shows it as awaiting upload.' + (review.requestMessage ? ' Your note: ' + esc(review.requestMessage) + '.' : '') : 'Your note is saved with this application on this device.'}</div><button class="btn" style="width:100%;" onclick="state.verificationModal=null; render();">Close</button>`}</div></div>` : ''}`;
 }
 
 function reopenReview(){
@@ -11265,8 +11265,8 @@ function makeOfferSheet(){
 
     </div>
     <div class="sheet-foot">
-      <button type="button" class="btn secondary" style="flex:1; border-radius:12px;" onclick="closeSheet()">Cancel</button>
-      <button type="button" class="btn" id="send-offer-btn" style="flex:1.5; border-radius:12px;" ${priced ? '' : 'disabled'} onclick="submitOffer()">
+      <button type="button" class="btn secondary" style="flex:1; border-radius:var(--r-card);" onclick="closeSheet()">Cancel</button>
+      <button type="button" class="btn" id="send-offer-btn" style="flex:1.5; border-radius:var(--r-card);" ${priced ? '' : 'disabled'} onclick="submitOffer()">
         ${priced ? 'Send offer ' + ic('arrow-right',12) : 'Name a price first'}
       </button>
     </div>`;
@@ -11399,8 +11399,8 @@ function finaliseProduceSheet(){
       <div class="sheet-group" id="final-totals">${finaliseTotalsBlock(b, t)}</div>
     </div>
     <div class="sheet-foot">
-      <button type="button" class="btn secondary" style="flex:1; border-radius:12px;" onclick="closeSheet()">Cancel</button>
-      <button type="button" class="btn" id="save-final-btn" style="flex:1.5; border-radius:12px;"
+      <button type="button" class="btn secondary" style="flex:1; border-radius:var(--r-card);" onclick="closeSheet()">Cancel</button>
+      <button type="button" class="btn" id="save-final-btn" style="flex:1.5; border-radius:var(--r-card);"
         ${t.valid ? '' : 'disabled'} onclick="submitFinalise()">
         ${t.valid ? 'Record ' + esc(pesoShort(t.amountCentavos)) : 'Enter the quantity'}
       </button>
@@ -11564,7 +11564,7 @@ function jobActionBar(b) {
   let firstButton = true;
   const buttons = moves.filter(m => m.kind !== 'note').map(m => {
     const html = `
-          <button type="button" class="btn ${firstButton ? '' : 'secondary'}" style="width:100%; border-radius:12px;" onclick="${act(m)}">${esc(m.label)}</button>`;
+          <button type="button" class="btn ${firstButton ? '' : 'secondary'}" style="width:100%; border-radius:var(--r-card);" onclick="${act(m)}">${esc(m.label)}</button>`;
     firstButton = false;
     return html;
   }).join('');
@@ -11643,7 +11643,7 @@ function listingsPanel(providerId) {
             <button type="button" class="chip" style="cursor:pointer;" onclick="editListing('${l.id}')">Edit</button>
           </span>
         </div>`).join('') : `<div style="font-size:var(--t-caption); color:var(--mist);">Nothing listed yet. A provider with no listed job cannot be booked for a price.</div>`}
-      <button type="button" class="btn sm secondary" style="width:100%; margin-top:12px; border-radius:10px;" onclick="providerProfileAction('add_service')">${ic('check', 12)} Add a service</button>
+      <button type="button" class="btn sm secondary" style="width:100%; margin-top:12px; border-radius:var(--r-sm);" onclick="providerProfileAction('add_service')">${ic('check', 12)} Add a service</button>
     </div>`;
 }
 
@@ -11909,11 +11909,11 @@ function realRequestCard() {
         const moves = providerJobMoves(b);
         const first = moves.filter(m => m.kind !== 'note')[0];
         const press = !first ? '' : first.kind === 'offer'
-          ? `<button type="button" class="btn sm" style="flex:1.4; border-radius:10px;" onclick="openMakeOffer('${b.id}')">${esc(first.label)}</button>`
-          : `<button type="button" class="btn sm" style="flex:1.4; border-radius:10px;" onclick="answerRequest('${b.id}','accept')">Accept</button>`;
+          ? `<button type="button" class="btn sm" style="flex:1.4; border-radius:var(--r-sm);" onclick="openMakeOffer('${b.id}')">${esc(first.label)}</button>`
+          : `<button type="button" class="btn sm" style="flex:1.4; border-radius:var(--r-sm);" onclick="answerRequest('${b.id}','accept')">Accept</button>`;
         return `<div style="display:flex; gap:8px; margin-top:12px;">
           ${press}
-          <button type="button" class="btn sm secondary" style="flex:1; border-radius:10px;" onclick="openProviderBooking('${b.id}')">See the job</button>
+          <button type="button" class="btn sm secondary" style="flex:1; border-radius:var(--r-sm);" onclick="openProviderBooking('${b.id}')">See the job</button>
         </div>
         ${moves.filter(m => m.kind === 'note').map(m => `<div class="move-note">${esc(m.text)}</div>`).join('')}
         <div style="font-size:var(--t-caption); color:var(--mist); margin-top:9px; line-height:1.5;">
@@ -12002,7 +12002,7 @@ function providerDashboard(){
         <span class="wait-dot" style="margin-top:4px;"></span>
       </div>
       ${waiting.map(b => `
-        <button type="button" data-provider-booking-id="${b.id}" aria-label="Open request from ${esc(customerOf(b).name)}" style="width:100%; text-align:left; background:var(--background); border:1px solid var(--line); border-radius:10px; padding:10px 11px; margin-top:9px; cursor:pointer; font:inherit; color:var(--ink); display:flex; align-items:center; gap:8px;">
+        <button type="button" data-provider-booking-id="${b.id}" aria-label="Open request from ${esc(customerOf(b).name)}" style="width:100%; text-align:left; background:var(--background); border:1px solid var(--line); border-radius:var(--r-sm); padding:10px 11px; margin-top:9px; cursor:pointer; font:inherit; color:var(--ink); display:flex; align-items:center; gap:8px;">
           <span style="flex:1;">
             <span style="display:block; font-size:var(--t-body-sm); font-weight:700;">${esc(b.summary)}</span>
             <span style="display:block; font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${esc(customerOf(b).name)} · Brgy. ${esc(b.barangay)} · received ${agoText(b.createdAt)}</span>
@@ -12098,7 +12098,7 @@ function providerFSM(){
     <div class="card card-quiet">
       <div style="font-weight:700; font-size:var(--t-body-sm); margin-bottom:4px;">Demand Heatmap & Forecasting</div>
       <div style="font-size:var(--t-caption); color:var(--mist); margin-bottom:8px;">An illustration from sample activity, not a forecast this prototype computes.</div>
-      <div style="background:var(--verified-100); color:var(--success-ink); padding:8px 12px; border-radius:8px; font-size:var(--t-caption); font-weight:700;">
+      <div style="background:var(--verified-100); color:var(--success-ink); padding:var(--s-2) 12px; border-radius:var(--r-xs); font-size:var(--t-caption); font-weight:700;">
         ${ic("flame",13)} Poblacion Heatmap Status: Very High Density
       </div>
     </div>
@@ -12202,8 +12202,8 @@ function requestActionCard(b){
       <div style="font-size:var(--t-body-sm); font-weight:800; color:var(--error-ink);">Decline this request?</div>
       <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:5px;">${esc(customerOf(b).name)} will be told you could not take it and can look for another provider. This does not remove the record.</div>
       <div style="display:flex; gap:8px; margin-top:12px;">
-        <button type="button" class="btn sm secondary" style="flex:1; border-radius:10px;" id="keep-request-btn" ${busy ? 'disabled' : ''}>Keep it</button>
-        <button type="button" class="btn danger" style="flex:1.2; border-radius:10px;" id="confirm-decline-btn" ${busy ? 'disabled' : ''}>${busyAction === 'decline' ? `<span class="spinner"></span> Declining&hellip;` : 'Yes, decline'}</button>
+        <button type="button" class="btn sm secondary" style="flex:1; border-radius:var(--r-sm);" id="keep-request-btn" ${busy ? 'disabled' : ''}>Keep it</button>
+        <button type="button" class="btn danger" style="flex:1.2; border-radius:var(--r-sm);" id="confirm-decline-btn" ${busy ? 'disabled' : ''}>${busyAction === 'decline' ? `<span class="spinner"></span> Declining&hellip;` : 'Yes, decline'}</button>
       </div>
     </div>`;
   }
@@ -12216,7 +12216,7 @@ function requestActionCard(b){
         </div>
         <span class="wait-dot" style="margin-top:4px;"></span>
       </div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; font-size:var(--t-caption); padding:10px; background:var(--background); border-radius:10px;">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; font-size:var(--t-caption); padding:10px; background:var(--background); border-radius:var(--r-sm);">
         <div><span style="color:var(--mist); font-size:var(--t-caption);">Received</span><br><b>${agoText(b.createdAt)}</b></div>
         <div><span style="color:var(--mist); font-size:var(--t-caption);">Requested for</span><br><b>${esc(b.date)}, ${esc(b.time)}</b></div>
         <div><span style="color:var(--mist); font-size:var(--t-caption);">Client is in</span><br><b>Brgy. ${esc(b.barangay)}</b></div>
@@ -12229,9 +12229,9 @@ function requestActionCard(b){
       </div>
       <div style="display:flex; gap:8px; margin-top:12px;">
         ${priceByOffer(b) && !currentOffer(b.id)
-          ? `<button type="button" class="btn" style="flex:1.4; border-radius:10px;" onclick="openMakeOffer('${b.id}')">Make an offer</button>`
-          : `<button type="button" class="btn" style="flex:1.4; border-radius:10px;" id="accept-request-btn" ${busy ? 'disabled' : ''}>${busyAction === 'accept' ? `<span class="spinner"></span> Accepting&hellip;` : currentOffer(b.id) && currentOffer(b.id).status === 'accepted' ? 'Confirm the visit' : 'Accept request'}</button>`}
-        <button type="button" class="btn secondary" style="flex:1; border-radius:10px;" id="decline-request-btn" ${busy ? 'disabled' : ''}>Decline</button>
+          ? `<button type="button" class="btn" style="flex:1.4; border-radius:var(--r-sm);" onclick="openMakeOffer('${b.id}')">Make an offer</button>`
+          : `<button type="button" class="btn" style="flex:1.4; border-radius:var(--r-sm);" id="accept-request-btn" ${busy ? 'disabled' : ''}>${busyAction === 'accept' ? `<span class="spinner"></span> Accepting&hellip;` : currentOffer(b.id) && currentOffer(b.id).status === 'accepted' ? 'Confirm the visit' : 'Accept request'}</button>`}
+        <button type="button" class="btn secondary" style="flex:1; border-radius:var(--r-sm);" id="decline-request-btn" ${busy ? 'disabled' : ''}>Decline</button>
       </div>
     </div>`;
 }
@@ -12250,7 +12250,7 @@ function providerBookings(){
     </div>
     ${rescheduleAskCard('provider')}
     ${filtered.length === 0 ? bookingListEmpty(filter, 'provider') : filtered.map(b => `
-      <div class="card" data-provider-booking-id="${b.id}" style="cursor:pointer; border-radius:14px; padding:14px; margin-bottom:12px; border:1px solid var(--line); background:var(--surface);">
+      <div class="card" data-provider-booking-id="${b.id}" style="cursor:pointer; border-radius:var(--r-md); padding:14px; margin-bottom:12px; border:1px solid var(--line); background:var(--surface);">
         <div class="row" style="align-items:flex-start; margin-bottom:8px;">
           <div style="display:flex; gap:12px; align-items:center;">
             <img class="img-avatar" src="${photoFor(b.id)}" alt="${esc(customerOf(b).name)}" style="width:40px; height:40px;">
@@ -12311,10 +12311,10 @@ function providerBookingDetail(){
       <div style="font-size:var(--t-body-sm); font-weight:800; margin-bottom:8px;">Client location</div>
       ${onJob ? `
         <div style="font-size:var(--t-body-sm); color:var(--ink-soft); margin-bottom:10px;">${esc(booking.address)}</div>
-        <div id="provider-booking-map" style="height:220px; border-radius:12px; border:1px solid var(--line); width:100%; overflow:hidden;"></div>
+        <div id="provider-booking-map" style="height:220px; border-radius:var(--r-card); border:1px solid var(--line); width:100%; overflow:hidden;"></div>
         <div style="font-size:var(--t-caption); color:var(--mist); margin-top:7px;">Pinned address for ${esc(customerOf(booking).name)}. Drag to explore the map and zoom for directions.</div>
       ` : `
-        <div style="display:flex; gap:10px; align-items:flex-start; padding:12px; background:var(--background); border:1px solid var(--line); border-radius:12px;">
+        <div style="display:flex; gap:10px; align-items:flex-start; padding:var(--s-3); background:var(--background); border:1px solid var(--line); border-radius:var(--r-card);">
           <span style="color:var(--deep); flex-shrink:0; margin-top:1px;">${ic('lock',16)}</span>
           <div style="font-size:var(--t-body-sm); line-height:1.5;">
             <div style="font-weight:800;">Brgy. ${esc(booking.barangay)}</div>
