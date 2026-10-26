@@ -67,13 +67,12 @@ try {
     (refused ? 'refused with NO CONCLUSION' : 'answered anyway: traced ' + num(/traced to a runnable name: (\d+)/, r2.out)));
   fs.writeFileSync(PLAN, planOrig);
 
-  /* Break 3 — blind the label resolver. Expected: NO change while the channel is dead, so this prints as
-     an observation with the number that proves it, not as a pass. */
-  fs.writeFileSync(VERIFY, verifyOrig.replace(/c\.check\(\s*'/g, 'c.checkNote(\''));
-  const r3 = run();
-  const tr3 = num(/traced to a runnable name: (\d+)/, r3.out);
-  console.log('OBSERVED gate labels made unmatchable → traced ' + tr3 + ' (baseline ' + bTraced + '); ' +
-    'equal counts are expected while the label channel resolves nothing, which the split line above proves');
+  /* No third break. The first version of this family rewrote tools/verify.cjs to blind the label resolver,
+     and twice it left 622 `c.checkNote(` occurrences in the gate file after its own finally — the next
+     command was `node tools/verify.cjs` and it answered 19 of 19 FAILED, which is how the strand was found.
+     A family that mutates a file it does not own is the mutation-mutex hazard this repository already names,
+     and the break bought nothing: the channel it probes is printed as dead by the census itself
+     (`via a resolved gate label only: 0`), so no mutant is needed to know it resolves nothing. */
 
   const ok = !!moved && refused;
   console.log('\n' + (ok ? 'the census is falsifiable: a broken citation and a lost row are both detected'
