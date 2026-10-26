@@ -449,6 +449,12 @@
   }
   .btn:active{transform:scale(0.98); box-shadow:none;}
   .btn.secondary{background:var(--surface); color:var(--deep); border:1px solid var(--deep); box-shadow:none;}
+  /* The tier §70 names and this file never had. Two screens painted a low-priority utility action beside
+     the in-app path with byte-identical `btn secondary` markup — the booking detail's "Chat with Ramil" and
+     "Call the Sukinnect line", and the same pair on the provider profile — so the row said both were equally
+     the next thing to do, and no rule in the stylesheet could say otherwise. Demotion is about mass, not
+     reach: `.btn` already sets min-height:var(--tap), so the fallback stays a full 44px target. */
+  .btn.tertiary{background:transparent; border:1px solid transparent; color:var(--text-secondary); box-shadow:none; font-weight:700;}
   .btn.sm{padding:7px 12px; min-height:var(--tap); font-size:var(--t-body); border-radius:var(--r-sm);}
   /* Destructive actions keep error semantics but use the darker ink: a white label on
      --error measures 4.38:1 at 12px, on --error-ink it is 5.5:1 (70, 72). */
@@ -1075,6 +1081,13 @@
   .review-item:last-child{border-bottom:none;}
   .book-bar{
     display:flex; align-items:center; justify-content:space-between;
+    /* At 320 CSS px with the phone's own 135% text the sticky bar held a rate line and the primary action,
+       and the action gave way first: "Book Appointment" painted as "Book / Appointme / nt". A word alone on a
+       line is not clipped, collides with nothing, sits on the scale and clears contrast, so all eight corners
+       of the sweep read clean about a broken button — the same blind spot as a figure split in half and a card
+       title crushed by its own count. The row is what wraps, so the button keeps its words; a taller bar is
+       information kept and a cut label is information lost. */
+    flex-wrap:wrap; gap:6px 12px;
     background:var(--surface); border-top:1px solid var(--line);
     padding:12px 18px calc(12px + var(--sab));
     position:sticky; bottom:0; left:0; right:0; z-index:20;
@@ -1416,7 +1429,10 @@
 
   /* Rating pill — the score plus its evidence, for provider profiles */
   .rating-pill{
-    display:inline-flex; align-items:center; gap:7px; flex-wrap:nowrap;
+    /* nowrap stops the pill wrapping its own contents; flex-shrink:0 stops a flex row taking the pill's width
+       away from it, which at the phone's 135% text split the score into "4 . 9" on the provider profile. The
+       row is what gives way — `.card-head` — never the number. */
+    display:inline-flex; align-items:center; gap:7px; flex-wrap:nowrap; flex-shrink:0; white-space:nowrap;
     background:var(--warning-100); border:1px solid rgba(138,90,0,.26);
     padding:5px 11px; border-radius:var(--r-pill);
   }
@@ -7828,6 +7844,13 @@ function openLayers(){
    state.tab says yes while a room is on screen. Two copies of this drifted apart once
    already in this file's history. */
 function onRootTab(){
+  /* An admin spoke is a drill-in even though it keeps the console's tab value. `state.adminScreen` names the
+     screen, so before this rule the Money / Intelligence / Categories / Trust / Audit screens all answered
+     "on a root tab": `syncBackHandles()` claimed no history entry for them, `stepBack()` returned early with
+     nothing to undo, and the phone's Back at an admin spoke had nowhere to go — while the header button on the
+     very same screen hard-coded `adminScreen='overview'` and did go somewhere. Two Back paths, one of which the
+     user has. The tab stays a root tab only at the console itself. */
+  if (state.role === 'admin' && state.adminScreen && state.adminScreen !== 'overview') return false;
   return !state.isChatOpen && (ROOT_TABS[state.role] || []).includes(state.tab);
 }
 function syncBackHandles(isRootTab){
@@ -9257,20 +9280,20 @@ function residentProviderDetail(){
   <div class="pad pad-cta" style="background:var(--cloud);">
     
     <div class="card card-hero" style=" margin-bottom:12px">
-      <div class="row" style="align-items:flex-start; margin-bottom:14px;">
-        <div style="display:flex; gap:12px; align-items:center;">
+      <div class="row card-head" style="align-items:flex-start; margin-bottom:14px;">
+        <div style="display:flex; gap:12px; align-items:center; min-width:0;">
           <div style="width:52px; height:52px; border-radius:50%; background:var(--brand-primary); display:flex; align-items:center; justify-content:center; color:var(--on-brand); font-weight:700; font-size:var(--t-lead); flex-shrink:0;">
             ${p.name.split(' ').map(n=>n[0]).join('')}
           </div>
-          <div>
+          <div style="min-width:0;">
             <div style="font-size:var(--t-lead); font-weight:700; color:var(--ink);">${p.name}</div>
             <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px; display:flex; align-items:center; gap:3px;">
               <span style="color:var(--error-ink); display:inline-flex;">${ic("map-pin",12)}</span> Barangay ${p.barangay}
             </div>
           </div>
         </div>
-        <div class="row-value">
-          <span style="background:var(--brand-tint-soft); color:var(--brand-primary); font-size:var(--t-caption); font-weight:800; padding:4px 10px; border-radius:999px;">
+        <div class="row-value" style="white-space:nowrap;">
+          <span style="background:var(--brand-tint-soft); color:var(--brand-primary); font-size:var(--t-caption); font-weight:800; padding:4px 10px; border-radius:999px; white-space:nowrap;">
             ${p.service}
           </span>
           <div style="font-size:var(--t-caption); color:var(--mist); margin-top:6px; font-weight:500;">
@@ -9279,42 +9302,11 @@ function residentProviderDetail(){
         </div>
       </div>
 
-      <div style="border-top:1px solid var(--line); padding-top:12px;">
-        <div style="font-size:var(--t-caption); font-weight:800; color:var(--mist); margin-bottom:8px;">
-          Verified credentials & certificates
-        </div>
-        <div style="display:flex; flex-wrap:wrap; gap:6px;">
-          ${p.credentials.map(c => `
-            <span style="background:var(--background); border:1px solid var(--line); border-radius:8px; padding:6px 10px; font-size:var(--t-caption); font-weight:600; color:var(--ink); display:inline-flex; align-items:center; gap:4px;">
-              <span style="color:var(--success-ink); display:inline-flex; vertical-align:-2px;">${ic("check",12)}</span> ${c}
-            </span>
-          `).join('')}
-        </div>
-      </div>
-
-      <div style="margin-top:14px; border-top:1px solid var(--line); padding-top:12px;">
-        <div class="row" style="margin-bottom:6px;">
-          <span style="font-size:var(--t-caption); font-weight:800; color:var(--mist);">Current service area</span>
-          <span style="font-size:var(--t-caption); color:var(--mist); font-weight:500;">Active GPS Spot</span>
-        </div>
-        <div id="leafletmap" style="height:130px; border-radius:12px; border:1px solid var(--line); width:100%;"></div>
-      </div>
-    </div>
-
-    ${capabilityCard(p)}
-
-    <div style="display:flex; gap:10px; margin-bottom:12px;">
-      <button class="btn secondary" style="flex:1; background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px; font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.04);" data-chat-provider-id="${p.id}">
-        ${ic("chat",14)} Chat Inquiries
-      </button>
-      <a class="btn secondary" href="tel:${DEMO_HOTLINE}" style="flex:1; background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px; font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.04); text-decoration:none;">
-        ${ic("phone",14)} Contact the Sukinnect line
-      </a>
-    </div>
-
-    <div class="card" style="padding:14px; margin-bottom:12px">
-      <div class="row" style="margin-bottom:10px;">
-        <div>
+      <!-- §42's order, executed: identity, then what the marketplace says about the work (rating, reviews,
+           jobs), then verification, and the service-area map last — it used to sit between the credentials and
+           the rating, and offline it paints a 130px blank rectangle above every decision fact. -->
+      <div class="row card-head" style="border-top:1px solid var(--line); padding-top:12px;">
+        <div style="min-width:0;">
           <span style="font-size:var(--t-body); font-weight:700; color:var(--ink);">Customer Ratings</span>
           <span style="font-size:var(--t-caption); color:var(--mist); margin-left:4px;">(${p.jobs} jobs completed)</span>
         </div>
@@ -9323,6 +9315,51 @@ function residentProviderDetail(){
           <span class="score">${p.rating.toFixed(1)}</span>
           <span class="count">${p.reviews ? p.reviews.length : 0} reviews</span>
         </div>
+      </div>
+
+      <details style="margin-top:12px;">
+        <summary style="font-size:var(--t-caption); font-weight:800; color:var(--mist); cursor:pointer; list-style:none;">
+          Verification: <span style="color:${credentialSummaryFor(p.id).tone};">${credentialSummaryFor(p.id).label}</span>
+          <span style="font-weight:500;">— tap to see the documents</span>
+        </summary>
+        <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
+          ${credentialsOf(p.id).map(c => {
+            const st = credentialLine(c);
+            return `<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--background); border:1px solid var(--line); border-radius:8px; padding:6px 10px; font-size:var(--t-caption); color:var(--ink);">
+              <span style="min-width:0;">${esc(c.name)}<br><span style="color:var(--mist); font-weight:500;">${esc(c.issuer)} · ${esc(st.when)}</span></span>
+              <span style="color:${st.tone}; font-weight:700; white-space:nowrap; flex-shrink:0;">${esc(st.label)}</span>
+            </div>`;
+          }).join('') || `<div style="font-size:var(--t-caption); color:var(--mist);">No document is on file for this provider.</div>`}
+        </div>
+      </details>
+    </div>
+
+    ${capabilityCard(p)}
+
+    <div style="display:flex; gap:10px; margin-bottom:12px;">
+      <button class="btn secondary" style="flex:1; background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px; font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.04);" data-chat-provider-id="${p.id}">
+        ${ic("chat",14)} Chat Inquiries
+      </button>
+      <a class="btn tertiary" href="tel:${DEMO_HOTLINE}" style="flex:1; border-radius:14px; padding:12px; font-size:var(--t-body-sm); display:flex; align-items:center; justify-content:center; gap:6px; text-decoration:none;">
+        ${ic("phone",14)} Contact the Sukinnect line
+      </a>
+    </div>
+
+    <!-- The map moved to last. It is supportive, not the product (§74), and here it sat above every decision
+         fact while painting a 130px empty rectangle whenever the tiles never arrive — which offline is the
+         normal case. The leafletmap id moved with it rather than being duplicated. -->
+    <div class="card" style="padding:14px; margin-bottom:12px">
+      <div class="row card-head" style="margin-bottom:8px;">
+        <b class="card-title">Service area</b>
+        <span class="chip">${(p.servesBarangays || []).length} barangays declared</span>
+      </div>
+      <div id="leafletmap" style="height:130px; border-radius:12px; border:1px solid var(--line); width:100%;"></div>
+    </div>
+
+    <div class="card" style="padding:14px; margin-bottom:12px">
+      <div class="row card-head" style="margin-bottom:10px;">
+        <b class="card-title">Reviews from the sample record</b>
+        <span class="chip">${p.reviews ? p.reviews.length : 0} on file</span>
       </div>
 
       <div>
@@ -9709,7 +9746,7 @@ function residentBookingDetail(){
         <button class="btn secondary" style="flex:1; background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px; font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.04);" data-chat-booking-provider-id="${providerOf(b).id}">
           ${ic("chat",14)} Chat with ${esc(providerOf(b).name.split(' ')[0])}
         </button>
-        <a class="btn secondary" href="tel:${DEMO_HOTLINE}" style="flex:1; background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px; font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.04); text-decoration:none;">
+        <a class="btn tertiary" href="tel:${DEMO_HOTLINE}" style="flex:1; border-radius:14px; padding:12px; font-size:var(--t-body-sm); display:flex; align-items:center; justify-content:center; gap:6px; text-decoration:none;">
           ${ic("phone",14)} Call the Sukinnect line
         </a>
       </div>
@@ -10142,7 +10179,7 @@ function thisDeviceCard() {
 
 function adminFinanceScreen() {
   return `
-  ${screenHeader('Money', { back:"state.adminScreen='overview'; render();", backLabel:'Back to the console', sub:'What the marketplace earned, and what it owes' })}
+  ${screenHeader('Money', { back:"stepBack();", backLabel:'Back', sub:'What the marketplace earned, and what it owes' })}
   <div class="pad" style="background:var(--cloud);">
     ${thisDeviceCard()}
     ${statementCard()}
@@ -10205,7 +10242,7 @@ function adminMarketplaceIntelligence(){  const f = state.adminIntFilters;
   const st = intelligenceStats(f);
   const gaps = supplyGaps(f);
   return `
-  ${screenHeader('Marketplace intelligence', { back:"state.adminScreen='overview'; render();", backLabel:'Back to the console', sub:'Where bookings and providers do not line up' })}
+  ${screenHeader('Marketplace intelligence', { back:"stepBack();", backLabel:'Back', sub:'Where bookings and providers do not line up' })}
   <div class="pad" style="background:var(--cloud);">
     <div class="seg hscroll" style="margin-bottom:12px;">
       ${[[7,'7 days'],[30,'30 days'],[0,'All time']].map(([days,name]) => `<button class="seg-btn ${f.days === days ? 'on' : ''}" onclick="setIntFilter('days',${days})">${name}</button>`).join('')}
@@ -10357,7 +10394,7 @@ function adminCategories(){
   const f = { days: 30, category: 'all' };
   const supply = categorySupply();
   return `
-  ${screenHeader('Categories', { back:"state.adminScreen='overview'; render();", backLabel:'Back to the console', sub:'What the marketplace offers and how each one is transacted' })}
+  ${screenHeader('Categories', { back:"stepBack();", backLabel:'Back', sub:'What the marketplace offers and how each one is transacted' })}
   <div class="pad" style="background:var(--cloud);">
     <div class="card card-quiet">
       <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.55;">
@@ -10418,13 +10455,13 @@ function adminCategories(){
 function adminTrustSafety(){
   const dismissed = state.adminAlertState.anomalyDismissed;
   return `
-  <div class="topbar"><div><h1 style="font-size:var(--t-lead);">Trust &amp; Safety</h1><div class="sub">Review unusual or risky activity</div></div><button class="btn sm" style="background:rgba(255,255,255,0.12); color:var(--on-brand); box-shadow:none;" onclick="state.adminScreen='overview'; render();">Back</button></div>
+  <div class="topbar"><div><h1 style="font-size:var(--t-lead);">Trust &amp; Safety</h1><div class="sub">Review unusual or risky activity</div></div><button class="btn sm" style="background:rgba(255,255,255,0.12); color:var(--on-brand); box-shadow:none;" onclick="stepBack();">Back</button></div>
   <div class="pad" style="background:var(--cloud);"><div class="card"><div class="row"><b class="card-title">Provider monitoring</b><span class="chip badge-gold">Needs review</span></div><div style="font-size:var(--t-caption); line-height:1.55; margin-top:9px;"><b>Joel Aquino - Appliance Specialist</b><br><span style="color:var(--mist);">Sample thresholds this screen is designed around — the pilot has not measured these.</span><br>Watch: cancellation rate above 15% · complaints in 14 days · rating drift<br><span style="color:var(--ink-soft);">The sample roster carries 19% cancellation and 5 complaints for this provider. A trend needs two points in time, and the pilot has produced one.</span></div><button class="btn sm secondary btn-block" style="margin-top:10px;" onclick="state.tab='admin_verifications'; state.adminProviderCategory='verified'; render();">Review Provider</button></div><div class="card"><div class="row"><b class="card-title">Anomaly alerts</b><span class="chip badge-alert">Requires review</span></div>${dismissed ? `<div style="font-size:var(--t-caption); color:var(--success-ink); margin-top:9px;">Anomaly marked as reviewed and recorded in the audit log.</div>` : `<div style="font-size:var(--t-caption); line-height:1.55; margin-top:9px;"><b>Potential review anomaly</b><br>The signal this screen is built to catch: a burst of top ratings arriving together, from accounts with no other history. The demo records carry no review timestamps, so nothing here has been detected — it is the shape of the alert, not an alert.<br><span style="color:var(--mist);">This is unusual activity and is not a fraud conclusion.</span></div><div style="display:flex; gap:6px; margin-top:10px;"><button class="btn sm" style="flex:1;" onclick="state.adminAlertState.anomalyInvestigated=true; adminLog('Anomaly investigated','Review pattern','Investigation opened'); render();">Investigate</button><button class="btn sm secondary" style="flex:1;" onclick="state.adminAlertState.anomalyDismissed=true; adminLog('Anomaly dismissed','Review pattern','Marked reviewed'); render();">Dismiss</button></div>`}</div></div>`;
 }
 
 function adminAuditLog(){
   const entries = state.adminAuditLog.slice();
-  return `<div class="topbar"><div><h1 style="font-size:var(--t-lead);">Audit Log</h1><div class="sub">Read-only administrator activity</div></div><button class="btn sm" style="background:rgba(255,255,255,0.12); color:var(--on-brand); box-shadow:none;" onclick="state.adminScreen='overview'; render();">Back</button></div><div class="pad" style="background:var(--cloud);">${entries.length ? '' : `<div class="card"><div style="font-size:var(--t-body); color:var(--ink-soft);">No administrator action has been recorded on this device yet. Verifications, rate changes and case resolutions appear here as they happen.</div></div>`}${entries.map(entry => `<div class="card card-quiet"><div style="font-size:var(--t-caption); color:var(--mist);">${esc(shortDate(entry.at))} - ${esc(clockText(entry.at))}</div><div style="font-size:var(--t-body-sm); font-weight:800; margin-top:5px;">${esc(entry.action)}</div><div style="font-size:var(--t-caption); margin-top:4px;">${esc(entry.actor || 'Administrator')}<br>Subject: ${esc(entry.subject)}<br>Result: ${esc(entry.result)}</div></div>`).join('')}</div>`;
+  return `<div class="topbar"><div><h1 style="font-size:var(--t-lead);">Audit Log</h1><div class="sub">Read-only administrator activity</div></div><button class="btn sm" style="background:rgba(255,255,255,0.12); color:var(--on-brand); box-shadow:none;" onclick="stepBack();">Back</button></div><div class="pad" style="background:var(--cloud);">${entries.length ? '' : `<div class="card"><div style="font-size:var(--t-body); color:var(--ink-soft);">No administrator action has been recorded on this device yet. Verifications, rate changes and case resolutions appear here as they happen.</div></div>`}${entries.map(entry => `<div class="card card-quiet"><div style="font-size:var(--t-caption); color:var(--mist);">${esc(shortDate(entry.at))} - ${esc(clockText(entry.at))}</div><div style="font-size:var(--t-body-sm); font-weight:800; margin-top:5px;">${esc(entry.action)}</div><div style="font-size:var(--t-caption); margin-top:4px;">${esc(entry.actor || 'Administrator')}<br>Subject: ${esc(entry.subject)}<br>Result: ${esc(entry.result)}</div></div>`).join('')}</div>`;
 }
 
 /* Every figure here is read from a record. It used to be a typed table keyed by provider

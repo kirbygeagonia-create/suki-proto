@@ -1300,6 +1300,70 @@ suite('hygiene', async () => {
     '.card-head wraps: ' + /\.card-head\s*\{[^}]*flex-wrap:\s*wrap/.test(cssCode) +
       ' · chip holds its word: ' + /\.chip\s*\{[^}]*white-space:\s*nowrap/.test(cssCode));
 
+  /* R6: §70 names a tertiary tier and this file never had one, which is how two screens could paint the
+     platform's phone line with the same weight as the in-app chat. The rule is on the tier, so the check is
+     both halves: the fallback wears it, nothing else still dresses a `tel:` link as a secondary, and the class
+     exists in the stylesheet rather than being invented inline per screen. */
+  const tertiaryTels = (markupCode.match(/class="btn tertiary"[^>]*href="tel:/g) || []).length;
+  const loudTels = (markupCode.match(/class="btn(?: secondary)?"[^>]*href="tel:/g) || []).length;
+  c.check('a call to the platform is dressed as the fallback it is on every screen that offers one',
+    tertiaryTels === 2 && loudTels === 0,
+    tertiaryTels + ' tertiary tel controls · ' + loudTels + ' still styled as a primary or secondary action');
+  c.check('and the tertiary tier is a rule in the system, not a style attribute on one button',
+    /\.btn\.tertiary\s*\{[^}]*background:\s*transparent/.test(cssCode) &&
+      /\.btn\{[^}]*min-height:var\(--tap\)/.test(cssCode),
+    '.btn.tertiary declared: ' + /\.btn\.tertiary\s*\{[^}]*background:\s*transparent/.test(cssCode) +
+      ' · .btn still carries the tap floor: ' + /\.btn\{[^}]*min-height:var\(--tap\)/.test(cssCode));
+
+  /* A9: §42's order is a reading order, and the screen used to lead with a credential pill stack and a map
+     that paints an empty rectangle offline, pushing rating and reviews below the fold. `hygiene` reads source
+     text everywhere else, so this is the one place in it that boots the page — the order is a property of what
+     the screen paints, and a grep over markup cannot see a template's evaluation order. */
+  const app = boot();
+  app.state.view = 'app'; app.state.role = 'resident'; app.state.selectedProvider = app.PROVIDERS[0];
+  const pdHtml = String(app.residentProviderDetail());
+  const pdOrder = ['Customer Ratings', 'Verification:', 'Chat Inquiries', 'id="leafletmap"']
+    .map((t) => pdHtml.indexOf(t));
+  c.check('the provider profile answers §42: rating, then verification, then contact, with the map last',
+    pdOrder.every((i) => i >= 0) && pdOrder.every((i, k) => k === 0 || i > pdOrder[k - 1]),
+    'positions ' + pdOrder.join(' < ') + ' (any -1 means the block is not painted at all)');
+  c.check('and its credential list reads the records, not a second copy of names',
+    pdHtml.indexOf('Verified credentials & certificates') < 0 &&
+      pdHtml.indexOf('Expiring soon') >= 0 && pdHtml.indexOf('Barangay Clearance') >= 0,
+    'old pill heading still painted: ' + (pdHtml.indexOf('Verified credentials & certificates') >= 0) +
+      ' · a record state shown: ' + (pdHtml.indexOf('Expiring soon') >= 0) +
+      ' · a record named: ' + (pdHtml.indexOf('Barangay Clearance') >= 0));
+
+  /* A11: an admin spoke kept the console's tab value, so `onRootTab()` answered "root" while a drill-in was on
+     screen — the page claimed no history entry for it, `stepBack()` returned early with nothing to undo, and
+     the only way out was a header button that hard-coded the console. Both paths now run through the page's
+     own back step, and the case that exposed it is asserted directly: enter the audit log from the account
+     tab, step back, and the account tab is where you land. */
+  c.check('no admin spoke hard-codes its own way back any more',
+    (markupCode.match(/state\.adminScreen='overview';\s*render\(\);/g) || []).length === 0 &&
+      (markupCode.match(/back:"stepBack\(\);"/g) || []).length >= 3,
+    'hard-coded destinations left: ' + (markupCode.match(/state\.adminScreen='overview';\s*render\(\);/g) || []).length);
+
+  const a11 = (function() {
+    const out = {};
+    app.state.view = 'app'; app.state.role = 'admin';
+    app.state.tab = 'profile'; app.state.adminScreen = 'overview'; app.render();
+    app.state.tab = 'admin_dashboard'; app.state.adminScreen = 'audit'; app.render();
+    out.spokeIsDrillIn = app.state.tab === 'admin_dashboard';
+    app.stepBack();
+    out.fromAccountCard = { tab: app.state.tab, screen: app.state.adminScreen };
+    app.state.tab = 'admin_dashboard'; app.state.adminScreen = 'overview'; app.render();
+    app.state.adminScreen = 'finance'; app.render();
+    app.stepBack();
+    out.fromConsole = { tab: app.state.tab, screen: app.state.adminScreen };
+    return out;
+  })();
+  c.check('and the header button lands where the phone would: account card → audit → back is the account tab',
+    a11.fromAccountCard.screen === 'overview' && a11.fromAccountCard.tab === 'profile' &&
+      a11.fromConsole.screen === 'overview' && a11.fromConsole.tab === 'admin_dashboard',
+    'from the account card: tab=' + a11.fromAccountCard.tab + ' screen=' + a11.fromAccountCard.screen +
+      ' · from the console: tab=' + a11.fromConsole.tab + ' screen=' + a11.fromConsole.screen);
+
   /* A token declared in :root and never reached is the drift AGENTS.md §31 has been re-measuring by
      hand in prose for weeks — "95 tokens declared with 92 of them reached" is a figure that moves with
      every pass, which is why measure.cjs exists. The count is now a rule: the unreached set has to

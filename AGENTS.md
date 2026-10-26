@@ -2651,8 +2651,43 @@ belongs in the gate for any defect a screenshot shows and a tally cannot**: the 
 title+chip pairs the markup paints and requires each to carry the class, behind a floor of ten pairs so a
 pattern that stops matching reports "0 of 0" rather than passing; its sibling pins that the class is
 `flex-wrap` and the chip is `nowrap`, because the second is the first's failed attempt. Proven by
-`node tools/falsify-coherence.cjs`, which grows to 10 breaks — one head loses the class, then the class
-loses `flex-wrap` while all 22 rows still name a rule that no longer exists.
+`node tools/falsify-coherence.cjs`, which grew first to 10 breaks — one head loses the class, then the class
+loses `flex-wrap` while all the rows still name a rule that no longer exists — and to 15 with the three sections
+below. The pair count it asserts is a live number printed by the check, not a figure carried here.
+
+THE SAME DEFECT LIVES IN EVERY ROW SHAPE, AND WHEN THE SYSTEM CANNOT SAY IT, THE MISSING VOCABULARY IS THE
+DEFECT. Two more rounds at the phone's own 320 CSS px / 135% text found the identical squeeze in three places
+the card-head rule did not cover: the sticky action bar's primary button painted "Book / Appointme / nt", the
+provider profile's ratings row painted "Custo / mer / Ratin / gs" with its score pill splitting into "4 . 9", and
+the service badge split into "Plumbi / ng". Each was invisible to all 25 tallies at every corner, for the same
+reason as before — a word alone on a line is not clipped, does not collide, is on the scale and clears contrast —
+and each was fixed the same way: **the row wraps, the words hold** (the sticky bar and two more rows take
+flex-wrap, the pill and the badge take flex-shrink:0 with white-space:nowrap). Do not read this as three bugs: it
+is one rule about overflow-wrap:anywhere meeting a flex row that will not give way, and the fourth instance will be
+on a row nobody has photographed yet.
+
+The R6 half of that work is a different lesson. The booking detail and the provider profile each painted a
+btn secondary chat control beside a byte-identical btn secondary tel: link, and **nothing in the file could call
+it wrong, because the button system has PRIMARY, SECONDARY and DESTRUCTIVE and no tertiary tier at all** — §70
+names the tier, the stylesheet did not have it, so the rule was unexpressible rather than unobserved. The fix is
+.btn.tertiary in the stylesheet, not a quieter inline style on two buttons, and the 44px floor is untouched because
+the demotion is mass, not reach. **When a stated rule cannot be expressed, look for the missing vocabulary before
+looking for the missing check.** Three new gate checks and five new breaks in falsify-coherence (now 15 of 15,
+0 not applied) pin the tier, §42's reading order on the provider profile, and the credential list that now reads
+credentialsOf()/credentialLine() instead of painting a green check beside two documents the records call expiring.
+
+AN ADMIN SPOKE IS A DRILL-IN, AND A BACK RULE THAT IGNORES IT REMOVES THE USER'S BACK RATHER THAN AIMING IT.
+A11 was found as "the header button and the phone's Back disagree". Reading onRootTab() showed worse: an admin
+spoke keeps state.tab on the console's root tab while state.adminScreen names the screen, so onRootTab() answered
+"root" with a drill-in on screen — syncBackHandles() claimed **no** history entry, stepBack() returned early with
+nothing to undo, and the phone's Back at an admin spoke had nowhere to go. The reported symptom (two destinations)
+was a third of the defect; the other two were that one of the paths did not exist at all, and that pointing the
+button at stepBack() — the obvious fix — would have done nothing. The rule now answers about the screen, not only
+the tab. Two checks hold it: one textual (no spoke hard-codes adminScreen='overview'), one behavioural (account
+tab → audit log → back is the **account tab**; console → Money → back is the console), and the falsifier break that
+deletes the onRootTab() clause reports tab=admin_dashboard screen=audit — the button doing nothing, which is what
+the check is for. The same break is why a rule about a destination has to be asserted by landing on it: the
+textual check alone would have passed on the first fix, which changed the string and not the behaviour.
 
 A SCREEN CAN SATISFY EVERY SENSOR AND STILL BE A DECORATIVE STATISTIC. `adminProviderInsights` — the
 Providers bar's "Insights" button — was missing from the camera's table until §81 added it, and once it

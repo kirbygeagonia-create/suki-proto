@@ -2243,6 +2243,13 @@ two `assembleDebug` attempts died on a wedged daemon (`FileLockContentionHandler
 use`) and only `gradlew --stop` cleared it, and the wrapper still reported that failed build as
 `completed, exit code 0` — so read the build log or ask `audit-build-bytes`, never the exit code.
 
+**Superseded within the hour by `1.2-preview.44` (`versionCode 46`), 2026-10-26.** The three rows §138 reported
+open were ruled by the owner and built (CHANGES §139). Nothing about this leg changed — it is still one install and
+one keyboard reading — but the artifact a phone should run is now `.44`, and `node tools/audit-build-bytes.cjs`
+reads **findings: 0** with all four copies at `fd176312…`. **Install `.44`.** The screen worth photographing on the
+handset is the provider profile: its mid-word breaks at 320 CSS px with 135% text were found on the bench
+*emulating* that corner, and a phone is the only place the multiplication is real (§68, §73).
+
 ## The browse → review → book walk (G11) — the method, armed and not yet run
 
 §10 of the improvement brief asks whether a person can go from opening the app to sending a request in

@@ -8622,3 +8622,60 @@ pass with an instrument behind them**; **3 are open** — R6 (needs a scope ruli
 (needs either a pass or a corrected prescription); and **2 cannot be closed on this machine at all** — G11's
 one-to-three-minute number and R10's keyboard-open composer, both gated on a handset by the owner's standing
 ruling. Nothing is pushed, no device was attached, and the deployment is left deliberately stale as ruled.
+
+## 139. Three rows the audit left open were ruled, and one of them was not the defect described
+
+§138 reported R6, A11 and A9 as findings needing a ruling. All three came back as **build it**, with A9 as
+"screenshot it and decide together" — so the screenshots were taken first, and they changed what the work was.
+
+**A9's own photograph found the defect the plan had never named.** At 320 CSS px with the phone's own 135% text,
+the provider profile's sticky action bar painted its primary button as **"Book / Appointme / nt"** — the label
+broken across three lines because the rate column beside it would not give way. Every corner of the sweep read
+clean about it, for the now-familiar reason: a word alone on a line is not clipped, collides with nothing, sits on
+the scale and clears contrast. The fix is the same rule §137 established for card heads, applied to the bar —
+`.book-bar{ flex-wrap:wrap }` — so the button keeps its words and the bar grows a line. **A taller bar is
+information kept; a cut label is information lost.**
+
+**The reorder made that visible, and then made two more.** Moving the ratings row above the fold, per §42, put it
+in the same squeeze the sticky bar had been in: "Custo / mer / Ratin / gs" across four lines, the score pill
+splitting into "4 . 9", and the service badge into "Plumbi / ng". Three more instances of one rule, all found by
+looking at the picture rather than at the diff. Each got the treatment the rule prescribes — `card-head` on the
+rows that hold two things which must stay whole, `flex-shrink:0; white-space:nowrap` on the pill and the badge —
+and the re-shot corner shows every word intact.
+
+**A9 was also a truth problem, not only a layout one.** The credential list the screen replaced painted a green
+check beside all four documents, read from `p.credentials` — a second copy of the names that no record owns. Two
+of the plumber's four documents are within `credentialWarnDays`, so the screen said "all fine" about documents the
+records call expiring. The list now reads `credentialsOf()` through `credentialLine()`, the shared helper the
+admin screens already use, and the summary line is `credentialSummaryFor()`, so the heading and the detail cannot
+disagree by construction. The screenshot reads **"Verification: 2 of 4 expiring"** in the amber tone — the same
+defect class §77 caught on that provider's own profile card, arriving a second time from the resident's side.
+
+**A11 was not the bug described.** The finding as written said the header button and the phone's Back disagree.
+Reading `onRootTab()` showed something worse: an admin spoke keeps `state.tab` on the console's root tab, so
+`onRootTab()` answered "root" while a drill-in was on screen — which meant `syncBackHandles()` claimed **no**
+history entry for it and `stepBack()` returned early with nothing to undo. The phone's Back at an admin spoke did
+not land somewhere else; it had nowhere to go. Pointing the button at `stepBack()` would therefore have done
+nothing at all. The fix is the rule first: an admin spoke is a drill-in, so `onRootTab()` answers false while
+`state.adminScreen` is anything but `overview`. Then the five hard-coded destinations become the page's own back
+step, and the two paths agree because they are the same code.
+
+The check that proves it is behavioural, not textual, and it asserts the case the plan row named: sign in as
+admin, open the account tab, enter the audit log from "My Admin Activity", step back — the account tab is where
+you land. From the console it still lands on the console. Removing the `onRootTab()` rule makes the same check
+report `tab=admin_dashboard screen=audit`, which is the button doing nothing.
+
+**R6 needed a tier, not a style.** The two screens each painted a `btn secondary` chat control beside a
+`btn secondary` `tel:` link to the platform's demo line, byte-identical. The reason nothing in the file could
+call that wrong is that the button system has PRIMARY, SECONDARY and DESTRUCTIVE and **no tertiary tier at all** —
+so the fix adds `.btn.tertiary` to the stylesheet rather than inventing a quieter inline style on two buttons.
+The hit area is untouched: `.btn` already carries `min-height:var(--tap)`, which is the whole point of demoting
+mass instead of reach.
+
+**As printed at the end of this pass.** `node tools/verify.cjs` → **all 649 checks passed** (643 before the six
+added here); `node tools/falsify-coherence.cjs` → **15 of 15 breaks caught, 0 not applied**, the five new ones
+each failing the check it names — including the two that assert a *count* (24 title+chip heads, 2 tertiary call
+links) and the one that asserts a destination; `node tools/shot.cjs --list` → **88 screens**;
+the provider profile re-photographed at 320×638 @135% with every word intact; the eight-corner sweep over these
+bytes → **8 of 8 corners, 25 tallies each, all clear** (`node tools/sweep-text-scale.cjs`); the full mutant
+aggregate is re-run after this section and its figures are quoted from that run, not from here.

@@ -59,6 +59,11 @@ const GROUPS = 'the booking detail names the six groups in order';
 const HELPDESK = 'the help desk orders by case state';
 const HEADS = 'every card head with a count beside its title is allowed to wrap';
 const HEAD_CSS = 'the class that grants it is flex-wrap, not a chip that shrinks';
+const TEL = 'a call to the platform is dressed as the fallback it is on every screen that offers one';
+const TIER = 'the tertiary tier is a rule in the system, not a style attribute on one button';
+const PROFILE_ORDER = 'the provider profile answers §42: rating, then verification, then contact, with the map last';
+const ADMIN_BACK = 'no admin spoke hard-codes its own way back any more';
+const ADMIN_BACK_LANDED = 'the header button lands where the phone would';
 
 /* The anchors are read out of the file rather than typed a second time, because this family edits lines
    carrying template literals and nested quotes: a needle copied by hand is a needle that can go stale in
@@ -111,6 +116,22 @@ const REAL = [
   { name: 'the row is told to shrink the chip instead of wrap, which is the fix that moved the break',
     check: HEAD_CSS,
     from: headCss, to: headCss ? headCss.replace('flex-wrap:wrap; ', '') : '' },
+  { name: 'the tertiary tier is given a surface, so the fallback looks as important as the in-app path',
+    check: TIER,
+    from: '.btn.tertiary{background:transparent;', to: '.btn.tertiary{background:var(--surface);' },
+  { name: 'one platform call link is promoted back to a secondary button',
+    check: TEL,
+    all: true, from: 'class="btn tertiary" href="tel:', to: 'class="btn secondary" href="tel:' },
+  { name: 'the provider profile stops naming its ratings block, so §42\'s order cannot be found',
+    check: PROFILE_ORDER,
+    from: '>Customer Ratings</span>', to: '>What the sample record says</span>' },
+  { name: 'an admin spoke goes back to hard-coding its own destination',
+    check: ADMIN_BACK,
+    all: true, from: 'back:"stepBack();"', to: "back:\"state.adminScreen='overview'; render();\"" },
+  { name: 'the back rule forgets that an admin spoke is a drill-in, and the phone has nowhere to go',
+    check: ADMIN_BACK_LANDED,
+    from: "  if (state.role === 'admin' && state.adminScreen && state.adminScreen !== 'overview') return false;",
+    to: '  /* removed */' },
 ];
 
 function gateOutput() {
@@ -135,7 +156,7 @@ if (missing.length) {
 }
 
 const out0 = gateOutput();
-for (const name of [ICONS, QUEUE, GROUPS, HELPDESK, HEADS, HEAD_CSS]) {
+for (const name of [ICONS, QUEUE, GROUPS, HELPDESK, HEADS, HEAD_CSS, TEL, TIER, PROFILE_ORDER, ADMIN_BACK, ADMIN_BACK_LANDED]) {
   const r = readCheck(out0, name);
   if (!r.seen) { console.log('BROKEN  no gate check named "' + name + '"'); process.exit(1); }
   if (r.failed) { console.log('BROKEN  baseline already red: ' + r.why); process.exit(1); }
@@ -146,9 +167,12 @@ let caught = 0, applied = 0, unmatched = 0;
 try {
   for (const b of REAL) {
     const hits = original.split(b.from).length - 1;
-    if (hits !== 1) {
+    /* A rule that holds over several screens is broken over all of them. `class="btn tertiary" href="tel:"`
+       appears on two screens, and a break that changed one would leave the check true for the wrong reason —
+       the count it asserts is 2, and 2 is what it would still see if the other were also promoted. */
+    if (b.all ? hits < 1 : hits !== 1) {
       unmatched++;
-      console.log('SKIP  ' + b.name + '  (its anchor matched ' + hits + ' times, needs exactly 1)');
+      console.log('SKIP  ' + b.name + '  (its anchor matched ' + hits + ' times, needs ' + (b.all ? 'at least 1' : 'exactly 1') + ')');
       continue;
     }
     if (b.from === b.to) {
@@ -157,7 +181,7 @@ try {
       continue;
     }
     applied++;
-    fs.writeFileSync(TARGET, original.replace(b.from, b.to));
+    fs.writeFileSync(TARGET, b.all ? original.split(b.from).join(b.to) : original.replace(b.from, b.to));
     if (fs.readFileSync(TARGET, 'utf8') === original) {
       unmatched++; applied--;
       console.log('SKIP  ' + b.name + '  (the write did not land)');
