@@ -141,6 +141,7 @@ week guarding nothing.
 node tools/audit-open-items.cjs     # every "still owed" sentence the present-tense documents still make
 node tools/audit-matrix-coverage.cjs       # the improvement plan's 47-row matrix: every id present, once, classified
 node tools/audit-report-coverage.cjs       # and each of those rows actually dispositioned in the plan's own report
+node tools/audit-citations.cjs             # every file and quoted gate-check the plan cites resolves, or says why not
 node tools/audit-camera-dialog-coverage.cjs   # profile dialogs the camera's walk has never opened
 node tools/audit-compat-floor.cjs   # the oldest WebView that can render this page, and which feature decides
 node tools/deploy-check.cjs         # what the live site actually serves, read from outside the repository

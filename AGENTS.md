@@ -2689,6 +2689,34 @@ deletes the onRootTab() clause reports tab=admin_dashboard screen=audit — the 
 the check is for. The same break is why a rule about a destination has to be asserted by landing on it: the
 textual check alone would have passed on the first fix, which changed the string and not the behaviour.
 
+A CITATION IS A CLAIM ABOUT A TOOL, AND THIS SESSION MADE THREE FALSE ONES BEFORE A CHECK EXISTED.
+While auditing the improvement plan for whether every row it describes is actually implemented, prose
+written in this same session cited `falsify-status-duplication` (no such family), a `login`-suite check on
+the role boundary (no such check), and §85's declared-state check reading the admin lock dialog (that
+family is about dark mode and the "Pro" label). Each was caught by `ls` or `grep` — but only because the
+author stopped to check, which is luck wearing a discipline's clothes. `node tools/audit-citations.cjs`
+is the discipline: every file and every bold-quoted gate-check label the plan cites must resolve, or be
+absent with a reason stated beside it in a `citation-exempt:` marker — the same idiom §"THE COMPATIBILITY
+FLOOR" uses for CSS the page keeps on purpose, and with the same rule that a stale exemption is itself a
+finding. `node tools/falsify-citations.cjs` proves it three ways, one of them in the direction that only
+looks right: blinding the resolver's walk over the tracked tree must make it **refuse a correct plan** with
+a phantom file finding, because a check that invents defects teaches the reader to ignore it. Two facts it
+surfaced are worth more than the tool. **The brief this work was commissioned under,
+`SUKINNECT_UX_RELIABILITY_MVP_PROMPT.md`, is not in the workspace and has never been committed** — so the
+plan's §13 matrix is the only surviving record of what was asked, and "is everything in the Markdown file
+implemented?" can only ever be answered against the plan. And **a citation a reader cannot run is a false
+citation**: the §14 table named a family as `…-reschedule.cjs`, which no one can type.
+
+THE ANSWER TO "IS EVERYTHING IMPLEMENTED?", STATED SO THE NEXT SESSION DOES NOT RE-DERIVE IT. Of the plan's
+47 concerns: 45 are built, ruled out of scope, or resolved by an earlier pass with an instrument behind
+them; `A2` is deferred by the owner pending a screenshot; `G11`'s one-to-three-minute number and `R10`'s
+keyboard-open composer are handset-gated by standing ruling and are reported as **not verified**, never as
+passing. Three rows the first pass claimed were fine were found by reading the sections nobody re-audits:
+`A9` was **over-claimed as built** in the completion report, `R6` was a scope contradiction between §4 and
+§13 rather than owed work, and `A11`'s "already resolved" rested on a sentence about the back machinery
+while the painted button had no back to take. **The matrix is not the audit — §1 to §17 are the audit,** and
+a section that has not been re-read is a section still making claims.
+
 A SCREEN CAN SATISFY EVERY SENSOR AND STILL BE A DECORATIVE STATISTIC. `adminProviderInsights` — the
 Providers bar's "Insights" button — was missing from the camera's table until §81 added it, and once it
 was in, it read clean on all 25 tallies at every corner. That is the lesson worth keeping: the camera
