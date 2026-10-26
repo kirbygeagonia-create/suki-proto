@@ -23,6 +23,8 @@ const METHOD = 'the change-method sheet offers the methods on the record';
 const BADGES = 'the profile card shows the badges its provider actually holds';
 const PREF = 'the preferences card offers no switch it cannot turn';
 const NOTFOUND = 'an id outside the account shows nothing rather than someone else';
+const LOCK = 'the admin lock dialog says what Unlock does, and Unlock does only that';
+
 
 const mutants = [
   { name: 'Edit Pricing goes back to an action nothing branches on',
@@ -37,6 +39,18 @@ const mutants = [
     from: `row('security', 'Password & Sign-in', 'Not stored on this device')`,
     to: `row('security','Password & Sign-in','PIN enabled - 2FA enabled')`,
     expect: CLAIM },
+  /* A13's dialog: the copy and the button are one claim, so each half gets its own break. The first
+     restores the promising label while leaving the dialog otherwise intact — the exact regression the
+     row closed by hand. The second leaves the honest sentence and makes Unlock actually sign the
+     administrator out, which is the same lie arriving from the handler's side. */
+  { name: 'the lock dialog promises "PIN to continue" again',
+    from: 'so no PIN is checked: Unlock closes this screen and leaves the app signed in.',
+    to: 'Enter PIN to continue.',
+    expect: LOCK },
+  { name: 'Unlock really does sign the administrator out',
+    from: `onclick="state.adminAccountModal=null; render();">Unlock`,
+    to: `onclick="signOut()">Unlock`,
+    expect: LOCK },
   { name: 'the PIN modal takes a credential field and writes the audit log',
     from: 'keeps no PIN, so there is nothing to change here and nothing to write to the Audit Log.'
       + ' A real deployment would store a hashed secret server-side and record the change as an'

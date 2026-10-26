@@ -2961,6 +2961,32 @@ suite('honesty', async () => {
     return { ok: found.length === 0, why: 'still asserting: ' + found.join(' | ') };
   })());
 
+  /* A13 asks for the session lock to be coherent or removed, and the copy was made honest. The old
+     label promised "PIN to continue" over a button that only closed the dialog, so the wording was
+     changed to state that nothing is checked. Nothing asserted that, which means any later edit could
+     restore the promise in silence and only a person reading a screenshot would notice. This reads the
+     dialog the hub actually paints, so it cannot pass by rendering nothing: the Unlock button must be
+     there, must only close, and the sentence must say the PIN is not checked. */
+  verdict('the admin lock dialog says what Unlock does, and Unlock does only that', (() => {
+    app.state.view = 'app'; app.state.role = 'admin'; app.state.tab = 'profile';
+    /* Two renders, in this order. render() clears every *Modal field when the destination changes —
+       that is how leaving a layer works — so arming the dialog before the first paint is arming it
+       against a screen render() is about to leave. Proven in the sandbox on the committed bytes: one
+       render paints 4,913 chars of hub and no Unlock button at all, which a check would read as a
+       broken dialog; settle-then-raise paints 5,888 with the layer present. */
+    app.render();
+    app.state.adminAccountModal = 'lock';
+    app.render();
+    const html = app._document.getElementById('screen').innerHTML;
+    const why = [];
+    if (!/>Unlock<\/button>/.test(html)) why.push('the lock dialog painted no Unlock button');
+    if (!/no PIN is checked/.test(html)) why.push('the copy no longer says the PIN is not checked');
+    if (/Enter PIN|PIN to continue/i.test(html)) why.push('a label promises a check the build cannot perform');
+    if (!/onclick="state\.adminAccountModal=null; render\(\);">Unlock/.test(html))
+      why.push('Unlock does something other than close the dialog, so the copy is now the false half');
+    app.state.adminAccountModal = null;
+    return { ok: why.length === 0, why: why.join(' \u00b7 ') };
+  })());
   /* The payout account was typed into three places and held in a fourth: the profile
      field the payout itself reads. Signed in as the fruit buyer it still showed the
      plumber's number. A field a keyboard can write has to be the one the screen shows. */
