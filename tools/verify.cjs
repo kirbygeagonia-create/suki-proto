@@ -1260,6 +1260,18 @@ suite('hygiene', async () => {
   c.check('no bar hand-types its own heading size', selfSized === 0 && headings >= 10,
     'selfSized=' + selfSized + ' headings=' + headings);
 
+  /* The same drift one element over: five bars typed the identical translucent action style into
+     their markup and a sixth typed a different one — a filled navy pill — so the same "leave the
+     app" action looked like two things depending on which screen painted it. `.btn.onbar` is the
+     name now. The positive control counts the uses, because a rule that matches nothing would make
+     "no inline copies remain" true on a build where the class was never applied at all. */
+  const onbarUses = (src.match(/class="btn sm onbar"/g) || []).length;
+  const onbarCopies = (src.match(/style="background:rgba\(255,255,255,0?\.12\)[^"]*"/g) || []).length
+    + (src.match(/style="background:var\(--brand-navy-deep\); color:var\(--on-brand\)/g) || []).length;
+  c.check('a control that sits in the brand bar takes the class, not a typed style',
+    onbarUses >= 5 && onbarCopies === 0 && /\.btn\.onbar\{/.test(css),
+    'uses=' + onbarUses + ' inlineCopies=' + onbarCopies + ' rule=' + (/\.btn\.onbar\{/.test(css) ? 1 : 0));
+
   /* a button that reports success without changing anything is the bug class this
      whole rebuild was asked to remove */
   const congratulating = (body.match(/onclick="showToast\(([^)]*)\)"[^>]*>/g) || [])
