@@ -8183,3 +8183,23 @@ sheet's own scroll body. Chromium makes a scrollable region keyboard-focusable o
 privacy notice is the tallest content in the app, so a Tab user lands on the scroller by design — the
 gap was only that the app's `:where(...)` focus list named the interactive things and not that one. It is
 in the list now, and the tally reads 0.
+
+## 134. The shell was rebuilt to match the page, which un-blocked a falsifier that had been refusing correctly
+
+The owner chose to rebuild the Android shell rather than leave the leg blocked on it. Staging the page
+(`cmp`-proved), bumping `versionCode 41/preview.39` → `42/preview.40`, and `cmd.exe //c gradlew.bat
+assembleDebug` took 51 seconds and moved `node tools/audit-build-bytes.cjs` from `findings: 2` to
+**`findings: 0`** — every copy now agrees at `a9687553…`, including the page extracted from inside the
+new APK. The consequence worth recording is that **the aggregate's one flagged row disappeared with
+it**: `falsify-build-bytes`, which had been printing `0/0 — printed no summary` because it correctly
+refused to grade breaks against a tree it knew was stale, now runs and reports **4 of 4 caught,
+0 not applied, 0 missed**. A refusal and a pass are different answers, and only the second proves the
+guard; the way to tell them apart was already in this repository's own habit — read the flagged row,
+never the headline.
+
+Two things the rebuild did not buy. `cmd.exe /c "gradlew.bat …"` returned **exit 0 having run nothing**
+(OpenJDK banner, old APK still on disk) — the first build attempt was a false success and the four-copy
+audit is what caught it, so `//c` is the form to use under Git Bash. And no handset is attached:
+`adb devices` is empty, so `preview.40` runs on nothing yet and the composer-under-the-IME question
+stays open with `visualViewport` at zero uses in the page. `DEVICE-PASS.md` carries the install-and-read
+step for when a phone is on the bus.

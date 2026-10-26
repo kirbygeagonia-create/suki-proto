@@ -2193,3 +2193,27 @@ public `/` still serves `3c73bfef` from 2026-10-15 with the same six fixes absen
 that build deliberately stale on 2026-10-24, so the number is a tripwire against unchosen drift; whether a Netlify
 build was queued at that instant is not distinguishable from here and is not claimed either way.
 
+
+## Build `1.2-preview.40` staged and built on the bench, 2026-10-26 — the keyboard leg is installable, and still unmeasured
+
+The shell tree is untracked by the owner's standing decision, so git will never show what happened
+here and this is the only record of it. `Sukinnect-next.html` was copied to
+`app/src/main/assets/Sukinnect.html` and proved identical with `cmp`; `app/build.gradle` went
+`versionCode 41 / 1.2-preview.39` → **`42 / 1.2-preview.40`** so an install can be told apart by
+version string, and `gradlew.bat assembleDebug` produced `Sukinnect-1.2-preview.40-debug.apk` in 51s
+(`BUILD SUCCESSFUL`, 9 tasks executed / 25 up-to-date). Note the invocation: `cmd.exe /c "gradlew.bat …"`
+from Git Bash returned exit 0 having run **nothing** — it opened a cmd banner and left the old APK in
+place. `cmd.exe //c` is the form that works here, and the proof was the four-copy audit, not the exit
+code: `node tools/audit-build-bytes.cjs` went `findings: 2` → **`findings: 0`**, all four reads at
+`a9687553…`, including the page extracted out of the new APK's bundle. With that,
+`node tools/falsify-build-bytes.cjs` — which had been refusing on the deliberately stale copies and
+showing up as the aggregate's one flagged row — runs for real: **4 of 4 breaks caught, 0 not applied,
+0 missed**, and it restored the audit, `dist/` and the staged asset afterward.
+
+**What this does not do.** No handset is on the bus (`adb devices` answers an empty list), so
+`preview.40` is installed nowhere and **the chat-composer-under-the-keyboard question is still
+unanswered** — `visualViewport` appears zero times in the page, and nothing measured on a bench can
+substitute for the IME. When a phone is attached the step is `adb install -r -t
+app/build/outputs/apk/debug/Sukinnect-1.2-preview.40-debug.apk`, then read it back from
+`dumpsys package com.sukinnect.app` rather than from this file, and open a chat room with the composer
+focused. Attach a **fresh** process to DevTools, never a resumed one.
