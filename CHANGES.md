@@ -8746,12 +8746,4 @@ The two §14 camera legs that were marked stale are re-measured against the curr
 across 88 screens**, all four tallies **0** (the pre-§139 figure of 855 is superseded, not re-quoted), and
 `--measure --dark` reports **0** contrast failures over the same 88 screens.
 
-**And the money sensor is now recorded as blind rather than clean.** `--probe=@tools/probe-money-sums.js` answered
-all 88 screens with `findings: 0` and `cardsWithTotals: 0` — the two characters its own contract says must not
-mean the same thing. So "the money adds up on every screen that can be checked" is **unproven on this build**,
-written into plan §14 as `NOT PROVEN` instead of carried forward as a passing claim. Two candidate causes, neither
-yet measured: no walked screen paints an aggregating card (the booking details the walk reaches are jobs that have
-not reached a final state, and this plan's own R7 rule deliberately omits a Receipt group whose records do not
-exist), or the probe's `.card > .row` selectors stopped matching. The next session's first command is the
-calibration the probe shipped with — plant ₱10 on a receipt total, require `painted … sumOfParts … delta 10`, and
-only then let it report a zero.
+**And the money sensor was reported blind by my own reader, which is the more useful finding.** `--probe=@tools/probe-money-sums.js` looked like `findings: 0` *and* `cardsWithTotals: 0` across 88 screens — the two characters its header says must never mean the same thing — and that reading went into plan §14 and §17 as `NOT PROVEN` before the aggregate was even started. It was the parse: the probe answers `JSON.stringify(…)`, so a single `JSON.parse` yields a **string**, and `r.findings`/`r.cardsWithTotals` are `undefined` on a string. Decoded twice the same log reads **5 screens carrying an aggregating card, 9 cards, 0 findings**, and the calibration that makes that zero mean something was re-run on `fd176312…`: ₱10 planted on the receipt `Total` answers `painted 425 sumOfParts 415 delta 10` on both booking-detail receipts, page restored byte-identical. **Two rules, both about the reader: a probe that returns a JSON string must be decoded twice, and a claim about an instrument's silence has to be confirmed against the instrument's own population line before it is written down** — this session shipped the wrong sentence into three documents in about ninety seconds, and the correction is the commit that follows this one.
