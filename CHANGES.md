@@ -8757,3 +8757,13 @@ Two things landed that were not in the original scope of "is everything in the M
 **A census of the plan's own pointers.** `node tools/audit-row-instruments.cjs` reads §4's 47 rows and accepts only evidence that resolves. It reports **10 traced / 47**, **34 built-class rows naming no runnable instrument**, and — the finding that survives every attempt to weaken it — **zero** rows whose disposition quotes a gate-check label, against the 646 labels `verify.cjs` actually prints. Three readings of "is it traceable" were tried: same line (14 of 47), same bullet block (15), same change-log section (6 more, but attributed to the wrong families, because a section names `falsify-all` for every row it discusses). The last reading asked the code instead of the prose, and no `tools/*.cjs` or `tools/probe-*.js` names any plan id at all — the ids are documentation-only labels. So implementation and traceability separate here: the rows are largely guarded, and the document cannot be followed to the guards. That is the same defect A13 showed for one row — a sentence asserting a guard the dialog did not have — at the scale of the plan.
 
 Two of §17's stale exception names were corrected in the same edit: `P1e` is asserted by six checks (the exception list under-credited work that is guarded), and `A13`'s lock dialog was the genuine half (the list under-stated a gap that was open). A stale exception list is a defect in both directions, and this is the second time this week a hand-kept exception list in this document has been wrong about a row it was written to be honest about.
+
+**And the corrected scope now under-counts, which is stated rather than hidden.** Excluding any block that names
+more than two ids was the right answer to the sentence-that-credited-21-rows, but it also throws away genuine
+shared evidence: `falsify-figures` really does guard both `G7` and `G8`, and it is cited in the class bullet, so the
+tightened census now lists them as untraced. So **10 of 47 is a floor, not a measurement** — the honest claim is that
+between 10 and 27 rows are traceable, the true figure needs a rule that credits a class-list citation for the ids on
+the same line as the token rather than for the whole bullet, and that rule is not yet written. Nothing in §17's
+wording should be read as saying those rows are unguarded; it says the document does not point at the guard, which is
+still true and is the finding that matters. (Discovered by grepping the 34 untraced ids against the change log: only
+9 of them appear there at all, which is the same absence seen from the other side.)
