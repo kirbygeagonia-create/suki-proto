@@ -8857,3 +8857,9 @@ bug in the app, and neither would have been found any other way:
 The standing lesson is the runner's, not mine: `not applied: 0` and a headline total are not the reading — the
 flagged rows are, and a pass that reports two problems in the test suite has told you more than a pass that
 reports none.
+
+## 146. The aggregate over the tree that grew two instruments and one check
+
+`node tools/falsify-all.cjs` run against the committed build: **352 mutants applied, 352 caught, 0 not applied — every rule is still being tested** across **62 printed family rows**, summed a second way with the parser in this script rather than trusted from the runner’s own arithmetic (applied 352, caught 352, not applied 0, missed 0). Flagged rows: none. The family count moved from 61 because `tools/audit-row-instruments.cjs` and `tools/falsify-row-instruments.cjs` joined the tree, and the gate count from 650 to 651 because of the A13 lock-dialog check and the G6 privacy check. This is the pass that answers the standing question about my own edits: four files that every family re-runs (`tools/verify.cjs`, `tools/harness.cjs`, and the two doc-reading audits) were changed after the previous clean run, and only a full pass can say whether a needle was orphaned. `not applied: 0` and `missed: 0` are the columns that answer it, not the headline total.
+
+Also re-measured on the same build by this script’s own runs: the traceability census at **42 of 47 rows traced, 0 built-class rows unpointed, 15 dispositions quoting a gate-check label that resolves**, and `node tools/audit-build-bytes.cjs` at **findings: 0** — the four copies of the page still identical, because no page byte changed since `fd176312`; the edits this hour were to tools and documents.

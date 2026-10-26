@@ -951,7 +951,7 @@ between a dated table and a false one.
 
 | §14 item | Command run | Result |
 |---|---|---|
-| Every P1/P2 change — full gate | `node tools/verify.cjs` | **all 643 checks passed** |
+| Every P1/P2 change — full gate | `node tools/verify.cjs` | **all 651 checks passed** (re-run 2026-10-26 after the A13 and G6 checks landed; the row carried 643 from the build before §139) |
 | Any new record family | `node tools/falsify-storage-truth.cjs` and `node tools/falsify-reschedule.cjs` (both through the aggregate) | storage-truth **5 of 5**, reschedule **20 of 20**, 0 not applied, 0 missed |
 | Reschedule wording | gate checks at `tools/verify.cjs:5627`–`:5628`; the two camera screens `reschedule-sheet` / `reschedule-answer` | **Deviation from the stated method:** no `--probe=@` file exists for this row. The rule is asserted by the gate against the rendered card and photographed by the walk, which answers the same question; recorded rather than papered over |
 | Screen coverage | `node tools/shot.cjs --list`, `node tools/audit-camera-dialog-coverage.cjs` | **88 screens**; 17 layer-raising profile controls, 17 clicked; **findings: 0** |
