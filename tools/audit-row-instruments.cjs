@@ -87,7 +87,24 @@ function blocksNaming(id) {
       block += '\n' + s17Lines[j];
     }
     const named = new Set((block.match(ALL_IDS) || []));
-    if (named.size > 2) continue;      /* a class list is not a disposition */
+    if (named.size > 2) {
+      /* A class list is not a disposition — but it can still hold real shared evidence. `falsify-figures`
+         guards G7 and G8, and its citation sits inside the CD bullet, so a blanket skip threw away a
+         pointer that exists. Credit such a block only from lines carrying BOTH this id and a tool token:
+         a bullet-wide credit is exactly what let one sentence about all 21 AR ids lift the census from 15
+         to 27, which is the measurement tracking the prose instead of the rows. */
+      const TOK = /(?:falsify|probe|audit|sweep|measure|device)-[a-z0-9-]+|[a-z-]+\.cjs/;
+      /* The same test at line level. Without it the rule still flattered: §17's AR sentence names
+         `A8` `A10` `A12` `A13` and a tool token on one line, so four ids were credited by the very
+         sentence written to be honest about them. A line is evidence about a row only when it is about
+         that row — at most two ids on it. */
+      const sameLine = s17Lines.filter(l => {
+        if (!(rx.test(l) && TOK.test(l))) return false;
+        return new Set((l.match(ALL_IDS) || [])).size <= 2;
+      });
+      if (sameLine.length) got.push(sameLine.join('\n'));
+      continue;
+    }
     got.push(block);
     i = s17Lines.length;               /* one block per id is enough; the rest are prose mentions */
   }
