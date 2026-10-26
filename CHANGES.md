@@ -8900,3 +8900,57 @@ incomplete: two `border-left` bars remain (one 4px navy, one 3px brand cyan) and
 this console does not manage" still shows a bar in `.shots/design-d/admin-dash.png` after the global
 `h3::before` was deleted — so that heading's bar comes from a source not yet identified, and it is named as
 open rather than written off as fixed.
+
+## 148. A screen name is now sized by the bar it sits in, and the walk that measured it was lying
+
+The owner's complaint — "it is not a real system, every screen is inconsistent" — has a counted form: a
+system is one definition per idea. The bar is the most repeated idea in the app, every one of the 88
+screens the camera paints has one, and it turned out to have two sizes.
+
+    node tools/shot.cjs --probe=@tools/probe-bar-titles.js
+    BEFORE  BARS seen=83 | sizes drill:16×38 drill:20×40 root:16×5 | titleEqualsSub=16 | inlineStyled=3
+    AFTER   BARS seen=83 | sizes drill:20×48 root:24×35          | titleEqualsSub=0  | inlineStyled=0
+
+The cause was one selector. `.topbar .title` carried the font family, size and weight, and `h1` is reset
+to `font-size:inherit` so a heading can sit in a flex bar as the div it replaced. So a bar that wrote
+`class="title"` got 20px/600, and a bar that wrote a plain `<h1>` — nineteen of them hand-write their
+own heading — got the body size, 16px/400. On 16 screens the screen name was the *same size as its own
+`.sub` line underneath it*, which is why those headers read as a block of text rather than a title with
+a caption. One bar proved the mechanism by typing a complete copy of the rule into its own inline style.
+
+Nothing saw this because it is not a violation of any rule that exists: 16px is on the type scale, clears
+§68's 14px floor, has fine contrast, is not clipped and does not collide. It is the §76 class arriving
+from the side of geometry — a screen can satisfy every sensor and still be wrong about what it *is*. So
+the fix is positional: `.topbar h1` carries the size, `.screen[data-root="1"] .topbar h1` carries the
+root step, and a heading inside a bar cannot decline it. The root step now reaches 35 bars instead of 5.
+
+Two gate checks in `suite('hygiene')` pin the shape, each with a positive control so a blinded CSS scan
+cannot make "no class-keyed rule" true: `positional >= 1 && rootStep >= 1 && classKeyed === 0`, and
+`selfSized === 0 && headings >= 10`. `node tools/falsify-bar-titles.cjs` proves them — 4 breaks, 4
+caught, 0 not applied — and the fourth break is not about the application.
+
+**The walk was photographing a state nobody can reach.** After the fix the same probe still reported
+`data-root=0` on six genuine root tabs — the resident's Profile, the provider's Dash and FSM and
+Bookings, the admin's Dashboard and Account — while the Node harness, which reaches those destinations
+by assigning `state.tab`, answered `data-root=1` for all thirteen. Two instruments disagreeing about the
+same element is a defect in one of them. The state field printed beside the reading named it:
+`isChatOpen` was true on all of them. The bottom navigation's handler is `clearModals()`, then
+`state.isChatOpen = false`, then the tab, then `render()`; the camera's per-screen setup ran the first and
+the last but not the middle one, because `clearModals()` must not clear that flag — opening a room IS a
+destination change, and clearing it there closes the room the instant it opens. So every screen after the
+chat-room row was painted with a chat still flagged open, `onRootTab()` answered false, and the root-tab
+header treatment was replaced by the drill-in one. The app's own comment at that line had predicted the
+symptom word for word; what nobody had checked was whether the *camera* committed the defect it warned
+about. Driving it the way a thumb does — tap the painted thread row, then the painted Profile item —
+reads `isChatOpen=false data-root=1 title=24px "Resident Profile"`. The camera runs the nav's line now,
+and the family's fourth break removes it and requires the root count to fall, so the repair is asserted
+rather than remembered.
+
+Two metrics joined `node tools/audit-design-consistency.cjs`: `bar_title_class_rules` and
+`bar_titles_self_sized`, both blessed at 0, and `inline_styles` fell 1035 → 1026. `Sukinnect.html` is
+untouched — `git diff --quiet origin/main -- Sukinnect.html`.
+
+Open in this section, not closed: 19 bars still hand-write their markup instead of calling
+`screenHeader()` (`topbar_divs_handwritten` = 19 against 13 calls), six of them hand-type their own left
+group instead of `.hb`, five copy the same translucent action style inline and a sixth uses a different
+one, and `.jr-time` is still reused as the admin's count badge.

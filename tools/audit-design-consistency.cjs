@@ -27,6 +27,8 @@ const metrics = [
   { key: 'literal_radii', what: 'hard-coded border-radius values', n: count(/border-radius:\s?[0-9.]+px/g) },
   { key: 'distinct_radii', what: 'different corner radii in use', n: distinct(/border-radius:\s?[0-9.]+px/g).length },
   { key: 'topbar_divs_handwritten', what: 'top bars written inline rather than through screenHeader()', n: count(/<div class="topbar"/g) - 1 },
+  { key: 'bar_title_class_rules', what: 'rules that size a screen name through a class a screen can decline', n: count(/\.topbar \.title/g) },
+  { key: 'bar_titles_self_sized', what: 'headings that type their own font-size into the bar', n: count(/<h1[^>]*style="[^"]*font-size/g) },
   { key: 'screenheader_calls', what: 'screens that do use the shared header', n: count(/screenHeader\(/g) - 1 },
   { key: 'chip_tone_rules', what: 'rules that give a chip its colour', n: count(/\.chip\.[a-z-]+\b[^{]*\{/g) + count(/\.badge-[a-z]+\{/g) },
   { key: 'section_heading_constructs', what: 'distinct ways a section title is expressed', n: (count(/class="section-label"/g) > 0 ? 1 : 0) + distinct(/<h3[^>]*style="[^"]*font-size[^"]*"/g).length + count(/\.card-quiet[^{]*\{[^}]*border-left/g) },

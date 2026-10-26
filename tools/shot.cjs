@@ -1585,6 +1585,18 @@ async function main() {
          before the cause was the harness rather than the markup. */
       await session.evaluate(`(function(){
          try { clearModals(); } catch (e) {}
+         /* The bottom navigation's own handler is clearModals(), then state.isChatOpen = false,
+            then the tab, then render() — and the walk ran the first and the last but not the
+            middle one, because clearModals() must not clear the flag (opening a room IS a
+            destination change, so clearing there closes it the instant it opens). So after the
+            chat-room row, every later screen was photographed with a chat still flagged open,
+            which makes onRootTab() answer false: the resident's Profile, the provider's Dash, the
+            FSM screen, the provider's Bookings, the admin's Dashboard and Account all painted
+            their screen name at the drill-in size, while a thumb that leaves a chat gets the root
+            treatment — proven by tapping the painted thread row and then the painted Profile
+            item, which reads isChatOpen=false, data-root=1, title 24px Resident Profile. A setup
+            that moves the model without moving the field measures a state nobody can reach. */
+         try { state.isChatOpen = false; } catch (e) {}
          /* The app pays back the entries it owns with real history.back() calls, which is
             right on a phone and wrong here: the walk jump-cuts between screens, and a back()
             past the page's own entries leaves the file entirely and Chrome closes the target.

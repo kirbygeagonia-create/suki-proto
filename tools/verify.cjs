@@ -1237,6 +1237,29 @@ suite('hygiene', async () => {
   const body = src.slice(src.lastIndexOf('<script>') + 8, src.lastIndexOf('</script>'));
   const css = src.slice(0, src.indexOf('</style>'));
 
+  /* The top bar is the one element every screen of the walk paints, so it is the element where
+     "not a system" shows first. The heading size used to live on `.topbar .title` while `h1` was
+     reset to `font-size:inherit`, which meant a screen that wrote a bare <h1> got 16px — the body
+     size, identical to its own `.sub` line — and a screen that remembered the class got 20px, or
+     24px on a root tab. Nineteen bars hand-wrote their heading, thirteen used the shared one, and
+     no sensor saw the split because 16px is on the scale and clears the floor. The rule is now
+     positional: an h1 inside a bar cannot decline its size.
+       Each half is asserted as a positive so the pair cannot pass by matching nothing: a blinded
+     CSS scan makes "no class-keyed rule" true and "the positional rule exists" false at once. */
+  const positional = (css.match(/\.topbar h1\{[^}]*font-size:var\(--t-title\)/g) || []).length;
+  const rootStep = (css.match(/\.screen\[data-root="1"\] \.topbar h1\{[^}]*font-size:var\(--t-title-lg\)/g) || []).length;
+  const classKeyed = (css.match(/\.topbar \.title/g) || []).length;
+  const headings = (src.match(/<h1/g) || []).length;
+  c.check('a screen name is sized by the bar it sits in, not by a class a screen can forget',
+    positional >= 1 && rootStep >= 1 && classKeyed === 0,
+    'positional=' + positional + ' rootStep=' + rootStep + ' classKeyed=' + classKeyed + ' h1InMarkup=' + headings);
+
+  /* The inline copy of the rule was the proof: one bar typed font-family, font-size and weight
+     into its own heading because the class it needed was optional. */
+  const selfSized = (src.match(/<h1[^>]*style="[^"]*font-size/g) || []).length;
+  c.check('no bar hand-types its own heading size', selfSized === 0 && headings >= 10,
+    'selfSized=' + selfSized + ' headings=' + headings);
+
   /* a button that reports success without changing anything is the bug class this
      whole rebuild was asked to remove */
   const congratulating = (body.match(/onclick="showToast\(([^)]*)\)"[^>]*>/g) || [])

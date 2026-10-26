@@ -3806,6 +3806,39 @@ latency; three separate handset findings already prove that a bench reading of a
 worthless. An earlier section of this file refused to build a mechanism it could only demonstrate; the
 same rule applies to a metric: the method is the deliverable, the number waits for a phone.
 
+A SCREEN NAME THAT IS ALSO BODY COPY IS INVISIBLE TO EVERY SENSOR THAT ASKS ABOUT SIZE. The owner's
+"not a real system, every screen is inconsistent" was counted before it was argued, and the count came
+from the most repeated element in the app: the top bar, painted by all 88 screens the camera walks.
+`.topbar .title` carried the heading's family, size and weight while `h1` is reset to
+`font-size:inherit`, so a bar that remembered the class painted its screen name at 20px/600 and a bar
+that wrote a plain `<h1>` painted it at the inherited body size — 16px/400, which is exactly what the
+`.sub` line under it already was. 43 of 83 bars were in that second group and 16 of them printed a
+heading indistinguishable from its own caption. No tally could see it: 16px is on the type scale, clears
+§68's floor, passes contrast, is not clipped and collides with nothing. The fix is positional — the
+heading is sized by the bar it sits in, so a screen cannot decline it — and `node
+tools/shot.cjs --probe=@tools/probe-bar-titles.js` now prints the population as `drill:20×48 root:24×35`
+with `titleEqualsSub=0` beside `drift=0`. Two `hygiene` checks pin the shape with positive controls
+(the positional rule must exist, at least ten `<h1>` must exist), and `node tools/falsify-bar-titles.cjs`
+proves 4 of 4.
+
+THE CAMERA COMMITTED THE DEFECT IT WAS MEASURING. The same probe then reported `data-root=0` on six
+genuine root tabs while the Node harness answered `data-root=1` for all thirteen — two instruments
+disagreeing about one element, which is a defect in one of them, not a finding about the app. The state
+printed beside the reading named it: `isChatOpen` was true on all six. The bottom navigation's handler is
+`clearModals()`, then `state.isChatOpen = false`, then the tab, then `render()`, and the walk ran the
+first and the last but not the middle, because that flag must not be cleared inside `clearModals()`
+(opening a room IS a destination change). Every screen after the chat-room row was therefore painted
+with a chat still open, `onRootTab()` answered false, and the root header treatment was replaced by the
+drill-in one — the precise symptom the application's own comment beside that line describes, committed
+by the harness rather than by the code. Confirmed by driving it as a thumb does: tap the painted thread
+row, then the painted Profile item, and the bar reads `isChatOpen=false data-root=1 title=24px "Resident
+Profile"`. **A walk that moves the model without moving the field photographs a state nobody can reach,
+and this is the fourth form of that trap** — after the missing SCREENS row, the setup that moved the
+model but not the input, and the probe that typed into a detached node. When two instruments disagree,
+read the state the app was actually in at paint time before touching either file, and print the
+disagreement's cause as a break (`falsify-bar-titles` break 4 removes the line from the camera and
+requires the root count to fall).
+
 ---
 
 # 32. GRADIENT USAGE

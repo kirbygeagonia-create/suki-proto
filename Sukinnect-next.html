@@ -235,13 +235,20 @@
      phone. It is inert wherever a rule says `white-space:nowrap`, which is where the deliberate
      ellipses live. */
   body{ overflow-wrap:anywhere; }
-  .topbar .title{font-family:var(--font-display); font-size:var(--t-title); font-weight:600;}
+  /* Sized by position: the bar is the one element every one of the 88 screens paints, and a
+     rule keyed on a class meant the 19 bars that hand-write their own heading painted their
+     screen name at the inherited body size (16px) while the 13 that remember `class="title"`
+     painted it at 20px — and on a root tab the same name sits beside a `.sub` line of the
+     identical 16px, so the heading is indistinguishable from its own caption. An h1 inside a
+     top bar cannot decline the size now. Measured before and after with
+     node tools/shot.cjs --probe=@tools/probe-bar-titles.js */
+  .topbar h1{font-family:var(--font-display); font-size:var(--t-title); font-weight:600;}
   .topbar .sub{font-size:var(--t-body); opacity:0.78; margin-top:2px;}
   /* Root tabs - the ones the bottom nav lands on - carry a large title, the way a
      real app header does. Detail and drill-in screens stay compact so the back
      button and the subject fit (7.2). render() marks the screen with data-root. */
   .screen[data-root="1"] .topbar{ padding-bottom:18px; }
-  .screen[data-root="1"] .topbar .title{ font-size:var(--t-title-lg); letter-spacing:-.3px; }
+  .screen[data-root="1"] .topbar h1{ font-size:var(--t-title-lg); letter-spacing:-.3px; }
   /* The identity/back group inside the bar. min-width:0 lets a long name ellipsize
      instead of pushing the actions off the screen. */
   .topbar .hb{ display:flex; align-items:center; gap:10px; min-width:0; }
@@ -1304,7 +1311,7 @@
     border-radius:50%; pointer-events:none;
     background:radial-gradient(circle, rgba(5,188,196,.22), transparent 70%);
   }
-  .topbar .title{ letter-spacing:-0.2px; }
+  .topbar h1{ letter-spacing:-0.2px; }
 
   /* The four screens the bottom nav lands on take the light bar: on those the
      header is your own name and where you are, so the brand colour is better
@@ -9198,7 +9205,7 @@ function residentResults(){
   <div class="topbar">
     <div style="display:flex; align-items:center; gap:8px;">
       <button id="back-home-btn" class="back-btn" aria-label="Back to home">${ic("chevron-left",18)}</button>
-      <h1 style="font-family:var(--font-display); font-size:var(--t-title); font-weight:600;">Find Services</h1>
+      <h1>Find Services</h1>
     </div>
     <div style="font-size:var(--t-caption); opacity:0.85;">${state.searching ? 'Matching…' : (narrowing ? list.length + ' of ' + PROVIDERS.length + ' providers' : PROVIDERS.length + ' smart matches')}</div>
   </div>
