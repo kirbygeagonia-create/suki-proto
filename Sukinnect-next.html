@@ -1305,11 +1305,14 @@
      component that wants a different ring can still ask for one. */
   /* compat-exception: :is() / :where() — this selector list styles the keyboard focus ring only.
      Below Chromium 88 the rule is dropped and the user-agent ring still paints, so a Tab user sees a ring that is
-     not the brand one rather than no ring. tools/shot.cjs --focus is what checks that claim. */
+     not the brand one rather than no ring. tools/shot.cjs --focus is what checks that claim.
+     `.sheet-body` is in the list because Chromium makes a scrollable region keyboard-focusable on its
+     own, and the legal sheet is the tallest content in the app: a Tab user lands on that scroller by
+     design, so the ring that meets them there should be the app's, not the user-agent's. */
   :where(button, [type=button], [type=submit], [type=reset], a[href], input, select, textarea,
          summary, [tabindex]:not([tabindex="-1"]), .navitem, .chip, .pick, .filter-option,
          .cat, .stat, .job-row, .rate-star, .seg-btn, .addon-btn, .auth-switch,
-         .concierge-row, .notif-item):focus-visible{
+         .sheet-body, .concierge-row, .notif-item):focus-visible{
     outline:3px solid var(--brand-primary-light); outline-offset:2px;
   }
 

@@ -8169,3 +8169,17 @@ grades itself against "all four copies identical" cannot demonstrate anything un
 rebuilt, and it is right to say so rather than to grade breaks against a baseline it does not share.
 The aggregate's exit code 1 is the guard working: a run with an unproven family is not a clean run, and
 reading only the headline "299 caught" would have hidden it.
+§132's counts are that row's state, not this one's: with the four checks and three breaks added here,
+`reschedule` is **38 checks** (counted, not remembered) and the family is **17 breaks**, and the full
+aggregate re-run on the committed tree answers **55 families, 302 mutants applied, 302 caught,
+0 not applied** with the single flagged row still `build-bytes`, refusing on the deliberately stale
+shell copies.
+
+**One accessibility finding came from walking the new surfaces with real `Tab` presses rather than from
+reading the markup.** `node tools/shot.cjs --measure --focus --only=login-register,reschedule-sheet,
+reschedule-answer,legal-terms` reports 39 stops, none without a ring, none walking past a scrim, none
+off the viewport — and **one stop painting the browser's default ring instead of the app's**: the legal
+sheet's own scroll body. Chromium makes a scrollable region keyboard-focusable on its own, and the
+privacy notice is the tallest content in the app, so a Tab user lands on the scroller by design — the
+gap was only that the app's `:where(...)` focus list named the interactive things and not that one. It is
+in the list now, and the tally reads 0.
