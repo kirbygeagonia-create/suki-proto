@@ -215,6 +215,25 @@ below was executed this session, not inherited from documentation.
 ---
 
 ## 4.5 Measured density baseline (added while completing §4.1's painted-layout requirement)
+**Three readings in this section are superseded, 2026-10-26.** They stay standing because this is the plan's
+baseline — the number Phase A started from is the point of it — but a reader must not take them as current:
+
+- **the walk is 88 screens, not 82.** `node tools/shot.cjs --list` is the count; six destinations have joined
+  since this line was written — among them the admin attention queue and the two reschedule-inbox screens,
+  each added because a coverage audit found a destination the camera had never opened.
+- **`probe-density.js` is tracked.** The sentence below says it was "promoted to `tools/` only in Phase B",
+  because Phase A adds no tracked script — Phase B came and went, and `tools/probe-density.js` is what the
+  density row in §17 now runs.
+- **"7 distinct screens put their first large action below the fold" was the probe's error, not the app's.**
+  Its selector asked for the first `.btn` at least 40px tall. Widened to anything a thumb can press
+  (`button, a[href], [onclick], .btn`), the honest population on the untouched build was **one**: the admin's
+  Money screen, whose two operations sat 2,239px down a 2.5-screen scroll beneath the three cards they change.
+  That card has since been hoisted and extracted so its position is one line a check can order. Of the other
+  six, the three re-measured under the widened selector begin **121, 128 and 181px** down — Master
+  Administrator's thirteen pressable rows, Marketplace Intelligence, and the provider dashboard — and the tall
+  content below them is chrome, not an action. **A changed headline number with no comparison beside it is a
+  vocabulary change dressed as a finding**, which is why the old seven is quoted here rather than deleted.
+
 
 `shot.cjs --measure` over all **82** screens: every failure tally **0** — tap floor, WCAG contrast, clipped text,
 off-scale fonts, content under the nav, unreachable controls, dialog semantics + caret, split stat figures,
@@ -495,6 +514,15 @@ retention, rights, contact).
 **Facts the plan refuses to invent, queued for the owner/legal to supply:** legal entity name, registered address,
 DPO/privacy officer, complaint email, retention periods, effective dates, refund commitments, registration/licensing
 status. Each appears as `[to be supplied]` in the draft rather than as plausible filler.
+
+**Corrected 2026-10-26 — the marker is not `[to be supplied]`.** The drafts that were actually written mark every
+one of those facts `[<thing> — NOT DECIDED]`, and **`to be supplied` appears zero times in `Sukinnect-next.html`**
+(`grep -c "to be supplied" Sukinnect-next.html` → 0; `grep -c "NOT DECIDED" …` → 5 bracket sites). A reviewer who
+followed this sentence and searched for the quoted string would have found nothing and concluded the drafts had
+invented the facts — the opposite of what the marker exists to prevent. Two `legal` checks pin the real shape, by
+name: **"every unknown business fact is a bracket marked as undecided, and nothing is bracketed by accident"** and
+**"no document invents a contact address, an officer, or a registration that has not happened"**, proved by
+`node tools/falsify-legal-truth.cjs`.
 
 Registration mechanics: one unchecked Terms checkbox with working links; a versioned acceptance recorded **locally**
 with the honest scope stated; no re-acceptance per login; optional consents kept separate from Terms acceptance.
