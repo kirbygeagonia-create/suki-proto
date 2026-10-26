@@ -111,7 +111,15 @@ function blocksNaming(id) {
   return got.join('\n');
 }
 function evidenceFor(id) {
-  const hay = rows.find(r => r.id === id).row + '\n' + blocksNaming(id);
+  const raw = rows.find(r => r.id === id).row + '\n' + blocksNaming(id);
+  /* A sentence that NAMES a file to say the row is not guarded by anything is not evidence that it is.
+     This was caught by my own §17 disclaimer about G6 — "Withheld appears zero times in
+     `tools/verify.cjs`" — which credited G6 and moved the census to 42 traced with zero built-class rows
+     unpointed: a perfect score manufactured by a negation. A line is dropped when it denies rather than
+     declares, and tools/falsify-row-instruments.cjs now carries the break that plants exactly that
+     sentence and requires the row to stay in the untraced list. */
+  const NEG = /zero times|no pointer|no instrument|does not appear|never appears|not enforced|cannot trace|no resolving|nothing runnable/i;
+  const hay = raw.split(/\r?\n/).filter(l => !NEG.test(l)).join('\n');
   const out = [];
   (hay.match(TOOLS) || []).forEach(t => { if (resolve(t) && !out.includes('tool:' + t)) out.push('tool:' + t); });
   (hay.match(/\*\*([^*]{12,})\*\*/g) || []).forEach(b => {
@@ -128,7 +136,11 @@ function evidenceFor(id) {
 }
 
 /* 3 — report. Built classes are held to a runnable name; PD/NA are not, and say so. */
-const NEEDS = ['AR', 'CD', 'PR', 'CV'];
+/* CV is excluded from the rows that must name an instrument: the class means the check cannot be performed
+   on this machine at all (a thumb, a soft keyboard, a phone's text inflation), and a row in it that named a
+   tool would be claiming an instrument the plan already says does not exist. NA and PD stay out for the same
+   reason: nothing was built, so nothing is guarded. */
+const NEEDS = ['AR', 'CD', 'PR'];
 const bare = [], traced = [];
 rows.forEach(r => {
   const ev = evidenceFor(r.id);

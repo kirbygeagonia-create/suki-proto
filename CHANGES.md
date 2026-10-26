@@ -8754,7 +8754,7 @@ Two things landed that were not in the original scope of "is everything in the M
 
 **The aggregate over the repaired tree.** `node tools/falsify-all.cjs`: **345 mutants applied, 345 caught, 0 not applied — every rule is still being tested**, with the flagged rows being none. `falsify-report-coverage` now runs 5        5 (applied / caught): its first break had been written against output wording the audit never produces — it wanted `silent: A11`, the tool prints `LIST MISMATCH  CD list omits: A11` — and its new fifth break is the first thing that has ever made the headline `not dispositioned` count move, which is how it became clear that the number had never been tested.
 
-**A census of the plan's own pointers.** `node tools/audit-row-instruments.cjs` reads §4's 47 rows and accepts only evidence that resolves. It reports **19 traced / 47**, **25 built-class rows naming no runnable instrument**, and — the finding that survives every attempt to weaken it — **zero** rows whose disposition quotes a gate-check label, against the 646 labels `verify.cjs` actually prints. Three readings of "is it traceable" were tried: same line (14 of 47), same bullet block (15), same change-log section (6 more, but attributed to the wrong families, because a section names `falsify-all` for every row it discusses). The last reading asked the code instead of the prose, and no `tools/*.cjs` or `tools/probe-*.js` names any plan id at all — the ids are documentation-only labels. So implementation and traceability separate here: the rows are largely guarded, and the document cannot be followed to the guards. That is the same defect A13 showed for one row — a sentence asserting a guard the dialog did not have — at the scale of the plan.
+**A census of the plan's own pointers.** `node tools/audit-row-instruments.cjs` reads §4's 47 rows and accepts only evidence that resolves. It reports **41 traced / 47**, **exactly one built-class row naming no runnable instrument**, and — the finding that survives every attempt to weaken it — **zero** rows whose disposition quotes a gate-check label, against the 646 labels `verify.cjs` actually prints. Three readings of "is it traceable" were tried: same line (14 of 47), same bullet block (15), same change-log section (6 more, but attributed to the wrong families, because a section names `falsify-all` for every row it discusses). The last reading asked the code instead of the prose, and no `tools/*.cjs` or `tools/probe-*.js` names any plan id at all — the ids are documentation-only labels. So implementation and traceability separate here: the rows are largely guarded, and the document cannot be followed to the guards. That is the same defect A13 showed for one row — a sentence asserting a guard the dialog did not have — at the scale of the plan.
 
 Two of §17's stale exception names were corrected in the same edit: `P1e` is asserted by six checks (the exception list under-credited work that is guarded), and `A13`'s lock dialog was the genuine half (the list under-stated a gap that was open). A stale exception list is a defect in both directions, and this is the second time this week a hand-kept exception list in this document has been wrong about a row it was written to be honest about.
 
@@ -8794,3 +8794,22 @@ five lit up at once. The second is the general rule: when a pointer you just wro
 shape of the writing before touching the recogniser, because a tool adjusted until it accepts new evidence will
 eventually accept any evidence. `node tools/falsify-row-instruments.cjs` still condemns both hazards after every
 one of these changes, and `node tools/verify.cjs` stayed at 650 throughout.
+
+**From 10 to 41, and the two readings that had to be refused.** The census now traces **41 of 47 rows**, with
+**one built-class row unpointed (`G6`)** and **15 dispositions quoting a gate-check label that resolves** — the
+label channel that had read zero for the file's entire existence. The path there is worth keeping because every
+wrong reading was more comfortable than the right one: blanket-skipping class bullets read 10; crediting any
+line carrying an id and a token read 20, and the extra came from the disclaimer I had just written; requiring
+the pointer to be its own bullet read 30, then 40; and the peak was **42 traced with zero built-class rows
+unpointed**, which is a perfect score produced by a *negation* — the sentence admitting G6 has no guard cites
+`tools/verify.cjs` to say `Withheld` appears zero times there, and a scanner that only asks "is there a file
+name on this line" cannot tell a guard from a confession. The rule now drops denying lines, and
+`node tools/falsify-row-instruments.cjs` carries the break that plants precisely that sentence and requires the
+row to stay untraced: **three breaks, three caught**, alongside the retargeted-citation and lost-rows breaks.
+Two shape errors of my own are in the same hour, both recorded because both were invisible in the arithmetic:
+indented sub-bullets stay inside their parent block (so twenty-one pointers silently failed until they were
+dedented), and a label wrapped across lines fails a byte-exact comparison (so the whitespace normalisation was
+true and useless while the real cause was indentation). **Fix the shape of the writing before touching the
+recogniser** — a scanner adjusted until it accepts new evidence will end by accepting any evidence, and the 42
+proved it. `node tools/verify.cjs` 650 green; `audit-citations`, `audit-report-coverage`, `audit-matrix-coverage`
+all `findings: 0`.

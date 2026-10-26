@@ -751,7 +751,7 @@ direction, since a reviewer reads PD as "nothing here yet". `R8` moved PD → NA
 classes, one row per class so a reader can find any id by searching for it:
 
 - **AR — 21.** `G1` `G2` `G6` `G10` `R1` `R2` `R4` `R11` `P1b` `P1e` `P1f` `P1g` `P1i` `P1j` `P1k` `A4` `A7`
-  `A8` `A10` `A12` `A13`. Each is *claimed* to be backed by an instrument, and that claim is now measured rather than asserted: `node tools/audit-row-instruments.cjs` reads §4's 47 rows and counts only evidence that resolves — a file under `tools/` that exists, or a bold-quoted label equal to one of the `verify.cjs` check labels. Its answer on the build this section was written: **19 of 47 rows trace to a runnable name, 25 built-class rows do not, and no row's disposition quotes a gate-check label at all.** Reading the row-to-guard question three ways (line scope, whole-bullet scope, change-log section scope, and finally asking which instrument file names the id) answered that no tool file names any plan id, so the pointer has to be written, not inferred. Two of the exception names in this sentence's previous draft were also wrong: `P1e` is asserted by six checks in `tools/verify.cjs` (`no card claims an optimizer or a travel saving the build does not compute`, `and the day is listed in exactly one place`, `the one list carries every job today's records hold for this provider`, a p7 empty-state check, `the dispatch switch says what it does instead of promising suggestions`, and the surge card showing the request that has waited longest), and `A13`'s lock dialog — the half that genuinely had nothing behind it — now has `the admin lock dialog says what Unlock does, and Unlock does only that`, proved by two breaks in `node tools/falsify-profile-honesty.cjs`.
+  `A8` `A10` `A12` `A13`. Each is *claimed* to be backed by an instrument, and that claim is now measured rather than asserted: `node tools/audit-row-instruments.cjs` reads §4's 47 rows and counts only evidence that resolves — a file under `tools/` that exists, or a bold-quoted label equal to one of the `verify.cjs` check labels. Its answer on the build this section was written: **41 of 47 rows trace to a runnable name, exactly one built-class row does not, and 15 dispositions quote a gate-check label that resolves.** Reading the row-to-guard question three ways (line scope, whole-bullet scope, change-log section scope, and finally asking which instrument file names the id) answered that no tool file names any plan id, so the pointer has to be written, not inferred. Two of the exception names in this sentence's previous draft were also wrong: `P1e` is asserted by six checks in `tools/verify.cjs` (`no card claims an optimizer or a travel saving the build does not compute`, `and the day is listed in exactly one place`, `the one list carries every job today's records hold for this provider`, a p7 empty-state check, `the dispatch switch says what it does instead of promising suggestions`, and the surge card showing the request that has waited longest), and `A13`'s lock dialog — the half that genuinely had nothing behind it — now has `the admin lock dialog says what Unlock does, and Unlock does only that`, proved by two breaks in `node tools/falsify-profile-honesty.cjs`.
 - **Per-row pointers, written because the class sentences above name evidence for none of the ids they
   cover.** `node tools/audit-row-instruments.cjs` counts a pointer only when it resolves — a file under
   `tools/` that exists, or a bold-quoted label equal to a check the gate actually prints.
@@ -767,6 +767,44 @@ classes, one row per class so a reader can find any id by searching for it:
 - **A11** — **no admin spoke hard-codes its own way back any more**, with two breaks in
     `tools/falsify-coherence.cjs`: the spoke hard-coding a destination, and the back rule forgetting that a
     spoke is a drill-in.
+- **R2** — **a second job cannot start while one is in progress**, and **one job in progress per
+    provider**.
+- **R3** — `tools/falsify-filter-function.cjs`: the start-within axis stops narrowing anything, and the
+    area filter goes back to matching where a provider lives.
+- **R4** — `tools/falsify-credential-pair.cjs`, with **the expiring badge stops following the documents**
+    in `tools/falsify-trust.cjs`.
+- **R5** — **the seeded distance is disclosed as a sample, not as a measurement of the reader**.
+- **R7** — **the booking detail names the six groups in order, and only the ones the record supports**.
+- **R9** — **the value blocks that typed their own alignment take the shared class**, in
+    `tools/falsify-figures.cjs`.
+- **A10** — **no hand-rolled 30px back button survives**.
+- **P1b** — **moving between root tabs leaves nothing to retrace**.
+- **P1c** — **a provider who came from the FSM goes back to the FSM**.
+- **P1d** — **the dispatch switch says what it does instead of promising suggestions**.
+- **P1f** — **a receipt is only ever a finished job whose money changed hands**, with
+    `tools/falsify-pay-records.cjs`.
+- **P1g** — `tools/falsify-id-substitutions.cjs`: the resident booking detail falls back to the first job.
+- **P1h** — `tools/falsify-reschedule.cjs`: a proposal moves the appointment the moment it is sent, and the
+  side that asked can accept its own request.
+- **P1i** — **a job that has arrived shows the time it arrived**.
+- **P1j** — `tools/falsify-count-labels.cjs`: the in-progress count takes the unanswered requests as well.
+- **G3** — `tools/falsify-legal-truth.cjs`: a placeholder stops saying it is undecided, and the Terms box
+    comes pre-ticked.
+- **A1** and **P1a** — `tools/falsify-action-above-fold.cjs`: the action card goes back below the statement
+    figures it changes.
+- **A6** — `tools/falsify-insights-records.cjs`: the completion bar goes back to the typed 88.
+- **A8** — `tools/falsify-empty-queue.cjs`: the empty state replaces the queue whatever its size.
+- **A12** — `tools/falsify-empty-kinds.cjs`: the unavailable screen takes the wording of the
+    nothing-has-happened-yet screen.
+- **R11** — `tools/falsify-profile-honesty.cjs`: Edit Pricing goes back to an action nothing branches on.
+- **G11** and **R10** — *no instrument exists and none can exist on this machine.* Both need a handset: the
+    one-to-three-minute walk is a thumb on a screen, and the keyboard-open composer is a soft keyboard. They
+    are reported NOT VERIFIED, never as passing, and the method for the first is written in `DEVICE-PASS.md`.
+- **G6 — the one AR row with no pointer that resolves.** §4 says its privacy gate is "documented and enforced
+  in code", but `Withheld` appears zero times in `tools/verify.cjs` and in no `tools/falsify-*.cjs`, so the
+  claim that a `requested` job shows a lock card while an accepted one shows the door and the number rests on
+  prose alone. It is named here rather than smoothed over: the census reports it as the single built-class row
+  it cannot trace, and the repair is a behavioural check, not another sentence.
 - **CD — 12, all twelve now built:** `G3` `G5` `G7` `R3` `R5` `R6` `R7` `A3` `A9` `A11` `P1d` `P1h`.
   The last three closed on 2026-10-26 after the audit reported them open (`CHANGES.md` §139): R6 needed a
   tertiary button tier the system never had, A9 needed §42's reading order and turned out to be painting green

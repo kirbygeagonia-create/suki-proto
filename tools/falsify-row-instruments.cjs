@@ -74,7 +74,23 @@ try {
      and the break bought nothing: the channel it probes is printed as dead by the census itself
      (`via a resolved gate label only: 0`), so no mutant is needed to know it resolves nothing. */
 
-  const ok = !!moved && refused;
+  /* Break 3 — a NEGATED pointer must not count as evidence. The census was caught doing exactly that: the
+     §17 sentence written to admit that G6 has no guard cites `tools/verify.cjs` to say the word `Withheld`
+     appears zero times there, and the token read as a pointer, giving 42 traced with zero built-class rows
+     unpointed. This plants that shape on a row the census already calls untraced and requires the count to
+     stay where it was. */
+  const untracedRow = (/^ {2}([A-Z][0-9A-Za-z]*)\s+\[/m.exec((run().out.split('=== built-class rows a reader cannot trace to anything runnable ===')[1] || '').split('===')[0]) || [])[1];
+  let negated = null;
+  if (untracedRow) {
+    fs.writeFileSync(PLAN, planOrig + '\n- **' + untracedRow + '** — `Withheld` appears zero times in `tools/verify.cjs`, so nothing guards it.\n');
+    const r4 = run();
+    const tr4 = num(/traced to a runnable name: (\d+)/, r4.out);
+    negated = (tr4 === bTraced);
+    console.log((negated ? 'CAUGHT   ' : 'MISSED   ') + 'a negated citation for ' + untracedRow + ' must not be credited → traced ' + tr4 + ' (baseline ' + bTraced + ')');
+    fs.writeFileSync(PLAN, planOrig);
+  } else console.log('SKIP  no untraced row available to plant a negated citation in');
+
+  const ok = !!moved && refused && negated === true;
   console.log('\n' + (ok ? 'the census is falsifiable: a broken citation and a lost row are both detected'
     : 'NOT PROVEN: at least one hazard this tool exists to catch is invisible to it'));
   process.exit(ok ? 0 : 1);
