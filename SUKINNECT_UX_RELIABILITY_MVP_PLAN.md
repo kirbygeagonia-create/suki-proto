@@ -8,6 +8,15 @@ implemented until the owner approves.
 
 ## 1. Executive summary
 
+**Status of this summary, read 2026-10-26.** Everything below is what Phase A found, and it is left as written
+because it is the plan's before-picture. Two of its "three highest-risk gaps" have since been built: rescheduling is
+a record family with a state vocabulary, both sides' entry points and a counter path (`RESCHEDULE_REQUESTS`,
+`CHANGES.md` §132 and §135), and the three legal documents exist behind a sheet reached from registration, each
+carrying a visible draft banner and every undecided fact inside a `NOT DECIDED` bracket (§132). **The third is still
+open exactly as stated** — keyboard-open chat has never been observed on a handset, and `visualViewport` still
+appears zero times in the page, which is verifiable rather than remembered. The counts in the second paragraph
+(567 checks, 82 screens, 105 scripts) are that day's readings; today's come from the commands themselves.
+
 **What the app is.** A hyperlocal services marketplace prototype (residents ↔ local providers, plus an admin
 console) whose spine is FIND → REVIEW → BOOK → COORDINATE → COMPLETE → RECORD. The active artefact is
 `Sukinnect-next.html`, a single-file client-side rebuild with a real domain kernel: integer-centavo money, a
@@ -62,6 +71,16 @@ verified good and churning them would be movement without improvement (§14).
 
 ## 2. Repository / worktree baseline (measured, this session)
 
+**"This session" means the Phase A session of 2026-10-25.** Every figure in the table below is that day's
+snapshot and is kept unchanged on purpose — the section exists so a reader can see what the work started from, and
+rewriting it would destroy the only before-picture the plan has. It is already out of date on every countable row:
+HEAD has moved past `9fec6a1`, the page is longer than 11,854 lines, the walk is wider than 82 screens and the gate
+is above 567 checks. **Today's numbers are printed by the commands named in the rows themselves** — `node
+tools/measure.cjs Sukinnect-next.html`, `node tools/shot.cjs --list`, `node tools/verify.cjs`,
+`node tools/falsify-all.cjs` — and §17's closing block quotes a run rather than restating one. One row was
+re-checked rather than assumed: `Suki.docx` is still absent from the workspace, so §13's summarised list remains the
+only proxy for it and §4.1's answer through that proxy still stands.
+
 | | |
 |---|---|
 | Repo | `kirbygeagonia-create/suki-proto`, cwd confirmed (`AGENTS.md`, `Sukinnect-next.html`, `tools/` all present) |
@@ -108,8 +127,9 @@ enforced in the kernel, not in screens.
 is counted automatically, and a page→shell depth bridge (`SukiShell.setBackDepth`) because a WebView's `canGoBack()`
 cannot see `pushState` entries. Root-tab taps pay Back debt explicitly.
 
-**Sheets/modals/screens.** 86 walked screens as of the P2 sweep (82 at Phase A; `node tools/shot.cjs --list`
-is the count); sheets are `state.sheet` branches, modals `state.*Modal/*Confirm`.
+**Sheets/modals/screens.** `node tools/shot.cjs --list` is the count — **88** as of 2026-10-26, against **82** at
+Phase A; the walk grew one screen per destination the plan added, the attention queue and the two reschedule-inbox
+screens most recently. Sheets are `state.sheet` branches, modals `state.*Modal/*Confirm`.
 Category art is 7 static PNGs; the AI concierge is an embedded Home row (`concierge-row`, line 8282) opening its own
 screen with a real file control.
 
@@ -150,9 +170,9 @@ below was executed this session, not inherited from documentation.
 | R3 | Is "Arrives within" trustworthy? Is "Nearest" honest? | **CD (plus a correction to this row's first draft)** | Read at the code: `providerMatches()` (5833) filters on `!f.maxWait \|\| p.availabilityMin <= f.maxWait` — the control labelled **"Arrives within"** actually filters **when the provider can start**, not an arrival estimate, so the label promises what the field does not carry. Second, **there is no "Nearest" sort at all**: `providerMatches()` returns `PROVIDERS.filter(…)` with no `.sort()`, and no distance is ever computed in the file (no `haversine`/`atan2`/`sqrt`; `distanceKm` appears 14 times, always a seeded literal, e.g. `distanceKm:0` at 2490). **My first draft of this row claimed ranking was "a computed value" — it is not**; the correction is recorded rather than smoothed over. Admin does have real sorts (`ADMIN_SORTS` 9543, `ADMIN_PENDING_SORTS` 9547). | Re-label the control to what it filters ("Can start within"); keep distance as a labelled demo figure (R5); do **not** add a nearest-sort to answer the concern — with seeded coordinates that manufactures the false precision §4.2.9 forbids. | **P1** | the sheet row names availability, not arrival; no unlabelled nearest-ranking exists |
 | R4 | Credentials on the provider profile, not duplicated in booking detail | **AR** | Credential state is a record (`CREDENTIALS` + `credentialState`/`worstCredentialState`), a provider's summary counts flagged documents rather than saying "All Valid", and the booking surface shows a summary. Private documents stay admin-side; §56 respected. | none | — |
 | R5 | Distance accuracy / live-location claims | **CD (small and precise)** | Nothing claims live GPS and `mapFallback()` degrades honestly when tiles never paint. But the provider card renders `'Brgy. ' + p.barangay + ' · about ' + p.distanceKm + ' km from you'` (6393) from a **seeded literal**: `"from you"` asserts a relation to the reader's real location that no computation supports — `about` hedges the number, not the premise. | Drop `"from you"` (or show the declared service area alone), or derive the figure from the seeded coordinates **and label it demo**. The cheapest honest fix is the wording. Tile/CDN IP exposure remains the accepted production DPA item and belongs in the Privacy Notice drafted for G3, where a reader expects it. | **P2** | no distance string asserts a user-relative fact unless derived from a record; before/after screenshots |
-| R6 | Chat and Call visible with clear hierarchy and touch size | **AR/PR** | Chat is a first-class nav destination and contextual to a booking; call handling exists with the WebView external-action path. Touch floors hold at 44px. | verify hierarchy only where a booking detail offers both; no new surface | **P2** |
-| R7 | Separate timeline / contact / schedule / price / completion / receipt | **PR** | Booking status and payment status are separate fields and separate visual labels; receipts derive from records (`residentFinished`/`residentPaid`/`bookingTotal`) and print only paid, finished work; a receipt appears only for a finished paid job (line 6032 says so in the UI). What remains is grouping into tabs on the detail screen, which is layout work. | tab the detail screen along the six named groups; move nothing out of sight that a decision needs | **P2** |
-| R8 | Concierge as a bottom-right floating button | **PD** | Today it is a Home row (8282) that opens a real screen (8318) with a working photo control, and it refuses to sort a photo-only request instead of inventing a category. Nothing is broken; a floating button is a different navigation choice with real costs (safe area, composer, nav overlap, discoverability on low-end). | **Recommend keeping the embedded entry for V1** and revisiting only with the keyboard/viewport work, because a FAB is exactly the control a keyboard can bury. | **P2/PD** |
+| R6 | Chat and Call visible with clear hierarchy and touch size | **PR** (re-classed from AR/PR, 2026-10-26) | Chat is a first-class nav destination and contextual to a booking (`data-chat-booking-provider-id` on the detail's pair opens the thread for *that* booking); the call path exists as `href="tel:${DEMO_HOTLINE}"` and is labelled "Call the Sukinnect line", so it names the platform's number rather than pretending to reach the provider. Touch floors hold at 44px. **What was never verified is the row's own subject:** the two controls are byte-identical — same `btn secondary`, same inline style, `flex:1` each — so the screen offers two equally strong actions where one is the in-app path and the other a fallback, which is §70's "do not make all buttons equally visually strong" unmet. This row is also the only one of the 47 that appears nowhere in §17's disposition — **and it is absent from §13's P2 enumeration**, so it was never in the scope the owner approved; the `P2` in its own priority cell is the discrepancy. | put the discrepancy to the owner: either the row joins P2 and the fallback is demoted to a quiet text+glyph link (cut visual mass, never the hit area — `.btn` keeps `min-height:var(--tap)`), or the priority cell is corrected and the pair stays as it is | **P2?** |
+| R7 | Separate timeline / contact / schedule / price / completion / receipt | **CD** (fixed in Phase B as labelled groups rather than tabs) | Booking status and payment status are separate fields and separate visual labels; receipts derive from records (`residentFinished`/`residentPaid`/`bookingTotal`) and print only paid, finished work; a receipt appears only for a finished paid job. The six groups are now named in reading order on the resident's booking detail — `BOOKING_GROUPS`, six `<div class="section-label">` headings, arrival/completion stamps moved out of the figures grid, and a group whose records do not exist is not painted at all — asserted by a gate check that requires a `requested` job to carry neither the Completion nor the Receipt heading. **The prescribed widget was not used:** §10's word is *separate*, and a tab control would have hidden two of the six behind a tap, so the deviation is deliberate and recorded in §17. | done as labelled groups; see §17 for the deviation | **P2** |
+| R8 | Concierge as a bottom-right floating button | **NA** (ruled by the owner, 2026-10-25 — the class read **PD** afterwards, which asked a reviewer for a decision that has been made) | Today it is a Home row (8282) that opens a real screen (8318) with a working photo control, and it refuses to sort a photo-only request instead of inventing a category. Nothing is broken; a floating button is a different navigation choice with real costs (safe area, composer, nav overlap, discoverability on low-end). | **kept the embedded entry** — a FAB is exactly the control a keyboard can bury, and R10 is unresolved for that reason; revisit only with the keyboard/viewport work | **P2/PD** |
 | R9 | Booking/rescheduling copy concise, alignment consistent | **PR / CD** | Booking copy is already short and state-truthful (the receipt line at 6032 says plainly that work in progress and cancelled jobs have no receipt), but the *alignment* half of the concern is the same defect as G7 — `text-align:right` appears 5 times in 1,607 stylesheet lines and tabular figures 0, so money/date/count rows do not share a rule across screens. | Folded into the G7 sweep: one value class covering the booking and (new) reschedule surfaces, so the copy and the numerals are settled by the same change. | **P2** |
 | R10 | Chat: nav must not jump above the composer with the keyboard open | **CV** | `visualViewport` 0 uses in code; `DEVICE-PASS` records the on-screen keyboard moving the page **without** `visualViewport` reporting it on the OPPO. Nothing emulates a keyboard, so no bench number proves either safety. | Treat as the plan's main *verification* task: reproduce on a handset with the driver already written, and only then decide whether to add a visual-viewport listener. | **P1** |
 | R11 | Profile not crowded; detail on the right screen | **AR** | The hub is module-based (`residentSectionBody`, 10 bodies) and every module derives from records or says plainly that no record backs it (saved providers, maintenance reminders). | none | — |
@@ -165,7 +185,7 @@ below was executed this session, not inherited from documentation.
 | P1b | Today Schedules Back must return to the right tab/state | **AR** | One history mechanism with destination-key routing and context restore; root-tab taps clear layers; `--focus`/`--measure` walks the real entry points, and a `back` gate suite exists. Keep the handset regression. | — | — |
 | P1c | FSM: simplify the job view, prioritise actions | **PR** | FSM exists as its own nav destination; job rows carry true state and next valid action; the emergency-dispatch control's availability was made honest (`Enable Dispatch`). | group actions by state; secondary data below the fold but never a *required* fact | **P2** |
 | P1d | Dynamic Availability / Rate & Schedule Optimizer: live or illustrative? | **CD (wording)** | Neither performs an optimisation the kernel acts on; presenting either as an automatic decision is the §63/§86 misrepresentation this repo forbids. | **Recommend:** label them plainly as settings that change *their* availability/rate, or remove the "optimizer" framing. Do not add an algorithm to satisfy the name (§88). | **P1** |
-| P1e | Which bookings may a provider see (dual-role)? | **PD** | Roles are separate sessions in this prototype; a provider signing in as resident sees resident screens. §13 forbids assuming a dual-role model. | keep explicit role sessions for V1; document that one session = one role; no silent role merge | **P2** |
+| P1e | Which bookings may a provider see (dual-role)? | **AR** (documented 2026-10-26; the class still read **PD** afterwards) | Roles are separate sessions in this prototype; a provider signing in as resident sees resident screens. §13 forbids assuming a dual-role model. The rule is now stated where a reviewer looks — `README.md` "One session is one role, deliberately", naming both directions of the boundary and the fact that no authentication enforces it — and the boundary is structural rather than enforced: `state.role` selects the destination set, and no code path shows one role another role's records. **No gate check asserts that boundary**, and none is claimed here — the row is closed on the documentation the action asked for, which is all §13 asked of it. | done as proposed: explicit role sessions, documented, no silent role merge | **P2** |
 | P1f | Payment records: amounts, states, dates, linked booking | **AR** | Payouts are records with their own path; centavo arithmetic, ledger balance and the produce/labour split are gated; a stale index is clamped *and written back* so the rail marks the row the money uses. | none | — |
 | P1g | A booking must not vanish when its details open | **AR** | Detail screens no longer fall back to a neighbour's record (foreign-id substitution closed at three entry points and in `providerOf()`), and lists are derived from records. | none | — |
 | P1h | A real rescheduling workflow, not forced cancellation | **CD** | **The plan's central gap** — see §1 and §9. | design in §9, approve, then build | **P0/P1** |
@@ -180,16 +200,16 @@ below was executed this session, not inherited from documentation.
 | A1 | Dashboard overload; actions above the fold | **PR** | Counts are separated where the nouns differ (`agreed` vs `waiting`, no longer one "Live bookings" 10); Insights is derived or deleted (`networkAttentionList` is the single filter both halves read). Density metric as G5. | metric first, then cut | **P2** |
 | A2 | Redundant admin avatar in the header | **PD** | Present today. Harmless; duplicates the Account destination. | **Recommend** leaving it until the header/keyboard sweep, then decide with a screenshot; not worth a change on its own | **P3** |
 | A3 | Shield as the generic Dashboard icon | **CD (semantics)** | `navItem('admin_dashboard','shield','Dashboard')` (8002) and `AUTH_ROLE_ICON.admin='shield'` (7755), while `shield` legitimately denotes trust/warranty elsewhere (5980 empty state). §5.5 asks for a stable semantic map. | **Recommend** dashboard→grid/gauge glyph, reserve `shield` for Trust & Safety and verification surfaces; keep the admin role badge as-is if the sign-in screen's meaning is "official console" (say which in the icon table) | **P2** |
-| A4 | Needs Attention ↔ notifications; one list or two | **PD** | One shared filter feeds both the stat strip and the attention card "so they cannot drift apart by construction" (1979) — the duplication risk is already closed. What does not exist is a dedicated, filterable *queue*. | **Recommend** promoting the existing shared filter into a filterable queue reachable from the badge, rather than adding a second list | **P2** |
+| A4 | Needs Attention ↔ notifications; one list or two | **AR** (decided and built 2026-10-26; the class still read **PD** after the queue shipped, which told a reviewer a decision was outstanding) | One shared filter feeds the stat strip, the attention card **and** the queue, "so they cannot drift apart by construction". The queue exists: a fifth Providers segment, `attentionQueue(kind)`, filterable by the three things a record can actually assert, with the reason a provider is listed produced by the same object that decides they are listed. `admin-attention` is a row of the camera's walk, `falsify-coherence` condemns a queue that computes its own membership, and the gate requires `attentionQueue(null)` to answer exactly what the shared filter answers. | done — the recommendation was taken as written | **P2** |
 | A5 | Collapsible sidebar on wide screens | **NA/PD** | The product is mobile-first; §36/§91 of AGENTS.md and the whole measurement rig assume phone widths; admin already works at 450 CSS px. | defer; only if the owner asks for a desktop console | — |
 | A6 | Operations: less irrelevant data, actions forward | **PR** | Marketplace Intelligence counts a date window and is record-derived; decorative bars were removed (capacity bar and a cancellation verdict deleted because no record asserts them). | apply G5 metric | **P2** |
 | A7 | Providers: discoverable, accessible, functional sort/filter | **AR (now read at the code, not deferred)** | Replaces the earlier "verify in Phase B": `providerMatches()` narrows the set on query, `serviceId`, **barangay through `providerServes()`** (declared service area, not where a provider happens to live), `maxWait`, and `providerAccepting(p)`; `activeFilterCount()` (5848) counts those same three and `blankFilters()` resets them (6103/6115/9204) — so these are real filters, not appearance toggles. Admin sorts bind to named fields (`ADMIN_SORTS`, `ADMIN_PENDING_SORTS`). Icon-only controls stay governed by the camera's label and tap tallies, which read 0. | Residual is R3's **labelling**, not filter function. Add one probe asserting each filter changes the rendered set and that clear-all restores it, so a future regression is caught rather than trusted. | **P2** | per-filter probe: set differs from unfiltered; clear-all restores the full set |
 | A8 | Verification queues; drop decorative progress bars | **AR** | Applications and documents are records; the count is `3 of 4` because a missing `submittedAt` *is* outstanding; approve is refused while a document is outstanding and names which; a **Decided** tab exists because a decision that deletes its own record is unauditable; ornamental bars removed. | none | — |
-| A9 | Provider profile decluttered without losing decision context | **PR** | Layout work, same rule as R7. | tab/group, keep verification + rate + area visible | **P2** |
+| A9 | Provider profile decluttered without losing decision context | **PR** (still open — §17 previously reported it built, which was an over-claim) | The grouping work R7 describes landed on the **resident's booking detail**, not on this screen, and nothing else in Phase B touched the provider profile's layout. What *is* true of it: verification, rate and area stay visible, the credential summary counts flagged documents rather than asserting "All Valid", and the screen no longer falls back to another provider's record when nothing is selected. Whether it is "decluttered" is a layout judgment this file cannot make, and the row's own prescription — tab/group the profile — has not been executed. | needs its own pass, or the row's prescription corrected to match what §42 of AGENTS.md actually requires; not counted as done | **P2** |
 | A10 | Missing/incorrect Back buttons | **AR** | as G2 | — | — |
-| A11 | Audit log must return to the profile/activity context | **AR** | The audit-log destination is in the walk (`admin-audit`, reached by clicking the row a person clicks) and Back is layer/destination-aware with context restore; the profile→activity→Back case is the documented reason `clearModals()` and the destination key exist. | re-test in Phase B walk 6 | — |
+| A11 | Audit log must return to the profile/activity context | **PR** (re-classed from AR, 2026-10-26 — the AR rested on a claim about the machinery, not about this destination) | The audit-log destination is in the walk (`admin-audit`, reached by clicking the row a person clicks) and `stepBack()` is layer/destination-aware with context restore — that half is true and measured. **The row's own case is not.** The header "Back" on five admin spokes (Money, Marketplace intelligence, Categories, Trust & Safety, Audit Log) hard-codes `state.adminScreen='overview'; render();`, while the phone's Back runs `stepBack()`, which also resets `state.tab` to `lastRootTab[role]`. Reached from the console those two agree. Reached from the admin account's "My Admin Activity" card — which switches `state.tab` to `admin_dashboard` on the way in — they do not: the visible button lands on the console, the hardware lands back on the account tab, i.e. the activity context the row asks for. So the one Back path the brief names is served by the button the brief does not mention, and no instrument in this repository has ever pressed both and compared. | make the header button call the same function `popstate` calls (`systemBack()`), which is what the shell fix's own comment says keeps the two paths from drifting — then prove it by walking profile→activity→audit and reading the `<h1>` after each of the two back steps; if the four console spokes change destination, that is the finding, not a reason to keep them hard-coded | — |
 | A12 | Empty profile modules: honest empty states | **AR** | `emptyState('shield','Nothing under warranty', …)` pattern; §76/§88 rule "where a module has no record behind it, it says so plainly"; "PIN enabled/2FA enabled/2 devices" rows were deleted or replaced with `Not configured`. | none | — |
-| A13 | Admin Session Lock: make it coherent or remove it | **PD** | Today it is deliberately honest: the dialog states that **no PIN is checked** and that Unlock closes the screen leaving the app signed in; the earlier PIN/password modals were deleted because they fabricated audit-log entries. | **Recommend keep as labelled demo + copy pass**; removing it loses a documented trust surface; *never* dress it as security (§11's "do not imply production authorization") | **P2/PD** |
+| A13 | Admin Session Lock: make it coherent or remove it | **AR** (the decision was taken and the copy pass done, 2026-10-26; the class still read **PD** afterwards) | Today it is deliberately honest: the dialog states that **no PIN is checked** and that Unlock closes the screen leaving the app signed in; the earlier PIN/password modals were deleted because they fabricated audit-log entries. The placeholder repeats the promise beside the field a person types into, and the dialog is in the camera's walk (`admin-security-modal`, plus the lock screen reached through the account hub). **No check pins that wording** — it was fixed by reading a screenshot, and it is the kind of sentence a later edit can silently reverse; the row is closed on the decision and the copy, not on an assertion. | done as recommended — kept as a labelled demo surface, never dressed as security (§11) | **P2/PD** |
 | A14 | Help Desk around status, priority, summary, linked booking, history, next action | **PR** | Cases are records with timeline/evidence; the sheet is walked; evidence gathering is not framed as blame (AGENTS §28). Density: §13's complaint stands partly — triage ordering by priority needs verifying against records rather than a typed field. | confirm a `priority` source exists; if not, say "unranked" rather than invent one | **P1** |
 
 ---
@@ -257,6 +277,21 @@ work queue (A4).
 updates once; SIGN-IN/REGISTER → **terms readable and accepted once**; chat keyboard-open state **verified** rather than
 assumed. Everything else in §4.1–§13 is already on the map.
 
+**Status of the "stuck at" lines above, 2026-10-26.** Four of the six no longer describe the build, and they are
+left in place because they are why the plan asked for what it asked for:
+- Resident (a) *no path but cancel* — gone. A proposal is a record, the booking's own `date`/`time` change only when
+  the other side accepts, and both booking lists render a pending ask.
+- Resident (b) *the rules are nowhere readable* — gone as a mechanism: three documents behind a sheet reached from
+  registration, a versioned local acceptance, and every undecided fact inside a `NOT DECIDED` bracket. **The content
+  is still a draft no counsel has read**, so "readable" is true and "in force" is not.
+- Provider *the same missing reschedule* — gone, from that side too; and the two feature names implying automation
+  (P1d) were fixed — one reworded to say what the switch does, the route card deleted rather than reworded.
+- Admin *Needs Attention is a summary, not a work queue* — gone: the queue is the shared filter with a label on it,
+  filterable by the three conditions a record can assert.
+- Resident (c) *whether the composer survives a keyboard* — **still exactly as written.** `visualViewport` appears
+  zero times in the page (re-counted today), nothing here emulates a keyboard, and the owner has ruled the leg stays
+  pending until a phone is attached.
+
 ---
 
 ## 6. Navigation / back audit
@@ -273,6 +308,18 @@ edit-form's missing entry was found). Hardware/system Back is bridged by publish
 §5.2(6) keyboard state is the only untested clause (see R9) — that is the honest line between "verified" and
 "assumed" here.
 
+**Corrected 2026-10-26: "by construction" was doing more work than the code supports.** The paragraph above is true
+of the *history* — `stepBack()`, the published depth the shell asks, `layerKeys()`, the `popstate` handler. It is not
+true of the buttons the app paints. Five admin spokes (Money, Marketplace intelligence, Categories, Trust & Safety,
+Audit Log) carry a header control whose handler is the literal string `state.adminScreen='overview'; render();` — a
+hand-written destination that never consults the history the page maintains. Where the person came from the console
+the two agree by luck of the destination; where they came from the admin account's "My Admin Activity" card, which
+switches `state.tab` on the way in, they do not: the button lands on the console, the phone's Back lands back on the
+account tab. That is the case row **A11** asks about, it is why A11 came out of AR, and it is a second untested
+clause in this section beside §5.2(6). The fix is not a new mechanism — it is the one the shell bridge already
+establishes: the header button calls the same function `popstate` calls, because two paths that reach the same
+destination by different code are the defect this section claims not to have.
+
 ---
 
 ## 7. Design-system proposal
@@ -283,6 +330,22 @@ locally hosted with Plus Jakarta Sans behind it (four WOFF2 weights, license fil
 6/6), one sans family for all interface text, tabular/aligned numerals **to be added** (G7), the existing
 tap/contrast/focus/measurement floors, and one icon table (43 glyphs drawn, all 38 reachable names covered, plus a
 semantic map written down so A3 stops recurring).
+
+**Corrected 2026-10-26, because three of the proposals above have since been executed.** The token census is no
+longer a hand-kept figure — `node tools/measure.cjs Sukinnect-next.html` prints it, and the gate asserts the
+*rule* rather than the number: the unreached set must equal the exception list and every exception must still be
+declared. The two spacing orphans (`--s-1`, `--s-8`) were reached by converting the literals they already equalled,
+which changes no pixel, and `--info` is kept unreached and named as the sole exception, because §31 mandates the
+token and §34 forbids spending it on a brand chip. Tabular and aligned numerals are no longer "to be added": one
+stylesheet rule carries both halves, and `falsify-figures` proves it. The icon semantic map exists as `ICON_MEANING`
+and the gate fails a glyph that navigates without a row.
+
+**Button hierarchy, from R6.** The system as written has PRIMARY (`.btn`), SECONDARY (`.btn.secondary`) and
+DESTRUCTIVE (`.btn.danger`) and **no tertiary tier**, which is why the booking detail could paint two byte-identical
+`btn secondary` controls side by side and nothing in the file could call that wrong — §70 of AGENTS.md names a
+low-priority utility tier, so the missing class is the gap, not the screen's fault. Adding `.btn.tertiary` is the
+smallest change that makes the rule expressible; it is not a new visual language, and the fallback keeps its glyph,
+its words and its 44px box.
 
 **Explicitly rejected, with reasons:** swapping to Poppins (not a local asset; §5.4 says do not load remote fonts, and
 the incumbent face was chosen for legibility and is pinned by tests); any chart library; any framework migration;
@@ -477,6 +540,13 @@ swap (A3); filter-must-change-results checks (A7/R3); booking-detail grouping (R
 applied to the three crowded dashboards (G5/A1/A6/P1a); Needs-Attention queue (A4); empty-state kind distinctness
 (G10); 1–3 min walk method (G11); `--s-1/--s-8/--info` token cleanup.
 
+**Scope note, 2026-10-26.** This list — not §4's priority cells — is what "implement all of P2" meant when the
+owner approved it, and the nine items above are what was built. **One row carries `P2` in §4 and is absent from
+this enumeration: R6** (the booking detail's Chat/Call hierarchy). It is therefore *not* an approved item that was
+skipped; it is a discrepancy between the matrix and the roadmap, found while re-reading both, and it stays
+un-built until the owner says which of the two is right. A11's finding, reported in the same re-read, carries no
+priority at all in §4 and is likewise offered rather than done.
+
 **P3 — polish:** category-art refresh if commissioned (NA), avatar-in-header (A2), wide-screen sidebar (A5),
 illustration/chart styling nudges.
 
@@ -641,16 +711,30 @@ nothing. The reason is a comment beside the constant and a paragraph in `CHANGES
 **The §4 matrix re-audited row by row, 2026-10-26.** All **47** concerns were re-read against the current
 file rather than against this document's memory of them. The table's own coverage is now an instrument —
 `node tools/audit-matrix-coverage.cjs`, which prints one line per id and refuses with `NO CONCLUSION`
-rather than summarising a table it failed to parse — and today it reads **47/47 ids present exactly once**
-with the distribution **AR 20 · CD 8 · PR 11 · PD 5 · CV 2 · NA 1**. **20 AR** (each still backed by an
-instrument that runs — a named `honesty`/`machine`/`storage` check, a camera tally, or a probe), **8 CD**
-— G3, G5, G7, R3, R5, P1d, P1h, A3, **all eight now built**, **11 PR** — G4 (closed as already resolved),
-G8 and R9 (both were the numeral half, built), G9 (artwork: owner ruled no change until art exists), R7
-and A9 (built), P1a/A1/A6 (the density metric applied; nothing indicted, so nothing cut), P1c (guarded:
-the gate fails if FSM grows a second job list), A14 (built in this pass, below), **5 PD** — R8 (the
-floating concierge button stays unbuilt, as recommended), A2 (avatar stays), A4 (queue built), A13 (kept,
-honestly labelled), P1e (documented in this pass, below), **2 CV** — G11's number and R10's keyboard, both
-gated on hardware, and **1 NA** — A5's wide-screen sidebar, which the mobile-first sections rule out.
+rather than summarising a table it failed to parse — and it reads **47/47 ids present exactly once** with the
+distribution it prints today; run the command rather than trusting any distribution quoted here, including
+the one that was true when this section was first written (**AR 20 · CD 8 · PR 11 · PD 5 · CV 2 · NA 1**).
+Five rows have moved since: `R6` and `A11` came **out** of AR because a rule the row names had never been
+walked, and `A4`, `P1e` and `A13` came **out** of PD because the owner's decision had been taken and built
+while the class still advertised it as outstanding — the same misleading sentence arriving from the other
+direction, since a reviewer reads PD as "nothing here yet". `R8` moved PD → NA for the same reason. The
+classes, one row per class so a reader can find any id by searching for it:
+
+- **AR — 21.** `G1` `G2` `G6` `G10` `R1` `R2` `R4` `R11` `P1b` `P1e` `P1f` `P1g` `P1i` `P1j` `P1k` `A4` `A7`
+  `A8` `A10` `A12` `A13`. Each is still backed by an instrument that runs — a named `honesty`/`machine`/
+  `storage` check, a camera tally, or a probe — except `P1e` and `A13`, whose closure is documentation and
+  wording rather than an assertion, stated as such in their rows.
+- **CD — 9, all nine now built:** `G3` `G5` `G7` `R3` `R5` `R7` `P1d` `P1h` `A3`.
+- **PR — 12:** `G4` (closed as already resolved), `G8` and `R9` (both were the numeral half, built),
+  `G9` (artwork: owner ruled no change until art exists), `P1a`/`A1`/`A6` (the density
+  metric applied; nothing indicted, so nothing cut), `P1c` (guarded: the gate fails if FSM grows a second job
+  list), `A14` (built in this pass, below), and the three rows that are **open**, each named at the end of this
+  section: `R6`, `A11` and `A9`.
+- **PD — 1:** `A2` (the admin header avatar stays until the wide-screen question, and the owner decides it
+  with a screenshot, not this document).
+- **CV — 2:** `G11`'s number and `R10`'s keyboard, both gated on hardware.
+- **NA — 2:** `A5`'s wide-screen sidebar, which the mobile-first sections rule out, and `R8`'s floating
+  concierge button, ruled kept-as-an-embedded-entry by the owner.
 
 **Three rules had never been executed and were closed in this pass**, each of them an instruction this
 document wrote for itself:
@@ -724,6 +808,45 @@ instead of letting a count crush its title · `sweep-text-scale` → **8 of 8** 
 clear · `audit-build-bytes` → **findings: 0**, four copies at `2691a76c…`, shell at
 `versionCode 45 / 1.2-preview.43`. The aggregate remains un-run and unquoted.
 
+**What this report does not cover, and the rule that was missing.** `node tools/audit-report-coverage.cjs`
+answers this of the tree: it reads the §4 rows, then asks which of them §17 **lists** — a bullet or a table
+row, not a prose mention — and exits 1 on any row that is silent *and* not classified AR. Run it rather than
+trusting a figure here: the first version of this paragraph quoted "40 named, seven silent", and the paragraph
+itself, by naming those seven, made that reading false — a count kept in prose inside the document the count
+measures is §90's drift arriving one level up. What the reading was when the tool was written is the useful
+part: **29 of 47**, with eighteen silent, and every one of those eighteen dispositioned somewhere in prose
+that the strict rule does not credit.
+
+The reason the command exists is **R6**, which was classified AR/PR with a P2 action, never had that action
+built, and appeared **nowhere in §17** — so nothing in the repository could notice the gap between "the plan
+has 47 rows" and "the report dispositions 29 of them". `audit-matrix-coverage.cjs` counts the rows; this asks
+the other half. A11 arrived the same way: its AR rested on a sentence about the Back *machinery* rather than
+about the destination the row names. Both were found by reading the AR class, not by any check. The rule this
+establishes: **a row re-classed out of AR gets a §17 disposition in the same change**, because the report is
+the only place a reader looks for what Phase B owes. The class list above is that rule applied — which is why
+it is bullets.
+
+Three rows are open on this reading — **and none of the three is approved work in flight**, which is why they
+are reported rather than fixed in the pass that found them:
+- **A9** — the provider profile's grouping. This one is a **correction to this report, not a new finding**: §17
+  said "R7 and A9 (built)", and R7's grouping work landed on the resident's booking detail only. Nothing in
+  Phase B laid out the provider profile differently. Whether the screen is cluttered is a layout judgment the
+  plan cannot make from a class count, and the reading I did do to answer it (counting headings in the
+  function's own body) was inconclusive — so the honest state is *not done, and not measured*, which is what
+  its §4 row now says.
+- **R6** — the booking detail's Chat and Call pair carries no hierarchy: two byte-identical `btn secondary`
+  controls, so §70's "do not make all buttons equally visually strong" is unmet on the one screen where the
+  brief asks. The surfaces themselves are honest (the chat opens the thread for *that* booking; the call link
+  says it reaches the Sukinnect line). **But §13's P2 enumeration does not name this row** — only its own §4
+  priority cell does — so building it would widen the scope the owner approved. It needs a ruling: join P2 (the
+  fix is one class and one inline style removed), or correct the cell.
+- **A11** — five admin spokes hard-code their header Back to `adminScreen='overview'` while the phone's Back
+  runs `stepBack()`, which also restores the root tab. From the console the two agree; from the admin
+  account's "My Admin Activity" card they do not, and the row's own case is the disagreeing one. The row carries
+  **no priority in §4 at all**, so this too is a finding offered, not a task assumed. The fix is small — point
+  the header button at the function `popstate` already calls — and it would be proved by walking
+  profile→activity→audit and reading the `<h1>` each of the two back steps lands on.
+
 **Closed after the first report.** `falsify-legal-truth` caught one of my own checks as a MISSED - it
 grepped the sign-in render, where the register fields are never painted - and was re-pointed at the
 register-mode paint with a presence half, so the family now reads 8 of 8. A second audit against §9 of
@@ -732,3 +855,33 @@ was raised against (so an answer arriving after the booking moved is refused and
 writing nothing), and the card shows both ends of the move. The one deviation that survives is
 deliberate: `requested` bookings are not offered a reschedule, because an unanswered request has no
 agreed time to move. Recorded in `CHANGES.md` §133.
+
+**§14 executed item by item, 2026-10-26.** The checklist above says "all runnable, none invented", so it was run
+as a checklist rather than quoted as one. Every result below is from a command executed against the committed
+build (`65e375e`, page bytes `2691a76c…`); the aggregate figures come from a single sequential pass, and the
+camera readings from runs after the last page edit.
+
+| §14 item | Command run | Result |
+|---|---|---|
+| Every P1/P2 change — full gate | `node tools/verify.cjs` | **all 643 checks passed** |
+| Any new record family | `node tools/falsify-storage-truth.cjs`, `…-reschedule.cjs` (through the aggregate) | storage-truth **5 of 5**, reschedule **20 of 20**, 0 not applied, 0 missed |
+| Reschedule wording | gate checks at `tools/verify.cjs:5627`–`:5628`; the two camera screens `reschedule-sheet` / `reschedule-answer` | **Deviation from the stated method:** no `--probe=@` file exists for this row. The rule is asserted by the gate against the rendered card and photographed by the walk, which answers the same question; recorded rather than papered over |
+| Screen coverage | `node tools/shot.cjs --list`, `node tools/audit-camera-dialog-coverage.cjs` | **88 screens**; 17 layer-raising profile controls, 17 clicked; **findings: 0** |
+| Painted layout | `node tools/shot.cjs --measure`, `--measure --focus`, `--measure --dark` | 25 failure tallies at **0**; focus walked **855 keyboard stops over 88 screens** with all four focus tallies **0**; dark sweep **0** contrast failures; no console errors |
+| Phone corners | `node tools/sweep-text-scale.cjs` | **8 of 8 corners, 25 tallies each, all clear** |
+| Alignment sweep | three `hygiene` checks, `node tools/falsify-figures.cjs`, the before/after pair in §135 | one alignment rule and one numeral rule in the page (`1` and `1`); **7 of 7 breaks caught** |
+| Keyboard / chat on a handset | — | **NOT VERIFIED, and not verifiable here.** `visualViewport` appears **0** times in the page (re-counted today); the owner has ruled the leg stays pending until a phone is attached |
+| Invariants | `machine`, `ledger`, `money` suites inside `verify.cjs` | unchanged behaviour — these are gate suites, not mutant families, so they are counted in the 643 |
+| Shipped file | `git diff --quiet origin/main -- Sukinnect.html` | silent — **unchanged from `origin/main`** |
+| Build copies | `node tools/audit-build-bytes.cjs` | **findings: 0**, four copies identical at `2691a76c…` |
+| Commit hygiene | `node tools/audit-commit-subjects.cjs --check-message <file>` before each commit | run before every commit in this pass; `65e375e` reported **unique** over 347 reachable commits |
+| **Matrix coverage** (added by this pass) | `node tools/audit-matrix-coverage.cjs` | **47/47 ids present exactly once**, every row classified: AR 21 · CD 9 · PR 12 · PD 1 · CV 2 · NA 2 |
+| **Report coverage** (added by this pass) | `node tools/audit-report-coverage.cjs` | **findings: 0** — every row dispositioned in §17, §17's class list matches §4 id for id, all 17 section headings present and ordered; proved by `node tools/falsify-report-coverage.cjs`, **4 of 4** |
+
+**The answer to the question, stated once.** Of the plan's 47 concerns, **44 are built, ruled out of scope, or
+resolved by an earlier pass with an instrument behind them**. **Three are open and none of the three is approved
+work in flight**: `R6` needs a scope ruling (its §4 cell says P2, §13's P2 list does not name it), `A11` needs a
+priority (it carries none), and `A9` was **over-claimed as built by this report** and is now correctly marked not
+done. **Two rows cannot be closed on this machine at all** — `G11`'s one-to-three-minute number and `R10`'s
+keyboard-open composer — both gated on a handset by standing ruling. Nothing is pushed, no device was attached,
+and the deployment is left deliberately stale as ruled.

@@ -8538,3 +8538,87 @@ command ended in a `tail` and the pipeline's exit is the last program's, not gra
 `FAILURE` and `audit-build-bytes` said `findings: 1` against an APK still stamped `.42`; the exit code
 said nothing was wrong. **A background run's exit code is not a measurement of the thing it ran** — read
 the log, or ask the audit that inspects the artifact.
+
+## 138. The plan was asked whether it was implemented, and the answer was in the sections nobody re-read
+
+The question was "is everything in the Markdown file properly implemented?" — the file being
+`SUKINNECT_UX_RELIABILITY_MVP_PLAN.md`, whose §4 matrix carries 47 owner concerns. §136 had already re-read that
+matrix and closed three rules that had never been executed. This pass read **every section** instead, and found
+more than the matrix had.
+
+**Four findings, in descending order of how much they hurt.**
+
+**§17 claimed a row was built that never was.** The completion report said "R7 and A9 (built)". R7's grouping
+landed on the resident's booking detail — `BOOKING_GROUPS`, six `section-label` headings, a gate check that a
+`requested` job carries neither a Completion nor a Receipt heading, and a falsifier break that keeps the receipt
+card from losing its heading. **A9 is the provider profile**, and nothing in Phase B laid that screen out
+differently. The over-claim had also propagated into this session's own task list ("Booking-detail grouping
+(R7/A9)", marked completed), and `CHANGES.md` never mentions A9 at all, so there was no third record to contradict
+it. An attempt to settle whether the screen is cluttered by counting headings in the function's body came back
+inconclusive, so the row now reads *not done, and not measured* rather than swapping a false claim for a vague
+one. R7 moved PR → CD with its deviation stated: the prescribed widget was tabs, labels were chosen because a tab
+hides two of the six groups behind a tap, and §10's word is *separate*.
+
+**R6 is not an approved item that got skipped — it is a discrepancy inside the plan.** Its §4 priority cell says
+`P2`; §13's P2 paragraph, which is what "implement all of P2" actually named, lists nine items and R6 is not one
+of them. So the honest disposition is *unscoped*, not *owed*, and building it would have widened the scope the
+owner approved. What the row does find is real and small: the booking detail's Chat and Call controls are
+byte-identical `btn secondary` markup, so §70's "do not make all buttons equally visually strong" is unmet on the
+one screen where the brief asks — and the reason nothing could call it wrong is that the button system has
+PRIMARY, SECONDARY and DESTRUCTIVE and **no tertiary tier at all**.
+
+**A11's AR rested on a claim about the machinery, not about the destination.** §6 asserted that back order is
+satisfied "by construction". True of `stepBack()`, the page→shell depth bridge, `layerKeys()` and `popstate`.
+Not true of the buttons the app paints: exactly **5** admin spokes carry the literal handler
+`state.adminScreen='overview'; render();` — counted, not estimated — and that assignment never consults the
+history the page maintains. From the console the two paths agree; from the admin account's "My Admin Activity"
+card, which switches `state.tab` on the way in, the visible button lands on the console while the phone's Back
+lands on the account tab. **The one Back path the brief names is served by the button the brief does not
+mention**, and no instrument here has ever pressed both and compared the `<h1>` each lands on.
+
+**Six sections spoke in the present tense about a build that had moved.** §1 announced three highest-risk gaps,
+two of which are now features; §5's "where a user gets stuck today" was wrong in four of six clauses, including
+"Needs Attention is a summary, not a work queue" — the most misleading text in the file, because it describes what
+a person cannot do; §7 still listed the token census, tabular numerals and the icon semantic map as proposals;
+§3 carried a stale screen count; §2's "measured, this session" meant a session three days ago. Each got a dated
+correction rather than a rewrite, because these sections are the plan's before-picture and rewriting them destroys
+the only baseline the document has. §12, §15 and §16 were re-read and held up; §2's live claim (`Suki.docx` absent
+from the workspace) was re-checked rather than assumed, and is still true.
+
+**Two instruments came out of this, both aimed at the plan rather than the page.**
+`node tools/audit-matrix-coverage.cjs` already counted the 47 rows; `node tools/audit-report-coverage.cjs` now asks
+which rows §17 **dispositions** — a bullet or a table row, not a prose mention — and refuses on any row that is
+silent and not AR. It also cross-checks §17's class list against §4's table id for id, and censuses the plan's own
+section headings. The last check exists because of a mistake made during this pass: an edit anchored on
+`---\n\n## 6. Navigation / back audit` deleted that heading and left §6's prose filed under §5, every count in the
+document still read correctly, and nothing noticed until the headings were listed by hand.
+`node tools/falsify-report-coverage.cjs` proves four ways this can go quiet, including the two that only look
+right in the opposite direction — blinding the parser's continuation-line rule must make it **refuse a correct
+document**, and demoting a heading must be caught by the census. 4 of 4 breaks caught, 0 not applied, files
+restored byte-for-byte.
+
+**Three citations in prose I wrote this session named things that do not exist:** a
+`falsify-status-duplication` family, a gate check on the role boundary, and §85's declared-state check reading the
+lock dialog's wording. Each was caught by `ls` or `grep` before it shipped, and two rows now say plainly that their
+closure rests on documentation and wording **with no assertion behind it** — which is the true state and a named
+gap, where the invented citation would have been a false confidence. A check that cites a tool that isn't there is
+worse than no citation, because the next reader will run it, get nothing, and conclude the claim was never tested.
+
+**Also fixed in the same reading:** the report-coverage paragraph first quoted "29 of 47 named", then "40 named,
+seven silent" — each made false by the paragraph itself naming the rows it measured. A figure kept in prose inside
+the document the figure counts is §90's drift one level up, so the numbers are gone and the command is the citation.
+
+**As printed at the end of this pass.** `node tools/falsify-all.cjs` → **59 families, 332 mutants applied, 332
+caught, 0 not applied — every rule is still being tested** (the pass enumerated its family list before
+`falsify-report-coverage` existed, so the tree now holds 60 and the next pass will run it). `node tools/verify.cjs`
+→ **all 643 checks passed** · `node tools/shot.cjs --list` → **88 screens** ·
+`node tools/audit-matrix-coverage.cjs` and `node tools/audit-report-coverage.cjs` → **findings: 0**, the class list
+reading **AR 21 · CD 9 · PR 12 · PD 1 · CV 2 · NA 2 = 47** · `node tools/audit-camera-dialog-coverage.cjs` →
+**findings: 0** · `node tools/audit-build-bytes.cjs` → **findings: 0**, four copies at `2691a76c…`, shell at
+`versionCode 45 / 1.2-preview.43` · `git diff --quiet origin/main -- Sukinnect.html` → unchanged.
+
+**What the answer to the question now is.** Of the 47 rows: **44 are built, ruled out, or resolved by an earlier
+pass with an instrument behind them**; **3 are open** — R6 (needs a scope ruling), A11 (needs a priority), A9
+(needs either a pass or a corrected prescription); and **2 cannot be closed on this machine at all** — G11's
+one-to-three-minute number and R10's keyboard-open composer, both gated on a handset by the owner's standing
+ruling. Nothing is pushed, no device was attached, and the deployment is left deliberately stale as ruled.
