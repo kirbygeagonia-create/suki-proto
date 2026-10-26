@@ -8863,3 +8863,32 @@ reports none.
 `node tools/falsify-all.cjs` run against the committed build: **352 mutants applied, 352 caught, 0 not applied — every rule is still being tested** across **62 printed family rows**, summed a second way with the parser in this script rather than trusted from the runner’s own arithmetic (applied 352, caught 352, not applied 0, missed 0). Flagged rows: none. The family count moved from 61 because `tools/audit-row-instruments.cjs` and `tools/falsify-row-instruments.cjs` joined the tree, and the gate count from 650 to 651 because of the A13 lock-dialog check and the G6 privacy check. This is the pass that answers the standing question about my own edits: four files that every family re-runs (`tools/verify.cjs`, `tools/harness.cjs`, and the two doc-reading audits) were changed after the previous clean run, and only a full pass can say whether a needle was orphaned. `not applied: 0` and `missed: 0` are the columns that answer it, not the headline total.
 
 Also re-measured on the same build by this script’s own runs: the traceability census at **42 of 47 rows traced, 0 built-class rows unpointed, 15 dispositions quoting a gate-check label that resolves**, and `node tools/audit-build-bytes.cjs` at **findings: 0** — the four copies of the page still identical, because no page byte changed since `fd176312`; the edits this hour were to tools and documents.
+
+## 147. The owner rejected the design, and the reason was measurable rather than a matter of taste
+
+"The Design is so worse, its not a real system in a mobile application design, every screens are not
+consistent." Read as a claim to test rather than a complaint to absorb, it turned out to be countable:
+**1,039 inline `style=` attributes**, **~13 distinct literal `border-radius` values plus 155 inline ones**
+against 5 radius tokens used 41 times, **four parallel chip vocabularies** (`.chip`'s own default was GREEN,
+so an untoned label read as success; `.chip.tone-*`; `.badge-gold`/`.badge-alert`; `.status-<state>` plus a
+`.status-pill` with its own geometry), **two section-heading systems** (`.section-label` in 22 places versus
+hand-sized `<h3 style=…>` on the admin console), **two card-title sizes** (`.card-title` at 16px/800 versus
+an inline `--t-body-lg` 17px/700 on the resident's own active-booking card), **`.stat` declaring its radius
+twice** (12px at line 1132, 14px at 1410), and **two ways to build a header** (`screenHeader()` called 14
+times against 20 hand-written `<div class="topbar">`). None of that is taste: it is the definition of "not a
+system", and the count of definitions per idea is the metric that moves.
+
+Four decisions were put to the owner and all four went the conservative way: converge the system and keep the
+look; plain section label with no accent bar; one card title at ~17px bold; short labels with the honesty
+lines kept. Three steps followed. `.card-title` is now the single 17px/700 title and the admin's `<h3>`
+headings carry `.section-label`; the chip base is neutral and every tone is written once with the legacy
+selectors aliased into it, so "warning" cannot mean two ambers; `.stat` keeps one radius from the token scale
+and `.status-pill` keeps only its uppercase, taking its geometry from the chip. The resident header's
+"· Tap to open profile" and five admin queue sentences became labels, which is also what stopped the bell
+button falling onto a second row: `.topbar` wraps so a long title is never cut, and the block that forced the
+wrap was an instruction, not a fact.
+
+Three things this step did NOT fix, named so the next one is not a surprise: the admin queue's count column
+reuses `.jr-time`, a job-row's time slot, as a number badge; the "What this console does not manage" card
+still carries the accent-bar heading, so a third heading construct survives; and the stat tiles still place
+the figure top-right over a label that wraps to two lines, which is why the two tiles are different heights.
