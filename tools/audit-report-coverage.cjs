@@ -140,6 +140,23 @@ for (const r of rows) {
   if (claimed[cls] && claimed[cls].ids.indexOf(r.id) < 0) listProblems.push(r.id + ' is ' + cls + ' in §4 but absent from the §17 ' + cls + ' list');
 }
 const uniqueProblems = [...new Set(listProblems)];
+/* An empty class list is not agreement — it is the cross-check having nothing to compare. Deleting every
+   `- **AR — N…**` bullet made this audit report `findings: 0` on a strictly worse document, and the
+   falsifier's break caught it (aggregate-62, MISSED: "wanted findings greater than 1, got findings 0").
+   A guard that goes silent when its input disappears is the failure this repository keeps meeting, so each
+   class §4 actually uses must have a list here. */
+/* §4 writes its class cell annotated — `**AR (decided and built 2026-10-26; the class still read PD)**` —
+   so the row's class must be reduced to its two-letter key before it is compared with the §17 list keys.
+   Without this the new check reported "§17 carries no class list for AR (decided and built…)", a false
+   finding manufactured by comparing an annotation against a bare key — the same annotation trap that hid
+   nine rows from the row-instrument census an hour earlier. */
+const clsKey = (c) => (/^(AR|CD|PR|PD|CV|NA)/.exec(String(c || '').replace(/^\*\*/, '')) || [])[1];
+const classesIn4 = [...new Set(rows.map(r => clsKey(r.cls)))].filter(Boolean).sort();
+const missingClasses = classesIn4.filter(c => !claimed[c] || !claimed[c].ids.length);
+missingClasses.forEach(c => uniqueProblems.push('§17 carries no class list for ' + c +
+  ' — the id-for-id cross-check has nothing to compare, which is not the same as agreeing'));
+if (missingClasses.length) uniqueProblems.push('the §17 class list is missing ' + missingClasses.length +
+  ' of the ' + classesIn4.length + ' classes §4 uses');
 console.log('class list: ' + Object.keys(claimed).sort().map(k => k + ' ' + claimed[k].ids.length).join(' · '));
 for (const p of uniqueProblems) console.log('  LIST MISMATCH  ' + p);
 

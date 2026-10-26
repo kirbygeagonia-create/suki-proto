@@ -104,8 +104,15 @@ try {
   } else console.log('SKIP  ' + target + ' has no pointer line to rewrite (set TARGET_ROW to a traced row)');
 
   const ok = !!moved && refused && negated === true;
-  console.log('\n' + (ok ? 'the census is falsifiable: a broken citation and a lost row are both detected'
-    : 'NOT PROVEN: at least one hazard this tool exists to catch is invisible to it'));
+  /* `tools/falsify-all.cjs` reads one of a small set of summary shapes; a family whose total it cannot parse
+     is reported as unproven rather than as zero, which is what it did to this file on aggregate-62
+     ("printed no summary — nothing was proven"). Print the shape the runner owns. */
+  const applied = 2 + (negated === null ? 0 : 1);
+  const caught = (moved ? 1 : 0) + (refused ? 1 : 0) + (negated === true ? 1 : 0);
+  console.log('mutants applied ' + applied + ', caught ' + caught + ', not applied ' + (negated === null ? 1 : 0));
+  console.log((ok ? 'PROVEN: ' : 'NOT PROVEN: ') + (ok
+    ? 'a broken citation, a lost row and a negated pointer are each detected'
+    : 'at least one hazard this tool exists to catch is invisible to it'));
   process.exit(ok ? 0 : 1);
 } finally {
   fs.writeFileSync(PLAN, planOrig);

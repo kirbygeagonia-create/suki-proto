@@ -8832,3 +8832,28 @@ traced and requires the count to drop by exactly one. And it anchored on `**G6**
 `**G6 — the one AR row…**`, the id inside the bold with an em dash after it; the anchor missed and the family
 said NOT PROVEN instead of pretending. Both times the honest signal was the refusal, which is the only reason
 they were noticed.
+
+## 145. The full pass found two defects in the instruments, not in the application
+
+`node tools/falsify-all.cjs` over the tree that grew `audit-row-instruments.cjs`, the A13 check and the G6
+check: **62 families, 349 mutants applied, 348 caught, 0 not applied, 1 missed — 2 families need attention**,
+rows summed independently (rows=62 applied=349 caught=348 not_applied=0 missed=1). Neither flagged row was a
+bug in the app, and neither would have been found any other way:
+
+1. **`report-coverage` break 2 printed MISSED: an audit that goes silent when its input disappears.** Deleting
+   every `- **AR — 21…**` class bullet produced `findings: 0, exit 0` — the cross-check loops
+   `if (claimed[cls] && …)`, so with no `claimed` entries it compared nothing and agreed with everything. A
+   guard that passes on a strictly worse document is the failure mode this file names most often, and here it
+   survived the audit's own first four breaks. It now requires every class §4 actually uses to have a list, and
+   reports one problem per absent class plus one summary line, so the count climbs with the damage: findings
+   0 on the committed plan, **5 of 5** breaks caught. My first fix for this compared an annotated class string
+   (`**AR (decided and built 2026-10-26…)**`) against a bare key and manufactured a false finding on a correct
+   document — the annotation trap, for the second time in two hours.
+2. **`row-instruments` printed no parsable summary.** `falsify-all` reported it as
+   `<<< printed no summary — nothing was proven`, which is the runner behaving exactly as designed: an
+   unparseable family is unproven, never zero. The family now prints
+   `mutants applied 3, caught 3, not applied 0` in the shape the runner owns.
+
+The standing lesson is the runner's, not mine: `not applied: 0` and a headline total are not the reading — the
+flagged rows are, and a pass that reports two problems in the test suite has told you more than a pass that
+reports none.
