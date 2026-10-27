@@ -119,7 +119,13 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'CREDENTIALS', 'LISTINGS'
   'frequentActionRows', 'frequentActionsCard', 'openFrequentAction',
   'adminWebOnly', 'exitAdminShell',
   'rateBandFor', 'marketRateHint', 'openRateWizard', 'rateWizardSheet',
-  'rateWizardGo', 'rateWizardChoose', 'rateWizardSave'];
+  'rateWizardGo', 'rateWizardChoose', 'rateWizardSave',
+  /* the verification stepper and its two named seams */
+  'openVerificationWizard', 'verificationSheet', 'verificationGo', 'verificationAttach',
+  'verificationField', 'verificationSummary', 'saveVerificationDraft',
+  'readIdDocumentSeam', 'matchFaceSeam',
+  /* the sign-up guide and its dictation seam */
+  'openSignupGuide', 'signupGuideSheet', 'guideWrite', 'guideGo', 'guideDictate', 'speechSeam'];
 
 function boot({ appMode = false, storage = null } = {}) {
   const src = fs.readFileSync(APP, 'utf8');

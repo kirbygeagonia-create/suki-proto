@@ -1108,6 +1108,13 @@ const SCREENS = [
      wizard is a three-step sheet a provider reaches from their own pricing section — both are
      destinations, so both are walked. */
   ['concierge-suggested', `state.view='app'; state.role='resident'; state.tab='concierge'; render();`],
+  ['signup-guide-step2',   `state.view='login'; state.role='resident'; state.authMode='register'; render();
+                        openSignupGuide(); guideWrite(0, 'Nueva Residente'); guideGo(1);`],
+  ['verification-docs',     `state.view='app'; state.role='provider'; state.tab='profile'; render();
+                        openVerificationWizard(); verificationGo(1);`],
+  ['verification-review',  `state.view='app'; state.role='provider'; state.tab='profile'; render();
+                        openVerificationWizard(); verificationAttach('idFile', { files:[{ name:'philsys-front.jpg' }] });
+                        verificationField('qualType', 'TESDA NC II'); verificationGo(3);`],
   ['rate-wizard-step2',   `state.view='app'; state.role='provider'; state.tab='profile'; render();
                         openRateWizard(); rateWizardGo(1);`],
   ['rate-wizard-confirm', `state.view='app'; state.role='provider'; state.tab='profile'; render();

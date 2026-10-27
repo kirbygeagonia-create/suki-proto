@@ -6422,6 +6422,128 @@ suite('legal', async () => {
   return c;
 });
 
+/* ══ the professional-verification stepper ═════════════════════════════════
+   The brief asks for government IDs, OCR on them, facial recognition and the identity extracted from
+   all of it. Two of those four are not wired in this build, so the test that matters is whether the
+   screen lies about them: it must name the seam, show no extracted field, and never announce a
+   submission no record backs. */
+suite('verification', async () => {
+  const c = makeChecker();
+  const app = boot();
+  const seam = app.readIdDocumentSeam('id.jpg');
+  c.check('the OCR seam answers that it did not run, and carries no extracted field',
+    seam.available === false && seam.fields === null && /not wired in this build/.test(seam.reason),
+    JSON.stringify(seam).slice(0, 110));
+  const face = app.matchFaceSeam();
+  c.check('the face seam answers that it did not run, and shows no score',
+    face.available === false && face.score === null && /not wired in this build/.test(face.reason),
+    JSON.stringify(face).slice(0, 110));
+
+  const w = boot();
+  w.state.view = 'app'; w.state.role = 'provider';
+  w.openVerificationWizard();
+  const steps = [];
+  for (let i = 0; i < 4; i++) { steps.push(String(w.verificationSheet())); w.verificationGo(i + 1); }
+  c.check('every step paints, and each names the step it is on',
+    steps.length === 4 && steps.every((m, i) => /sheet-title/.test(m) && m.indexOf('Step ' + (i + 1) + ' of 4') > -1),
+    steps.map((m, i) => i + 1 + ':' + m.length).join(' '));
+  c.check('the ID step prints the seam sentence and no invented identity field',
+    /nothing is extracted from the picture/.test(steps[0]) && !/[A-Z]{2}-\d{2,}/.test(steps[0])
+      && !/\b\d{9,}\b/.test(steps[0]),
+    steps[0].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 110));
+  c.check('the face step says the check was not performed rather than passing it',
+    /Face comparison is not wired/.test(steps[2]) && !/match/i.test(steps[2].replace(/not wired|Face comparison/g, '')),
+    steps[2].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 110));
+
+  /* Attaching a document has to yield a name and nothing else — the same rule the concierge follows,
+     and the one an OCR step would break if it were real. */
+  const att = boot();
+  att.state.view = 'app'; att.state.role = 'provider';
+  att.openVerificationWizard();
+  att.verificationAttach('idFile', { files: [{ name: 'philsys-front.jpg', size: 51903 }] });
+  const held = att.state.verification.idFile;
+  const dump = JSON.stringify(att.state.verification);
+  c.check('an attached document is held as a name, with no bytes in the draft',
+    held === 'philsys-front.jpg' && !/data:|blob:/.test(dump) && !/51903/.test(dump),
+    'held ' + String(held) + ' · draft ' + dump.slice(0, 90));
+  c.check('the review step states what the device holds and what it never sent',
+    /not performed by this build/.test(steps[3]) && /Saved on this device only/.test(steps[3])
+      && !/submitted|received by our team/i.test(steps[3]),
+    steps[3].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 120));
+  c.check('the last control keeps the details rather than announcing a submission',
+    /saveVerificationDraft\(\)/.test(steps[3]) && !/onclick="submitVerification/.test(steps[3]),
+    'foot of the review step: ' + steps[3].slice(steps[3].indexOf('sheet-foot')).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 90));
+  const entry = (() => { const e = boot(); e.state.view = 'app'; e.state.role = 'provider';
+    return String(e.providerSectionBody('credentials')); })();
+  c.check('the stepper is reached from the provider\'s own credentials section',
+    /openVerificationWizard\(\)/.test(entry) && typeof app.openVerificationWizard === 'function',
+    entry.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 90));
+  return c;
+});
+
+/* ══ the sign-up guide: a stepper whose answers go into the form, and a voice seam ══
+   Two promises to hold: the guide must fill the SAME fields the register path validates (not a parallel
+   copy of the person), and dictation must say what it is and what it is not — the browser's own engine
+   where one exists, and an honest refusal where it does not. */
+suite('signup-guide', async () => {
+  const c = makeChecker();
+  const seam = boot().speechSeam();
+  c.check('the dictation seam names the engine it found, or says none is exposed',
+    typeof seam.available === 'boolean' && seam.reason.length > 40
+      && (seam.available ? /browser's own speech engine/.test(seam.reason) : /no speech recognition engine/.test(seam.reason)),
+    JSON.stringify(seam).slice(0, 120));
+
+  const g = boot();
+  g.state.view = 'login'; g.state.role = 'resident'; g.state.authMode = 'register';
+  g.render();
+  g.openSignupGuide();
+  /* One question at a time is a fact about the body, not the rail: the rail names every step by design,
+     so "the next question's words appear" is true of a correct sheet. The discriminator is that the
+     card the person answers holds one title, and it is this step's. */
+  const first = String(g.signupGuideSheet());
+  const cardTitles = (first.match(/class="card-title">([^<]*)</g) || []).map(s => s.replace(/class="card-title">|</g, ''));
+  c.check('the guide asks one question at a time and counts the steps it has',
+    /Step 1 of 2/.test(first) && cardTitles.length === 1
+      && cardTitles[0] === 'What should we call you?' && /wiz-step/.test(first),
+    'titles: ' + JSON.stringify(cardTitles) + ' · rail steps ' + (first.match(/class="wiz-step/g) || []).length);
+  /* The whole point of the guide is that it is not a second place the answer can live. */
+  g.guideWrite(0, 'Nueva Residente');
+  g.guideGo(1);
+  g.guideWrite(1, 'Buayan');
+  const nameEl = g._document.getElementById('reg-name');
+  const brgyEl = g._document.getElementById('reg-brgy');
+  c.check('every guide answer lands in the field the register form itself reads',
+    nameEl.value === 'Nueva Residente' && brgyEl.value === 'Buayan',
+    'reg-name "' + nameEl.value + '" · reg-brgy "' + brgyEl.value + '"');
+  c.check('the guide is a guide: it fills the form and creates no account of its own',
+    g.state.view === 'login' && g.state.sheet === 'signupGuide'
+      && (g.state.termsAcceptances || []).length === 0,
+    'view ' + g.state.view + ' · sheet ' + String(g.state.sheet) + ' · acceptances ' + (g.state.termsAcceptances || []).length);
+  const last = String(g.signupGuideSheet());
+  c.check('the sheet states plainly what dictation is, and never calls the guide a model',
+    /speech engine|no speech recognition engine/.test(last) && !/AI-powered|powered by AI|our AI/i.test(last),
+    last.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(-110));
+  c.check('the dictation control is named and reports whether it is listening',
+    /aria-pressed="false"/.test(first) && /Dictate instead/.test(first),
+    first.slice(first.indexOf('guideDictate'), first.indexOf('guideDictate') + 120).replace(/\s+/g, ' '));
+  const listening = boot();
+  listening.state.view = 'login'; listening.state.role = 'resident'; listening.state.authMode = 'register';
+  listening.render();
+  listening.openSignupGuide();
+  listening.guideDictate(0);
+  c.check('with no engine on the platform, pressing dictate says so and leaves the field alone',
+    /no speech recognition engine/i.test(String(listening.state.signupGuideNote))
+      && listening._document.getElementById('reg-name').value === ''
+      && listening.state.signupGuideListening !== true,
+    'note: ' + String(listening.state.signupGuideNote).slice(0, 70));
+  const loginMode = (() => { const b = boot(); b.state.view = 'login'; b.state.role = 'resident'; b.state.authMode = 'login'; return b.loginHTML(); })();
+  const registerMode = (() => { const b = boot(); b.state.view = 'login'; b.state.role = 'resident'; b.state.authMode = 'register'; return b.loginHTML(); })();
+  c.check('the guide is offered where an account is being created, and not where one is being used',
+    /id="signup-guide-open"/.test(registerMode) && !/id="signup-guide-open"/.test(loginMode),
+    'in register: ' + /id="signup-guide-open"/.test(registerMode) + ' · in sign-in: ' + /id="signup-guide-open"/.test(loginMode));
+  return c;
+});
+
 (async () => {
   let total = 0, failed = 0;
   for (const { name, fn } of suites) {

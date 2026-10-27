@@ -5633,6 +5633,8 @@ let state = {
   /* Which document version this device agreed to, in which role, when. A local record of a real
      action on this device — not a server-side audit trail, and the screen that shows it says so. */
   rateWizard:null,
+  verification:null,
+  signupGuide:null,
   termsAcceptances:[],
   /* Which of the legal documents THIS DEVICE has scrolled to the end of. Session-only on purpose:
      the acceptance that gets stored is the record, this is the gate that leads to it, and pretending
@@ -6410,6 +6412,173 @@ function rateWizardSheet(){
     </div>`;
 }
 
+/* ── the professional-verification stepper ────────────────────────────────────────────────────
+   The brief asks for verification "with the use of Enhance And Improve Stepper method, with
+   procedural model": certificates, valid government IDs, OCR on the ID, facial recognition, and the
+   identity extracted from them. Two of those four are things this build cannot do, and the ruling for
+   Phase D was to build the procedure and name the seam rather than skip the step or fake its result.
+
+   What is real here:
+     · the sequence, the data it asks for, and the draft it builds — all held on state and shown back;
+     · the document NAMES the person attaches, which is the only thing the file input yields (the
+       prototype keeps no picture bytes, the same rule the concierge follows);
+     · a review step that says what was entered and what was not.
+   What is a seam, and says so on screen:
+     · OCR on the ID — no field is extracted, because a form that printed a name it "read" off a photo
+       would be inventing that name;
+     · face comparison — no score is shown, because there is nothing to compare against.
+   What is deliberately NOT claimed: there is no reviewer on this device to receive an application, so
+   the last step saves the draft and says it was saved locally, rather than announcing a submission
+   that no record would back. */
+const VERIFY_STEPS = ['Government ID', 'Proof of qualification', 'Face check', 'Review'];
+
+function readIdDocumentSeam(fileName){
+  return { available: false, fields: null,
+    reason: 'Optical character reading is not wired in this build. '
+      + (fileName ? 'The attached file is recorded by name (' + fileName + '); ' : 'No file is attached yet; ')
+      + 'nothing is extracted from the picture, and no name, date or number below was read from it.' };
+}
+function matchFaceSeam(){
+  return { available: false, score: null,
+    reason: 'Face comparison is not wired in this build. There is no stored reference image to compare '
+      + 'against and no score to show, so this step confirms nothing about who is holding the phone.' };
+}
+
+function openVerificationWizard(){
+  if (!state.verification) {
+    const pp = state.providerProfileData;
+    state.verification = { step: 0, idType: 'National ID', idFile: null, qualType: '', qualFile: null,
+      name: pp.name || '', barangay: pp.barangay || '' };
+  }
+  openSheet('verification');
+}
+function verificationField(key, value){
+  const v = state.verification;
+  if (!v) return;
+  v[key] = value;
+  /* Field writes repaint in place; the sheet is already mounted and a re-render of the whole screen
+     would drop the caret the person is typing with. */
+  const foot = document.getElementById('verify-state');
+  if (foot) foot.textContent = verificationSummary();
+}
+function verificationAttach(key, el){
+  const v = state.verification;
+  const file = el && el.files && el.files[0];
+  if (!v) return;
+  /* Name only. The concierge follows the same rule: this prototype keeps no picture bytes, so there is
+     nothing for an OCR step to read even if it were wired. */
+  v[key] = file ? file.name : null;
+  render();
+}
+function verificationGo(step){
+  const v = state.verification;
+  if (!v) return;
+  v.step = Math.max(0, Math.min(VERIFY_STEPS.length - 1, step));
+  render();
+}
+function verificationSummary(){
+  const v = state.verification;
+  if (!v) return '';
+  const need = [];
+  if (!v.idFile) need.push('the government ID');
+  if (!v.qualFile) need.push('the qualification document');
+  return need.length ? 'Still needed: ' + need.join(' and ') + '.' : 'Both documents named. Nothing is read from them.';
+}
+function saveVerificationDraft(){
+  const v = state.verification;
+  if (!v) return;
+  persist();
+  state.sheet = null;
+  render();
+  showToast('Verification details kept on this device. Nothing was sent to a reviewer, because this '
+    + 'build has no reviewer on it.');
+}
+
+function verificationSheet(){
+  const v = state.verification || { step: 0, idType: 'National ID', idFile: null, qualType: '', qualFile: null };
+  const step = v.step;
+  const ocr = readIdDocumentSeam(v.idFile);
+  const face = matchFaceSeam();
+  const rail = `<div class="wiz-rail" role="list">
+    ${VERIFY_STEPS.map((label, i) => `<span class="wiz-step ${i === step ? 'on' : ''} ${i < step ? 'done' : ''}" role="listitem">
+      <b>${i + 1}</b><span>${esc(label)}</span></span>`).join('')}
+  </div>`;
+  const seam = (why) => `<div style="font-size:var(--t-caption); color:var(--mist); margin-top:var(--s-3); line-height:1.5;">
+    ${ic('alert-triangle', 12)} ${esc(why)}</div>`;
+  const picker = (key, label) => `<label class="form-label">${esc(label)}
+    <input type="file" accept="image/*,application/pdf" class="form-input" style="margin-top:6px; min-height:var(--tap);"
+      onchange="verificationAttach('${key}', this)">
+  </label>
+  <div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:4px;">
+    ${v[key] ? ic('check', 12) + ' Held as a name: <b>' + esc(v[key]) + '</b>' : ic('file-text', 12) + ' Nothing attached yet.'}
+  </div>`;
+  const body = step === 0 ? `
+    <div class="card" style="border-radius:var(--r-card); padding:var(--s-4);">
+      <b class="card-title">A valid government ID</b>
+      <label class="form-label" style="margin-top:10px;">Which ID
+        <select class="form-input" style="margin-top:6px;" onchange="verificationField('idType', this.value)">
+          ${['National ID', "Driver's License", "PhilSys ID", "Passport", "UMID", "Voter's ID"]
+            .map(o => `<option ${v.idType === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}
+        </select>
+      </label>
+      ${picker('idFile', 'Attach a picture or PDF of it')}
+      ${seam(ocr.reason)}
+    </div>` : step === 1 ? `
+    <div class="card" style="border-radius:var(--r-card); padding:var(--s-4);">
+      <b class="card-title">Proof of the trade you claim</b>
+      <div style="font-size:var(--t-caption); color:var(--ink-soft); margin:4px 0 10px;">
+        A certificate, an endorsement, or a work history. This is what the review looks at beside your
+        profile.
+      </div>
+      <label class="form-label">What document it is
+        <input class="form-input" style="margin-top:6px;" placeholder="e.g. TESDA NC II"
+          value="${esc(v.qualType)}" oninput="verificationField('qualType', this.value)">
+      </label>
+      ${picker('qualFile', 'Attach a picture or PDF of it')}
+    </div>` : step === 2 ? `
+    <div class="card" style="border-radius:var(--r-card); padding:var(--s-4);">
+      <b class="card-title">Face check</b>
+      <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.6; margin-top:6px;">
+        ${esc(face.reason)}
+      </div>
+      <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px;">
+        A launched service would compare this against the photo on the ID above. With no reference image
+        stored, any score here would be a number with nothing behind it.
+      </div>
+    </div>` : `
+    <div class="card" style="border-radius:var(--r-card); padding:var(--s-4);">
+      <b class="card-title">What this device holds</b>
+      <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.8; margin-top:6px;">
+        ID type: <b>${esc(v.idType)}</b><br>
+        ID file: <b>${v.idFile ? esc(v.idFile) : 'none attached'}</b><br>
+        Qualification: <b>${v.qualType ? esc(v.qualType) : 'not named'}</b><br>
+        Qualification file: <b>${v.qualFile ? esc(v.qualFile) : 'none attached'}</b><br>
+        Face check: <b>not performed by this build</b>
+      </div>
+      <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">
+        Saved on this device only. No bytes of either document leave the phone, nothing was read out of
+        them, and no reviewer receives this in the prototype.
+      </div>
+    </div>`;
+  return `
+    <div class="sheet-head">
+      <div style="min-width:0;">
+        <h2 class="sheet-title">Verify your account</h2>
+        <div class="sheet-sub">Step ${step + 1} of ${VERIFY_STEPS.length} · ${esc(VERIFY_STEPS[step])}</div>
+      </div>
+      <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close">${ic('x', 15)}</button>
+    </div>
+    <div class="sheet-body">${rail}${body}</div>
+    <div class="sheet-foot">
+      <div id="verify-state" aria-live="polite" style="font-size:var(--t-caption); color:var(--mist); margin-bottom:8px;">${esc(verificationSummary())}</div>
+      <button type="button" class="btn sm secondary" style="flex:1;" ${step === 0 ? 'disabled aria-disabled="true"' : ''}
+        onclick="verificationGo(${step - 1})">Back</button>
+      ${step === VERIFY_STEPS.length - 1
+        ? `<button type="button" class="btn" style="flex:1;" onclick="saveVerificationDraft()">Keep these details</button>`
+        : `<button type="button" class="btn" style="flex:1;" onclick="verificationGo(${step + 1})">Next</button>`}
+    </div>`;
+}
+
 function providerSectionBody(section){
   const pp = state.providerProfileData;
   return section === 'services' ? listingsPanel(CURRENT_PROVIDER_ID) : section === 'pricing' ? `<div class="card"><b class="card-title">What should I charge?</b>
@@ -6417,7 +6586,13 @@ function providerSectionBody(section){
         Counted from the rates providers in your trade list on this device — not from the web.
       </div>
       <button class="btn sm secondary" onclick="openRateWizard()">Set a rate in 3 steps</button>
-      <hr style="margin:14px 0; border:0; border-top:1px solid var(--line);"><div class="card"><b>Pricing &amp; Rates</b><div class="card-body">Starting from <b>${pesoShort(cheapestListing(providerOf({providerId:CURRENT_PROVIDER_ID})))}</b> across ${listingsOf(CURRENT_PROVIDER_ID).length} listed services.<br>Every price is what you charge; the platform fee comes out of it.</div><button class="btn sm" style="margin-top:8px;" onclick="providerProfileAction('edit')">Edit Pricing</button></div>` : section === 'area' ? `<div class="card"><b>Service Area</b><div class="card-body">Base barangay: <b>${esc(pp.barangay)}</b><br>Service radius: <b>${esc(pp.serviceRadius)}</b>${coverageLines(providerOf({providerId:CURRENT_PROVIDER_ID}))}</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('edit')">Change Radius</button></div>` : section === 'hours' ? `<div class="card"><b>Working Hours</b><div class="card-body">Monday - Saturday: <b>${esc(pp.workingHours)}</b><br><span style="color:var(--mist);">No day-by-day schedule is recorded, so nothing here claims a day you have not set.</span></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('edit')">Edit Hours</button></div>` : section === 'dispatch' ? `<div class="card"><b>Emergency Dispatch</b><div class="card-body">Status: <b style="color:var(--success-ink);">${state.providerEmergencyDispatch ? 'Enabled' : 'Disabled'}</b><br>Accept urgent requests outside the normal booking flow when available.<br>Urgent requests reach you inside the barangays recorded under Service area. The radius you typed — <b>${esc(pp.serviceRadius)}</b> — is your own description of that area; the list above is what discovery filters on. There is no separate emergency radius or emergency window in this prototype, because nothing records one.</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('dispatch')">${state.providerEmergencyDispatch ? 'Disable' : 'Enable'} Dispatch</button></div>` : section === 'credentials' ? `<div class="card"><b>Credentials &amp; verification</b>
+      <hr style="margin:14px 0; border:0; border-top:1px solid var(--line);"><div class="card"><b>Pricing &amp; Rates</b><div class="card-body">Starting from <b>${pesoShort(cheapestListing(providerOf({providerId:CURRENT_PROVIDER_ID})))}</b> across ${listingsOf(CURRENT_PROVIDER_ID).length} listed services.<br>Every price is what you charge; the platform fee comes out of it.</div><button class="btn sm" style="margin-top:8px;" onclick="providerProfileAction('edit')">Edit Pricing</button></div>` : section === 'area' ? `<div class="card"><b>Service Area</b><div class="card-body">Base barangay: <b>${esc(pp.barangay)}</b><br>Service radius: <b>${esc(pp.serviceRadius)}</b>${coverageLines(providerOf({providerId:CURRENT_PROVIDER_ID}))}</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('edit')">Change Radius</button></div>` : section === 'hours' ? `<div class="card"><b>Working Hours</b><div class="card-body">Monday - Saturday: <b>${esc(pp.workingHours)}</b><br><span style="color:var(--mist);">No day-by-day schedule is recorded, so nothing here claims a day you have not set.</span></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('edit')">Edit Hours</button></div>` : section === 'dispatch' ? `<div class="card"><b>Emergency Dispatch</b><div class="card-body">Status: <b style="color:var(--success-ink);">${state.providerEmergencyDispatch ? 'Enabled' : 'Disabled'}</b><br>Accept urgent requests outside the normal booking flow when available.<br>Urgent requests reach you inside the barangays recorded under Service area. The radius you typed — <b>${esc(pp.serviceRadius)}</b> — is your own description of that area; the list above is what discovery filters on. There is no separate emergency radius or emergency window in this prototype, because nothing records one.</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('dispatch')">${state.providerEmergencyDispatch ? 'Disable' : 'Enable'} Dispatch</button></div>` : section === 'credentials' ? `<div class="card"><b class="card-title">Verification</b>
+      <div style="font-size:var(--t-caption); color:var(--ink-soft); margin:4px 0 8px; line-height:1.55;">
+        The ID and the qualification document are what a reviewer would look at. This build walks you
+        through preparing them; it does not read them.
+      </div>
+      <button class="btn sm secondary" onclick="openVerificationWizard()">Verify in 4 steps</button>
+      <hr style="margin:14px 0; border:0; border-top:1px solid var(--line);"><div class="card"><b>Credentials &amp; verification</b>
       <div class="card-body" style="font-size:var(--t-caption); line-height:1.7;">
         Verification: <b>${esc(providerVerificationLine(CURRENT_PROVIDER_ID))}</b>
       </div>
@@ -6596,7 +6771,7 @@ function providerFiltersSheet(){
     </div>`;
 }
 
-const SHEET_LABELS = { providerFilters:'Filter providers', bookingRequest:'Book an appointment', reschedule:'Propose a new time', legalDoc:'Legal document', rateWizard:'Set a service rate', raiseCase:'Raise a case', profileSection:'Profile section', makeOffer:'Make an offer', finaliseProduce:'Record the actual quantity' };
+const SHEET_LABELS = { providerFilters:'Filter providers', bookingRequest:'Book an appointment', reschedule:'Propose a new time', legalDoc:'Legal document', rateWizard:'Set a service rate', verification:'Verify your account', signupGuide:'Guide me through signing up', raiseCase:'Raise a case', profileSection:'Profile section', makeOffer:'Make an offer', finaliseProduce:'Record the actual quantity' };
 
 const REQUEST_TIMES = ['8:00 AM','10:00 AM','1:00 PM','3:00 PM','5:00 PM'];
 
@@ -8025,6 +8200,8 @@ function sheetHTML(){
   if(state.sheet === 'legalDoc') return legalDocSheet();
   if(state.sheet === 'profileSection') return profileSectionSheet();
   if(state.sheet === 'rateWizard') return rateWizardSheet();
+  if(state.sheet === 'verification') return verificationSheet();
+  if(state.sheet === 'signupGuide') return signupGuideSheet();
   return '';
 }
 
@@ -8674,6 +8851,151 @@ function legalLinks(){
   </div>`;
 }
 
+/* ── the sign-up guide: a stepped form with dictation where the platform offers it ─────────────
+   The brief asks the AI to "become a Wizard guide to help the User" at sign-up, by "A Voice Command,
+   Manual Typing". Three things are true of what is built here, and the screen says each of them:
+
+     · It is a guide, not a second account system. Every answer is written into the SAME inputs the
+       register card already validates and submits, so there is one path to an account and the guide
+       cannot create a person the form does not know about.
+     · Dictation is the browser's own speech engine, reached through a named seam. Where no engine is
+       exposed the step says so and leaves the keyboard; nothing is claimed and nothing is greyed into
+       a dead control.
+     · Nothing here is a model. The sentences are written by hand and the only data the guide handles
+       is what the person typed or said, which stays on the device like the rest of this prototype. */
+
+/* The seam. It reports what the platform exposes rather than pretending a capability away: a page that
+   hides the button when the engine is missing leaves a reviewer unable to tell "not on this browser"
+   from "never built". */
+function speechSeam(){
+  const Ctor = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
+  if (!Ctor) {
+    return { available: false, engine: null,
+      reason: 'This browser exposes no speech recognition engine, so dictation is unavailable here. '
+        + 'Type the answer instead — the guide accepts either.' };
+  }
+  return { available: true, engine: (window.SpeechRecognition ? 'SpeechRecognition' : 'webkitSpeechRecognition'),
+    reason: 'Dictation uses the browser\'s own speech engine. Nothing is recorded and nothing is sent to Sukinnect.' };
+}
+
+function openSignupGuide(){
+  if (!state.signupGuide) state.signupGuide = { step: 0 };
+  openSheet('signupGuide');
+}
+/* Two steps, because two is what the register form asks beyond an email and a password. A third would
+   have had to invent a field the form does not have, and a guide that fills a field nobody reads is the
+   same defect as a form whose answers are thrown away. */
+const SIGNUP_GUIDE_STEPS = [
+  { field: 'name', input: 'reg-name', label: 'What should we call you?',
+    why: 'The name on your bookings and the greeting on Home come from this one answer.' },
+  { field: 'brgy', input: 'reg-brgy', label: 'Which barangay are you in?',
+    why: 'This decides who is nearby. Providers outside your area will not be offered to you.' }
+];
+
+function guideWrite(step, value){
+  const s = SIGNUP_GUIDE_STEPS[step];
+  if (!s) return;
+  /* Written through the element the form itself reads, so the guide cannot hold an answer the register
+     path never sees. authInput() is the same handler typing in the field calls. */
+  const el = document.getElementById(s.input);
+  if (!el) { state.signupGuideError = 'The form field for this answer is not on the screen right now.'; render(); return; }
+  el.value = value;
+  if (typeof authInput === 'function') authInput(s.field, el);
+  delete state.signupGuideError;
+  render();
+}
+function guideDictate(step){
+  const seam = speechSeam();
+  state.signupGuideListening = false;
+  if (!seam.available) {
+    state.signupGuideNote = seam.reason;
+    render();
+    return;
+  }
+  const Ctor = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const rec = new Ctor();
+  const s = SIGNUP_GUIDE_STEPS[step];
+  rec.lang = 'en-PH';
+  rec.interimResults = false;
+  rec.onresult = (e) => {
+    const said = e && e.results && e.results[0] ? String(e.results[0][0].transcript || '').trim() : '';
+    if (said) guideWrite(step, said);
+    state.signupGuideListening = false;
+    state.signupGuideNote = said ? 'Heard: ' + said : 'Nothing was heard. Type it instead.';
+    render();
+  };
+  rec.onerror = () => {
+    state.signupGuideListening = false;
+    state.signupGuideNote = 'The speech engine reported an error, so nothing was filled in. Type the answer instead.';
+    render();
+  };
+  rec.onend = () => { state.signupGuideListening = false; render(); };
+  state.signupGuideListening = true;
+  state.signupGuideNote = 'Listening for your ' + s.field + ' answer. Say it, then stop.';
+  render();
+  try { rec.start(); }
+  catch (err) {
+    state.signupGuideListening = false;
+    state.signupGuideNote = 'Dictation could not start on this device. Type the answer instead.';
+    render();
+  }
+}
+function guideGo(step){
+  const g = state.signupGuide;
+  if (!g) return;
+  g.step = Math.max(0, Math.min(SIGNUP_GUIDE_STEPS.length - 1, step));
+  delete state.signupGuideNote;
+  render();
+}
+function signupGuideSheet(){
+  const g = state.signupGuide || { step: 0 };
+  const step = g.step;
+  const s = SIGNUP_GUIDE_STEPS[step];
+  const seam = speechSeam();
+  const current = (() => { const el = document.getElementById(s.input); return el ? String(el.value || '') : ''; })();
+  const rail = `<div class="wiz-rail" role="list">
+    ${SIGNUP_GUIDE_STEPS.map((x, i) => `<span class="wiz-step ${i === step ? 'on' : ''} ${i < step ? 'done' : ''}" role="listitem">
+      <b>${i + 1}</b><span>${esc(x.label.split(' ').slice(0, 3).join(' '))}</span></span>`).join('')}
+  </div>`;
+  const note = state.signupGuideNote
+    ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:var(--s-3); line-height:1.5;">${esc(state.signupGuideNote)}</div>` : '';
+  const err = state.signupGuideError
+    ? `<div class="inline-error" role="alert" style="margin-top:10px;">${esc(state.signupGuideError)}</div>` : '';
+  return `
+    <div class="sheet-head">
+      <div style="min-width:0;">
+        <h2 class="sheet-title">Guide me through signing up</h2>
+        <div class="sheet-sub">Step ${step + 1} of ${SIGNUP_GUIDE_STEPS.length} · type it or say it</div>
+      </div>
+      <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close">${ic('x', 15)}</button>
+    </div>
+    <div class="sheet-body">
+      ${rail}
+      <div class="card" style="border-radius:var(--r-card); padding:var(--s-4);">
+        <b class="card-title">${esc(s.label)}</b>
+        <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.55; margin:4px 0 10px;">${esc(s.why)}</div>
+        <label class="form-label">Your answer
+          <input class="form-input" style="margin-top:6px;" value="${esc(current)}"
+            aria-label="Your answer to: ${esc(s.label)}"
+            oninput="guideWrite(${step}, this.value)">
+        </label>
+        <button type="button" class="btn sm secondary" style="margin-top:8px;" aria-pressed="${state.signupGuideListening ? 'true' : 'false'}"
+          onclick="guideDictate(${step})">${state.signupGuideListening ? 'Listening…' : 'Dictate instead'}</button>
+        <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">
+          ${ic('alert-triangle', 12)} ${esc(seam.reason)}
+        </div>
+        ${note}${err}
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <button type="button" class="btn sm secondary" style="flex:1;" ${step === 0 ? 'disabled aria-disabled="true"' : ''}
+        onclick="guideGo(${step - 1})">Back</button>
+      ${step === SIGNUP_GUIDE_STEPS.length - 1
+        ? `<button type="button" class="btn" style="flex:1;" onclick="closeSheet()">Go to the form</button>`
+        : `<button type="button" class="btn" style="flex:1;" onclick="guideGo(${step + 1})">Next</button>`}
+    </div>`;
+}
+
 function loginHTML(){
   /* The documents the gate reads, resolved once for the sentence, the buttons and the lock line. The
      sentence splits them by how they are consented to, because "accept" a privacy notice is a claim the
@@ -8773,6 +9095,7 @@ function loginHTML(){
           <b>erning@demo.ph</b> for the Fruit Harvest &amp; Buy pilot. Same app, different work.</div>` : ''}
         ${isRegister ? '' : `<button type="button" class="auth-forgot" onclick="showToast('Password reset is not part of this prototype.')">Forgot password?</button>`}
 
+        ${isRegister ? `<button type="button" class="auth-forgot" id="signup-guide-open" onclick="openSignupGuide()">Guide me through signing up</button>` : ''}
         ${legalLinks()}
 
         <div class="auth-field" style="margin-bottom:0;">
