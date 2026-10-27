@@ -1179,9 +1179,9 @@ const SCREENS = [
   ['provider-payout-modal', `state.view='app'; state.role='provider'; state.tab='profile'; render();
                           openProfileSection('provider','payout','Payout & Earnings','Where the money goes');
                           clickPainted(/ProfileAction\\(.payout.\\)/, 'the manage-payout button');`],
-  ['admin-security-modal', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+  ['admin-security-modal', `state.view='app'; state.role='admin'; state.appShell=false; state.tab='profile'; render();
                           openProfileSection('admin','security','Security & Sign-in','What this device keeps');
-                          clickPainted(/AccountAction\\(.pin.\\)/, 'the security-PIN button');`],
+                          clickPainted(/AccountAction\\(.pin.\\)/, 'the security-PIN button'); requirePaintedDialog('the Security PIN dialog');`],
   /* Four more dialogs on the same shelf, found by measuring rather than by noticing. `node
      tools/audit-camera-dialog-coverage.cjs` asks which profile controls the app paints that raise a
      layer, and which of those names any row of this table clicks: the difference is a destination the
@@ -1191,15 +1191,15 @@ const SCREENS = [
      contrast and dialog semantics). This is the fourth time the class was found by a person happening
      to look — `admin-account`, the audit log, the verification review, the logout confirm — and the
      first time an instrument asked the question on its own. */
-  ['admin-password-modal', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+  ['admin-password-modal', `state.view='app'; state.role='admin'; state.appShell=false; state.tab='profile'; render();
                           openProfileSection('admin','security','Security & Sign-in','What this device keeps');
-                          clickPainted(/adminAccountAction\\('password'\\)/, 'the Password button');`],
-  ['admin-twofa-modal', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+                          clickPainted(/adminAccountAction\\('password'\\)/, 'the Password button'); requirePaintedDialog('the Password dialog');`],
+  ['admin-twofa-modal', `state.view='app'; state.role='admin'; state.appShell=false; state.tab='profile'; render();
                           openProfileSection('admin','security','Security & Sign-in','What this device keeps');
-                          clickPainted(/adminAccountAction\\('twofa'\\)/, 'the Two-factor button');`],
-  ['admin-sessions-modal', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+                          clickPainted(/adminAccountAction\\('twofa'\\)/, 'the Two-factor button'); requirePaintedDialog('the Two-factor dialog');`],
+  ['admin-sessions-modal', `state.view='app'; state.role='admin'; state.appShell=false; state.tab='profile'; render();
                           openProfileSection('admin','security','Security & Sign-in','What this device keeps');
-                          clickPainted(/adminAccountAction\\('sessions'\\)/, 'the View Sessions button');`],
+                          clickPainted(/adminAccountAction\\('sessions'\\)/, 'the View Sessions button'); requirePaintedDialog('the View Sessions dialog');`],
   ['provider-dispatch-modal', `state.view='app'; state.role='provider'; state.tab='profile'; render();
                           openProfileSection('provider','dispatch','Emergency Dispatch','Urgent requests');
                           clickPainted(/providerProfileAction\\('dispatch'\\)/, 'the Enable Dispatch button');`],
@@ -1209,9 +1209,9 @@ const SCREENS = [
      hub markup was read too, these three surfaced on the same run that added the four above. */
   ['provider-logout-modal', `state.view='app'; state.role='provider'; state.tab='profile'; render();
                           clickPainted(/providerProfileAction\\('logout'\\)/, 'the Log Out button under the account rail');`],
-  ['admin-logout-modal', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+  ['admin-logout-modal', `state.view='app'; state.role='admin'; state.appShell=false; state.tab='profile'; render();
                           clickPainted(/adminAccountAction\\('logout'\\)/, 'the Log Out button under the account rail');`],
-  ['admin-lock-modal', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+  ['admin-lock-modal', `state.view='app'; state.role='admin'; state.appShell=false; state.tab='profile'; render();
                           clickPainted(/adminAccountAction\\('lock'\\)/, 'the Lock Admin Session button');`],
   /* The six forms where a person types the app's most sensitive facts — a name, a phone, a home
      address, a household item, a service price, a portfolio entry. Three dialog screens already
@@ -1239,7 +1239,7 @@ const SCREENS = [
   ['provider-portfolio-form', `state.view='app'; state.role='provider'; state.tab='profile'; render();
                           openProfileSection('provider','portfolio','Work Portfolio','Service photos and examples');
                           clickPainted(/providerProfileAction\\('portfolio_add'\\)/, 'the add-work button');`],
-  ['admin-edit-form', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+  ['admin-edit-form', `state.view='app'; state.role='admin'; state.appShell=false; state.tab='profile'; render();
                           clickPainted(/adminAccountAction\\('edit'\\)/, 'the Edit Profile button');`],
   /* The dialog a save shows when nothing on the form was edited (§68). Reached the way a person
      reaches it — open the form, press Save — because a screen that has never been painted has never
@@ -1250,7 +1250,7 @@ const SCREENS = [
   ['provider-save-unchanged', `state.view='app'; state.role='provider'; state.tab='profile'; render();
                           clickPainted(/providerProfileAction\\('edit'\\)/, 'the Edit Professional Profile button');
                           clickPainted(/saveProviderProfessionalProfile\(\)/, 'the Save Changes button');`],
-  ['admin-save-unchanged', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+  ['admin-save-unchanged', `state.view='app'; state.role='admin'; state.appShell=false; state.tab='profile'; render();
                           clickPainted(/adminAccountAction\\('edit'\\)/, 'the Edit Profile button');
                           clickPainted(/saveAdminProfile\(\)/, 'the Save Changes button');`],
   ['admin-dash',       `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='overview'; render();`],
@@ -1310,7 +1310,7 @@ const SCREENS = [
      tab='profile' dispatch the other two roles use. It sat out every camera run since the
      table was written — 46 screens never included it — and it is the screen that holds the
      admin's editable name, phone and office. */
-  ['admin-account',    `state.view='app'; state.role='admin'; state.tab='profile'; render();`],
+  ['admin-account',    `state.view='app'; state.role='admin'; state.appShell=false; state.tab='profile'; render();`],
   /* Reached by the "Insights" button in the Providers top bar — a whole destination behind a
      real control, and the word 'insights' appeared nowhere in this file until this entry was
      added, so it had never been

@@ -9676,3 +9676,30 @@ account screen's modal expression has to move to a layer the sheet path also ren
 buttons have to route to the screen that owns it. `modalAboveSheet()` then answers true *and* tells the
 truth, the tally clears without touching the predicate, and the four `admin-*-modal` rows can be
 wired to `requirePaintedDialog` — which is already in `tools/shot.cjs`, waiting for a fix to guard.
+
+**§158's diagnosis was wrong about the app, and right about the camera — and the correction matters more
+than the original claim.** The probe asked which surface the admin is on: `APP_SHELL` is **true**, and
+`#screen` holds the *admin-web-only refusal page* ("The admin console is a desktop surface…"). The
+ruling of 2026-10-27 that moved admin to the web replaced `adminTabHTML()` with `adminWebOnly()`, so the
+account hub that owns those four dialogs no longer exists inside the shell — and the four
+`admin-*-modal` rows, added by §97 while admin still lived in the app, were calling
+`openProfileSection('admin','security',…)` directly and forcing a sheet over a refusal page. **No thumb
+can reach that state.** There was never a dead control: the buttons work on the web surface, where the
+owner put them. What was broken was the walk, and the tally's `aria-modal="false"` was the symptom of
+measuring a fiction — the fourth form of the trap this file names, after the missing row, the setup that
+moves the model but not the field, and the probe that types into a detached node: **a row can be
+reachable only by the harness, and then a clean number about it is a clean number about nothing.**
+
+The fix is in `tools/shot.cjs`, not in the page: the nine admin profile rows now set
+`state.appShell=false` before opening a section, and the four dialog rows call
+`requirePaintedDialog` — the helper §158 left unused — so a row named after a dialog fails the walk by
+naming the dialog if it ever stops mounting. Measured after the change, the four shots are titled by
+their own dialogs ("Change security PIN", "Change password", "Two-factor authentication", "Sign out this
+device?") and every failure tally reads 0, with no console errors. The predicate question §158 left open
+is moot for these screens: `modalAboveSheet()` answered true *and* a dialog was mounted, on the surface
+where a person can actually tap the button.
+
+What remains genuinely open is narrower than §158 claimed and still worth doing: the app raises a modal
+three ways, and `topLayerEl()` resolves the third (the verification review's inline fixed overlay) only
+because `modalAboveSheet()` reads state. A predicate that asked the paint by class would have missed it.
+That is a design note about the layer machinery, not a defect report.
