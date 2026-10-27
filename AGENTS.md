@@ -3839,6 +3839,59 @@ read the state the app was actually in at paint time before touching either file
 disagreement's cause as a break (`falsify-bar-titles` break 4 removes the line from the camera and
 requires the root count to fall).
 
+NINETEEN TOP BARS ARE ONE COMPONENT NOW, AND THE COUNTS THAT SAY SO ARE RATCHETED. The owner's
+"not a real system, every screen is inconsistent" was converted into a metric per idea
+(`node tools/audit-design-consistency.cjs`: 13 metrics, each with a ceiling that can only go down, plus a
+`--bless` that rewrites them). `topbar_divs_handwritten` 19 → 0; `screenheader_calls` 13 → 32 — held to a
+FLOOR, not a ceiling, because every other metric counts ways-to-say-a-thing and this one counts the
+opposite, so ratcheting it upward would refuse the fix; `bar_title_class_rules`,
+`bar_titles_self_sized`, `bar_left_groups_handwritten`, `bar_action_styles_inline` all 0;
+`literal_paddings` 111 → 15 and `distinct_paddings` 41 → 7, where the 15 left are deliberate: 2px and 3px
+hairlines, two values above the scale's top, and the numbers inside `calc(18px + var(--sat))`;
+`inline_styles` 1035 → 1003. The three identity bars landed last so the `avatar`/`nav` options the
+component gained were never dead code, and the resident Home notification button was EXTRACTED from the
+original bar rather than retyped, because a hand-copy of an inline SVG is a new claim about pixels. Proof
+that a structural refactor moved nothing: the painted population read identically before and after — 83
+bars, `drill:20×48 root:24×35`, `drift=0`, `titleEqualsSub=0` — and the only number that moved was
+`classless`, 46 → 0.
+
+A RULE THAT CARRIES TWO IDEAS MAKES BOTH OF THEM MANDATORY, AND A PSEUDO-ELEMENT IS INVISIBLE TO A GREP
+FOR THE PROPERTY IT REPLACES. Three defects, one shape. The shared numeral rule aligned *and* tabulated
+every figure, which is right for a money column and wrong for a headline number in a tile — inheriting
+`text-align:right` is what pushed the admin's roster figures into the far corner of their own tiles; the
+rules are now two and the gate asserts the relation (anything right-aligned must also be tabulated), with
+a mutation break that leaves a figure aligned but un-tabulated, because that is the failure the split
+introduces. `.jr-time` was the leading slot of a job row holding three ideas — a booking time, the word
+"Open", and a bare count — and only the counts carried an inline colour, making the hue the sole carrier
+of a state the words beside them already state. And the card-title accent bar survived two passes that
+each reported the class closed, because they grepped for `border-left` while the bar was painted by
+`.card > b:first-child::before` on 63 cards, under a comment praising the consistency. When a rule says
+"no bar", ask what else can draw a line.
+
+A POSITIVE CONTROL THAT COUNTS MARKUP FAILS THE CORRECT REFACTOR — TWICE IN ONE SESSION, AND ONCE IN A
+GUARD BUILT TO CATCH THAT. One gate check required ten `<h1>` in the source; it saw eight, then five, as
+bars converged on the component, which is the change this file had been asking for. Another required the
+admin's provider-management back button to exist in its hand-written attribute form. And a refactor guard
+asserting "the multiset of every `id` and `onclick` string is unchanged" reported two ids lost on a
+*correct* conversion, because the component parameterises names: `id="back-home-btn"` becomes
+`backId:'back-home-btn'`. The repairs are the rule: count the abstraction's use sites, compare every
+spelling of a moved name, and state plainly that a painted population belongs to the instrument that
+renders it. `node tools/falsify-bar-titles.cjs` is 7 breaks, 7 caught; `node tools/falsify-figures.cjs`
+8 of 8; and the family's own re-point left a dangling constant that crashed it on load while the
+background wrapper reported `exit 0`, because the command ended in an `echo` — read the log, not the exit
+code.
+
+A BREAK CAN GO STALE BY BEING SUPERSEDED, AND IT PRINTS `0 not applied` WHILE IT DOES. `falsify-flex-crush`
+reported 4 of 5 — the quietest shape of a stale break, since "not applied" is the column everyone reads.
+Its notification-button break removed the narrow `flex-shrink:0` and the bar's wrap, which is what proved
+the guard when it was written; a later rule that keeps top-bar controls from wrapping also gives them
+`flex:0 0 auto`, whose middle value *is* `shrink:0`. Two declarations of one idea, and a break that
+removes only one proves nothing while still looking applied. It removes all three now and reports 3
+crushed circles where it used to read 0 — the first time that break has measured the rule it names. The
+same session found the mirror case in the application: an approval to delete the card `:hover` lift,
+whose stated reason was that a phone has no hover, when a `@media (hover:none)` block already neutralises
+it there. Re-asked rather than executed: a wrong *reason* for an approval is not permission to spend it.
+
 ---
 
 # 32. GRADIENT USAGE

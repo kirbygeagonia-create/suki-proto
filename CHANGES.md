@@ -8954,3 +8954,111 @@ Open in this section, not closed: 19 bars still hand-write their markup instead 
 `screenHeader()` (`topbar_divs_handwritten` = 19 against 13 calls), six of them hand-type their own left
 group instead of `.hb`, five copy the same translucent action style inline and a sixth uses a different
 one, and `.jr-time` is still reused as the admin's count badge.
+
+## 149. The bar stops being written nineteen ways, a headline figure stops inheriting a column's alignment, and an accent bar turns out to be a pseudo-element
+
+§148 fixed the screen name. This section is everything that followed from the same question — *how many
+ways does this app say one thing?* — across six commits, with the count of ways going down each time.
+
+**A control that sits in the brand bar** (`d65332e`). Five top-bar actions typed the identical
+translucent style into their markup and a sixth typed a different one, a filled navy pill on the
+resident's hub, so the same "leave the app" action looked like two things depending on which screen
+painted it. `.btn.onbar` is the name. Six bars also hand-typed their title group as flex pixels (three
+at `gap:8px`, three at `10px`) instead of the `.hb` class that already owns that geometry. The patcher
+refuses a group string unless every occurrence sits within three lines after a top bar opens, because
+that flex pattern is common markup elsewhere in the file.
+
+**A rule that carries two ideas makes both of them mandatory** (`1a810d0`). The shared numeral rule
+aligned *and* tabulated every figure in the app. Right for a money column; wrong for `.stat .num`, a
+headline number in a tile that has nothing to line up with — inheriting `text-align:right` is what
+pushed the admin's roster figures into the far corner of their own tiles with a void between the figure
+and the label under it. Two rules now, and the gate asserts the relation between them: anything
+right-aligned must also be tabulated, because a column of proportional digits does not line up however
+it is aligned. `falsify-figures` grew by exactly that break, the subset one the split makes possible.
+`.jr-time` was holding three ideas in one slot — a booking time, the word "Open", and a bare count —
+and the counts were the only ones carrying an inline colour, which made the hue the sole carrier of a
+state the words beside them already state (§34, §72). `.jr-time`, `.jr-state`, `.jr-count`: one
+geometry, three names, colour gone.
+
+**Then the sweep, run against that state, came back 0 of 8 corners** with seven contrast findings, all
+of them the resident hub's "Log Out" at 1:1 on `rgb(255,255,255)`. A root tab's bar is white — the app
+decides that beside the rule that makes it — and the on-bar pill paints white text on translucent
+white. **This one was mine, and the story is worth keeping straight.** The button had been a filled
+navy pill, which reads on a white bar; `d65332e` folded it into `.btn.onbar`, whose translucent white
+background and white text are written for the brand gradient. Nothing caught it at the time because the
+walk was still painting that screen as a dark drill-in — the bug §148's camera repair removed. So the
+sequence is: §148 made the walk paint what a thumb sees, `1a810d0`'s sweep then saw the text this pass
+had made invisible, and the same run that proved the population proved the regression. A latent defect
+and a self-inflicted one look identical from inside the source; only the pixels tell them apart.
+`.screen[data-root="1"] .btn.onbar` inverts it the way the `.notif-btn` rule beside it already does,
+and a gate check pins that every bar control painting on-brand text has a root-tab variant. Its
+population is the known bar classes, because the camera remains the net for a new one — and the check
+was too wide on its first run, flagging `.chat-head` and the message bubbles, which bring their own
+dark surface and need no variant.
+
+**The card-title bar was a pseudo-element** (`378ffc4`). The owner ruled "plain bold label, no bar";
+this pass went looking for the third bar with a grep for `border-left`, found one inline use, deleted
+it, and the bar stayed on screen. It was never a border: `.card > b:first-child::before` painted a 3px
+gradient strip in front of **63 card titles**, under a comment praising the consistency, with
+`position:relative` and a 9px pad existing only to place it. Two earlier passes had each reported this
+class closed. Same shape, same screenshot: the shared settings row drew a text `›` as its affordance
+while 20 other places draw the icon arrow, and a trade and its barangay were joined by a middle dot in
+87 places and by a hyphen in four.
+
+**Nineteen bars become one** (`10b`, `10c`). Every screen's top bar is now emitted by
+`screenHeader()`; `topbar_divs_handwritten` went 19 → 0 and `screenheader_calls` 13 → 32. The
+component gained `avatar` and `nav` for the three identity bars, and those three went last so the
+options were never dead code. What made this safe was not care but a guard: the multiset of every
+`id`, `onclick`, `aria-label`, `data-nav` and `photoAvatar` name in the file must be unchanged, and it
+had to be rewritten once already — the component *parameterises* those names, so a guard that only
+knew the attribute spelling reported two ids lost on a correct refactor. The lifted notification button
+is extracted from the original bar rather than retyped, because a hand-copy of an inline SVG is a new
+claim about pixels.
+
+**Three instrument lessons, all the same lesson.** Two gate checks failed on the conversion, and both
+were positive controls that had encoded an assumption about *where* a heading is written: one required
+ten `<h1>` in the markup (it saw eight, then five, as bars converged), and one required the admin's
+provider-management back button to exist in its hand-written attribute form. Neither fact was about the
+app. The first now counts the component's call sites and says plainly that the painted population
+belongs to the camera; the second accepts either spelling. And the family that proves these checks
+crashed on a dangling constant its own re-point left behind, while the background wrapper reported
+`exit 0` because the command ended in an `echo` — the log said what happened, the exit code did not.
+
+**The last off-scale spacing goes onto the scale** (`aba1ea3`): `literal_paddings` 111 → 15 and
+`distinct_paddings` 41 → 7. The 15 that remain are the deliberate exceptions, because "snap to the scale"
+hides four decisions: round to the nearest step with ties away from zero; leave 2px and 3px alone, which
+are hairlines rather than spacing; leave a value *above* the scale top alone and report it — 78px of
+breathing room is not a mis-typed 80px, and clamping it to 32 would be a redesign wearing a rounding rule;
+and carry `0` and `calc(…)` through as values, which is what makes `padding:0 11px` convertible at all. The
+patcher refused its own first three drafts, which is the only reason they were fixable: it matched
+`padding:var(--s-4)` inside a *comment* explaining the scale; a `[ ?]` separator made the single-value form
+`padding:14px` fail to match at all, so the map silently did nothing to the commonest case; and
+`calc\([^)]*\)` stopped at the inner close paren of `calc(18px + var(--sat))`, truncating the match and
+then reporting the numbers inside it as leftovers.
+
+**A break can go stale by being superseded, and it prints `0 not applied` while it does.**
+`falsify-flex-crush` reported 4 of 5 — the quietest shape of a stale break, since "not applied" is the
+column everyone reads. Its notification-button break removed the narrow `flex-shrink:0` and the bar's
+wrap, which is what proved the guard when it was written. A later rule that keeps top-bar controls from
+wrapping also gives them `flex:0 0 auto`, whose middle value *is* the same `shrink:0`. Two declarations of
+one idea — the thing this session keeps converging — and a break that removes only one of them proves
+nothing while still looking applied. It removes all three now and reports 3 crushed circles where it used
+to read 0, which is the first time that break has measured the rule it names.
+
+Measured at the end: gate 651 → 655; `node tools/falsify-bar-titles.cjs` 7 breaks, 7 caught, 0 not
+applied, 0 missed; `node tools/falsify-figures.cjs` 8 of 8; `node tools/falsify-flex-crush.cjs` 5 of 5;
+`node tools/falsify-profile-honesty.cjs` 15 of 15; `node tools/audit-design-consistency.cjs` with
+`inline_styles` 1035 → 1003, `topbar_divs_handwritten` 0, `bar_title_class_rules` 0,
+`bar_titles_self_sized` 0, `bar_left_groups_handwritten` 0, `bar_action_styles_inline` 0,
+`literal_paddings` 15, `distinct_paddings` 7, and no metric risen; `node tools/shot.cjs
+--probe=@tools/probe-bar-titles.js` over 83 painted bars reading
+`drill:20×48 root:24×35 drift=0 titleEqualsSub=0 classless=0 inlineStyled=0 rootVsFlag=0`; and
+`node tools/sweep-text-scale.cjs` 8 of 8 corners clean, 25 tallies each, run separately against
+`cd2cfec`, `378ffc4`, `bfa13c5` and `aba1ea3`. `Sukinnect.html` untouched throughout.
+
+**One of the owner's four rulings rested on a premise this section contradicts, and was not acted on.**
+The card `:hover` lift was approved for removal on the stated ground that a phone has no hover and a stuck
+hover is a WebView artifact — but a `@media (hover:none)` block at the end of the stylesheet already
+neutralises exactly that, with `transform:none !important` and the shadow reset, so the lift is a
+desktop-preview affordance rather than a phone defect. Re-asked rather than executed, per the rule that a
+wrong *reason* for an approval is not permission to spend it.
