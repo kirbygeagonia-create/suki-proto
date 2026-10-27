@@ -9703,3 +9703,9 @@ What remains genuinely open is narrower than §158 claimed and still worth doing
 three ways, and `topLayerEl()` resolves the third (the verification review's inline fixed overlay) only
 because `modalAboveSheet()` reads state. A predicate that asked the paint by class would have missed it.
 That is a design note about the layer machinery, not a defect report.
+
+**The sweep then read 8 of 8 corners clean, anchor included** — `node tools/sweep-text-scale.cjs` on the
+bytes at `aac05ca`, logged in `.scratch/sweep-2.log`. Before that commit it was 0 of 8, with the same
+two lines at every corner. That contrast is the whole argument for the diagnosis above: a geometry
+failure that does not vary with width or text size is not geometry, and a defect that disappears when
+the *walk* is corrected was never in the page.
