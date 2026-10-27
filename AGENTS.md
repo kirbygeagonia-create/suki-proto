@@ -4000,6 +4000,47 @@ whichever rule it did not think of.** `literal_z_index` is a ratchet metric at c
 surfaced that the audit's one floor metric read its floor from a hardcoded number while `--bless` wrote the
 measured count into the baseline: the file advertised 32 and the code enforced 13.
 
+A BREAK CAN GO STALE BECAUSE THE CHECK IT NAMES MOVED SEMANTICALLY, AND THEN NOTHING AT ALL SAYS SO.
+`falsify-typography` renamed the last **Atkinson** face and named the check that guards the four weights.
+For a whole pass that check had been counting the weights of the **UI family**, which since the Poppins
+ruling is Poppins — so the mutation could not move the number it existed to move, the family printed one
+survivor, and every part of the needle was still true: the block it renamed exists, the line it matches
+appears once, the mutant applied. This is the third way a verifier expectation ages — not a spelling, not
+a wording, not a twin line, but the *meaning* of the check migrating underneath the break. The repair was
+two breaks instead of one, discriminating in opposite directions against the same seed: withdraw ONE
+Poppins semibold block and the weight-set check stays green while the new relational check fails; withdraw
+BOTH and the relational check goes quiet while the weight-set check fails. A single break proves a guard;
+a pair with opposite answers proves that the two guards are different guards, which is what §68's
+distinct-weights amendment had quietly undone. Prove such a pair in memory first — `node
+.scratch/prove-71-family.js` lifts the helper out of the family's own bytes with a slice and `eval`, so
+the code under proof is the code that will run, and `fonts/fonts.css` is never written while anything else
+is reading it.
+
+SHELL-ESCAPING IS PART OF THE CODE PATH, AND A PATCHER CAN DIE WITHOUT FAILING. Three separate commands
+in one session wrote a `RegExp` string through a quoted heredoc and had `\\s` collapse to `\s`, which
+JavaScript reads as the literal character `s`; the resulting filter matched **zero** `@font-face` blocks,
+so the break returned the file unchanged, printed SKIP, and the suite would have reported a healthy run
+minus one guard. The fix is not a better escape — it is to remove the escaping layer: `indexOf` on
+`'font-weight: ' + weight + ';'` instead of a constructed regex, and the **Write tool** instead of a
+heredoc for any file whose content contains backslashes. Measured the same way each time: print the counts
+the filter sees (24 blocks, 8 carrying `font-family: 'Poppins'`, 7 at weight 600, intersection 2) before
+believing a zero.
+
+A BACKGROUND STAGE THAT PIPES LOSES ITS VERDICT, AND EXIT 0 WILL TELL YOU NOTHING. The seven-family chain
+ended with the eight-corner sweep appended to the same command. The chain reported `completed (exit code
+0)`, its task output file was **empty**, and the log it was writing stopped at the stage marker — while
+the screenshots in `.shots/` were stamped sixteen minutes later, proving the sweep had genuinely run and
+genuinely painted. Nothing recovered its answer, so the entire run had to be repeated into
+`.scratch/sweep-159.log`. This document already says to redirect rather than pipe, because a pipeline that
+has printed nothing is not a run that has finished; what this adds is that the harness's own `exit code 0`
+and `completed` are not evidence either, and that **a run whose output cannot be read is a run that did
+not happen** — quote it as absence, never as a clean result. The related refusal, found while writing the
+tool that lands the re-run's numbers: a guard that counts processes is not a guard, because in one shell
+`ps -W | grep -ci node.exe` answered 1 and `tasklist | grep -ci node.exe` answered 2 for the same instant,
+and `tasklist //FI "IMAGENAME eq node.exe"` dies when spawned from here. Count what the tool can prove
+instead — the run's own eight corner headers, its final verdict line, and `git status` on the file a live
+mutant pass would own — and refuse on `unreadable` rather than defaulting it to zero.
+
 ---
 
 # 31A. OWNER RULINGS OF 2026-10-27 THAT OVERRIDE SECTIONS 30–33, 68 AND 23
