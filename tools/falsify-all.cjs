@@ -133,7 +133,12 @@ function runOne(file) {
      does not reproduce (as one did on 2026-10-21, inside this pass and not outside it) leaves no
      record at all of which rule was seen quiet. */
   const notes = out.split(/\r?\n/)
-    .filter(l => /^(MISSED|SKIP|BROKEN|QUIET|NOTED|BASELINE|the run)/.test(l))
+    /* A family that dies on an uncaught exception prints a Node stack and none of the verdict
+       prefixes, so the row used to read `printed no summary` with the cause discarded — which is
+       how a single killed child turned into fourteen unproven rows on 2026-10-27: the crash line
+       was the only evidence of what actually happened, and it was thrown away. */
+    .filter(l => /^(MISSED|SKIP|BROKEN|QUIET|NOTED|BASELINE|the run|Error:|TypeError:|ReferenceError:|RangeError:|SyntaxError:|throw er|\s+at )/.test(l))
+    .slice(0, 6)
     .map(l => l.slice(0, 158));
   for (const shape of SHAPES) {
     const m = out.match(shape.re);
@@ -145,12 +150,38 @@ function runOne(file) {
   return { applied: 0, caught: 0, skipped: 0, crashed, missed: 0, silent: true, notes };
 }
 
+/* Every family rewrites the target and restores it in a `finally`, so a family that never reaches
+   its finally leaves the break in the working file — and the NEXT family snapshots that file as its
+   own pristine copy, which locks the mutation in and turns one death into a cascade. On
+   2026-10-27 one killed family left the Money screen's action card swapped back below the figures,
+   the gate went red for every family that demands a green baseline, and fifteen rows printed no
+   summary. The pass-level git check catches that at the END; this catches it at the family that
+   caused it, keeps the bytes for reading, and restores from the commit rather than from a snapshot
+   that may already be the mutant. */
+function strand(file) {
+  let dirty = '';
+  try {
+    dirty = execFileSync('git', ['status', '--porcelain', '--', file], { encoding: 'utf8', cwd: ROOT }).trim();
+  } catch (e) { return { git: false }; }
+  if (!dirty) return { git: true, stranded: false };
+  const keep = path.join(ROOT, '.scratch', 'strand-' + file.replace(/[^a-z0-9-]/gi, '_') + '-' + Date.now() + '.html');
+  try {
+    fs.mkdirSync(path.dirname(keep), { recursive: true });
+    fs.copyFileSync(path.join(ROOT, file), keep);
+    execFileSync('git', ['checkout', '--', file], { cwd: ROOT });
+    return { git: true, stranded: true, keep: path.relative(ROOT, keep) };
+  } catch (e) { return { git: true, stranded: true, unrecoverable: String(e.message).slice(0, 80) }; }
+}
+
 let A = 0, C = 0, S = 0, bad = 0;
 console.log('family'.padEnd(40) + 'applied  caught  not applied  missed');
 for (const f of families) {
   const r = runOne(f);
+  const st = strand(TARGET);
   A += r.applied; C += r.caught; S += r.skipped;
-  const trouble = r.silent || r.caught !== r.applied || r.applied === 0;
+  const trouble = r.silent || r.caught !== r.applied || r.applied === 0 || st.stranded || st.git === false;
+  if (st.git === false) console.log('      | NOTED git is unavailable, so a stranded mutant could not be detected or repaired');
+  if (st.unrecoverable) console.log('      | BROKEN the target was mutated and could not be restored: ' + st.unrecoverable);
   if (trouble) bad++;
   console.log(f.replace(/^falsify-|\.cjs$/g, '').padEnd(40)
     + String(r.applied).padStart(6) + String(r.caught).padStart(9)
@@ -159,7 +190,8 @@ for (const f of families) {
     + (!r.silent && r.applied === 0 ? '   <<< NOTHING APPLIED — every needle missed, so this family tested nothing'
       : '')
     + (!r.silent && r.caught !== r.applied && r.applied > 0 ? '   <<< MUTANT SURVIVED' : '')
-    + (r.crashed ? '   <<< exited on a signal: ' + String(r.crashed).slice(0, 40) : ''));
+    + (r.crashed ? '   <<< exited on a signal: ' + String(r.crashed).slice(0, 40) : '')
+    + (st.stranded ? '   <<< LEFT THE TARGET MUTATED — restored from the commit (' + st.keep + '); every row after this one ran against a repaired file' : ''));
   if (trouble) (r.notes || []).forEach(n => console.log('      | ' + n));
 }
 console.log('─'.repeat(72));

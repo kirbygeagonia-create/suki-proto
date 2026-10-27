@@ -38,7 +38,12 @@ const metrics = [
   { key: 'screenheader_calls', what: 'screens that do use the shared header (a floor, not a ceiling)', n: count(/screenHeader\(/g) - 1, floor: 13 },
   { key: 'chip_tone_rules', what: 'rules that give a chip its colour', n: count(/\.chip\.[a-z-]+\b[^{]*\{/g) + count(/\.badge-[a-z]+\{/g) },
   { key: 'section_heading_constructs', what: 'distinct ways a section title is expressed', n: (count(/class="section-label"/g) > 0 ? 1 : 0) + distinct(/<h3[^>]*style="[^"]*font-size[^"]*"/g).length + count(/\.card-quiet[^{]*\{[^}]*border-left/g) },
-  { key: 'stat_tile_systems', what: 'competing stat-tile classes', n: (count(/\.stat-strip\b/g) ? 1 : 0) + (count(/\.statgrid\b/g) ? 1 : 0) + (count(/\.stat\{/g) ? 1 : 0) },
+  /* Counted by what is painted, not by how many rules exist. The old definition added
+     `.stat-strip`, `.statgrid` and `.stat{` and reported three competing systems, but `.statgrid` is
+     the two-column layout that holds `.stat` tiles — a wrapper is not a rival idea. The two real
+     answers are a read-only strip of figures and a number you can press, which is exactly the
+     distinction the stylesheet's own comment makes. */
+  { key: 'stat_tile_systems', what: 'competing stat-tile ideas (a figure strip, a pressable tile)', n: (count(/class="stat-strip"/g) ? 1 : 0) + (count(/class="stat"/g) ? 1 : 0) },
   { key: 'literal_font_sizes', what: 'font-size set in px rather than through the scale', n: count(/font-size:\s?[0-9.]+px/g) },
   { key: 'literal_paddings', what: 'padding set with literal pixels', n: count(/padding:\s?[0-9.]+px/g) },
   { key: 'distinct_paddings', what: 'different padding values in use', n: distinct(/padding:\s?[0-9.]+px(?: [0-9.]+px)*/g).length },
