@@ -78,6 +78,7 @@
      asserts the RELATIONS between these rungs, so the order survives any change of numbers. */
   --z-sticky:20;      /* an action footer pinned inside a scrolling screen */
   --z-nav:30;         /* the bottom navigation */
+  --z-fab:40;         /* a control pinned inside the scrolling screen, above its cards, below every layer */
   --z-sheet:60;       /* a bottom sheet, and the tap-target dim inside it */
   --z-modal:70;       /* a dialog — must outrank a sheet, which is what raised it */
   --z-map-veil:1100;  /* the map's own loading veil, above Leaflet's panes inside the map only */
@@ -549,21 +550,40 @@
      There is deliberately no `animation` and no `transition` on any `.cat`
      element here or below — the gate fails the file if either returns, and
      tools/shot.cjs --measure counts animated category nodes in the live page. */
-  /* The concierge is a prototype feature that sharpens discovery; it must not
-     outrank search and categories, so it is one row, not a hero (20, 8). */
-  .concierge-row{
-    display:flex; align-items:center; gap:9px; width:100%; text-align:left;
-    background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md);
-    padding:var(--s-2) var(--s-3); min-height:52px; box-sizing:border-box; cursor:pointer;
-    font:inherit; color:var(--ink);
+  /* The concierge is reached from a control pinned to the bottom-right of the screen, not from a card
+     in the middle of the page (the owner's ruling of 2026-10-27). `position:sticky` inside the screen's
+     own scroller is what makes this need no measurement at all: the bottom navigation is outside that
+     scroller, so the dock clears it at every text scale without a pixel value derived from the nav's
+     height — which is the trap §73 records for anything that writes its own geometry. The dock itself
+     passes taps through to the cards it overlaps; only the button takes them. */
+  .fab-dock{
+    position:sticky; bottom:var(--s-4); z-index:var(--z-fab);
+    display:flex; justify-content:flex-end; pointer-events:none; margin-top:var(--s-4);
   }
-  .concierge-row .cr-ic{
-    width:28px; height:28px; border-radius:var(--r-sm); flex-shrink:0;
-    display:flex; align-items:center; justify-content:center;
-    background:var(--brand-tint-soft); color:var(--deep);
+  .concierge-fab{
+    pointer-events:auto; flex-shrink:0; display:inline-flex; align-items:center; gap:var(--s-2);
+    min-height:var(--tap); padding:0 var(--s-5) 0 var(--s-4); border-radius:999px; border:0;
+    background:var(--surface-brand); color:var(--on-brand); cursor:pointer;
+    font-family:var(--font-ui); font-size:var(--t-body-sm); font-weight:700;
+    box-shadow:var(--shadow-lg);
   }
-  .concierge-row .cr-t{ display:block; font-size:var(--t-body); font-weight:700; }
-  .concierge-row .cr-s{ display:block; font-size:var(--t-caption); color:var(--ink-soft); margin-top:1px; }
+  .concierge-fab .fab-ic{ display:inline-flex; flex-shrink:0; }
+  .freq-action{
+    display:flex; align-items:center; gap:var(--s-2); width:100%; text-align:left; min-height:var(--tap);
+    background:var(--background); border:1px solid var(--line); border-radius:var(--r-card);
+    padding:var(--s-2) var(--s-3); margin-top:var(--s-2); cursor:pointer; font:inherit; color:var(--ink);
+  }
+  .freq-action .fa-t{ display:block; font-size:var(--t-body-sm); font-weight:700; }
+  .freq-action .fa-s{ display:block; font-size:var(--t-caption); color:var(--ink-soft); margin-top:1px; }
+  .wiz-rail{ display:flex; gap:var(--s-2); margin-bottom:var(--s-4); }
+  .wiz-step{ display:flex; align-items:center; gap:6px; flex:1; min-width:0; font-size:var(--t-caption);
+    color:var(--mist); border-bottom:2px solid var(--line); padding-bottom:6px; }
+  .wiz-step b{ display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px;
+    flex:none; border-radius:50%; background:var(--background); color:var(--ink-soft); font-size:var(--t-caption); }
+  .wiz-step span{ min-width:0; }
+  .wiz-step.done{ color:var(--ink-soft); border-bottom-color:var(--brand-secondary); }
+  .wiz-step.on{ color:var(--ink); font-weight:700; border-bottom-color:var(--brand-primary); }
+  .freq-action.on{ border-color:var(--brand-primary); background:var(--brand-tint-soft); }
   /* Compact progress for the active booking: four real states this prototype has,
      plus the payment status as its own pill, never merged in (22). */
   .mini-steps{ display:flex; align-items:center; gap:3px; margin-top:9px; }
@@ -1439,7 +1459,7 @@
   :where(button, [type=button], [type=submit], [type=reset], a[href], input, select, textarea,
          summary, [tabindex]:not([tabindex="-1"]), .navitem, .chip, .pick, .filter-option,
          .cat, .stat, .job-row, .rate-star, .seg-btn, .addon-btn, .auth-switch,
-         .sheet-body, .concierge-row, .notif-item):focus-visible{
+         .sheet-body, .concierge-fab, .notif-item):focus-visible{
     outline:3px solid var(--brand-primary-light); outline-offset:2px;
   }
 
@@ -1631,7 +1651,7 @@
   /* Pressed feedback. A touch screen has no hover to answer a tap, so every
      tappable component carries its own pressed state (7.6). Kept as one list
      rather than a per-component rule so the feel is identical everywhere (11). */
-  .concierge-row:active, .job-row:active, .auth-role button:active, .case-button:active,
+  .concierge-fab:active, .job-row:active, .auth-role button:active, .case-button:active,
   .auth-admin-link:active, .auth-admin-bar button:active,
   .auth-switch:active,
   .btn:active:not(:disabled), .filter-icon-btn:active:not(:disabled), .back-btn:active,
@@ -2695,7 +2715,12 @@ function refreshReputation(){
 
 // Sukinnect app mode — the APK loads this page with ?app=1: drop the
 // desktop phone mock and let the UI fill the real device screen.
-if (/[?&]app=1(&|$)/.test(location.search) || /SukinnectApp/i.test(navigator.userAgent)) document.body.classList.add('app-mode');
+/* The shell is a fact about how the page was loaded, not about which screen is open, so it is read once
+   into a constant and carried on state. It cannot be re-derived from the DOM afterwards: the class is the
+   effect of the flag, not its source, and a page that asked body.classList whether it was a phone would be
+   reading its own styling as if it were data. */
+const APP_SHELL = /[?&]app=1(&|$)/.test(location.search) || /SukinnectApp/i.test(navigator.userAgent);
+if (APP_SHELL) document.body.classList.add('app-mode');
 
 /* ═══════════════════════════════════════════════════════════════════════════
    DOMAIN KERNEL · part 2 — catalogue, configuration, ledger, pricing
@@ -5604,9 +5629,15 @@ let state = {
   activeChatBookingId:null,
   // Per-thread read markers: the unread dot means messages, not job status.
   threadRead:{},
+  appShell: APP_SHELL,
   /* Which document version this device agreed to, in which role, when. A local record of a real
      action on this device — not a server-side audit trail, and the screen that shows it says so. */
+  rateWizard:null,
   termsAcceptances:[],
+  /* Which of the legal documents THIS DEVICE has scrolled to the end of. Session-only on purpose:
+     the acceptance that gets stored is the record, this is the gate that leads to it, and pretending
+     a reload remembers that you read something would be a claim no byte could support. */
+  docRead:{},
   isChatOpen:false,
   conciergePhotoAttached: false,
   conciergePhotoName: '',
@@ -6222,9 +6253,171 @@ function residentSectionBody(section){
     </div>` : '';
 }
 
+/* ── the rate wizard: a suggestion counted from this device's own provider records ──────────────
+   The brief asks what happens when a person who is becoming a service professional does not know what
+   to charge. Two things answer that here, and neither is a model:
+     · a band, which is a division over the provider rows already on this device — the same eight records
+       the roster, the receipts and the Insights bars read, so a suggested rate cannot disagree with a
+       figure a reviewer can check somewhere else;
+     · a named seam for the outside market read the brief asks for, which answers that it did not happen,
+       so nothing on this screen is presented as web-sourced market data.
+   The rate it writes is the field the professional-profile form already writes, through the same
+   reader, so there is one source for what a resident is shown. */
+const RATE_WIZARD_STEPS = ['Your work', 'What the records show', 'Confirm and save'];
+
+function rateBandFor(trade){
+  const rows = PROVIDERS.filter(p => p.service === trade && Number.isFinite(p.rateCentavos) && p.rateCentavos > 0);
+  if (!rows.length) return null;
+  const cents = rows.map(p => p.rateCentavos).sort((a, b) => a - b);
+  return { trade, count: rows.length,
+    low: cents[0], mid: cents[Math.floor((cents.length - 1) / 2)], high: cents[cents.length - 1],
+    unit: rows[0].rateUnit };
+}
+
+/* The seam. It is called, it answers, and the answer is that no request was made — which is what keeps
+   the step honest without deleting the shape the brief asked for. */
+function marketRateHint(trade){
+  return { available: false,
+    reason: 'Reading the usual labour rate from outside Sukinnect is not wired in this build, so no figure below is web-sourced market data.' };
+}
+
+function openRateWizard(){
+  const pp = state.providerProfileData;
+  /* The trade comes from the roster record, not the editable profile string. The profile says
+     "Plumbing Specialist" while the rate rows say "Plumbing", so counting a band off the profile asked
+     the roster about a trade it does not contain and the sheet then told the provider that nobody lists
+     a rate for their work — a sentence the records contradict, found by looking at the screenshot. */
+  const me = signedInProvider();
+  const trade = (me && me.service) || pp.service;
+  state.rateWizard = { step: 0, trade: trade, chosen: null };
+  openSheet('rateWizard');
+}
+function rateWizardChoose(centavos){
+  const c = Math.round(Number(centavos));
+  if (!Number.isFinite(c) || c <= 0) { state.rateWizard.error = 'Name an amount above zero first.'; render(); return; }
+  state.rateWizard.chosen = c; delete state.rateWizard.error; render();
+}
+function rateWizardCustom(){
+  const el = document.getElementById('rate-wizard-custom');
+  rateWizardChoose(toCentavos(Number(el ? el.value : '')));
+}
+function rateWizardGo(step){
+  const w = state.rateWizard;
+  if (!w) return;
+  /* Forward needs a number before the confirm step can say anything true; sideways is free. */
+  if (step > w.step && step === 2 && !w.chosen) {
+    w.error = 'Pick a rate or type your own before confirming.'; render(); return;
+  }
+  w.step = Math.max(0, Math.min(RATE_WIZARD_STEPS.length - 1, step));
+  delete w.error;
+  render();
+}
+function rateWizardSave(){
+  const w = state.rateWizard;
+  if (!w || !w.chosen) { showToast('Nothing was picked, so the rate stayed as it was.'); return; }
+  const pp = state.providerProfileData;
+  pp.rateCentavos = w.chosen;
+  persist();
+  state.rateWizard = null;
+  state.sheet = null;
+  render();
+  showToast('Rate set to ' + rateLabel(pp.rateCentavos, pp.rateUnit) + ' — residents see it on your profile.');
+}
+
+function rateWizardSheet(){
+  const w = state.rateWizard || { step: 0, trade: state.providerProfileData.service, chosen: null };
+  const pp = state.providerProfileData;
+  const band = rateBandFor(w.trade);
+  const hint = marketRateHint(w.trade);
+  const step = w.step;
+  const rail = `<div class="wiz-rail" role="list">
+    ${RATE_WIZARD_STEPS.map((label, i) => `<span class="wiz-step ${i === step ? 'on' : ''} ${i < step ? 'done' : ''}" role="listitem">
+      <b>${i + 1}</b><span>${esc(label)}</span></span>`).join('')}
+  </div>`;
+  const body = step === 0 ? `
+    <div class="card" style="border-radius:var(--r-card); padding:var(--s-4);">
+      <b class="card-title">${esc(w.trade || 'Your trade')}</b>
+      <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.7; margin-top:6px;">
+        Brgy. ${esc(pp.barangay)}<br>${esc(pp.serviceRadius || 'Service radius not set')}
+      </div>
+      <div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px;">
+        This is the work your profile says you do. The suggestions on the next step are counted from providers in it.
+      </div>
+    </div>` : step === 1 && band ? `
+    <div class="card" style="border-radius:var(--r-card); padding:var(--s-4);">
+      <b class="card-title">Rates listed for ${esc(band.trade)} on this device</b>
+      <div style="font-size:var(--t-caption); color:var(--mist); margin:2px 0 10px;">
+        ${band.count} provider${band.count === 1 ? '' : 's'} · ${rateLabel(band.low, band.unit)} to ${rateLabel(band.high, band.unit)}
+      </div>
+      ${[['low', 'Starting out', band.low], ['middle', 'The middle of them', band.mid], ['high', 'The highest', band.high]]
+        .map(([k, note, cents]) => `<button type="button" class="freq-action ${w.chosen === cents ? 'on' : ''}"
+          onclick="rateWizardChoose(${cents})">
+          <span style="min-width:0; flex:1;"><span class="fa-t">${rateLabel(cents, band.unit)}</span>
+          <span class="fa-s">${esc(note)}</span></span>
+          ${w.chosen === cents ? `<span style="color:var(--success-ink); display:inline-flex; flex:none;">${ic('check', 14)}</span>` : ''}
+        </button>`).join('')}
+      <label class="form-label" style="margin-top:12px;">Or type your own
+        <input id="rate-wizard-custom" type="number" min="0" step="1" inputmode="decimal" class="form-input" placeholder="Pesos per ${esc(band.unit)}">
+      </label>
+      <button class="btn sm secondary" style="margin-top:8px;" onclick="rateWizardCustom()">Use what I typed</button>
+      <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">
+        ${ic('alert-triangle', 12)} ${esc(hint.reason)}
+      </div>
+    </div>` : step === 1 ? `
+    <div class="card" style="border-radius:var(--r-card); padding:var(--s-4);">
+      <b class="card-title">Nothing to suggest yet</b>
+      <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.6; margin-top:6px;">
+        No provider on this device lists a rate for ${esc(w.trade || 'your trade')}, so there is no band to count
+        from. Type the amount you want to charge instead — it is your rate, and nothing here invents one for you.
+      </div>
+      <label class="form-label" style="margin-top:12px;">Your rate in pesos
+        <input id="rate-wizard-custom" type="number" min="0" step="1" inputmode="decimal" class="form-input" placeholder="e.g. 450">
+      </label>
+      <button class="btn sm secondary" style="margin-top:8px;" onclick="rateWizardCustom()">Use what I typed</button>
+      <!-- The seam belongs on both branches. A screen that shows rate advice has to say in every state
+           that none of it came from outside, and the no-band branch is the one a real provider on this
+           build actually sees — the profile's own service string is not a roster trade. -->
+      <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">
+        ${ic('alert-triangle', 12)} ${esc(hint.reason)}
+      </div>
+    </div>` : ``;
+  const confirm = step === 2 ? `
+    <div class="card" style="border-radius:var(--r-card); padding:var(--s-4); margin-top:10px;">
+      <div style="font-size:var(--t-caption); color:var(--mist);">Residents will see</div>
+      <div style="font-size:var(--t-lead); font-weight:800; margin-top:2px;">${w.chosen ? esc(rateLabel(w.chosen, pp.rateUnit)) : 'No rate picked yet'}</div>
+      <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.6; margin-top:8px;">
+        This is a starting rate for a job in ${esc(w.trade || 'your trade')}. The final price is what you and the
+        resident agree, and the commission taken from a completed job is set by the platform, not by this screen.
+      </div>
+    </div>` : '';
+  const err = w.error ? `<div class="inline-error" role="alert" style="margin-top:10px;">${esc(w.error)}</div>` : '';
+  const last = step === RATE_WIZARD_STEPS.length - 1;
+  return `
+    <div class="sheet-head">
+      <div style="min-width:0;">
+        <h2 class="sheet-title">Set a service rate</h2>
+        <div class="sheet-sub">Step ${step + 1} of ${RATE_WIZARD_STEPS.length} · ${esc(RATE_WIZARD_STEPS[step])}</div>
+      </div>
+      <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close">${ic('x', 15)}</button>
+    </div>
+    <div class="sheet-body">${rail}${body}${confirm}${err}</div>
+    <div class="sheet-foot">
+      <button type="button" class="btn sm secondary" style="flex:1;" ${step === 0 ? 'disabled aria-disabled="true"' : ''}
+        onclick="rateWizardGo(${step - 1})">Back</button>
+      ${last
+        ? `<button type="button" class="btn" style="flex:1;" onclick="rateWizardSave()">Save this rate</button>`
+        : `<button type="button" class="btn" style="flex:1;" onclick="rateWizardGo(${step + 1})">Next</button>`}
+    </div>`;
+}
+
 function providerSectionBody(section){
   const pp = state.providerProfileData;
-  return section === 'services' ? listingsPanel(CURRENT_PROVIDER_ID) : section === 'pricing' ? `<div class="card"><b>Pricing &amp; Rates</b><div class="card-body">Starting from <b>${pesoShort(cheapestListing(providerOf({providerId:CURRENT_PROVIDER_ID})))}</b> across ${listingsOf(CURRENT_PROVIDER_ID).length} listed services.<br>Every price is what you charge; the platform fee comes out of it.</div><button class="btn sm" style="margin-top:8px;" onclick="providerProfileAction('edit')">Edit Pricing</button></div>` : section === 'area' ? `<div class="card"><b>Service Area</b><div class="card-body">Base barangay: <b>${esc(pp.barangay)}</b><br>Service radius: <b>${esc(pp.serviceRadius)}</b>${coverageLines(providerOf({providerId:CURRENT_PROVIDER_ID}))}</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('edit')">Change Radius</button></div>` : section === 'hours' ? `<div class="card"><b>Working Hours</b><div class="card-body">Monday - Saturday: <b>${esc(pp.workingHours)}</b><br><span style="color:var(--mist);">No day-by-day schedule is recorded, so nothing here claims a day you have not set.</span></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('edit')">Edit Hours</button></div>` : section === 'dispatch' ? `<div class="card"><b>Emergency Dispatch</b><div class="card-body">Status: <b style="color:var(--success-ink);">${state.providerEmergencyDispatch ? 'Enabled' : 'Disabled'}</b><br>Accept urgent requests outside the normal booking flow when available.<br>Urgent requests reach you inside the barangays recorded under Service area. The radius you typed — <b>${esc(pp.serviceRadius)}</b> — is your own description of that area; the list above is what discovery filters on. There is no separate emergency radius or emergency window in this prototype, because nothing records one.</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('dispatch')">${state.providerEmergencyDispatch ? 'Disable' : 'Enable'} Dispatch</button></div>` : section === 'credentials' ? `<div class="card"><b>Credentials &amp; verification</b>
+  return section === 'services' ? listingsPanel(CURRENT_PROVIDER_ID) : section === 'pricing' ? `<div class="card"><b class="card-title">What should I charge?</b>
+      <div style="font-size:var(--t-caption); color:var(--ink-soft); margin:4px 0 8px; line-height:1.55;">
+        Counted from the rates providers in your trade list on this device — not from the web.
+      </div>
+      <button class="btn sm secondary" onclick="openRateWizard()">Set a rate in 3 steps</button>
+      <hr style="margin:14px 0; border:0; border-top:1px solid var(--line);"><div class="card"><b>Pricing &amp; Rates</b><div class="card-body">Starting from <b>${pesoShort(cheapestListing(providerOf({providerId:CURRENT_PROVIDER_ID})))}</b> across ${listingsOf(CURRENT_PROVIDER_ID).length} listed services.<br>Every price is what you charge; the platform fee comes out of it.</div><button class="btn sm" style="margin-top:8px;" onclick="providerProfileAction('edit')">Edit Pricing</button></div>` : section === 'area' ? `<div class="card"><b>Service Area</b><div class="card-body">Base barangay: <b>${esc(pp.barangay)}</b><br>Service radius: <b>${esc(pp.serviceRadius)}</b>${coverageLines(providerOf({providerId:CURRENT_PROVIDER_ID}))}</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('edit')">Change Radius</button></div>` : section === 'hours' ? `<div class="card"><b>Working Hours</b><div class="card-body">Monday - Saturday: <b>${esc(pp.workingHours)}</b><br><span style="color:var(--mist);">No day-by-day schedule is recorded, so nothing here claims a day you have not set.</span></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('edit')">Edit Hours</button></div>` : section === 'dispatch' ? `<div class="card"><b>Emergency Dispatch</b><div class="card-body">Status: <b style="color:var(--success-ink);">${state.providerEmergencyDispatch ? 'Enabled' : 'Disabled'}</b><br>Accept urgent requests outside the normal booking flow when available.<br>Urgent requests reach you inside the barangays recorded under Service area. The radius you typed — <b>${esc(pp.serviceRadius)}</b> — is your own description of that area; the list above is what discovery filters on. There is no separate emergency radius or emergency window in this prototype, because nothing records one.</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('dispatch')">${state.providerEmergencyDispatch ? 'Disable' : 'Enable'} Dispatch</button></div>` : section === 'credentials' ? `<div class="card"><b>Credentials &amp; verification</b>
       <div class="card-body" style="font-size:var(--t-caption); line-height:1.7;">
         Verification: <b>${esc(providerVerificationLine(CURRENT_PROVIDER_ID))}</b>
       </div>
@@ -6403,7 +6596,7 @@ function providerFiltersSheet(){
     </div>`;
 }
 
-const SHEET_LABELS = { providerFilters:'Filter providers', bookingRequest:'Book an appointment', reschedule:'Propose a new time', legalDoc:'Legal document', raiseCase:'Raise a case', profileSection:'Profile section', makeOffer:'Make an offer', finaliseProduce:'Record the actual quantity' };
+const SHEET_LABELS = { providerFilters:'Filter providers', bookingRequest:'Book an appointment', reschedule:'Propose a new time', legalDoc:'Legal document', rateWizard:'Set a service rate', raiseCase:'Raise a case', profileSection:'Profile section', makeOffer:'Make an offer', finaliseProduce:'Record the actual quantity' };
 
 const REQUEST_TIMES = ['8:00 AM','10:00 AM','1:00 PM','3:00 PM','5:00 PM'];
 
@@ -7831,6 +8024,7 @@ function sheetHTML(){
   if(state.sheet === 'raiseCase') return raiseCaseSheet();
   if(state.sheet === 'legalDoc') return legalDocSheet();
   if(state.sheet === 'profileSection') return profileSectionSheet();
+  if(state.sheet === 'rateWizard') return rateWizardSheet();
   return '';
 }
 
@@ -7850,6 +8044,10 @@ function renderSheet(){
   const panel = root.querySelector('.sheet');
   panel.setAttribute('aria-label', SHEET_LABELS[state.sheet] || 'Options');
   panel.innerHTML = sheetHTML();
+  /* Post-paint measurement: a scroll gate can only be judged against real geometry, and a document
+     shorter than its pane has no bottom to reach. Runs here rather than at the paint site because
+     every sheet reaches the screen through this one function. */
+  noteUnscrollableDocs();
 }
 
 function splashHTML(){
@@ -8179,7 +8377,9 @@ function render(){
   } else if(state.role==='provider'){
     screen.innerHTML = providerTabHTML();
   } else {
-    screen.innerHTML = adminTabHTML();
+    /* The operations console is a web surface by the owner's ruling of 2026-10-27, so on a phone the role
+       that reaches it is met with a screen that says where it went rather than with a shrunk console. */
+    screen.innerHTML = state.appShell ? adminWebOnly() : adminTabHTML();
   }
   screen.classList.toggle('anim', changed);
   setScreenScroll(screen, keepScroll);
@@ -8291,8 +8491,13 @@ const AUTH_ROLE_ICON = { resident:'home', provider:'wrench', admin:'shield' };
    those duties, and it is flagged for counsel rather than presented as settled.
    None of this is legal advice and none of it has been reviewed by a Philippine lawyer. */
 const LEGAL_VERSION = 'draft-1';
+/* `consent` is how each document is stood behind at sign-up: 'accept' means the reader agrees to it,
+   'read' means the reader is told it exists and confirms having read it. A notice is not an agreement —
+   RA 10173 lists consent as one lawful basis of six — and the sentence on the card says which is which.
+   Every document has to declare one of the two, which the gate asserts: a field that goes missing would
+   otherwise be read as 'accept' by the comparison and quietly ask a reader to agree to a notice. */
 const LEGAL_DOCUMENTS = [
-  { id: 'terms', title: 'Terms & Conditions', label: 'Terms & Conditions',
+  { id: 'terms', title: 'Terms & Conditions', label: 'Terms & Conditions', consent: 'accept',
     intro: 'What you and Sukinnect each promise when a job is found, booked and recorded.',
     sections: [
       { h: 'What Sukinnect is', p: [
@@ -8324,7 +8529,7 @@ const LEGAL_DOCUMENTS = [
       { h: 'The limits of this build', p: [
         'Nothing here means a real service was performed, a real payment was taken, or a real document was verified by a real officer. The records you see are the sample records of a demonstration.',
         '[Effective date — NOT DECIDED] · Draft, not reviewed by Philippine counsel.' ] } ] },
-  { id: 'policy', title: 'Sukinnect Policy', label: 'Community & Provider Standards',
+  { id: 'policy', title: 'Sukinnect Policy', label: 'Community & Provider Standards', consent: 'accept',
     intro: 'The house rules for listing, accepting and doing work on Sukinnect.',
     sections: [
       { h: 'Say what you can actually do', p: [
@@ -8348,7 +8553,7 @@ const LEGAL_DOCUMENTS = [
         'There is no automatic suspension and no appeal queue yet — [appeal route — NOT DECIDED].' ] },
       { h: 'This policy is a draft', p: [
         'It describes how this prototype behaves, not how a launched platform is regulated. It is not legal advice and has not been reviewed by Philippine counsel; the standards above must be confirmed with the enforcement process a real operation can actually staff.' ] } ] },
-  { id: 'privacy', title: 'Privacy Notice', label: 'Privacy Notice',
+  { id: 'privacy', title: 'Privacy Notice', label: 'Privacy Notice', consent: 'read',
     intro: 'What this prototype holds about you, who can see it, and what you can ask for.',
     sections: [
       { h: 'What is collected, and why it is small', p: [
@@ -8383,12 +8588,49 @@ const LEGAL_DOCUMENTS = [
         'It was written for a prototype. It is not legal advice, and it must be reviewed by qualified Philippine counsel and a privacy professional before any public launch.' ] } ] }
 ];
 function legalDoc(id){ return LEGAL_DOCUMENTS.find(d => d.id === id) || null; }
+/* The documents the acceptance is gated on: every one the sign-in card puts in front of the reader,
+   derived from the record set rather than listed beside it, so a fourth document is gated the moment it
+   exists — the same rule by which `layerKeys()` derives the modal fields from `state`. The owner's
+   ruling of 2026-10-27 is that the box stays off until each has been read to its end, and the sentence
+   on the card says which of them the reader *accepts* and which the reader has merely *read*. */
+function acceptDocIds(){
+  return LEGAL_DOCUMENTS.map(d => d.id);
+}
+function docIsRead(id){ return state.docRead[id] === true; }
+function acceptanceUnlocked(){ return acceptDocIds().every(docIsRead); }
+/* Called from the sheet body's own scroll. Marking read must NOT re-render: the sheet would repaint,
+   the body's scrollTop would go back to zero, and the reader would be sent to the top of the text they
+   had just finished. So the state changes and the footer line is rewritten in place. */
+function docScrolled(id, el){
+  if (!el || docIsRead(id)) return;
+  const short = el.scrollHeight <= el.clientHeight + 4;
+  const atEnd = el.scrollTop + el.clientHeight >= el.scrollHeight - 24;
+  if (!(short || atEnd)) return;
+  state.docRead[id] = true;
+  const foot = document.getElementById('doc-read-state');
+  if (foot) foot.textContent = short
+    ? 'This document fits on one screen, so it counts as read. Close it to continue.'
+    : 'You reached the end of this document. Close it to continue.';
+}
+/* A document that cannot scroll has no bottom to reach, and a control that can never unlock is a
+   lockout, not a gate. Measured at mount rather than assumed from the length of the text. */
+function noteUnscrollableDocs(){
+  const body = document.querySelector('[data-doc-body]');
+  if (!body) return;
+  const id = body.getAttribute('data-doc-body');
+  if (body.scrollHeight <= body.clientHeight + 4) docScrolled(id, body);
+}
 function openLegalDoc(id){
   const d = legalDoc(id);
   if (!d) { showToast('No document carries that id'); return; }
   state.legalDoc = id;
   openSheet('legalDoc');
 }
+/* Its foot is a column, and that is a measured decision rather than a style: a sentence and a button
+   in one flex row is the crush this file records twice. The row gives its shortfall to whichever item
+   has the larger content basis — the sentence — and the button is left one character wide, with
+   `overflow-wrap:anywhere` only too happy to break a word there. Found in a screenshot; no camera
+   tally calls a one-letter-per-line label a defect. */
 function legalDocSheet(){
   const d = legalDoc(state.legalDoc);
   if (!d) {
@@ -8405,17 +8647,24 @@ function legalDocSheet(){
       </div>
       <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close">${ic("x",15)}</button>
     </div>
-    <div class="sheet-body">
+    <div class="sheet-body" data-doc-body="${esc(d.id)}" onscroll="docScrolled('${esc(d.id)}', this)">
       <div style="font-size:var(--t-caption); color:var(--warning-ink); background:var(--warning-100); border-radius:var(--r-card); padding:var(--s-3) var(--s-3); line-height:1.5; margin-bottom:10px;">
         ${ic('alert-triangle',12)} <b>Draft — not reviewed by Philippine counsel.</b> Placeholders in square brackets are facts the business has not decided yet; none of them is a claim.
       </div>
-      ${accepted.length ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin-bottom:10px;">${ic('check',12)} This device recorded your acceptance of the ${esc(d.label)} ${esc(LEGAL_VERSION)} on ${esc(shortDate(new Date(accepted[accepted.length-1].at)))}.</div>` : ''}
+      ${accepted.length ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin-bottom:10px;">${ic('check',12)} ${d.consent === 'read'
+        ? `This device recorded that you read the ${esc(d.label)} ${esc(LEGAL_VERSION)} on ${esc(shortDate(new Date(accepted[accepted.length-1].at)))}.`
+        : `This device recorded your acceptance of the ${esc(d.label)} ${esc(LEGAL_VERSION)} on ${esc(shortDate(new Date(accepted[accepted.length-1].at)))}.`}</div>` : ''}
       ${d.sections.map((s, i) => `<div style="margin-bottom:12px;">
         <div style="font-weight:800; font-size:var(--t-body-sm); margin-bottom:4px;">${i+1}. ${esc(s.h)}</div>
         ${s.p.map(par => `<p style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.55; margin:0 0 6px;">${esc(par)}</p>`).join('')}
       </div>`).join('')}
     </div>
-    <div class="sheet-foot">
+    <div class="sheet-foot" style="flex-direction:column; align-items:stretch;">
+      <div id="doc-read-state" aria-live="polite" style="font-size:var(--t-caption); color:var(--mist); margin-bottom:8px;">
+        ${docIsRead(d.id)
+          ? 'You reached the end of this document. Close it to continue.'
+          : 'Scroll to the end of this document before the acceptance box unlocks.'}
+      </div>
       <button type="button" class="btn" style="flex:1; border-radius:var(--r-card);" onclick="closeSheet()">Close</button>
     </div>`;
 }
@@ -8426,6 +8675,12 @@ function legalLinks(){
 }
 
 function loginHTML(){
+  /* The documents the gate reads, resolved once for the sentence, the buttons and the lock line. The
+     sentence splits them by how they are consented to, because "accept" a privacy notice is a claim the
+     law does not support: consent is one of six bases, and a notice is what makes the others visible. */
+  const acceptDocs = LEGAL_DOCUMENTS.filter(d => acceptDocIds().includes(d.id));
+  const agreedDocs = acceptDocs.filter(d => d.consent !== 'read');
+  const readDocs = acceptDocs.filter(d => d.consent === 'read');
   /* Admin is a route into the operations console, not a kind of account, so on
      that route the card renders sign-in fields whatever mode was left behind —
      and offers no half-built "create an account as Admin" form. */
@@ -8499,9 +8754,10 @@ function loginHTML(){
         </div>
         <div class="auth-field">
           <label class="row" style="align-items:flex-start; gap:10px; font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; min-height:var(--tap);">
-            <input type="checkbox" id="reg-terms" style="margin-top:3px; width:20px; height:20px; flex-shrink:0;" ${err.terms ? 'aria-invalid="true" aria-describedby="err-terms"' : ''}>
-            <span>I have read and accept the <b>Terms &amp; Conditions</b> and the <b>Sukinnect Policy</b>.
-            <button type="button" class="auth-switch" style="font-size:var(--t-caption);" onclick="openLegalDoc('terms')">Read them now</button></span>
+            <input type="checkbox" id="reg-terms" style="margin-top:3px; width:20px; height:20px; flex-shrink:0;" ${acceptanceUnlocked() ? '' : 'disabled aria-disabled="true"'} ${err.terms ? 'aria-invalid="true" aria-describedby="err-terms"' : ''}>
+            <span>I have read and accept ${agreedDocs.map(d => `<b>${esc(d.title)}</b>`).join(' and ')}${readDocs.length ? `, and I have read the ${readDocs.map(d => `<b>${esc(d.title)}</b>`).join(' and ')}` : ''}.
+            ${acceptDocs.map(d => `<button type="button" class="auth-switch" style="font-size:var(--t-caption);" onclick="openLegalDoc('${esc(d.id)}')">${docIsRead(d.id) ? 'Re-read' : 'Read'} ${esc(d.title)}</button>`).join(' ')}</span>
+            ${acceptanceUnlocked() ? '' : `<span class="auth-hint" style="display:block; font-size:var(--t-caption); color:var(--mist); margin-top:4px;">${ic('lock',11)} This box stays off until you have opened each document above and scrolled it to the end.</span>`}
           </label>
           ${err.terms ? `<div class="inline-error auth-error" id="err-terms" role="alert">${ic('alert-triangle',13)} ${err.terms}</div>` : ''}
         </div>
@@ -8532,7 +8788,7 @@ function loginHTML(){
           ${isRegister ? 'I already have an account' : 'Create a new account'}
         </button>`}
 
-        ${isRegister ? `<button type="button" class="auth-admin-link" id="rt-admin">${ic('shield',12)} Admin sign in</button>` : ''}
+        ${isRegister && !state.appShell ? `<button type="button" class="auth-admin-link" id="rt-admin">${ic('shield',12)} Admin sign in</button>` : ''}
 
       </div>
     </div>
@@ -8602,6 +8858,15 @@ function submitAuth(){
   // Must agree with loginHTML(): the Admin route never draws the name and
   // barangay fields, so it must never demand them either.
   const isRegister = state.role !== 'admin' && state.authMode === 'register';
+  /* The belt behind the hidden link. A role can arrive from a saved session or a script, and the ruling is
+     about where the console lives, so the render guard above is what holds it — this one stops a phone
+     signing INTO an account whose only destination is a screen it cannot use, and says why in the field's
+     own error slot rather than in a toast that disappears. */
+  if (state.role === 'admin' && state.appShell) {
+    state.authError = { admin: 'The Master Administrator console is available in a web browser, not in the app. Residents and service providers use this build on a phone.' };
+    render();
+    return;
+  }
   const errors = {};
   if (!value('login-email')) errors.email = 'Enter your email to continue.';
   if (!value('login-pass')) errors.pass = 'Enter your password.';
@@ -8609,9 +8874,25 @@ function submitAuth(){
   if (isRegister && !value('reg-brgy')) errors.brgy = 'Your barangay decides who is nearby.';
   // An unchecked box is a refusal, not a default. It is never pre-ticked, and the
   // optional consent below it is a separate yes that changes nothing about booking.
+  /* The gate is not the disabled attribute — that is a painted thing, and a disabled control still
+     answers to a script. Refusing here is what makes the rule real, and the message names what is
+     missing rather than repeating the tick refusal. */
+  if (isRegister && !acceptanceUnlocked()) {
+    const unread = acceptDocIds().filter(id => !docIsRead(id));
+    state.authError = { terms: 'Open ' + unread.length + ' document' + (unread.length === 1 ? '' : 's') +
+      ' and scroll to the end of each — the acceptance box stays off until you have read them all.' };
+    render();
+    return;
+  }
   const termsBox = document.getElementById('reg-terms');
   if (isRegister && !(termsBox && termsBox.checked)) {
-    errors.terms = 'Accept the Terms & Conditions and Sukinnect Policy to create an account. You can read them first — the link opens the whole document.';
+    /* Built from the same records the card renders, so the refusal cannot name a document the sentence
+       does not, or forget one the gate holds. */
+    const agreedTitles = LEGAL_DOCUMENTS.filter(d => d.consent !== 'read').map(d => d.title).join(' and ');
+    const readTitles = LEGAL_DOCUMENTS.filter(d => d.consent === 'read').map(d => d.title).join(' and ');
+    errors.terms = 'Accept the ' + agreedTitles
+      + (readTitles ? ', and confirm you have read the ' + readTitles : '')
+      + ' to create an account. You can read them first — each link opens the whole document.';
   }
   if (Object.keys(errors).length) {
     state.authError = errors;
@@ -8642,7 +8923,7 @@ function submitAuth(){
         : 'Signed in as ' + state.providerProfileData.name + ' — the fruit pilot');
     } else {
       showToast(isRegister
-        ? 'Prototype build - the account itself is not stored. Only your acceptance of the Terms is kept on this device, and bookings use the demo household address'
+        ? 'Prototype build - the account itself is not stored. Only the record of which documents you read is kept on this device, and bookings use the demo household address'
         : 'Signed in to the demo environment');
     }
     /* The register form asked for a name and a barangay, validated them with "Tell us who to greet"
@@ -8665,8 +8946,10 @@ function submitAuth(){
          only appears if that box was ticked. */
       const at = Date.now();
       const mine = (state.termsAcceptances || []).filter(a => a.role !== state.role);
-      mine.push({ role: state.role, doc: 'terms', version: LEGAL_VERSION, at });
-      mine.push({ role: state.role, doc: 'policy', version: LEGAL_VERSION, at });
+      /* One row per document the gate holds, written from the same list — a record set that names two
+         documents while the gate reads three is the drift this file keeps meeting, and it is the
+         difference between "you agreed" and "you read" being auditable. */
+      LEGAL_DOCUMENTS.forEach(d => mine.push({ role: state.role, doc: d.id, version: LEGAL_VERSION, at }));
       const marketing = document.getElementById('reg-marketing');
       if (marketing && marketing.checked) {
         mine.push({ role: state.role, doc: 'marketing-consent', version: LEGAL_VERSION, at });
@@ -8852,6 +9135,30 @@ function providerTabHTML(){
   return '';
 }
 
+/* One screen, painted only inside the shell. It names the reason, names the surface that does have the
+   console, and offers the way out — it does not pretend to be a reduced admin view, because there is no
+   reduced admin view. No glyph: the icon set carries no browser or window shape, and dressing this up as
+   a shield would spend the trust mark on a message about where a screen lives. */
+function adminWebOnly(){
+  return `
+  <div class="pad" style="background:var(--cloud); min-height:100%;">
+    <div class="card" style="border-radius:16px; padding:var(--s-5); text-align:center;">
+      <h1 class="card-title" style="margin:0 0 6px;">The admin console is a desktop surface</h1>
+      <p style="font-size:var(--t-body-sm); color:var(--ink-soft); line-height:1.55; margin:0 0 var(--s-4);">
+        Verification review, the audit log, disputes and fee settings are built for a browser, not for a
+        phone. Open Sukinnect in a web browser and sign in as Master Administrator there. This app build
+        holds no administrative state on the device.
+      </p>
+      <button type="button" class="btn" style="border-radius:var(--r-card);" onclick="exitAdminShell()">Back to the resident app</button>
+    </div>
+  </div>`;
+}
+/* Signing out of the admin role inside the shell returns to the destination a phone can actually use, so
+   the refusal is a door with a way through it rather than a wall. */
+function exitAdminShell(){
+  state.role = 'resident'; state.tab = 'home'; state.adminScreen = null; render();
+}
+
 function adminTabHTML(){
   if(state.tab==='admin_dashboard') return state.adminScreen === 'finance' ? adminFinanceScreen() : state.adminScreen === 'intelligence' ? adminMarketplaceIntelligence() : state.adminScreen === 'categories' ? adminCategories() : state.adminScreen === 'trust' ? adminTrustSafety() : state.adminScreen === 'audit' ? adminAuditLog() : adminDashboard();
   if(state.tab==='admin_verifications') return adminVerifications();
@@ -8984,15 +9291,6 @@ function residentHome(){
       ${SERVICES.map(s=>`<button type="button" class="cat" data-service="${s.id}"><span class="art">${catArt(s.id)}</span><span>${esc(s.label)}</span></button>`).join('')}
     </div>
 
-    <button type="button" class="concierge-row" id="open-concierge-btn" style="margin-top:18px;">
-      <span class="cr-ic">${ic("lightbulb",15)}</span>
-      <span style="min-width:0; flex:1;">
-        <span class="cr-t">Describe or snap the problem</span>
-        <span class="cr-s">Prototype concierge &middot; clarifies, then shortlists</span>
-      </span>
-      <span style="color:var(--mist); display:inline-flex;">${ic("arrow-right",14)}</span>
-    </button>
-
     <div class="section-label">${repeat.length ? 'Book again' : 'Highly rated nearby'}</div>
     <div class="hscroll" style="display:flex; gap:8px;">
       ${repeat.map(({ p, last }) => `
@@ -9004,6 +9302,98 @@ function residentHome(){
           <div style="font-size:var(--t-caption); margin-top:5px; font-weight:800; color:var(--deep);">${last ? 'last ' + bookingAmountText(last) : 'from ' + pesoShort(cheapestListing(p))}</div>
         </div>`).join('')}
     </div>
+
+    ${conciergeFab()}
+  </div>`;
+}
+
+/* One control, painted by the screen that owns it, so the door and the rule about the door live in the
+   same place. The name is in the label rather than only in the glyph: an icon-only round button is the
+   unnamed-control defect this repository already counts, and the glyph alone cannot say what it opens.
+   The handler is a named function on an inline attribute rather than a closure assigned at mount, so the
+   camera can click the control the way a thumb does — `clickPainted` reaches painted attributes, and a
+   door no instrument can open is a door nobody has proved. */
+function conciergeFab(){
+  return `<div class="fab-dock">
+    <button type="button" class="concierge-fab" id="concierge-fab"
+      aria-label="Ask the AI Service Concierge to describe or photograph the problem"
+      onclick="openConcierge()">
+      <span class="fab-ic">${ic('sparkles',16)}</span>Ask the concierge
+    </button>
+  </div>`;
+}
+function openConcierge(){ state.tab = 'concierge'; render(); }
+
+/* The brief asks the AI to "recommend the frequent actions" out of what the records hold. There is no
+   model here and none is claimed: the list is a count over the bookings on this device, ranked, and each
+   row prints the count that produced it. Three rules keep it honest —
+     · a suggestion exists only if a record says so, so an empty history gets an empty state rather than a
+       popular guess;
+     · every row names a destination the app already has, reached through the function that paints it, so
+       the card cannot promise a screen nobody can open;
+     · the trade a row names is read through providerOf(b).service, the same read the receipt and the
+       spend figures use, so the suggestion and the money cannot disagree.
+   "Popular" beyond this one device is deliberately not offered: there is no server, and a number that no
+   record produced is the thing AGENTS §86 forbids. The concierge is a resident surface in this build, so
+   the provider's own frequent actions are not built here either — recorded as a limit, not a task. */
+function frequentActionRows(){
+  const done = bookingsForResident().filter(b => b.status === 'completed');
+  const rows = [];
+  const byTrade = {};
+  done.forEach(b => {
+    const svc = providerOf(b).service;
+    /* An unknown provider answers with a record-shaped stand-in that carries no identity, so a job
+       nobody is behind cannot become a suggestion. */
+    if (!svc) return;
+    (byTrade[svc] = byTrade[svc] || []).push(b);
+  });
+  const ranked = Object.keys(byTrade).sort((a, b) => byTrade[b].length - byTrade[a].length || a.localeCompare(b));
+  for (const svc of ranked) {
+    const cat = SERVICES.find(x => x.label === svc);
+    if (!cat) continue;
+    const n = byTrade[svc].length;
+    rows.push({ id:'trade', serviceId:cat.id, trade:svc, count:n,
+      label:'Book ' + svc.toLowerCase() + ' again',
+      because: n + (n === 1 ? ' completed job' : ' completed jobs') + ' on this device' });
+    break;
+  }
+  const unrated = done.filter(b => !b.myRating)
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0] || null;
+  if (unrated) rows.push({ id:'rate', bookingId:unrated.id,
+    label:'Rate the job from ' + unrated.date,
+    because:'it reached a final state and no rating is recorded' });
+  return rows.slice(0, 2);
+}
+/* One dispatcher, so every row carries an inline handler a camera can click and a name the reachability
+   audit can resolve — and a suggestion that has stopped being true on the records says so instead of
+   opening something unrelated. */
+function openFrequentAction(id){
+  const row = frequentActionRows().find(r => r.id === id);
+  if (!row) { showToast('That suggestion is no longer on your records'); return; }
+  if (row.id === 'trade') { openCategory(row.serviceId); return; }
+  openBookingDetail(row.bookingId);
+}
+function frequentActionsCard(){
+  const rows = frequentActionRows();
+  if (!rows.length) {
+    return `<div class="card" style="border-radius:16px; padding:var(--s-4); margin-bottom:14px">
+      <b style="display:block; font-size:var(--t-body-sm); margin-bottom:4px;">Suggested from your records</b>
+      <p style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin:0;">
+        Nothing yet — this device holds no completed job to learn a habit from. Describe the problem below
+        and the shortlist will come from the providers near you.
+      </p>
+    </div>`;
+  }
+  return `<div class="card" style="border-radius:16px; padding:var(--s-4); margin-bottom:14px">
+    <b style="display:block; font-size:var(--t-body-sm); margin-bottom:2px;">Suggested from your records</b>
+    <div style="font-size:var(--t-caption); color:var(--mist); margin-bottom:8px;">Counted on this device, not predicted.</div>
+    ${rows.map(r => `<button type="button" class="freq-action" onclick="openFrequentAction('${esc(r.id)}')">
+      <span style="min-width:0; flex:1;">
+        <span class="fa-t">${esc(r.label)}</span>
+        <span class="fa-s">${esc(r.because)}</span>
+      </span>
+      <span style="color:var(--mist); display:inline-flex; flex:none;">${ic('arrow-right',14)}</span>
+    </button>`).join('')}
   </div>`;
 }
 
@@ -9034,6 +9424,7 @@ function residentConcierge(){
       </p>
     </div>
 
+    ${frequentActionsCard()}
     <div class="card" style="border-radius:16px; padding:var(--s-4); margin-bottom:14px">
       <label for="concierge-input-field" style="font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:block; margin-bottom:8px;">Describe the issue</label>
       <textarea id="concierge-input-field" rows="4" oninput="conciergeInput(this)" style="width:100%; border:1px solid var(--line); border-radius:var(--r-card); padding:var(--s-3); margin-bottom:14px; font-family:inherit; font-size:var(--t-body-sm); color:var(--ink); resize:none;" placeholder="Describe what is broken, leaking, or needs maintenance...">${esc(state.conciergeInput)}</textarea>
@@ -12535,9 +12926,6 @@ function bindTabHandlers(){
 
   const backHome=document.getElementById('back-home-btn');
   if(backHome) backHome.onclick=()=>{state.tab='home';render();};
-
-  const openConciergeBtn=document.getElementById('open-concierge-btn');
-  if(openConciergeBtn) openConciergeBtn.onclick=()=>{state.tab='concierge';render();};
 
   const backFromConciergeBtn=document.getElementById('back-from-concierge-btn');
   if(backFromConciergeBtn) backFromConciergeBtn.onclick=()=>{state.tab='home';render();};

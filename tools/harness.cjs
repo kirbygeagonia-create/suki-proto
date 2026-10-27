@@ -105,7 +105,21 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'CREDENTIALS', 'LISTINGS'
   'rescheduleBooking', 'rescheduleHistory', 'openRescheduleRequest', 'submitRescheduleRequest', 'answerReschedule',
   'withdrawReschedule', 'counterReschedule', 'rescheduleCard', 'rescheduleRow', 'rescheduleSheet',
   /* the three documents and the acceptance record, so the gate can drive the real register path */
-  'LEGAL_DOCUMENTS', 'LEGAL_VERSION', 'legalDoc', 'openLegalDoc', 'legalDocSheet', 'legalLinks'];
+  'LEGAL_DOCUMENTS', 'LEGAL_VERSION', 'legalDoc', 'openLegalDoc', 'legalDocSheet', 'legalLinks',
+  /* the scroll gate: which documents the consent sentence names, and the one function a scroll
+     calls. The gate drives these rather than writing state.docRead, so the reading rule itself is
+     what the checks exercise. */
+  'acceptDocIds', 'docIsRead', 'acceptanceUnlocked', 'docScrolled', 'noteUnscrollableDocs',
+  /* the floating concierge door on Home, so the gate can resolve the handler the painted attribute
+     names and prove the click lands somewhere */
+  'conciergeFab', 'openConcierge',
+  /* the Phase D surfaces: the record-derived suggestions, the web-only admin refusal, and the rate
+     wizard. Each is driven through its own function so the gate runs the procedure rather than reading
+     the source that describes it. */
+  'frequentActionRows', 'frequentActionsCard', 'openFrequentAction',
+  'adminWebOnly', 'exitAdminShell',
+  'rateBandFor', 'marketRateHint', 'openRateWizard', 'rateWizardSheet',
+  'rateWizardGo', 'rateWizardChoose', 'rateWizardSave'];
 
 function boot({ appMode = false, storage = null } = {}) {
   const src = fs.readFileSync(APP, 'utf8');

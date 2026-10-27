@@ -1021,6 +1021,24 @@ const SCREENS = [
      anything, so it is walked from its own opener. */
   ['legal-terms',       `state.view='login'; state.role='resident'; state.authMode='register'; render();
                         openLegalDoc('terms'); state.sheet='legalDoc'; render();`],
+  /* The scroll gate has two painted states and a thumb reaches both: the sheet with its bottom still
+     ahead, and the same sheet after the bottom has been hit. Scrolling for real — move scrollTop, then
+     dispatch the event the browser would fire — is what makes this the reader's path and not a model of
+     it, because the inline `onscroll` handler is the thing under test and only an event reaches it. */
+  ['legal-terms-read',  `state.view='login'; state.role='resident'; state.authMode='register'; render();
+                        openLegalDoc('terms');
+                        const pane = document.querySelector('[data-doc-body]');
+                        pane.scrollTop = pane.scrollHeight; pane.dispatchEvent(new Event('scroll'));`],
+  /* And the card the reader comes back to, with the box turned on — reached by opening each named
+     document, scrolling it, and closing it, which is the whole rule rather than its end state. */
+  ['register-read',     `state.view='login'; state.role='resident'; state.authMode='register'; render();
+                        acceptDocIds().forEach(id => {
+                          openLegalDoc(id);
+                          const p = document.querySelector('[data-doc-body]');
+                          p.scrollTop = p.scrollHeight; p.dispatchEvent(new Event('scroll'));
+                          closeSheet();
+                        });
+                        render();`],
   ['reschedule-answer', `state.view='app'; state.role='resident';
                         const ans = BOOKINGS.find(b=>b.status==='upcoming') || BOOKINGS[0];
                         ans.status='upcoming'; openRescheduleRequest(ans.id);
@@ -1086,6 +1104,20 @@ const SCREENS = [
                         state.isChatOpen=true; render();`],
   ['resident-profile', `state.view='app'; state.role='resident'; state.tab='profile'; render();`],
   ['concierge',        `state.view='app'; state.role='resident'; state.tab='concierge'; render();`],
+  /* The concierge now opens with a suggestion block counted from this device's records, and the rate
+     wizard is a three-step sheet a provider reaches from their own pricing section — both are
+     destinations, so both are walked. */
+  ['concierge-suggested', `state.view='app'; state.role='resident'; state.tab='concierge'; render();`],
+  ['rate-wizard-step2',   `state.view='app'; state.role='provider'; state.tab='profile'; render();
+                        openRateWizard(); rateWizardGo(1);`],
+  ['rate-wizard-confirm', `state.view='app'; state.role='provider'; state.tab='profile'; render();
+                        openRateWizard(); rateWizardChoose(45000); rateWizardGo(2);`],
+
+  /* The concierge door on Home is a painted control now, so the walk opens it the way a thumb does —
+     click the control the app painted — rather than assigning the tab. If the handler goes away this
+     shot fails by name instead of photographing a screen nobody can reach. */
+  ['concierge-from-fab', `state.view='app'; state.role='resident'; state.tab='home'; render();
+                        clickPainted(/openConcierge\\(\\)/, 'the floating concierge control on Home');`],
   /* The answer the concierge gives when the words sort into nothing. Typed into the
      field and submitted through the painted button, because the state only exists if
      a thumb can create it — and until this change an unsortable description was

@@ -1707,7 +1707,7 @@ suite('hygiene', async () => {
     modalZ !== null && sheetZ !== null && modalZ > sheetZ,
     '.modal-layer z-index ' + modalZ + ' against .sheet-layer ' + sheetZ);
 
-  const RUNGS = ['z-sticky', 'z-nav', 'z-sheet', 'z-modal', 'z-map-veil', 'z-toast'];
+  const RUNGS = ['z-sticky', 'z-nav', 'z-fab', 'z-sheet', 'z-modal', 'z-map-veil', 'z-toast'];
   const rungNums = RUNGS.map(rungValue);
   const ladderMissing = RUNGS.filter((n, i) => rungNums[i] === null);
   const ladderOutOfOrder = [];
@@ -2068,7 +2068,7 @@ suite('hygiene', async () => {
 suite('login', async () => {
   const c = makeChecker();
   const app = boot();
-  const { state, loginHTML } = app;
+  const { state, loginHTML, LEGAL_DOCUMENTS } = app;
   const safe = (label, fn) => { try { return fn(); } catch (err) { c.check(label + ' threw', false, err.message); return ''; } };
 
   state.view = 'login';
@@ -2163,12 +2163,48 @@ suite('login', async () => {
     !/auth-note-line|not an account|Demo environment/.test(one));
   c.check('and the sign-in still says the account is not stored',
     /the account itself is not stored/.test(app._source)
-      && /Only your acceptance of the Terms is kept on this device/.test(app._source));
+      && /Only the record of which documents you read is kept on this device/.test(app._source));
   c.check('forgot password reads as a link under the field', /class="auth-forgot"/.test(one));
   c.check('log in is the only primary action',
     (one.match(/class="btn" id="login-btn"/g) || []).length === 1);
   c.check('register asks for a name and a barangay, login does not',
     /id="reg-name"/.test(reg) && /id="reg-brgy"/.test(reg) && !/id="reg-name"/.test(one));
+  /* The owner's ruling of 2026-10-27: the acceptance box stays off until each document it names has
+     been scrolled to its end. What follows is the painted half; the real half is further down,
+     because `disabled` is a picture and a script can still tick the box — `submitAuth` refuses on
+     its own terms. The consent row is sliced out of the card rather than searched across it: the
+     foot links below open all three documents, including the notice nobody is asked to accept, so a
+     match over the whole screen would count those as consent buttons. The positive control counts
+     the documents themselves, because a gate over an empty set reports "all read" forever. */
+  const consentRowOf = (m) => m.slice(m.indexOf('id="reg-terms"'), m.indexOf('id="reg-marketing"'));
+  const gateDocs = app.acceptDocIds();
+  const lockedRow = consentRowOf(reg);
+  const rowOpens = LEGAL_DOCUMENTS.map(d => d.id).filter(id => lockedRow.indexOf("openLegalDoc('" + id + "')") > -1);
+  c.check('the acceptance is gated on documents that exist (a gate over none is silence)',
+    gateDocs.length >= 2, 'consent names: ' + gateDocs.join(', ') + ' — floor of 2');
+  c.check('the consent row opens exactly the documents the gate reads',
+    gateDocs.length >= 2 && rowOpens.length === gateDocs.length && gateDocs.every(id => rowOpens.indexOf(id) > -1),
+    'row opens ' + rowOpens.join(', ') + ' | gate requires ' + gateDocs.join(', '));
+  /* The row above is built FROM the gate, so their agreement is a tautology: filter a document out of
+     the list and the row shrinks with it and every relation still holds. This is the check that can see
+     the list itself move — the gate has to hold every document the card links, including the notice the
+     reader only acknowledges having read, which is the half of the owner's "these two" that is not an
+     acceptance. `falsify-scroll-gate` break D filters the notice out and must go red here. */
+  const linkedIds = (reg.match(/openLegalDoc\('([a-z-]+)'\)/g) || []).map(s => /'([a-z-]+)'/.exec(s)[1]);
+  const noticeIds = LEGAL_DOCUMENTS.filter(d => d.consent === 'read').map(d => d.id);
+  c.check('the gate holds every document the card links, including the one that is only read',
+    noticeIds.length >= 1 && linkedIds.length >= 3
+      && linkedIds.every(id => gateDocs.indexOf(id) > -1)
+      && noticeIds.every(id => gateDocs.indexOf(id) > -1),
+    'card links ' + linkedIds.filter((v, i, a) => a.indexOf(v) === i).join(', ')
+      + ' · gate holds ' + gateDocs.join(', '));
+  c.check('an unread register paints the box off and says what would turn it on',
+    /disabled aria-disabled="true"/.test(lockedRow) && /class="auth-hint"/.test(lockedRow)
+      && /scrolled it to the end/.test(lockedRow),
+    'row of ' + lockedRow.length + ' chars, ' + rowOpens.length + ' document button(s)');
+  c.check('and a sign-in screen has no acceptance to gate, because it creates nothing',
+    consentRowOf(one).length === 0 && lockedRow.length > 0,
+    'login row length ' + consentRowOf(one).length);
   c.check('fields carry real labels, not a placeholder alone', /for="login-email"/.test(one));
   c.check('the password can be shown', /id="toggle-pw-btn"/.test(one));
   c.check('the sample credential still arrives prefilled for the chosen role',
@@ -2190,6 +2226,59 @@ suite('login', async () => {
   const seedBrgy = regBoot.state.profileData.barangay;
   regBoot.state.view = 'login'; regBoot.state.role = 'resident'; regBoot.state.authMode = 'register';
   regBoot.render();
+  /* The scroll gate is a rule about geometry, and the harness mounts no sheet — `renderSheet()`
+     paints into `#sheet-root`, outside the fragment the harness assembles — so the element is handed
+     to the app's own scroll function with the measurements a finger produces, rather than the state
+     being written. That keeps `docScrolled` in the path every check below depends on; the camera
+     walks the real sheet and proves the geometry where it exists. Note the numbers: scrollTop plus
+     clientHeight reaches scrollHeight, so this is the at-end branch, not the escape for a document
+     too short to scroll. */
+  const AT_END = { scrollTop: 1000, clientHeight: 600, scrollHeight: 1600 };
+  const HALF_WAY = { scrollTop: 300, clientHeight: 600, scrollHeight: 1600 };
+  const readEveryDoc = (b) => b.acceptDocIds().forEach(id => b.docScrolled(id, AT_END));
+  readEveryDoc(regBoot);
+  regBoot.render();
+  const unlockedRow = consentRowOf(regBoot.loginHTML());
+  c.check('once each document is read the same box paints on, and its buttons offer a re-read',
+    !/disabled aria-disabled="true"/.test(unlockedRow) && !/class="auth-hint"/.test(unlockedRow)
+      && /Re-read/.test(unlockedRow) && /scrolled it to the end/.test(reg)
+      && regBoot.acceptanceUnlocked(),
+    'unlocked row ' + unlockedRow.length + ' chars · Re-read buttons ' + (unlockedRow.match(/>Re-read/g) || []).length);
+  const midBoot = boot();
+  midBoot.state.view = 'login'; midBoot.state.role = 'resident'; midBoot.state.authMode = 'register';
+  midBoot.render();
+  midBoot.acceptDocIds().forEach(id => midBoot.docScrolled(id, HALF_WAY));
+  c.check('opening a document is not reading it: half-way geometry unlocks nothing',
+    midBoot.acceptDocIds().every(id => !midBoot.docIsRead(id)) && !midBoot.acceptanceUnlocked()
+      && /disabled aria-disabled="true"/.test(consentRowOf(midBoot.loginHTML())),
+    'read after a half-way scroll: ' + midBoot.acceptDocIds().filter(id => midBoot.docIsRead(id)).length);
+  /* A document with no bottom to reach must not lock the reader out, or the gate is a wall. Measured
+     through the mount function rather than asserted in prose, so `noteUnscrollableDocs()` is the thing
+     under test and not its own comment. The fake pane is handed over for ONE selector: replacing
+     `querySelector` outright makes every other lookup in the page answer a document body, and the next
+     `render()` then dies in `syncBackHandles()` on a `.sheet` that has no setAttribute — an instrument
+     defect wearing the costume of an app crash. */
+  const shortBoot = boot();
+  shortBoot.state.view = 'login'; shortBoot.state.role = 'resident'; shortBoot.state.authMode = 'register';
+  const realQuery = shortBoot._document.querySelector.bind(shortBoot._document);
+  shortBoot._document.querySelector = (sel) => sel === '[data-doc-body]' ? {
+    scrollHeight: 480, clientHeight: 600, scrollTop: 0,
+    getAttribute: () => shortBoot.state.legalDoc
+  } : realQuery(sel);
+  /* One pane at a time, because the sheet shows one document — and the box only comes on when every
+     named document has been through it. Marking one read and asserting the box is enabled would be
+     a check that passes on a build where the gate ignores the second document entirely. */
+  const openedShort = shortBoot.acceptDocIds().map(id => {
+    shortBoot.state.legalDoc = id;
+    shortBoot.noteUnscrollableDocs();
+    return shortBoot.docIsRead(id);
+  });
+  const shortRow = consentRowOf(shortBoot.loginHTML());
+  c.check('a document that cannot scroll counts as read, so the gate never becomes a lockout',
+    openedShort.every(Boolean) && shortBoot.acceptanceUnlocked()
+      && shortRow.length > 200 && shortRow.indexOf('disabled') === -1,
+    'of ' + openedShort.length + ' unscrollable document(s), read: ' + openedShort.filter(Boolean).length
+      + ' · row of ' + shortRow.length + ' chars carries disabled: ' + (shortRow.indexOf('disabled') > -1));
   [['reg-name', 'Nueva Residente'], ['reg-brgy', 'Buayan'],
    ['login-email', 'nueva@example.com'], ['login-pass', 'demo1234']].forEach(([id, v]) => {
     regBoot._document.getElementById(id).value = v;
@@ -2234,6 +2323,20 @@ suite('login', async () => {
   refusedBoot.state.view = 'login'; refusedBoot.state.role = 'resident'; refusedBoot.state.authMode = 'register';
   refusedBoot.render();
   fill(refusedBoot);
+  const unreadBefore = refusedStore.getItem('sukinnect.snapshot.v1');
+  refusedBoot.submitAuth();
+  c.check('a register nobody has read is refused before the box is even asked about, and writes nothing',
+    refusedStore.getItem('sukinnect.snapshot.v1') === unreadBefore
+      && (refusedBoot.state.termsAcceptances || []).length === 0
+      && refusedBoot.state.authError && refusedBoot.state.authError.terms
+      && refusedBoot.state.authError.terms.indexOf('Open ' + gateDocs.length + ' document') === 0
+      && refusedBoot.state.view === 'login',
+    'error ' + JSON.stringify(refusedBoot.state.authError || null));
+  /* The two refusals are one branch each and must name different things: the unread case counts the
+     documents still shut, the unticked case names the box. A single message for both would let a
+     mutant that deletes the scroll gate pass as a tick check. */
+  readEveryDoc(refusedBoot);
+  refusedBoot.render();
   const refusedBefore = refusedStore.getItem('sukinnect.snapshot.v1');
   refusedBoot.submitAuth();
   await new Promise(r => setTimeout(r, 900));
@@ -2241,7 +2344,7 @@ suite('login', async () => {
     refusedStore.getItem('sukinnect.snapshot.v1') === refusedBefore
       && (refusedBoot.state.termsAcceptances || []).length === 0
       && refusedBoot.state.authError && refusedBoot.state.authError.terms
-      && /Terms/.test(refusedBoot.state.authError.terms)
+      && /Accept the Terms/.test(refusedBoot.state.authError.terms)
       && refusedBoot.state.view === 'login',
     'error ' + JSON.stringify(refusedBoot.state.authError || null) + ', view ' + refusedBoot.state.view);
 
@@ -2250,6 +2353,8 @@ suite('login', async () => {
   regBoot2.state.view = 'login'; regBoot2.state.role = 'resident'; regBoot2.state.authMode = 'register';
   regBoot2.render();
   fill(regBoot2);
+  readEveryDoc(regBoot2);
+  regBoot2.render();
   regBoot2._document.getElementById('reg-terms').checked = true;
   const beforeBytes = regStore.getItem('sukinnect.snapshot.v1');
   regBoot2.submitAuth();
@@ -2273,6 +2378,8 @@ suite('login', async () => {
   ncBoot.state.view = 'login'; ncBoot.state.role = 'resident'; ncBoot.state.authMode = 'register';
   ncBoot.render();
   fill(ncBoot);
+  readEveryDoc(ncBoot);
+  ncBoot.render();
   ncBoot._document.getElementById('reg-terms').checked = true;
   ncBoot.submitAuth();
   await new Promise(r => setTimeout(r, 900));
@@ -4777,6 +4884,190 @@ suite('fruit', async () => {
       !/Waiting for the provider to answer/.test(html);
   })(), 'the one booking where her answer is the story was the one screen that did not say so');
 
+  /* The owner's ruling of 2026-10-27: "The AI in the Home page will be changed in design, instead of
+     module there will be a chatbot at the bottom right." Three things have to be true for that to be
+     the change rather than a restyle — the module is gone, the new control opens the same screen, and
+     it is named. The second is behavioural, because a door that only exists in the markup is the defect
+     this repository keeps meeting: the check clicks the control the mount step wired and reads where the
+     app landed, behind a positive control that it had not landed there already. */
+  const fabBoot = boot();
+  fabBoot.state.view = 'app'; fabBoot.state.role = 'resident'; fabBoot.state.tab = 'home';
+  fabBoot.render();
+  const homeMarkup = fabBoot._document.getElementById('screen').innerHTML;
+  const fabCount = (homeMarkup.match(/class="concierge-fab"/g) || []).length;
+  const dockCount = (homeMarkup.match(/class="fab-dock"/g) || []).length;
+  c.check('Home carries one floating concierge control and no module card',
+    fabCount === 1 && dockCount === 1 && !/class="concierge-row"/.test(homeMarkup)
+      && !/concierge-row/.test(fabBoot._source),
+    'fab ' + fabCount + ' · dock ' + dockCount + ' · the old class survives anywhere in the file: '
+      + /concierge-row/.test(fabBoot._source));
+  c.check('the floating control says what it opens in words, not only in a glyph',
+    /aria-label="Ask the AI Service Concierge[^"]*"/.test(homeMarkup)
+      && /Ask the concierge/.test(homeMarkup)
+      && (homeMarkup.match(/ic\(|<svg/g) || []).length > 0,
+    homeMarkup.slice(homeMarkup.indexOf('concierge-fab'), homeMarkup.indexOf('concierge-fab') + 190).replace(/\s+/g, ' '));
+  const tabBefore = fabBoot.state.tab;
+  /* The Node harness cannot run an inline attribute, so the check does the next strongest thing: it
+     reads the handler NAME off the painted control, requires that name to resolve to a real function,
+     and calls it — which is what `audit-handler-reachability` exists to make meaningful. The real click
+     is the camera's row `concierge-from-fab`, which reaches the control through `clickPainted`. */
+  const fabAttr = (/id="concierge-fab"[^>]*onclick="([^"]+)"/.exec(homeMarkup.replace(/\s+/g, ' ')) || [])[1];
+  const fabFn = fabAttr && fabAttr.indexOf('openConcierge()') === 0 ? fabBoot.openConcierge : null;
+  const clicked = typeof fabFn === 'function' && (fabFn.call(fabBoot), true);
+  c.check('clicking the floating control opens the concierge, which is the whole promise of it',
+    tabBefore === 'home' && !!fabAttr && clicked && fabBoot.state.tab === 'concierge',
+    'painted handler ' + String(fabAttr) + ' resolves to a function: ' + !!clicked
+      + ' · tab was ' + tabBefore + ', after: ' + fabBoot.state.tab);
+  /* The dock is a full-width strip that must not shield the cards it overlaps, and it must sit above
+     them while scrolling — so the rule is split three ways, and each half is a different failure if it
+     goes missing: a dock that takes taps eats the screen, a dock without the rung hides behind cards. */
+  const cssRules = fabBoot._source.replace(/\/\*[\s\S]*?\*\//g, '');
+  c.check('the dock passes taps through to what it overlaps and keeps its own rung on the ladder',
+    /\.fab-dock\{[^}]*pointer-events:none[^}]*\}/.test(cssRules)
+      && /\.concierge-fab\{[^}]*pointer-events:auto[^}]*\}/.test(cssRules)
+      && /\.fab-dock\{[^}]*z-index:var\(--z-fab\)/.test(cssRules)
+      && /\.fab-dock\{[^}]*position:sticky/.test(cssRules),
+    'dock: ' + (/\.fab-dock\{([^}]*)\}/.exec(cssRules) || [, 'not found'])[1].replace(/\s+/g, ' ').slice(0, 130));
+
+  /* ── Phase D: the suggestion list, the web-only console, and the rate wizard ─────────────────
+     Three rules, each with its opposite asserted beside it, because every one of them can fail by
+     showing nothing: an empty suggestion list looks clean, a console that refuses everywhere looks
+     like a console that refuses on a phone, and a band computed from no rows is a null that renders
+     as an absence. */
+  const sug = boot();
+  sug.state.view = 'app'; sug.state.role = 'resident'; sug.state.tab = 'concierge';
+  const rowsWithSeed = sug.frequentActionRows();
+  c.check('the suggestions are counted from completed jobs, and each names the count that produced it',
+    rowsWithSeed.length >= 1 && rowsWithSeed.every(r => r.because && r.because.length > 8),
+    'rows: ' + rowsWithSeed.map(r => r.label + ' [' + r.because + ']').join(' | '));
+  const noHistory = boot();
+  noHistory.BOOKINGS.forEach(b => { if (b.status === 'completed') b.status = 'ongoing'; });
+  const rowsEmpty = noHistory.frequentActionRows();
+  noHistory.state.view = 'app'; noHistory.state.role = 'resident'; noHistory.state.tab = 'concierge';
+  const emptyCard = String(noHistory.frequentActionsCard());
+  c.check('with no completed job on the device the list is empty and the card says so, rather than guessing',
+    rowsEmpty.length === 0 && /Nothing yet/.test(emptyCard) && !/Book |Rate the job/.test(emptyCard),
+    'rows ' + rowsEmpty.length + ' · card: ' + emptyCard.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 90));
+  const door = boot();
+  door.state.view = 'app'; door.state.role = 'resident'; door.state.tab = 'concierge';
+  /* Every completed job in the seed already carries a rating, so the row this check exists to prove
+     does not exist until a record is changed inside the test — the same shape as voiding a payment to
+     watch a total move. Asserting against the seed alone would report "no unrated job" forever. */
+  const rated = door.BOOKINGS.find(b => b.status === 'completed' && b.myRating) || null;
+  if (rated) rated.myRating = null;
+  const rateRow = door.frequentActionRows().find(r => r.id === 'rate') || null;
+  const selectionBefore = door.state.selectedBookingId;
+  door.openFrequentAction('rate');
+  c.check('a suggestion opens the record it was counted from, not a screen that happens to exist',
+    !!rated && !!rateRow && rateRow.bookingId === rated.id
+      && door.state.selectedBookingId === rateRow.bookingId && door.state.selectedBookingId !== selectionBefore,
+    'voided the rating on ' + (rated ? rated.id : 'nothing') + ' · row names '
+      + (rateRow ? rateRow.bookingId : 'no row') + ' · the screen opened ' + String(door.state.selectedBookingId));
+  const stale = boot();
+  stale.state.view = 'app'; stale.state.role = 'resident';
+  const beforeTab = stale.state.tab, beforeSel = stale.state.selectedBookingId;
+  stale.BOOKINGS.forEach(b => { if (b.status === 'completed') b.status = 'ongoing'; });
+  stale.openFrequentAction('rate');
+  /* The rule is that nothing moves, so the assertion compares against the value the boot actually
+     left behind. Requiring the selection to be absent failed on a correct build because the app opens
+     a booking at start — an assertion about the world instead of about the change. */
+  c.check('a suggestion that has stopped being true says so instead of opening something else',
+    stale.state.tab === beforeTab && stale.state.selectedBookingId === beforeSel,
+    'tab stayed ' + stale.state.tab + ' · selection stayed ' + String(stale.state.selectedBookingId));
+
+  const shell = boot({ appMode: true });
+  const web = boot();
+  c.check('the app shell is read once from how the page loaded, and both answers are real',
+    shell.state.appShell === true && web.state.appShell === false,
+    'shell ' + String(shell.state.appShell) + ' · browser ' + String(web.state.appShell));
+  shell.state.view = 'app'; shell.state.role = 'admin'; shell.render();
+  const shellScreen = shell._document.getElementById('screen').innerHTML;
+  web.state.view = 'app'; web.state.role = 'admin'; web.state.tab = 'admin_dashboard'; web.render();
+  const webScreen = web._document.getElementById('screen').innerHTML;
+  c.check('inside the shell the admin role meets a stated refusal, and on the web the console is untouched',
+    /admin console is a desktop surface/i.test(shellScreen) && !/Provider verification/.test(shellScreen)
+      && /Provider verification|Marketplace Intelligence/.test(webScreen),
+    'shell paints ' + shellScreen.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 70)
+      + ' · browser paints the console: ' + /Provider verification|Marketplace Intelligence/.test(webScreen));
+  const shellLogin = (() => { const b = boot({ appMode: true }); b.state.view = 'login'; b.state.role = 'resident'; b.state.authMode = 'register'; return b.loginHTML(); })();
+  const webLogin = (() => { const b = boot(); b.state.view = 'login'; b.state.role = 'resident'; b.state.authMode = 'register'; return b.loginHTML(); })();
+  c.check('the shell never offers a route into an account it will not open',
+    !/id="rt-admin"/.test(shellLogin) && /id="rt-admin"/.test(webLogin),
+    'link in shell: ' + /id="rt-admin"/.test(shellLogin) + ' · in browser: ' + /id="rt-admin"/.test(webLogin));
+  const shellSignIn = boot({ appMode: true });
+  shellSignIn.state.view = 'login'; shellSignIn.state.role = 'admin';
+  shellSignIn._document.getElementById('login-email').value = 'admin@demo.ph';
+  shellSignIn._document.getElementById('login-pass').value = 'demo1234';
+  shellSignIn.submitAuth();
+  await new Promise(r => setTimeout(r, 900));
+  c.check('and signing in as Admin on a phone is refused in words that name the surface it is on',
+    shellSignIn.state.view === 'login' && shellSignIn.state.authError && /web browser/i.test(shellSignIn.state.authError.admin || ''),
+    'view ' + shellSignIn.state.view + ' · ' + JSON.stringify(shellSignIn.state.authError || null).slice(0, 90));
+
+  const band = boot();
+  const trades = [...new Set(band.PROVIDERS.map(p => p.service))];
+  const withBands = trades.filter(t => band.rateBandFor(t));
+  const plumb = band.rateBandFor(trades[0]);
+  c.check('the rate band is a division over the providers on this device, ordered and non-empty',
+    !!plumb && withBands.length >= 2 && plumb.low <= plumb.mid && plumb.mid <= plumb.high
+      && plumb.low > 0 && plumb.count === band.PROVIDERS.filter(p => p.service === plumb.trade).length,
+    trades[0] + ': ' + JSON.stringify(plumb) + ' · ' + withBands.length + ' of ' + trades.length + ' trades have a band');
+  c.check('a trade with no listed rate is refused a band rather than shown a zero',
+    band.rateBandFor('No Such Trade At All') === null,
+    String(band.rateBandFor('No Such Trade At All')));
+  const hint = band.marketRateHint('Plumbing');
+  /* Both branches of the rate step, because the seam sentence belongs wherever a rate is discussed.
+     The first draft painted only the branch that HAS a band — and the branch a real provider on this
+     build actually sees is the other one, because the profile's own service string is not a roster
+     trade. Each sheet is reached through the wizard's own draft, not by writing a rendered flag. */
+  const branchWithTrade = (trade) => {
+    const w = boot();
+    w.state.view = 'app'; w.state.role = 'provider';
+    w.openRateWizard();
+    w.state.rateWizard.trade = trade;
+    w.rateWizardGo(1);
+    return { markup: String(w.rateWizardSheet()), boot: w };
+  };
+  const withBand = branchWithTrade(plumb.trade);
+  const withoutBand = branchWithTrade('A trade nobody on this device lists');
+  const seamIn = (m) => m.indexOf(hint.reason.slice(0, 24)) > -1;
+  c.check('the outside market read is a named seam that says it did not happen, on every rate branch',
+    hint.available === false && /not wired in this build/i.test(hint.reason)
+      && seamIn(withBand.markup) && seamIn(withoutBand.markup),
+    'seam: ' + hint.reason.slice(0, 52) + ' · band branch quotes it: ' + seamIn(withBand.markup)
+      + ' · no-band branch quotes it: ' + seamIn(withoutBand.markup));
+  /* The defect the screenshot showed: the profile's own service string is "Plumbing Specialist" while
+     the rate rows say "Plumbing", so a band counted off the profile found nothing and the sheet told the
+     provider that nobody lists a rate for their own work. The trade now comes from the roster record,
+     and this asserts the branch the signed-in provider actually sees is the one with numbers in it. */
+  const own = boot();
+  own.state.view = 'app'; own.state.role = 'provider';
+  own.openRateWizard(); own.rateWizardGo(1);
+  const ownMarkup = String(own.rateWizardSheet());
+  const ownTrade = own.state.rateWizard.trade;
+  c.check('a provider opening the wizard sees a band for their own trade, not a claim that none exists',
+    own.rateBandFor(ownTrade) !== null && /Rates listed for/.test(ownMarkup)
+      && !/No provider on this device lists a rate/.test(ownMarkup),
+    'trade ' + ownTrade + ' · band ' + JSON.stringify(own.rateBandFor(ownTrade)));
+  const wizardBoot = withBand.boot;
+  /* Attempt the jump first: the refusal is a fact about the attempt, so reading `error` before asking
+     for the step would assert that nothing happened and call it a guard. */
+  wizardBoot.rateWizardGo(2);
+  const blocked = wizardBoot.state.rateWizard.step === 1 && /Pick a rate/.test(wizardBoot.state.rateWizard.error || '');
+  /* The amount has to differ from the rate the account already carries, or a Save that wrote nothing
+     would pass an equality test against the band. p1's own rate IS the middle of the Plumbing band, so
+     comparing to `mid` alone could not tell a write from a no-op. */
+  const rateBefore = wizardBoot.state.providerProfileData.rateCentavos;
+  const target = plumb.high !== rateBefore ? plumb.high : plumb.high + 5000;
+  wizardBoot.rateWizardChoose(target);
+  wizardBoot.rateWizardGo(2);
+  wizardBoot.rateWizardSave();
+  const rateAfter = wizardBoot.state.providerProfileData.rateCentavos;
+  c.check('the wizard will not confirm without a rate, and its Save writes the field the profile form writes',
+    blocked && wizardBoot.state.rateWizard === null && rateAfter === target && rateAfter !== rateBefore,
+    'forward without a rate refused: ' + blocked + ' · ' + rateBefore + ' -> ' + rateAfter
+      + ' (picked ' + target + ', band ' + plumb.low + '/' + plumb.mid + '/' + plumb.high + ')');
+
   c.check('the catalogue admits what it cannot do',
     /does not do/.test(adm.adminCategories()) && /not available here/.test(adm.adminCategories()));
 
@@ -6083,6 +6374,50 @@ suite('legal', async () => {
       return /Draft — not reviewed by Philippine counsel/.test(String(b.legalDocSheet()));
     });
   })());
+
+  /* The owner's ruling of 2026-10-27 asks for the terms and the privacy document to be read to their
+     end before the acceptance turns on. This build holds three documents, so the gate covers all three
+     and each declares HOW it is consented to — a notice is not an agreement, and RA 10173 lists consent
+     as one lawful basis of six. A missing declaration would be read as 'accept' by the comparison, so
+     the field itself is what this check holds, with both kinds required to be present: a scan that
+     matched nothing would report "every document declares a kind" forever. */
+  const kinds = LEGAL_DOCUMENTS.map(d => d.consent);
+  c.check('every legal document declares whether the reader accepts it or has merely read it',
+    LEGAL_DOCUMENTS.length >= 3 && kinds.every(k => k === 'accept' || k === 'read')
+      && kinds.includes('accept') && kinds.includes('read'),
+    'kinds: ' + LEGAL_DOCUMENTS.map(d => d.id + '=' + String(d.consent)).join(', '));
+  /* The record has to cover what the gate holds, or "you read this" is a claim with no row behind it
+     for the document the sentence names. Measured by running the real register path, not by reading the
+     source: a loop that writes two of three rows looks identical either way in prose. */
+  const gateBoot = boot();
+  gateBoot.state.view = 'login'; gateBoot.state.role = 'resident'; gateBoot.state.authMode = 'register';
+  gateBoot.render();
+  [['reg-name', 'Nueva Residente'], ['reg-brgy', 'Buayan'],
+   ['login-email', 'nueva@example.com'], ['login-pass', 'demo1234']].forEach(([id, v]) => {
+    gateBoot._document.getElementById(id).value = v;
+  });
+  gateBoot.acceptDocIds().forEach(id =>
+    gateBoot.docScrolled(id, { scrollTop: 1000, clientHeight: 600, scrollHeight: 1600 }));
+  gateBoot.render();
+  gateBoot._document.getElementById('reg-terms').checked = true;
+  gateBoot.submitAuth();
+  await new Promise(r => setTimeout(r, 900));
+  const gateRows = (gateBoot.state.termsAcceptances || []).filter(a => a.role === 'resident');
+  c.check('the acceptance record carries one row per document the gate holds',
+    gateRows.length === gateBoot.acceptDocIds().length
+      && gateBoot.acceptDocIds().every(id => gateRows.some(a => a.doc === id && a.version === LEGAL_VERSION)),
+    'recorded ' + (gateRows.map(a => a.doc).join(', ') || 'nothing')
+      + ' · gate holds ' + gateBoot.acceptDocIds().join(', '));
+  /* And the sheet's foot is a column, which is a measured thing rather than a style: a sentence and a
+     button in one flex row hands the whole shortfall to the sentence's larger content basis and leaves
+     the button one character wide, which no camera tally calls a defect. Found in a screenshot. */
+  gateBoot.state.legalDoc = 'terms';
+  const footMarkup = String(gateBoot.legalDocSheet());
+  const footTag = footMarkup.slice(footMarkup.indexOf('class="sheet-foot"'));
+  c.check('the document sheet foot stacks its line above its button, so neither crushes the other',
+    /flex-direction:column/.test(footTag.slice(0, 90)) && /id="doc-read-state"/.test(footTag)
+      && /onclick="closeSheet\(\)"/.test(footTag),
+    'foot opens: ' + footTag.slice(0, 96).replace(/\s+/g, ' '));
 
   return c;
 });
