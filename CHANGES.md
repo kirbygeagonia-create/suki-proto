@@ -9312,3 +9312,274 @@ this device's bookings; document expiry and reviewer records that already exist)
 procedure with a named seam (OCR, face match, reCAPTCHA, a hosted LLM, exchange and labour-rate lookups,
 blockchain settlement) and from what is a decision that is not this repository's to make (regulated
 lending, and the fact that a blockchain does not encrypt).
+
+## 153. The acceptance now has to be read, and the sentence that names it is derived from the records
+
+The owner's Phase D brief ends its consent rule with a condition rather than a label: "there should be a
+terms and conditions and privacy Policy, and the both will not enable the acceptance if did not scroll
+down to the bottom of these two." A checkbox that is merely pre-unticked asks a person to confirm they
+read something they may not have opened; a checkbox that cannot be ticked until each document has been
+scrolled to its end makes the confirmation a fact about an interaction.
+
+What is built (`Sukinnect-next.html`):
+
+- `state.docRead` holds one flag per document, and `acceptDocIds()` returns **every** id in
+  `LEGAL_DOCUMENTS` — derived from the record set rather than listed beside it, the same rule by which
+  `layerKeys()` derives the modal fields from `state`, so a fourth document is gated the moment it
+  exists.
+- `docScrolled(id, el)` marks read when `scrollTop + clientHeight` reaches `scrollHeight - 24`, **or**
+  when the pane cannot scroll at all. It rewrites the footer line in place and does not re-render: a
+  sheet that repainted would send the reader back to the top of the text they had just finished, which
+  turns the gate into a loop.
+- `noteUnscrollableDocs()` runs from `renderSheet()`, because a document shorter than its pane has no
+  bottom to reach, and a control that can never unlock is a lockout rather than a gate. Measured at
+  mount from real geometry, not assumed from the length of the prose.
+- The register card's box carries `disabled aria-disabled="true"` and a lock line naming what would turn
+  it on, and `submitAuth` refuses **before** the tick test when the gate is shut — because `disabled` is
+  a picture and a script can still tick a painted box, so the rule has to live in the handler too. The
+  two refusals are separate branches with separate messages: the unread one counts the documents still
+  shut, the unticked one names the box, and a single message for both would let a mutant that deletes the
+  scroll gate pass as a tick check.
+
+**The third document, and the distinction the brief's wording forced.** The build holds Terms &
+Conditions, Sukinnect Policy and a Privacy Notice. The owner named "a terms and conditions and privacy
+Policy", so the gate covers all three — and each document now declares `consent: 'accept' | 'read'`,
+because a notice is not an agreement: RA 10173 lists consent as one lawful basis of six, and the notice
+is what makes the other five visible. The sentence on the card says which is which ("I have read and
+accept the Terms & Conditions and Sukinnect Policy, and I have read the Privacy Notice"), the refusal
+message and the acceptance record are both generated from the same list, and the record writes one row
+per gated document. A check fails if any document stops declaring a kind, because a missing field reads
+as `'accept'` to the comparison and would quietly ask a reader to agree to a notice.
+
+**A fix that created a defect the suite cannot see.** The first version put the read-state line beside
+the Close button inside the shared `.sheet-foot`, which is a flex row. A row gives its shortfall to
+whichever item has the larger content basis — the sentence — so the button was left one character wide,
+and `body{ overflow-wrap:anywhere }`, the guard this file added for unbreakable tokens, happily broke
+"Close" into five lines. The screenshot of `legal-terms-read` showed it; all 25 tallies read 0, because a
+word alone on a line is not clipped, does not collide, is on the scale and clears contrast. The foot is a
+column now, and a gate check pins the shape for the same reason §82's split-figure check exists.
+
+Instruments:
+- 11 new gate checks (660 → 671): the gate's population has a floor, because a scan over an empty set
+  reports "all read" forever; the consent row opens exactly the documents the gate reads; an unread card
+  paints the box off; **half-way geometry unlocks nothing** (the check that keeps the gate from being
+  "opened the document"); the unscrollable case counts as read through the mount function itself; the
+  unread refusal and the tick refusal are told apart by their own wording; the record covers every gated
+  document; the foot stacks; the kinds are declared.
+- The four pre-existing `login`-suite register runs now reach the read state through `docScrolled()` with
+  the measurements a finger produces — the harness mounts no sheet (`renderSheet()` paints into
+  `#sheet-root`, outside the fragment it assembles), so the element is handed to the app's own function
+  rather than the state being written. `noteUnscrollableDocs()` is exercised the same way, with the fake
+  pane returned for **one** selector: replacing `querySelector` outright made every other lookup in the
+  page answer a document body, and the next `render()` died in `syncBackHandles()` on a `.sheet` with no
+  `setAttribute` — an instrument defect wearing the costume of an app crash.
+- Two camera rows, `legal-terms-read` and `register-read`, reached by setting `scrollTop` and
+  **dispatching the `scroll` event**, because the inline `onscroll` handler is the thing under test and
+  only an event reaches it. `register-read` opens each document, scrolls it and closes it, so the unlocked
+  card is painted by the rule rather than by a state assignment.
+- `node tools/falsify-scroll-gate.cjs` — 8 breaks, one per promise, each aimed at a named check.
+
+Two instrument lessons from the family itself, both about the author's own tooling. (1) A needle that
+carries `${` cannot be written as a template literal in the falsifier: Node interpolated it, the file
+threw `ReferenceError: acceptanceUnlocked is not defined` at load, and no mutant ever ran — the same trap
+this file records for a regex built inside a template literal, arriving one shape over. (2) The wrapper
+that launched it ended in `echo "exit=$?"`, so the background task reported **exit code 0** for a run that
+died on its first line. A command whose last statement is an `echo` reports the `echo`'s status: read the
+log, never the exit code. The tree was confirmed untouched by counting each needle in the target before
+re-running, which is the cheaper order than discovering a stranded mutant afterwards.
+
+## 154. The concierge door moved to the bottom-right of Home, and the module card was deleted rather than restyled
+
+The Phase D brief asks for one change on the first screen: "The AI in the Home page will be changed in
+design, instead of module there will be a chatbot at the bottom right." The build had a `.concierge-row`
+card sitting between the category grid and the "Book again" rail — a row that named itself
+"Describe or snap the problem" and was one of eleven things competing for the same scroll.
+
+What is built (`Sukinnect-next.html`):
+
+- `conciergeFab()` paints one `.fab-dock > .concierge-fab` at the foot of `residentHome()`, and
+  `openConcierge()` is the named handler on an inline `onclick`. The old row, its four CSS rules, and its
+  two appearances in the `:focus-visible` and `:active` selector lists are **deleted**, not left behind:
+  a gate check fails if the string `concierge-row` survives anywhere in the file, because a class with no
+  markup and a markup with no class are both ways for the next reader to be told the module still exists.
+- The dock is `position:sticky; bottom:var(--s-4)` **inside the screen's own scroller**. That is the whole
+  reason it needs no measurement: the bottom navigation is outside that scroll container, so the dock
+  clears it at every text scale without a pixel value derived from the nav's height — which is §73's trap
+  for anything that writes its own geometry, and the reason a `bottom:calc(56px + …)` version would have
+  been wrong on a phone at 135% type.
+- The dock takes no taps (`pointer-events:none`) and the button does (`pointer-events:auto`), because the
+  dock is a full-width strip and a strip that swallows taps eats the card under it.
+- A new rung, `--z-fab:40`, sits between `--z-nav:30` and `--z-sheet:60`, and the ladder check's ordered
+  rung list gained it — so the rung cannot be re-ordered into covering a sheet by accident.
+- The control is labelled in words, "Ask the concierge", with the glyph beside it, not an icon-only
+  circle. §72's rule that a name must not live only in a shape is the reason, and the check reads the
+  `aria-label` and the visible text separately.
+
+**Why the handler is a named function on an attribute rather than a closure assigned at mount.** The
+camera's `clickPainted` reaches a control by its painted `onclick` attribute; a door assigned in a mount
+step is invisible to it, so the walk would have had to keep assigning `state.tab='concierge'` — which is
+the form of this repository's oldest instrument defect, a screen reached by moving the model rather than
+by the thing a thumb does. `tools/shot.cjs` gained `concierge-from-fab`, which renders Home and clicks the
+control; if the handler goes away the shot fails by name.
+
+Instruments: 5 new gate checks (671 → 676) — one control and no module, named in words, the door opens the
+concierge behind a positive control that the tab was `home` before the click, the dock's three shape rules,
+and the ladder rung. `node tools/falsify-home-fab.cjs` — 6 breaks, one per promise, including the two that
+a screenshot would not show: a second door painted beside the first, and a stacking number typed instead of
+asked for. `node tools/falsify-scroll-gate.cjs` was re-run in the same chain because both families mutate
+this file, and the eight-corner sweep re-ran over the final bytes: `node tools/shot.cjs --list` is the
+walk's count, and a number carried here would be wrong the next time a screen is added.
+
+## 155. Two steppers, and the two capabilities this build does not have are named on screen
+
+The Phase D brief asks for verification "with the use of Enhance And Improve Stepper method, with
+procedural model" — certificates, valid government IDs, OCR on the IDs, facial recognition, the identity
+extracted from them — and for the AI to "become a Wizard guide" at sign-up "A Voice Command, Manual
+Typing". Two of those capabilities do not exist in a single-file prototype with no backend, and the
+ruling for Phase D was to build the procedure and name the seam rather than skip the step or fake its
+result. Both screens now do that, and each says so where the reader is standing.
+
+**Verification (`openVerificationWizard`, four steps).** Reached from the provider's own credentials
+section. Step 1 asks which government ID and attaches a picture or PDF; step 2 the qualification
+document; step 3 the face check; step 4 a review of what the device holds. The two seams:
+
+- `readIdDocumentSeam(fileName)` returns `{ available: false, fields: null, reason: … }` and the ID step
+  prints that reason. No name, date or number is shown, because a form that printed a name it "read" off
+  a photograph would be inventing that name — the same class as a tile carrying a count no record
+  produced.
+- `matchFaceSeam()` returns `{ available: false, score: null, … }`, and the review step states
+  `Face check: not performed by this build`. There is no stored reference image to compare against, so
+  any score would be a number with nothing behind it.
+
+An attachment yields its **name only** — `verificationAttach` reads `el.files[0].name` and nothing else,
+the rule the concierge already follows — so the draft holds no bytes for an OCR step to read even if one
+were wired. The final control is `saveVerificationDraft()`, which persists the draft and toasts *"Nothing
+was sent to a reviewer, because this build has no reviewer on it."* It is not called *Submit*: a button
+that announces a submission no record backs is the defect this file has closed a dozen times from the
+other direction.
+
+**Sign-up guide (`openSignupGuide`, two steps).** The brief's "wizard guide … voice command, manual
+typing". Two steps because two is what the register form asks beyond an email and a password — name and
+barangay, the same two answers §78 found were being collected and thrown away. A third step would have
+had to invent a field the form does not have, and a guide that fills a field nobody reads is the mirror
+of a form whose answers are dropped.
+
+- Every answer is written through `authInput(field, el)` on the real `reg-name` / `reg-brgy` element, so
+  the guide cannot hold an answer the register path never sees, and it creates no account of its own:
+  after three guide writes the view is still `login` and `termsAcceptances` is still empty.
+- `speechSeam()` reports the engine it found (`SpeechRecognition` / `webkitSpeechRecognition`) or says
+  none is exposed. With none, pressing *Dictate* leaves the field alone, sets the note to the seam's own
+  sentence, and stays a live control — hiding the button where the platform lacks the API would leave a
+  reviewer unable to tell "not on this browser" from "never built".
+- The sheet never calls itself a model, and the check asserts that: no `AI-powered` / `powered by AI` /
+  `our AI` string appears on it.
+
+Instruments: 17 new gate checks (689 → 706) across two new suites, `verification` and `signup-guide`,
+each with the opposite case pinned — the ID step prints the seam *and* no invented identifier; the
+review step states the face check was not performed; the guide's answers land in the fields the form
+reads; the guide is offered where an account is created and not where one is used. Four camera rows now
+paint the sheets (`verification-docs`, `verification-review`, `signup-guide-step2`, plus the two rate-
+wizard steps), all clean at every corner.
+
+Two of the first-run failures were the checks, not the application, and both are the same shape: one
+asserted that the *next* question's words must be absent, which is false of a correct step rail by
+design — the rail names every step — so the discriminator became "one card title, and it is this step's";
+the other expected the guide to write into a field the form does not have, which is how the third step
+went away. The rate-wizard defect found in a screenshot in §154 is pinned by a check of its own now: a
+provider opening the wizard sees a band for their own trade, not a claim that none exists.
+
+## 156. The wallet is a view over the books, and a stylesheet rule turns out to have been deleting headings on every sheet
+
+The brief asks for a digital wallet whose cash in and out runs through GCash or another cashless
+method, with loyalty privileges and loan eligibility on top. The deck forbids a stored-value wallet,
+and the owner's ruling was to build the experience and keep real money out of it. So the screen is a
+view: every figure on it is `providerBalances()` read back from the double-entry books, the same
+numbers the payout card and the admin settlement view already print, and the two controls that would
+move money are `gatewayCashSeam()` and `cashMovementSeam()`, which answer with the reason nothing was
+moved and write no ledger event. `loyaltyTier()` computes a label out of finished jobs and settled
+money and carries `privileges: []`, because honouring a privilege needs a thing to honour it with, and
+`fundingEligibilitySeam()` declines to answer at all — eligibility would need verified income,
+outstanding obligations and a lender, and any figure this build produced for them would be invented.
+
+The blockchain half is the property rather than the distributed part. `buildLedgerChain()` folds each
+event into the hash of the one before it with a 32-bit FNV-1a, and `verifyLedgerChain()` recomputes
+from the events instead of trusting a stored head, so an edited amount moves the head. The hash is not
+cryptography and the screen says so beside it: no network, no consensus, and records on this device are
+plain text — which is the honest answer to "encryption to be applied", and the reason the note names
+the gap rather than the feature.
+
+**The balance check was a tautology before it was worth anything.** The staged version compared
+`walletSnapshot()` with `providerBalances()` — and `walletSnapshot` calls `providerBalances` on the
+line above, so the assertion could not fail whatever the wallet printed. It now re-adds the figures in
+the check itself out of `BOOKINGS`, and requires that releasing one held job moves the wallet by
+exactly that job's share, up on `available` and down on `pending`. `node tools/falsify-wallet.cjs`
+proves it: a wallet that types `250000` is caught, a dropped hold is caught, and a doubled share is
+caught.
+
+**Three defects came from the screenshot, and all three were invisible to every tally in the camera
+because `display:none` text is not clipped, does not collide, is on the scale and clears contrast.**
+`.sheet-body .card > b:first-child{ display:none }` was written for the profile sheets, whose single
+card repeats the sheet header's words, and reached every card of every sheet — the wallet's four
+section titles painted as nothing at all. It is now `.sheet-body > .card:first-child > b:first-child`,
+which leaves the profile sheets exactly as they were (measured: `provider-credentials` still hides its
+one title) and returns the others. The comment beside the rule says its reason holds only for the card
+the header duplicates, and the probe found that the reason is only partly true even there: that sheet's
+head says "Credentials" while the silenced title says "Verification". Recorded rather than "fixed",
+because revealing it changes screens nobody has approved a change to. Second: the balance figure
+carried `class="stat"`, which is itself a card, so it drew a box inside a box. Third: the entry caption
+promised "the newest eight" over one row, read "1 ledger event touch this account", and named jobs by
+record id.
+
+A fourth finding is about the instrument, and it is the stranded-mutant class arriving in a file nobody
+was watching. The killed aggregate from the previous session had left `falsify-bar-titles` break 4 in
+the tree — `tools/shot.cjs` carrying `/* walk does not clear the chat flag */` where the
+`state.isChatOpen = false` line belongs. The app file was clean, so the preflight guard on the target
+file could not see it: the hazard was in the camera, not the page. Read `git status` across the whole
+tree after an interrupted run, not only against the mutation target.
+
+Gate 706 → 723. `provider-wallet` clean at every tally, no console errors.
+
+## 157. The last four lines of the brief become two seams and one derived list, and a privacy check learns it cannot tell which way round it was inverted
+
+Four lines of the brief had no artifact yet: an exchange-rate feed read from outside the application, a
+reCAPTCHA at sign-up, connections per customer and provider, and organisations or NGOs. The first two
+and the last are procedures with a named seam; the third is the one a prototype can build for real.
+
+`exchangeRateSeam()` answers no rate: every amount here is pesos, a foreign figure needs a feed from
+outside Sukinnect, and this page makes no network call. It is painted in the pricing wizard, and the
+first placement was inside the band branch — which is the wrong place for exactly the reason the
+feature exists: a device whose roster has no rate for the trade renders the other branch and went
+quiet precisely where the wizard has nothing to offer. It now sits outside the ternary, and the check
+asserts both halves: that the sentence renders, and that the source interpolates `${feed}` after
+`${body}` rather than inside a branch. `spamCheckSeam()` names all three things a CAPTCHA needs that do
+not exist here — a provider, a secret key, and a server to verify the token with — and is painted on
+the register card only, with the sign-in card asserted free of the claim so the gating is what is
+tested rather than the wording.
+
+**Connections are grouped out of BOOKINGS and nothing else**, because a booking is the only record that
+creates one. No contact book, no follow, no suggested people: §55 makes reputation transaction-based
+and §26 makes messaging a coordination tool. The resident's half names every provider they have
+requested; the provider's half withholds a household until a job is accepted, the same gate the booking
+detail applies to an address and a phone, and a withheld row carries no link out so the list cannot be
+used to open a stranger. `organizationSeam()` lists nothing: an NGO as a party needs a legal-entity
+record, a verification path different from a person holding an ID, and somewhere to disburse to, and
+this build has one account kind.
+
+**The privacy check passed with the rule inverted, which is the coverage gap the falsifier exists to
+find.** `falsify-connections` break 2 flips `if (PROVIDER_VISIBLE_STATES.includes(b.status))` and the
+whole gate stayed green with exit 0. The assertion had been aggregate — some rows hidden, some named —
+and groups are keyed on the household, so both halves stay true in either direction. It now derives
+which households must be hidden (their only booking is a request) and which must be named (one is
+accepted) from the records, and asserts every row in each set: a check that cannot tell which of its
+two conditions fired is half a check. Two further breaks printed NOT APPLIED for needles carrying a
+newline into a CRLF file, which is the family's own header warning arriving a third time.
+
+Two more screenshot findings, both the same class as §156: the connection count sat in a `card-title`
+on the first card of a sheet body, which is the one slot the sheet rule silences, so the headline
+figure painted as nothing; and the withheld sentence repeated on all eight rows under a head that
+already states the rule once. Both are asserted now — the head says it, no row repeats it, the count is
+in the line that paints.
+
+Gate 723 → 739. `node tools/falsify-wallet.cjs` 13 of 13, `node tools/falsify-connections.cjs` 7 of 7,
+both restored byte-for-byte; `tools/audit-handler-reachability.cjs` resolves every handler;
+`resident-connections` and `provider-connections` clean at every tally with no console errors.
