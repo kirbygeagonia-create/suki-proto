@@ -6744,14 +6744,19 @@ suite('connections', async () => {
 
   /* The privacy half, asserted on both sides of the boundary with a positive control that the seed
      actually contains a withheld case and a visible one. */
-  const requested = app.BOOKINGS.filter(b => b.providerId === app.CURRENT_PROVIDER_ID && b.status === 'requested');
-  const accepted = app.BOOKINGS.filter(b => b.providerId === app.CURRENT_PROVIDER_ID && app.PROVIDER_VISIBLE_STATES.includes(b.status));
-  const hidden = prov.filter(g => g.withheld);
-  c.check('the provider list withholds a household until the job is accepted, and shows one after',
-    requested.length >= 1 && accepted.length >= 1
-      && hidden.length >= 1 && hidden.every(g => g.withheld && /has not booked you/.test(g.name))
-      && prov.some(g => !g.withheld && !/has not booked you/.test(g.name)),
-    'requested ' + requested.length + ' · accepted ' + accepted.length + ' · withheld rows ' + hidden.length);
+  /* Directional, because an aggregate version of this passed with the whole gate inverted: a group is
+     keyed on the household, so "some rows are hidden and some are not" is true in both directions.
+     Naming which households must be hidden by rule, and which must be named by rule, is the only shape
+     of this assertion that can tell the two apart. */
+  const visibleIds = new Set(app.BOOKINGS.filter(b => b.providerId === app.CURRENT_PROVIDER_ID
+    && app.PROVIDER_VISIBLE_STATES.includes(b.status)).map(b => b.customerId));
+  const anyBookingIds = new Set(app.BOOKINGS.filter(b => b.providerId === app.CURRENT_PROVIDER_ID).map(b => b.customerId));
+  const mustHide = [...anyBookingIds].filter(id => !visibleIds.has(id));
+  c.check('the provider list hides a household whose only job is a request, and names one it accepted',
+    mustHide.length >= 1 && visibleIds.size >= 1
+      && prov.filter(g => mustHide.includes(g.key)).every(g => g.withheld && /has not booked you/.test(g.name))
+      && prov.filter(g => visibleIds.has(g.key)).every(g => !g.withheld && !/has not booked you/.test(g.name)),
+    'must hide ' + mustHide.length + ' · must name ' + visibleIds.size + ' · rows ' + prov.length);
   c.check('a withheld row carries no link out, so the list cannot become a way to open a stranger',
     prov.every(g => !g.withheld || !g.link), JSON.stringify(prov.filter(g => g.withheld).map(g => g.key)));
 
