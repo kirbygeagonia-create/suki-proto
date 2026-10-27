@@ -1223,10 +1223,10 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 12,498 lines, ONE :root block, 1,798 var() usages, 95 tokens declared with 94
+Sukinnect-next.html— 13,737 lines, ONE :root block, 2,314 var() usages, 100 tokens declared with 99
                     of them reached — the one exception is `--info`, kept declared because §31 names it
                     and §34 forbids spending it on a brand chip, and pinned as the sole exception by a
-                    gate check (see the token paragraph below). Twenty-four hex-shaped strings sit outside :root, and the
+                    gate check (see the token paragraph below). Twenty-eight hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
                     (§45 — the seventh is Fruit Harvest & Buy); one is the <meta
@@ -1249,12 +1249,12 @@ Sukinnect-next.html— 12,498 lines, ONE :root block, 1,798 var() usages, 95 tok
                     Everything that was a real violation is now a token: #fff became
                     --surface and --on-brand, the modal dim became --scrim, and the phone
                     mockup's bezel and signal bars became --device-bezel and
-                    --device-signal. Type is fully on the scale: of the 121 `font-size`
-                    declarations in the stylesheet, 119 take a var(), none is a literal px,
+                    --device-signal. Type is fully on the scale: of the 124 `font-size`
+                    declarations in the stylesheet, 122 take a var(), none is a literal px,
                     and the two that are neither are the `h1, h2` reset set to `inherit` — which is
                     what lets an <h1> sit in a flex bar as the div it replaced — and the `:root`
                     line §68 explains at length, `min(1em, 20px)`, which a phone ignores and the
-                    sweep exists to absorb. The 403 `font-size` declarations inside
+                    sweep exists to absorb. The 461 `font-size` declarations inside
                     markup's inline styles all take a var() too, except one: the throwaway span
                     `navFontScale()` measures the phone's text inflation with, which has to be a
                     literal 100px or it is measuring nothing. Every screen in the app now opens with
@@ -1296,7 +1296,7 @@ official mark is a PNG, not an icon, and it is still the only brand image on the
 The rebuild also added a real verification surface, because reading the file cannot
 see a layout: `node tools/shot.cjs` drives the machine's own Chrome headless over the
 DevTools Protocol with no npm packages, and `--measure` runs an in-page instrument
-across every screen in the walk (88 as of the re-audit that added the two inbox screens; `node tools/shot.cjs --list` is the count) for tap
+across every screen in the walk (100 as of the pass that added the wallet and connections sheets; `node tools/shot.cjs --list` is the count) for tap
 targets, WCAG contrast (sampling gradients at the text's
 own position), clipped text, off-scale fonts, content trapped under the nav, unnamed
 controls, form fields a screen reader cannot name, images that asked for a file and got no
