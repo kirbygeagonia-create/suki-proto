@@ -9245,3 +9245,70 @@ suite's mutex has always been the application file; this is the first time it wa
 holding the mutex, and the tell was two families failing in the aggregate that both pass alone. The run
 was restarted clean, and nothing was edited until it printed: **8 of 8 corners, 25 tallies each, all clear**,
 exit 0 — which is also the reading §151's closing paragraph promised would land after the commit.
+
+## 152. The palette goes flat, the face becomes Poppins, and the new face turns out to have no tabular figures
+
+The owner's new brief ended with two sentences that reverse this repository's own authoritative text:
+*"Make the Whole App design in a simple font and style, the poppins font, also make the Whole App color
+palette not in gradient anymore."* AGENTS.md §31–33 prescribe a gradient brand system measured from the
+pitch deck, §68 pins the UI face to Atkinson Hyperlegible Next and the plan rejected Poppins for not being
+a local asset. A ruling from the owner overrides its own document, so the documents were amended in place
+rather than quietly contradicted — but four of the brief's items also collide with §23, §56, §63 and §88,
+and those are recorded as rulings and seams in the plan's new §13A rather than built or dropped in silence.
+
+**Flat, everywhere, and it was not one grep.** Nine `linear-gradient` declarations, eight `--grad-*`
+tokens and two `radial-gradient` washes became four solid surfaces — `--surface-brand` (#0352AE on the
+bars, buttons and splash), `--surface-brand-deep` (#061364 on a selected chip), `--surface-brand-soft`
+(#F1F5FF behind the sign-in card) and `--accent-brand` (#05BCC4 for the active rule and the current step).
+The token swap was verified against `git show HEAD:` bytes before it was applied, and it still left three
+gradient paints behind, because they are not brand *fills* at all: a cyan aura behind the top bar, a cyan
+glow behind the splash mark, and the shimmer band that sweeps a skeleton. The two auras were deleted; the
+shimmer kept its travel and lost only its blend, so §47's loading feedback is intact. The names went with
+the values — a token called `--grad-*` holding a solid colour is a second lie on top of the first — and
+`the palette is flat: no linear or radial fill remains, and the one ring that uses a gradient says why`
+now strips comments before counting, because a dozen sentences still name the gradient they describe
+having been removed, and to a scanner a quoted number and a painted one are the same string. The one
+surviving gradient function is the workload ring, declared in the page beside it: a ring drawn with hard
+colour stops is a segmented circle, not a blend.
+
+**Poppins loaded, and the money columns broke silently.** Eight faces (four weights × latin + latin-ext)
+were downloaded, validated structurally rather than by a size guess — `wOF2` signature, the header's own
+declared length equal to the bytes on disk, a plausible table count — with the shipped Atkinson face run
+through the same validator first so a guard that rejects good files is caught before it deletes them. (Its
+predecessor did exactly that: an 8 KB floor refused seven valid faces, because Google serves each subset
+split small.) With the faces in place the gate stayed green and the page painted — so `probe-face-and-figures.js`
+asked the two questions a gate cannot: does the requested family *actually paint* (width-compared against
+the stand-in families, because `document.fonts` iterated empty on this page once), and do the digits still
+line up. **Poppins has no tabular figures.** `font-variant-numeric:tabular-nums` is a no-op in it:
+"111111" measured 61.45px against "000000" at 120.58px *with the property applied*, where Atkinson
+equalises both at 121.36px. A `1` is half the width of a `0`. The rule this repository built to stop a
+receipt's ₱ column leaning would have become decorative, and every screen still looked fine. The answer
+keeps both rulings: `--font-ui` is Poppins for the words, and `--font-figures` carries the digits in the
+face that has the feature, applied in the one shared rule that already owns `tabular-nums`. Gate 658 → 660.
+
+**The face change then produced one real layout defect, and it took two wrong fixes to see it.** The
+eight-corner sweep came back **6 of 8**: at 320 CSS px with the text at 200%, `"Your share of "` and
+`"₱400"` overlapped inside the provider dashboard's Weekly-earnings card. The first fix — a line of
+padding above the chart container — did nothing, which is the signal this file has written down twice
+before: *a fix that makes the number smaller without moving it means the model is wrong*. Measured, it was.
+The card paints **no value labels at all** at that corner (`chartColumns` drops them when the headroom
+reserve is refused, exactly as designed), so the `₱400` in the report was never a bar's number — it is the
+**top axis tick**, centred on the plot's own top edge by `translate(-100%,-50%)`, straddling the boundary
+between the plot and the sub-line above it; the sub wraps to four line boxes at that setting and the
+tick's lower half grazes the last by 2px. The fix is the container's own line of separation, sized in
+type units because a reserve that does not grow with the text is the §68 bug wearing a new costume, and
+the corner now reads 0. The comment that had been written from the wrong model was rewritten to the
+measured one rather than left in place — a false mechanism in a comment is how the next reader re-breaks it.
+
+**Four rulings the documents now carry, with their reasons.** §31–33 are marked superseded (the measured
+hexes still decide every colour; the gradient *mechanism* is gone). §68 is amended for the face, including
+the tabular finding so nobody "fixes" the digits back into Poppins. §23's no-wallet rule is recorded as
+*explicitly requested and overturned for the UX, not for the money* — wallet screens over the ledger
+records the kernel already owns, every one stating that no value is stored. And plan R8's ruling that the
+concierge stays an embedded entry is reversed by the brief's Home-chatbot line. The brief's remaining
+items are dispositioned in the plan's new **§13A** table, which separates what is buildable from the
+records (rate bands from the platform's own per-trade, per-barangay rates; frequent actions counted from
+this device's bookings; document expiry and reviewer records that already exist) from what is a labelled
+procedure with a named seam (OCR, face match, reCAPTCHA, a hosted LLM, exchange and labour-rate lookups,
+blockchain settlement) and from what is a decision that is not this repository's to make (regulated
+lending, and the fact that a blockchain does not encrypt).

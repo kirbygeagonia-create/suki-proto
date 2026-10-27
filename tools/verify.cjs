@@ -1865,12 +1865,26 @@ suite('hygiene', async () => {
   c.check('the face the app asks for first is one the stylesheet actually declares',
     !!firstFamily && declaredFamilies.includes(firstFamily),
     '--font-ui opens with ' + JSON.stringify(firstFamily) + '; fonts.css declares ' + declaredFamilies.join(', '));
+  /* Counted by distinct WEIGHT, not by block. fonts.css splits every family by subset, so a
+     family can arrive in eight blocks for four weights — counting blocks read 4 for Atkinson only because
+     that family happens not to be subset-split, and the check would have failed a correct Poppins swap. */
+  const uiWeights = new Set(fontFaces.filter(f => f.family === firstFamily).map(f => f.weight));
   c.check('the four weights the rebuild says it carries are really four',
-    fontFaces.filter(f => f.family === firstFamily).length === 4,
-    fontFaces.filter(f => f.family === firstFamily).map(f => f.weight || '?').join(',') || 'none');
+    uiWeights.size === 4,
+    [...uiWeights].sort().join(',') || 'none');
   /* The serif only stays away if the alias holds and nothing bypasses the two tokens. */
   const literalFamilies = (css.match(/font-family:\s*[^;]+/g) || [])
     .filter(d => !/var\(--font-(ui|display)\)|inherit|font-family:\s*var\(--font/.test(d));
+  /* A face swap that silently un-aligned the money is the failure this guard exists for: the digits
+     need a family with tabular figures, and Poppins does not have one. So the shared numeral rule must
+     name --font-figures — and the check that matters is the probe's measurement, not this shape
+     assertion; this is what stops the rule quietly dropping the face again. */
+  const figureRule = /\.row > b[\s\S]{0,260}?font-variant-numeric:tabular-nums/.exec(css);
+  c.check('the figures name their own face, because the UI face has no tabular digits',
+    !!figureRule && /font-family:var\(--font-figures\)/.test(figureRule[0]) &&
+    /--font-figures:\s*"Atkinson Next"/.test(css),
+    !figureRule ? 'no shared numeral rule found' : 'rule declares tabular-nums without --font-figures');
+
   c.check('no rule names a font family directly — every one goes through the two tokens',
     literalFamilies.length === 0, literalFamilies.map(d => d.slice(0, 46)).join(' | '));
   c.check('the display face is an alias, so the decorative serif stays out',
@@ -2098,9 +2112,29 @@ suite('login', async () => {
     && !/id="rt-resident"/.test(adminLog));
   c.check('and the Admin card has no control that cannot be answered',
     !/id="toggle-auth-mode"/.test(adminLog) && !/id="reg-name"/.test(adminReg));
-  c.check('the form sits in one centred card on the brand gradient',
-    /\.auth-screen\{[\s\S]{0,260}?background:var\(--grad-brand-soft\)/.test(css)
+  c.check('the form sits in one centred card on the flat brand surface',
+    /\.auth-screen\{[\s\S]{0,260}?background:var\(--surface-brand-soft\)/.test(css)
     && /\.auth-sheet\{[\s\S]{0,400}?box-shadow:var\(--shadow-md\)/.test(css));
+  /* No blended fill survives anywhere in the stylesheet, by the owner's ruling of 2026-10-27 that the
+     palette is flat. Two things this has to say and cannot fake:
+       · a conic-gradient with hard stops is how a segmented ring is drawn in CSS at all — the workload
+         ring has no blend in it, so it is declared as an exception beside the rule rather than silently
+         allowed, and a stale exception is a finding;
+       · comments are stripped first. Several sentences still name the gradient they describe having been
+         removed, and to a scanner those are the same string as a rule painting one — the §31 lesson about
+         a hex in a comment, arriving for a gradient.
+     The positive control counts the flat surfaces: a scan whose good pattern matched nothing would print
+     "no gradients" forever, which is the failure this repository keeps meeting. */
+  const cssNoComments = css.replace(/\/\*[^]*?\*\//g, ' ');
+  const blendedFills = (cssNoComments.match(/linear-gradient|radial-gradient/g) || []).length;
+  const flatSurfaces = (cssNoComments.match(/var\(--surface-brand[a-z-]*\)|var\(--accent-brand\)/g) || []).length;
+  const ringDecl = (cssNoComments.match(/conic-gradient/g) || []).length;
+  const ringExcused = /flat-palette-exception:\s*conic-gradient/.test(css);
+  c.check('the palette is flat: no linear or radial fill remains, and the one ring that uses a gradient says why',
+    blendedFills === 0 && flatSurfaces >= 8 && (ringDecl === 0 || ringExcused),
+    'blended fills ' + blendedFills + ' · flat surface uses ' + flatSurfaces +
+    ' (a floor of 8) · conic uses ' + ringDecl + ' · declared exception ' + ringExcused);
+
   c.check('the card never outgrows the viewport, so the keyboard has room',
     /\.auth-sheet\{[\s\S]{0,400}?max-height:100%/.test(css)
     && /\.auth-screen\{[\s\S]{0,260}?overflow:hidden/.test(css));

@@ -47,7 +47,7 @@
      layout has to absorb it; that is what --font-scale on the camera now measures. */
   font-size: min(1em, 20px);
 
-    /* The provider-detail header pill sits on the brand gradient lightened by a 12%
+    /* The provider-detail header pill sits on the flat brand surface lightened by a 12%
        white overlay, and #FFB800 measures 3.14:1 there — over the 3:1 floor a graphic
        needs, by 0.14. This tint measures 3.80:1. On flat navy #FFB800 is 11.66:1, so
        navy was never the problem; the earlier version of this note said it was. */
@@ -84,17 +84,15 @@
   --z-toast:9999;     /* feedback, over everything, never over the thing it is about */
     --brand-tint-soft:#E7EDFF;
 
-    /* gradients */
-    --grad-brand:linear-gradient(155deg,var(--brand-navy) 0%,var(--brand-primary) 52%,var(--brand-primary-light) 100%);
-    --grad-brand-soft:linear-gradient(160deg,var(--background) 0%,var(--brand-tint) 46%,var(--surface) 100%);
-    --grad-brand-dark:linear-gradient(160deg,var(--brand-navy-deep) 0%,var(--brand-navy) 100%);
-    --grad-accent:linear-gradient(90deg,var(--brand-primary-light) 0%,var(--brand-secondary) 100%);
-    /* Same three brand stops, re-angled per surface so a tall hero, a dark feature
-       panel and a small CTA do not all read as the identical rectangle (33). */
-    --grad-brand-hero:linear-gradient(172deg,var(--brand-navy) 0%,var(--brand-primary) 62%,var(--brand-primary-light) 100%);
-    --grad-brand-panel:linear-gradient(135deg,var(--brand-navy) 0%,var(--brand-primary) 100%);
-    --grad-cta:linear-gradient(135deg,var(--brand-primary) 0%,var(--brand-primary-light) 100%);
-    --grad-hero:linear-gradient(135deg,var(--brand-navy) 0%,var(--brand-primary) 55%,var(--brand-primary-dark) 100%);
+    /* brand surfaces — flat. Ruled by the owner on 2026-10-27: the app's palette is no longer
+       gradient-based, so each brand surface is ONE measured colour and the depth the gradients
+       used to carry comes from the shadows and the tinted tracks, which are still there.
+       The names changed with the values: a token called --grad-* that holds a solid colour would
+       be the lie, not the colour. The logo (§10) is a PNG and is untouched by any of this. */
+    --surface-brand:var(--brand-primary);        /* #0352AE — top bar, buttons, splash, chat head */
+    --surface-brand-deep:var(--brand-navy-deep);  /* #061364 — a selected chip on a tinted track */
+    --surface-brand-soft:var(--background);      /* #F1F5FF — the auth screen behind the card */
+    --accent-brand:var(--brand-secondary);       /* #05BCC4 — the active rule, the current step */
 
     /* surfaces */
     --background:#F1F5FF;
@@ -142,7 +140,17 @@
        spacing and larger x-height are the point — the trial measured no clipped
        text and no overflow across 46 screens. Plus Jakarta Sans stays as the
        fallback for any glyph Atkinson does not carry. */
-    --font-ui:"Atkinson Next", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+    /* Poppins is the UI face by the owner's ruling of 2026-10-27. "Atkinson Next" stays second
+       on purpose: it is the face the legibility and numeral work was measured on, and it carries any
+       glyph Poppins does not. "Plus Jakarta Sans" stays behind that as the shipped file's face. */
+    --font-ui:"Poppins", "Atkinson Next", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+    /* The face for any number a reader compares. Poppins has no tabular figures — measured in the
+       browser after the swap: "111111" is 61.45px against "000000" at 120.58px even WITH
+       font-variant-numeric:tabular-nums, because the family simply does not carry that feature.
+       Atkinson does, and was measured equalising both strings at 121.36px, so the digits stay in it
+       while the words move to Poppins. Verified by node tools/shot.cjs
+       --probe=@tools/probe-face-and-figures.js, not asserted here. */
+    --font-figures:"Atkinson Next", "Plus Jakarta Sans", ui-sans-serif, sans-serif;
     /* Headings used to switch to Fraunces, a decorative serif. §4 of the brief
        removes it from UI headings and operational labels; hierarchy now comes from
        weight and size, which is also what keeps numerals in the legible face. */
@@ -190,7 +198,6 @@
     --deep-600:var(--brand-primary-light);
     --deep-100:var(--brand-tint-soft);
     --deep-glow:var(--brand-glow);
-    --grad-primary:var(--grad-cta);
     --gold:var(--warning);
     --gold-600:var(--warning-ink);
     --verified:var(--success);
@@ -487,6 +494,7 @@
      roster numbers into the corner of their own tiles. */
   .row > b, .row-value, .offer-line .ol-v, .chart-value, .stat-strip .f b, .stat .num,
   .job-row .jr-count, input[type=number]{
+    font-family:var(--font-figures);
     font-variant-numeric:tabular-nums;
   }
   .btn{min-height:var(--tap); 
@@ -560,23 +568,23 @@
      plus the payment status as its own pill, never merged in (22). */
   .mini-steps{ display:flex; align-items:center; gap:3px; margin-top:9px; }
   .mini-steps .st{ flex:1; height:4px; border-radius:var(--r-pill); background:var(--border-strong); }
-  .mini-steps .st.on{ background:var(--grad-accent); }
+  .mini-steps .st.on{ background:var(--surface-brand); }
   .mini-steps .st.now{ background:var(--brand-secondary); }
 
-  /* Sign-in: the soft brand gradient, and one card floated in the middle of it.
+  /* Sign-in: the soft brand surface, flat, and one card floated in the middle of it.
      Nothing on the card that is not needed to get in — brand mark, the account
      you are entering as, two fields, one action. */
   .auth-screen{
     display:flex; height:100%; box-sizing:border-box; overflow:hidden;
     padding:calc(var(--s-5) + var(--sat)) var(--s-4) calc(var(--s-5) + var(--sab));
-    background:var(--grad-brand-soft);
+    background:var(--surface-brand-soft);
   }
   /* The browser's default 16px paragraph margins were costing ~80px of dead
      vertical space here, which is what pushed the form past the fold on a 640pt
      phone. Spacing on this screen is deliberate, never inherited. */
   .auth-screen p{ margin:0; }
   /* The card is the scroller, not the page: an Android keyboard can rise over
-     the gradient without burying the action, and `margin:auto` keeps the card
+     the pale field without burying the action, and `margin:auto` keeps the card
      optically centred even when it is too tall to centre (5, 38, 73). */
   .auth-sheet{
     margin:auto; width:100%; max-width:392px; max-height:100%;
@@ -692,19 +700,14 @@
     .auth-form{ margin-top:var(--s-6); }
   }
 
-  /* Launch screen — the app's first brand moment. Full-bleed hero gradient,
+  /* Launch screen — the app's first brand moment. Full-bleed brand surface,
      official mark, and the deck's FIND/REVIEW/BOOK/RECORD spine as the only
      copy. It plays once on cold load and is tappable to skip. */
   .splash{
     min-height:100%; padding:36px var(--s-7); box-sizing:border-box;
-    background:var(--grad-brand-hero); color:var(--text-on-brand);
+    background:var(--surface-brand); color:var(--text-on-brand);
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     text-align:center; position:relative; overflow:hidden; cursor:pointer;
-  }
-  .splash::after{
-    content:""; position:absolute; top:-58px; right:-58px; width:224px; height:224px;
-    background:radial-gradient(circle, rgba(5,188,196,.34), rgba(5,188,196,0) 68%);
-    pointer-events:none;
   }
   /* Same rule as the auth badge: the logo file has a white ground, so the tile
      around it adapts to the brand instead of the mark being altered. */
@@ -762,7 +765,7 @@
   }
   .skel::after{
     content:""; position:absolute; top:0; right:0; bottom:0; left:0; transform:translateX(-100%);
-    background:linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.75) 50%, rgba(255,255,255,0) 100%);
+    background:rgba(255,255,255,.55);
     animation:skelShimmer 1.2s ease-in-out infinite;
   }
   .skel-card{
@@ -851,7 +854,7 @@
     min-height:var(--tap); background:transparent; color:var(--ink);
   }
   .search-btn{
-    background:var(--grad-cta); color:var(--text-on-brand); border:none; border-radius:var(--r-pill);
+    background:var(--surface-brand); color:var(--text-on-brand); border:none; border-radius:var(--r-pill);
     width:var(--tap); height:var(--tap); cursor:pointer; display:flex;
     align-items:center; justify-content:center; flex-shrink:0;
     box-shadow:0 2px 8px rgba(3,82,174,.28);
@@ -1219,6 +1222,10 @@
   .chart-value{flex:0 0 auto; min-width:52px; font-size:var(--t-caption); color:var(--ink); font-weight:700;}
   .chart-foot{font-size:var(--t-caption); color:var(--mist); margin-top:8px; line-height:1.5;}
   .chart-share{display:flex; align-items:center; gap:16px; margin:10px 0 4px;}
+  /* flat-palette-exception: conic-gradient — a ring chart is drawn by hard colour stops, not by a
+     blend, so it is a segmented circle rather than a gradient surface; the flat-palette ruling is about
+     the palette, and this is the one place a gradient function remains. shot.cjs --measure is where the
+     ring's legibility is checked. */
   .chart-ring{width:96px; height:96px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;}
   .chart-ring-hole{width:58px; height:58px; border-radius:50%; background:var(--surface); display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--ink); text-align:center;}
   .chart-ring-hole b{font-size:var(--t-body);}
@@ -1241,7 +1248,17 @@
      label has somewhere to sit that is inside the chart — a grid column sized by
      absolutely-positioned children collapses to nothing, which is how the first
      version of this hung the tick labels outside the card at every width. */
-  .chart-cols{position:relative;}
+  /* The first reading of the overlap the camera reported at 320px @ 200% text — "Your share of " under
+     "₱400" — blamed the bar value labels. Measured, that was wrong twice over: the card paints NO
+     .chart-val at that corner (chartColumns drops them when the reserve is refused, exactly as designed),
+     and the ₱400 in question is the TOP AXIS TICK, which is centred on the plot top edge by
+     transform:translate(-100%,-50%) and so straddles the boundary between the plot and the card
+     sub-line above it. The sub wraps to four line boxes at the phone text setting, and the tick half
+     lands 2px into its last one. So the container keeps a line of its own: padding, not margin, because
+     the comment at chartColumns records that adjacent vertical margins collapse here and the graze comes
+     straight back. Sized to the type, per 68 — it has to grow when the text does, or the tick half grows
+     past it. */
+  .chart-cols{position:relative; padding-top:calc(var(--t-body) + var(--s-1));}
   .chart-plot{position:relative; margin-left:var(--chart-gutter); max-width:320px;}
   .chart-plot svg{display:block; width:100%; height:auto; overflow:visible;}
   .chart-tick,.chart-val,.chart-cat{position:absolute; font-size:var(--t-body-sm); line-height:1;
@@ -1268,10 +1285,7 @@
   ::selection{ background:var(--brand-tint); color:var(--brand-navy); }
 
   body{
-    background:
-      radial-gradient(1100px 700px at 12% -6%, var(--brand-tint) 0%, transparent 58%),
-      radial-gradient(900px 620px at 108% 8%, var(--brand-tint-soft) 0%, transparent 55%),
-      var(--brand-tint-soft);
+    background:var(--brand-tint-soft);
   }
 
   /* Phone frame — deeper, more premium */
@@ -1339,33 +1353,28 @@
   .wait-dot{ display:inline-block; flex-shrink:0; width:8px; height:8px; border-radius:50%; background:var(--deep); vertical-align:-1px; animation:waitPulse 1.9s ease-in-out infinite; }
   @keyframes waitPulse{ 0%,100%{ opacity:.3; } 50%{ opacity:1; } }
 
-  /* Topbar — signature brand gradient with a cyan aura */
+  /* Topbar — one flat brand surface. The cyan aura that used to sit behind the title was a
+   radial gradient, and the owner ruled the palette flat: the bar is one colour now. */
   .topbar{
-    background:var(--grad-brand);
+    background:var(--surface-brand);
     box-shadow:0 2px 12px rgba(3,0,43,.28);
     position:relative; overflow:hidden;
-  }
-  .topbar::after{
-    content:""; position:absolute; top:-45px; right:-30px; width:160px; height:160px;
-    border-radius:50%; pointer-events:none;
-    background:radial-gradient(circle, rgba(5,188,196,.22), transparent 70%);
   }
   .topbar h1{ letter-spacing:-0.2px; }
 
   /* The four screens the bottom nav lands on take the light bar: on those the
      header is your own name and where you are, so the brand colour is better
-     spent on what you can act on below it. Drill-in screens keep the gradient
+     spent on what you can act on below it. Drill-in screens keep the brand-colour
      header, because there the brand is what tells you that you have left home
      (32, 66). render() marks the root screens with data-root. */
   .screen[data-root="1"] .topbar{
     background:var(--surface); color:var(--ink); box-shadow:0 1px 0 var(--line);
   }
-  .screen[data-root="1"] .topbar::after{ display:none; }
   .screen[data-root="1"] .topbar .sub{ opacity:1; color:var(--mist); }
   .screen[data-root="1"] .notif-btn{ background:var(--brand-tint-soft); color:var(--deep); }
   .screen[data-root="1"] .notif-btn:hover{ background:var(--brand-tint); }
   .screen[data-root="1"] .notif-dot{ border-color:var(--surface); }
-  /* An on-bar control is written for the brand gradient, and a root tab's bar is white. Without
+  /* An on-bar control is written for the brand-colour bar, and a root tab's bar is white. Without
      this line the resident hub's "Log Out" is white text on a translucent white pill — the camera
      reads it as 1:1 on rgb(255,255,255) at seven screens, because the same control is painted by
      the hub, the household form, the payment modal, the edit form and the logout dialog. The
@@ -1398,9 +1407,9 @@
 
   .card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-md); }
 
-  /* Buttons — gradient primary, tactile press, keyboard focus ring */
+  /* Buttons — flat brand surface, tactile press, keyboard focus ring */
   .btn{
-    background:var(--grad-primary);
+    background:var(--surface-brand);
     box-shadow:0 5px 14px var(--deep-glow), inset 0 1px 0 rgba(255,255,255,.10);
     letter-spacing:.1px;
   }
@@ -1441,7 +1450,7 @@
     animation:spin .7s linear infinite;
   }
   .btn-loading{ opacity:.85; pointer-events:none; }
-  /* The default spinner is white for gradient buttons; on a light surface it
+  /* The default spinner is white for the brand-surface buttons; on a light surface it
      would be invisible, so it takes the brand ink instead. */
   .spinner.on-light{ border-color:var(--brand-tint); border-top-color:var(--brand-primary); }
   @keyframes spin{ to{ transform:rotate(360deg); } }
@@ -1466,7 +1475,7 @@
   .navitem.active::after{
     content:""; position:absolute; bottom:3px; left:50%; transform:translateX(-50%);
     width:18px; height:3px; border-radius:var(--r-pill);
-    background:var(--grad-accent);
+    background:var(--accent-brand);
     box-shadow:0 1px 5px var(--brand-glow);
   }
 
@@ -1675,10 +1684,10 @@
      that says who spoke — so it carries the tint, the radius and the time. The
      inline styles these replaced were written twice, once for the demo bubbles and
      once in JavaScript for whatever you typed. */
-  /* The room's header is the one brand-gradient surface in messaging: it says who
+  /* The room's header is the one brand-colour surface in messaging: it says who
      you are talking to, and nothing else competes with the thread below it. */
   .chat-head{
-    background:var(--grad-hero); color:var(--on-brand); padding:var(--s-4) var(--s-5);
+    background:var(--surface-brand); color:var(--on-brand); padding:var(--s-4) var(--s-5);
     display:flex; align-items:center; justify-content:space-between; gap:10px;
     border-bottom:1px solid rgba(255,255,255,.1);
   }
@@ -1737,7 +1746,7 @@
   .seg{ display:flex; gap:6px; background:var(--brand-tint-soft); padding:var(--s-1); border-radius:var(--r-md); overflow-x:auto; scrollbar-width:none; }
   .seg::-webkit-scrollbar{ display:none; }
   .seg-btn{ flex:1 0 auto; white-space:nowrap; min-height:var(--tap); border:none; background:transparent; color:var(--brand-navy); font-weight:700; font-size:var(--t-body-sm); padding:var(--s-2) var(--s-3); border-radius:var(--r-sm); cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; justify-content:center; gap:6px; transition:background .16s ease, color .16s ease, box-shadow .16s ease; }
-  .seg-btn.on{ background:var(--grad-brand-dark); color:var(--text-on-brand); box-shadow:0 3px 10px rgba(3,0,43,.28); }
+  .seg-btn.on{ background:var(--surface-brand-deep); color:var(--text-on-brand); box-shadow:0 3px 10px rgba(3,0,43,.28); }
   /* Four tabs, one phone width. The rail scrolls now, which fixes reaching the last one
      but not arriving at it half cut off — so this rail takes the space back from the
      padding instead of from the labels. */
@@ -11762,7 +11771,7 @@ function opportunityRadar(){
   const waiting = BOOKINGS.filter(b => b.status === 'requested' && providerOf(b).serviceId === me.serviceId);
   const hands = PROVIDERS.filter(p => p.serviceId === me.serviceId).length;
   return `
-    <div class="card" style="background:var(--grad-brand-panel); color:var(--on-brand)">
+    <div class="card" style="background:var(--surface-brand); color:var(--on-brand)">
       <div class="row" style="margin-bottom:6px;">
         <span style="font-size:var(--t-caption); font-weight:800; color:var(--on-brand);"><span style="color:var(--brand-secondary); display:inline-flex; vertical-align:-2px;">${ic("zap",12)}</span> Opportunity radar</span>
         <span class="chip ${waiting.length ? 'tone-warn' : ''}" style="font-size:var(--t-caption);">${waiting.length ? waiting.length + ' waiting' : 'nothing waiting'}</span>

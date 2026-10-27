@@ -889,6 +889,15 @@ Unless explicitly requested, do NOT build:
 - arbitrary money storage
 - unsupported financial architecture
 
+**EXPLICITLY REQUESTED, 2026-10-27 — the wallet rule is overturned for the UX, not for the money.**
+The owner asked for an in-app digital wallet whose cash-in/out runs through GCash or another cashless
+method, with loyalty privileges and loan/funding eligibility on top, and when told the deck forbids a
+stored value chose to build it and keep real money out. So: the wallet screens are built over the
+LEDGER AND PAYMENTS records the kernel already owns — a balance is derived from entries, never typed,
+and cash-in/out are records through the gateway seam — and every one of them states that this is a
+prototype with no value stored anywhere. §22 still separates booking state from payment state, §24
+still forbids hiding a cost, and nothing in this ruling licenses a number that no record produced.
+
 Treat payment integration as a future/production implementation concern and keep payment UX transparent.
 
 The customer should understand:
@@ -1138,6 +1147,26 @@ The first slide and the official logo remain the highest visual authority.
 ---
 
 # 31. MODERN GRADIENT DESIGN SYSTEM
+
+**SUPERSEDED ON 2026-10-27 — the palette is flat.** The owner ruled: "make the Whole App color palette
+not in gradient anymore", and when asked how far that reached, chose flat EVERYWHERE: the sign-in hero,
+the primary action, the active navigation pill, the splash, the chat header and the desktop backdrop.
+What follows this line is retained as the history of how the brand colours were derived and WHICH
+colour is which — §30's measured hexes still decide every colour in the app — but the gradient
+MECHANISM it prescribes no longer exists in `Sukinnect-next.html`. The eight `--grad-*` tokens are gone
+and there are four solid ones in their place: `--surface-brand` (#0352AE, the logo blue, on bars and
+buttons and the splash), `--surface-brand-deep` (#061364, a selected chip), `--surface-brand-soft`
+(#F1F5FF, the field behind the sign-in card) and `--accent-brand` (#05BCC4, the active rule and the
+current step). Depth now comes from the shadows and the tinted tracks, which were always there. Two
+decorative radial auras and one skeleton shimmer were deleted rather than re-coloured; the shimmer kept
+its travel, so §47's loading feedback is intact. `node tools/verify.cjs` asserts the rule
+(`the palette is flat: no linear or radial fill remains, and the one ring that uses a gradient says
+why`) with comments stripped — several sentences below still name the gradient they describe having
+removed, and to a scanner those are the same string as a rule painting one. The single remaining
+gradient FUNCTION is the workload ring, declared in the page beside it as `flat-palette-exception:
+conic-gradient`, because a ring chart drawn with hard colour stops is a segmented circle, not a blend.
+§10 is untouched by any of this: the logo is a PNG and is still the only brand image on the sign-in.
+The token census in the block below is printed by `node tools/measure.cjs`, not by this document.
 
 Translate the first-slide visual identity into a modern mobile-app gradient system.
 
@@ -3975,6 +4004,10 @@ measured count into the baseline: the file advertised 32 and the code enforced 1
 
 # 32. GRADIENT USAGE
 
+**Retired by the owner's ruling of 2026-10-27** (§31's supersession note): there are no gradients to
+apportion, so "intentional" is moot. Every GOOD USE CASE below is now a FLAT BRAND SURFACE use case —
+the same places, one colour each, and the same discipline about not painting every card.
+
 Gradients should be intentional.
 
 GOOD USE CASES:
@@ -4011,6 +4044,11 @@ The interface must remain practical.
 ---
 
 # 33. BRAND GRADIENT HIERARCHY
+
+**Retired by the owner's ruling of 2026-10-27**, same as §32. The four stops named here are still the
+brand colours and still mean what they mean — navy for the deepest surface, logo blue for the brand
+surface, electric blue for the light step, cyan for a thin accent — but they are used as four solids,
+not as blends, and the cyan remains a rule rather than a fill.
 
 Use several controlled layers.
 
@@ -4888,6 +4926,24 @@ Brand color migration is semantic, not mechanical.
 ---
 
 # 68. TYPOGRAPHY
+
+**AMENDED 2026-10-27 — the rebuild's UI face is now Poppins, and the digits are not.** The owner ruled
+"simple font and style, the poppins font" for the whole app. The one objection the plan recorded — that
+Poppins is not a local asset — is answered by self-hosting, not by a network: eight WOFF2 faces
+(400/500/600/700 × latin + latin-ext) now sit in `fonts/` beside Atkinson's four, with
+`POPPINS-OFL.txt` next to them, and the app still needs no network at runtime, so §81 and the offline
+rule are unchanged. What the swap broke, and what was caught by measuring rather than reasoning:
+**Poppins has no tabular figures.** `font-variant-numeric:tabular-nums` is a no-op in it — the probe
+read "111111" at 61.45px against "000000" at 120.58px WITH the property applied, where Atkinson
+equalises both at 121.36px. A `1` is half the width of a `0`, so every money column §13 of the plan
+asks to line up would have leaned worse than it ever did under Atkinson. The answer is not to drop the
+ruling: `--font-ui` is Poppins for words, and a new `--font-figures` carries the digits in Atkinson, in
+the one shared rule that already owns `tabular-nums`. `node tools/shot.cjs
+--probe=@tools/probe-face-and-figures.js` measures the face that loads, the face that paints, the two
+digit widths with and without the property, and the brand surface as painted; it reports
+`findings: 0` on this build. `node tools/falsify-typography.cjs` owns the faces, and the gate's
+weight check now counts distinct WEIGHTS rather than @font-face BLOCKS — a family split by subset has
+eight blocks for four weights, and the old count would have failed a correct swap.
 
 The current prototype uses:
 - Fraunces for prominent headings

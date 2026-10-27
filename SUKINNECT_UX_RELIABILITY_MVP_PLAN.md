@@ -607,6 +607,43 @@ changes how it *looks* and is safest done after the surfaces settle.
 
 ---
 
+## 13A. Phase D — the AI, financial and design brief (2026-10-27), and what is real in it
+
+The owner filed a new brief and gave four rulings on it. Recorded here in full so no item is quietly
+dropped or quietly over-claimed, in the four buckets the repository already uses: BUILT, BUILT-AS-
+LABELLED-PROCEDURE (the flow exists, the external service does not, and the screen says so), OWED
+(a build task in this plan, not yet done), and NOT BUILDABLE HERE (needs a backend, a network, or a
+counsel/licence decision).
+
+| Brief item | Bucket | What it means in this build |
+|---|---|---|
+| AI boosts operations, is database- and procedure-driven | OWED §57 | A recommender over the device's own records — the most-requested trade, the provider re-hired, the action that finishes a half-open flow — each one naming the record it came from. §76 forbids a decorative statistic, so a suggestion with no record behind it is not painted. |
+| Local/external model that learns the data and recommends frequent actions | Split | The **recommendation** half is procedural and honest (§57 above). The **learned-model** half is NOT BUILDABLE HERE: there is no training corpus and no inference in a single-file page, and §20 already forbids implying otherwise. |
+| Sign-up: AI wizard, voice command, manual typing | OWED §63 | A stepped guide over the four fields `submitAuth` already collects. Voice is the browser's own `SpeechRecognition` — no remote dependency — so it ships WITH a real unsupported state, and typing is never gated behind it. |
+| AI asks only for the data a step needs, stepper method | OWED §63, §64 | The procedure is buildable; the intelligence behind which step to show is a rule, and it is written as a rule. |
+| Exchange-rate and labour-rate lookups from the web and a hosted LLM | NOT BUILDABLE HERE, seam named | The app is offline by §81 and the phone build has no network at all (measured once: it rendered with none). The rate suggestion that IS buildable comes from the platform's own records — §58 — and says so. |
+| Standard/estimated labour fee, "what should I charge?" | OWED §58 | A market band computed from the rates already held for that trade and barangay, with the sample size stated, applied only when the professional confirms. |
+| New trades: program commissioning, portfolios, barbering | OWED, needs a catalogue decision | §44 says the system must not assume the six categories are permanent, so this is additive: a `SERVICES` row each, with its qualification set, pricing basis and verification requirement. |
+| Verification: certificates, government IDs, OCR, facial recognition, identity extraction, ratings | Split | Certificates, IDs and expiry states are REAL records now (`CREDENTIALS`, `APPLICATION_DOCS`, `PENDING_APPLICANTS`). **OCR and face match are BUILT-AS-LABELLED-PROCEDURE**: the upload step, the review step, the reviewer record and the honest "this build does not read documents" line. Ratings derive from completed work already. §56 still forbids exposing a document where a badge is enough. |
+| Terms and Privacy at every account creation, acceptance disabled until each is scrolled to its end | OWED §56 | Buildable and worth the care: a scroll gate with no keyboard or screen-reader path is an accessibility defect, and a document shorter than the pane never scrolls at all, so both cases need stating. |
+| Blockchain for encryption | NOT BUILDABLE, and the premise is wrong | A blockchain does not encrypt; it appends records that are hard to alter. What this app CAN do honestly is hash-chain its own ledger entries so a tampered row is detectable on screen — real integrity, no claim of secrecy. Personal data still needs §56 handling, not a chain. |
+| Blockchain for financial operations, settlement API | NOT BUILDABLE HERE, seam named | The gateway seam already exists; a chain-based settlement provider is a production choice with a licence question attached. |
+| Own e-wallet, GCash cash in/out | OVERTURNED RULE, OWED §65 | Owner ruled 2026-10-27 to build the wallet UX labelled simulated. See §23's note in AGENTS.md. |
+| XP / power-ups / privileges on earnings growth; loans; funding eligibility | OWED §65 as derivation, NOT BUILDABLE as offering | Tiers can be DERIVED from completed-job and payout records truthfully. A loan or a funding decision is regulated lending — it needs a licensed partner and counsel, and this plan will not let a prototype imply it evaluates anyone. |
+| reCAPTCHA | NOT BUILDABLE HERE, seam named | Needs a site key and Google's network. What is honest locally is a rate limit and a locked-state procedure, and the admin already has a session-lock precedent that says what it does not do. |
+| Connections per customer and provider | OWED | Threads and bookings already relate the two; a connections view over those records is a read-only screen, not a social graph (§26 forbids the feed shape). |
+| NGO / families-in-need linkage, kept inside the app's scope | OWED as a record family, business decision otherwise | §59 and §61 govern scope; nothing here should widen the marketplace thesis on an inference. |
+| Home AI becomes a bottom-right chatbot | OWED §55, RULING REVERSED | Plan R8 previously ruled the concierge entry embedded, no floating button; the owner has reversed that. The reversal is recorded rather than silent. |
+| Simple font and style; Poppins | DONE, 2026-10-27 | Self-hosted; see §68's amendment — and the digits had to stay in Atkinson because Poppins has no tabular figures. |
+| No gradients | DONE, 2026-10-27 | Flat everywhere, by the scope ruling; see §31–33's supersession notes. |
+| Admin on the web only, not in the app | OWED §59, needs the meaning settled | `app-mode` is what the APK loads; refusing the admin role there with a named reason is the honest reading, and the desktop page keeps it. |
+
+**Why the split matters more than the count.** Eight of these rows become real screens in this build,
+and seven do not exist without a server, a vendor contract, or a legal answer. Both groups are written
+here in the same table because the failure mode this plan keeps meeting is a sentence that reads like a
+capability — and the fix has never been to drop the hard rows or to fake them, but to say which bucket
+each one is in.
+
 ## 14. Acceptance-test checklist (all runnable, none invented)
 
 | Item | Check | Command / method | Passes when |
