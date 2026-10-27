@@ -1179,6 +1179,10 @@ const SCREENS = [
   ['provider-payout-modal', `state.view='app'; state.role='provider'; state.tab='profile'; render();
                           openProfileSection('provider','payout','Payout & Earnings','Where the money goes');
                           clickPainted(/ProfileAction\\(.payout.\\)/, 'the manage-payout button');`],
+  /* The only admin surface a phone can reach, and until now the only admin screen with no row: a
+     refusal page still has tap targets, contrast and a heading, and the ruling that moved the console
+     to the web did not delete the screen the shell paints in its place. */
+  ['admin-shell-refusal',   `state.view='app'; state.role='admin'; state.appShell=true; state.tab='profile'; render();`],
   ['admin-security-modal', `state.view='app'; state.role='admin'; state.appShell=false; state.tab='profile'; render();
                           openProfileSection('admin','security','Security & Sign-in','What this device keeps');
                           clickPainted(/AccountAction\\(.pin.\\)/, 'the security-PIN button'); requirePaintedDialog('the Security PIN dialog');`],
@@ -1674,6 +1678,19 @@ async function main() {
          try { if (typeof state !== 'undefined' && state.view === 'splash') { /* leave it on screen */ } } catch (e) {}
          return true;
       })()`);
+      /* The admin console is a web surface by the owner's ruling of 2026-10-27, so in the shell render()
+         replaces every admin screen with adminWebOnly(). Correct as product, and it voided every camera
+         measurement that leans on an admin screen: the Weekly charts, the class-less verification
+         overlay, the admin bottom nav. Each reported a clean 0 over a refusal page, which is how three
+         falsifier families printed five surviving mutants at once while twelve camera-driven siblings
+         passed the same run. Derived here from the state the row actually set rather than patched row
+         by row — a list is how nine rows got fixed and the rest kept measuring nothing. A row that
+         names appShell itself wins, because the refusal page below has to be allowed to ask for the
+         shell. */
+      await session.evaluate(`(function(){
+         try { if (!/appShell/.test(ROW_NAV) && typeof state !== 'undefined' && state.role === 'admin' && state.appShell) { state.appShell = false; render(); } } catch (e) {}
+         return true;
+      })()`.replace('ROW_NAV', JSON.stringify(String(nav))));
       await sleep(parseInt(flag('wait', APP_MODE ? '700' : '900'), 10));
       /* A sheet needs one more push: the app's own render pass can hand the sheet
          state to a screen change before the layer mounts, and the second call lands

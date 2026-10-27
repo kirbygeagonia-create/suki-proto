@@ -15,6 +15,9 @@ function gate() {
 
 const mutants = [
   { name: 'bookingsForProvider goes back to ignoring its argument',
+    /* STRANDED on purpose, reported as NOT APPLIED: this needle's body line is declared identically by
+       loyaltyTier() since the wallet landed, and a two-line needle cannot match a CRLF file.
+       Repair is an index-scoped replace, not a wider threshold — see the task. */
     from: '  const id = providerId || CURRENT_PROVIDER_ID;',
     to: '  const id = CURRENT_PROVIDER_ID;',
     expect: 'bookingsForProvider honours the id it is handed' },

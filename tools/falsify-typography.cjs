@@ -35,7 +35,7 @@ const MUTANTS = [
     apply: s => s.replace('url(font-atkinson-next-semibold.woff2)', 'url(ATKINSON-AUTHORS.txt)') },
   { name: 'the stack asks for a family the stylesheet never declares', where: 'APP', check:
     'the face the app asks for first is one the stylesheet actually declares',
-    apply: s => s.replace('--font-ui:"Atkinson Next"', '--font-ui:"Atkinson Alternate Next"') },
+    apply: s => s.replace('--font-ui:"Poppins"', '--font-ui:"Atkinson Alternate Next"') },
   { name: 'one of the four weights loses its face', where: 'FONTS', check:
     'the four weights the rebuild says it carries are really four',
     apply: renameLastAtkinsonFace },
