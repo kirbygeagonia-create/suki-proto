@@ -6720,6 +6720,79 @@ suite('wallet', async () => {
   return c;
 });
 
+/* ══ connections — the relationship a booking already created ═══════════════
+   The brief asks for connections per customer and per provider. The rule this suite holds is that a
+   connection is a DERIVED view over BOOKINGS: nothing can be added or requested, the provider's half
+   withholds a household until a job is accepted, and the organisation half is a seam. A check that
+   only read the sheet's words would pass on a list typed from memory. */
+suite('connections', async () => {
+  const c = makeChecker();
+  const app = boot();
+  const res = app.residentConnections();
+  const prov = app.providerConnections();
+  const books = app.bookingsForResident();
+  c.check('grouping loses nothing: the jobs summed equal the bookings on this side',
+    res.length >= 1 && res.reduce((t, g) => t + g.jobs, 0) === books.length,
+    'groups ' + res.length + ' · jobs ' + res.reduce((t, g) => t + g.jobs, 0) + ' · bookings ' + books.length);
+  res.forEach(g => {
+    const mine = books.filter(b => b.providerId === g.otherId).length;
+    if (g.jobs !== mine) c.check('one group counts its own provider exactly', false, g.otherId + ': ' + g.jobs + ' against ' + mine);
+  });
+  c.check('and one group counts its own provider exactly (over every group on the seed)',
+    res.every(g => g.jobs === books.filter(b => b.providerId === g.otherId).length),
+    res.map(g => g.otherId + '=' + g.jobs).join(' '));
+
+  /* The privacy half, asserted on both sides of the boundary with a positive control that the seed
+     actually contains a withheld case and a visible one. */
+  const requested = app.BOOKINGS.filter(b => b.providerId === app.CURRENT_PROVIDER_ID && b.status === 'requested');
+  const accepted = app.BOOKINGS.filter(b => b.providerId === app.CURRENT_PROVIDER_ID && app.PROVIDER_VISIBLE_STATES.includes(b.status));
+  const hidden = prov.filter(g => g.withheld);
+  c.check('the provider list withholds a household until the job is accepted, and shows one after',
+    requested.length >= 1 && accepted.length >= 1
+      && hidden.length >= 1 && hidden.every(g => g.withheld && /has not booked you/.test(g.name))
+      && prov.some(g => !g.withheld && !/has not booked you/.test(g.name)),
+    'requested ' + requested.length + ' · accepted ' + accepted.length + ' · withheld rows ' + hidden.length);
+  c.check('a withheld row carries no link out, so the list cannot become a way to open a stranger',
+    prov.every(g => !g.withheld || !g.link), JSON.stringify(prov.filter(g => g.withheld).map(g => g.key)));
+
+  const src = String(app._source);
+  c.check('nothing in the file can add, request or follow a connection',
+    !/function\s+(addConnection|requestConnection|followProvider|connectWith)/.test(src)
+      && !/state\.connections\s*=/.test(src),
+    'an adder was found: ' + /function\s+(addConnection|requestConnection|followProvider|connectWith)/.test(src));
+  const org = app.organizationSeam();
+  c.check('the organisation half is a seam that lists nothing it cannot hold',
+    org.available === false && org.organizations === 0 && /legal entity/.test(org.reason)
+      && /disburse/.test(org.reason), JSON.stringify(org).slice(0, 100));
+
+  const sheet = (() => { const s = boot(); s.state.view = 'app'; s.state.role = 'resident'; return String(s.connectionsSheet()); })();
+  const pSheet = (() => { const s = boot(); s.state.view = 'app'; s.state.role = 'provider'; return String(s.connectionsSheet()); })();
+  c.check('each side is titled for what it is looking at',
+    /Providers you have booked/.test(sheet) && !/Providers you have booked/.test(pSheet)
+      && /Households you work for/.test(pSheet), 'resident/provider heads differ');
+  c.check('the sheet says a connection is a record rather than something you can add',
+    /not something you can add, request or remove/.test(sheet), sheet.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').match(/Grouped from[^]{0,120}/)?.[0] || 'absent');
+  c.check('and it keeps money out of a list that is about who, not how much',
+    !/\u20b1/.test(sheet) && !/\bpsp\b/i.test(sheet), 'a peso figure appeared in the connections sheet');
+  /* Found in the screenshot: the withheld sentence was repeated on all eight rows, and the connection
+     count sat inside a card-title — the one slot the sheet rule silences on the first card of a body.
+     Both halves are asserted: the head says it once, no row says it again, and the count is painted. */
+  c.check('the withheld rule is stated once on the head, not repeated on every row',
+    /A name appears once you have accepted the job/.test(pSheet)
+      && !/stays withheld/.test(pSheet) && !/Withheld</.test(pSheet),
+    'head carries it: ' + /A name appears once/.test(pSheet) + ' · rows repeat it: ' + /stays withheld/.test(pSheet));
+  c.check('the connection count is in the line that paints, not in a silenced card heading',
+    /^\s*\d+ connections?\s*$/m.test(sheet.replace(/<[^>]*>/g, '\n')) && !/card-title">\d+ connection/.test(sheet),
+    'count visible: ' + /font-weight:700;">\d+ connection/.test(sheet));
+  const entry = (() => { const s = boot(); s.state.view = 'app'; s.state.role = 'resident'; return String(s.connectionsEntry()); })();
+  c.check('the entry is reached from the two surfaces that already hold the records',
+    /openConnections\(\)/.test(entry) && /Your providers/.test(entry)
+      && (src.split('${connectionsEntry()}').length - 1) === 2,
+    'interpolated call sites: ' + (src.split('${connectionsEntry()}').length - 1)
+      + ' · definitions: ' + (src.split('function connectionsEntry').length - 1));
+  return c;
+});
+
 (async () => {
   let total = 0, failed = 0;
   for (const { name, fn } of suites) {

@@ -1108,6 +1108,8 @@ const SCREENS = [
      wizard is a three-step sheet a provider reaches from their own pricing section — both are
      destinations, so both are walked. */
   ['concierge-suggested', `state.view='app'; state.role='resident'; state.tab='concierge'; render();`],
+  ['resident-connections',   `state.view='app'; state.role='resident'; state.tab='home'; render(); openConnections();`],
+  ['provider-connections',   `state.view='app'; state.role='provider'; state.tab='profile'; render(); openConnections();`],
   ['provider-wallet',      `state.view='app'; state.role='provider'; state.tab='profile'; render(); openWallet();`],
   ['signup-guide-step2',   `state.view='login'; state.role='resident'; state.authMode='register'; render();
                         openSignupGuide(); guideWrite(0, 'Nueva Residente'); guideGo(1);`],

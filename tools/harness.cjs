@@ -130,7 +130,10 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'CREDENTIALS', 'LISTINGS'
   'openWallet', 'walletSheet', 'walletSnapshot', 'walletEntries',
   'chainHash', 'buildLedgerChain', 'verifyLedgerChain',
   'gatewayCashSeam', 'cashMovementSeam', 'loyaltyTier', 'fundingEligibilitySeam',
-  'exchangeRateSeam', 'spamCheckSeam'];
+  'exchangeRateSeam', 'spamCheckSeam',
+  /* connections: a view over the bookings on both sides */
+  'residentConnections', 'providerConnections', 'connectionsFor', 'connectionGroups',
+  'PROVIDER_VISIBLE_STATES', 'organizationSeam', 'openConnections', 'connectionsSheet', 'connectionsEntry'];
 
 function boot({ appMode = false, storage = null } = {}) {
   const src = fs.readFileSync(APP, 'utf8');

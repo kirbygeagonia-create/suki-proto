@@ -6738,6 +6738,170 @@ function verifyLedgerChain() {
       + 'this prototype are stored in plain text in the browser.' };
 }
 
+/* ── connections: who each side has actually worked with ──────────────────────────────────────
+   The brief asks for "Connections of Per Customer and Service Provider or Professional and More".
+   This is the part a prototype can answer for real: the app already holds one record type that
+   creates a connection — a booking. So the list is grouped out of BOOKINGS and nothing else. No
+   contact book, no follow/following, no suggested people: §55 says reputation and relationship are
+   transaction-based, and §26 says messaging exists to coordinate services, not to build a feed.
+
+   Three rules this file holds itself to:
+     · a connection EXISTS only where a booking exists. Nothing here can be added, requested or
+       reciprocated, because there is no record to add it to — the sheet says so on its face;
+     · the provider's half is gated the same way the booking detail gates an address and a phone: a
+       job the provider has not accepted withholds the household, so the connection list cannot
+       become a way to read out the residents who are merely shopping around (§56);
+     · "and More" — an organization or NGO as a party — is a seam, not a screen. It would need a
+       legal-entity record family, a different verification path, and somewhere to disburse to; none
+       of the three exists, so the sheet names the gap instead of printing a fake organisation. */
+
+function connectionGroups(bookings, otherSideOf, labelFor) {
+  const byId = new Map();
+  bookings.forEach(b => {
+    const other = otherSideOf(b);
+    if (!other) return;
+    const key = labelFor(b, other);
+    const g = byId.get(key) || { key, otherId: other, jobs: 0, lastAt: 0, openJobs: 0, finishedJobs: 0,
+      withheld: true, bookingIds: [] };
+    g.jobs++;
+    g.bookingIds.push(b.id);
+    const at = Date.parse(b.createdAt || '') || 0;
+    if (at > g.lastAt) g.lastAt = at;
+    /* One accepted job is enough to un-hide a household: after that the provider is standing at the
+       door with the address, so the connection list revealing the name adds no exposure. */
+    if (PROVIDER_VISIBLE_STATES.includes(b.status)) g.withheld = false;
+    if (FINISHED_STATES.includes(b.status)) g.finishedJobs++; else g.openJobs++;
+    byId.set(key, g);
+  });
+  return [...byId.values()].sort((a, b) => b.jobs - a.jobs || b.lastAt - a.lastAt);
+}
+
+/* The states in which the provider side of a booking has a name to show. Deliberately its own list
+   rather than a reuse of the detail screen's gate, and the gate check asserts both say the same thing
+   for a requested job and an accepted one — two rules that cannot drift silently. */
+const PROVIDER_VISIBLE_STATES = ['accepted', 'en_route', 'arrived', 'in_progress', 'completed', 'rated'];
+
+function residentConnections() {
+  return connectionGroups(bookingsForResident(), b => b.providerId, (b, id) => id)
+    .map(g => {
+      const p = providerByIdForConnections(g.otherId);
+      return Object.assign(g, { name: p.name, sub: p.sub, link: { kind: 'provider', id: g.otherId } });
+    });
+}
+
+function providerConnections() {
+  return connectionGroups(bookingsForProvider(), b => b.customerId, (b, id) => id)
+    .map(g => {
+      const c = householdLabel(g.otherId, g.withheld);
+      return Object.assign(g, { name: c.name, sub: c.sub,
+        link: g.withheld ? null : { kind: 'household', id: g.otherId } });
+    });
+}
+
+/* providerOf() takes a BOOKING, so a connection keyed on an id needs the roster lookup. An unknown id
+   answers a stand-in with no identity rather than the first provider — the substitution class this
+   repository has closed at every other seam. */
+function providerByIdForConnections(id) {
+  const p = (typeof PROVIDERS !== 'undefined' ? PROVIDERS : []).find(x => x.id === id) || null;
+  if (!p) return { name: 'A provider this device has no record for', sub: 'No roster row carries this id' };
+  return { name: p.name, sub: p.service + ' · ' + p.barangay };
+}
+
+function householdLabel(id, withheld) {
+  if (withheld) return { name: 'A household that has not booked you', sub: '' };
+  const c = (typeof CUSTOMERS !== 'undefined' ? CUSTOMERS : []).find(x => x.id === id) || null;
+  if (!c) return { name: 'A household this device has no record for', sub: 'No customer row carries this id' };
+  return { name: c.name || ('Household ' + c.id), sub: c.barangay ? 'Brgy. ' + c.barangay : 'No barangay on the record' };
+}
+
+function connectionsFor(role) {
+  return role === 'provider' ? providerConnections() : residentConnections();
+}
+
+function organizationSeam() {
+  return {
+    available: false, organizations: 0,
+    reason: 'An organisation or NGO as a party is not built here. It would need a record of the legal '
+      + 'entity and who may sign for it, a verification path different from a person with an ID, and '
+      + 'somewhere to disburse funds to. This prototype has one account kind — a resident and a '
+      + 'provider — so it does not list organisations it cannot hold.'
+  };
+}
+
+function openConnections() { state.sheet = 'connections'; render(); }
+
+function connectionRow(g) {
+  const when = g.lastAt ? shortDate(new Date(g.lastAt)) : 'no date on the record';
+  /* Only a provider row gets a control, because openProviderDetail(id) is the handler that exists.
+     A household row names the job count and stops there: inventing an onclick that resolves to no
+     function is the dead-control defect, and tools/audit-handler-reachability.cjs would be right to
+     fail it. */
+  const meta = g.jobs + ' job' + (g.jobs === 1 ? '' : 's') + ' · last ' + when;
+  const detail = g.sub ? esc(g.sub) + ' · ' + meta : meta;
+  const go = g.link && g.link.kind === 'provider'
+    ? `<button type="button" class="btn sm secondary" style="flex:none;" onclick="openProviderDetail('${g.otherId}')">Open</button>`
+    : '';
+  return `<div class="row" style="padding:var(--s-2) 0; border-bottom:1px solid var(--line); align-items:center;">
+    <span style="min-width:0; flex:1;">
+      <b style="font-size:var(--t-body-sm);">${esc(g.name)}</b>
+      <span style="display:block; font-size:var(--t-caption); color:var(--mist);">${detail}</span>
+    </span>
+    ${go}
+  </div>`;
+}
+
+function connectionsSheet() {
+  const role = state.role === 'provider' ? 'provider' : 'resident';
+  const list = connectionsFor(role);
+  const org = organizationSeam();
+  const head = role === 'provider' ? 'Households you work for' : 'Providers you have booked';
+  const sub = role === 'provider'
+    ? 'A name appears once you have accepted the job'
+    : 'Everyone on this list is someone you have already requested';
+  return `
+    <div class="sheet-head">
+      <div style="min-width:0;">
+        <h2 class="sheet-title">${esc(head)}</h2>
+        <div class="sheet-sub">${esc(sub)}</div>
+      </div>
+      <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close">${ic('x', 15)}</button>
+    </div>
+    <div class="sheet-body">
+      <div class="card" style="border-radius:var(--r-card); padding:var(--s-4);">
+        <div style="font-size:var(--t-body-sm); font-weight:700;">${list.length} connection${list.length === 1 ? '' : 's'}</div>
+        <div style="font-size:var(--t-caption); color:var(--mist); margin:2px 0 8px;">
+          Grouped from the ${list.reduce((t, g) => t + g.jobs, 0)} booking${list.length === 1 && list[0].jobs === 1 ? '' : 's'} on this
+          device. A connection is not something you can add, request or remove — it is the record of a
+          job, and it appears here the moment one exists.
+        </div>
+        ${list.length ? list.map(connectionRow).join('')
+          : `<div style="font-size:var(--t-caption); color:var(--ink-soft);">Nothing has been booked from this device yet, so there is nobody to list. That is the record, not an error.</div>`}
+      </div>
+      <div class="card" style="border-radius:var(--r-card); padding:var(--s-4); margin-top:10px;">
+        <b class="card-title">Organisations and NGOs</b>
+        <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.6; margin-top:6px;">
+          ${ic('alert-triangle', 12)} ${esc(org.reason)}
+        </div>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <button type="button" class="btn" style="flex:1;" onclick="closeSheet()">Close</button>
+    </div>`;
+}
+
+function connectionsEntry() {
+  const role = state.role === 'provider' ? 'provider' : 'resident';
+  const list = connectionsFor(role);
+  return `<div class="card" style="border-radius:var(--r-card); padding:var(--s-4); margin-top:10px;">
+      <b class="card-title">${role === 'provider' ? 'Households you work for' : 'Your providers'}</b>
+      <div style="font-size:var(--t-caption); color:var(--ink-soft); margin:4px 0 8px; line-height:1.55;">
+        ${list.length ? `${list.length} ${list.length === 1 ? 'connection' : 'connections'}, counted from the jobs on this device.`
+          : 'No bookings yet, so no connections yet. This list is the record, not a contact book.'}
+      </div>
+      <button class="btn sm secondary" onclick="openConnections()">Open connections</button>
+    </div>`;
+}
+
 function openWallet() { state.sheet = 'wallet'; render(); }
 
 function walletSheet() {
@@ -6867,7 +7031,7 @@ function providerSectionBody(section){
         A view over the books this device keeps. It stores no money and holds no balance of its own.
       </div>
       <button class="btn sm secondary" onclick="openWallet()">Open the wallet</button>
-      <hr style="margin:14px 0; border:0; border-top:1px solid var(--line);"><div class="card"><b>Payout &amp; Earnings</b><div class="card-body">Current payout: <b>${esc(pp.bankAccount)}</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('payout')">Manage Payout</button></div>` : section === 'security' ? `<div class="card"><b>Account &amp; Security</b><div class="card-body">This prototype signs in locally and keeps no authentication state, so there is no PIN, two-factor or session list to report.</div></div>` : section === 'notifications' ? `<div class="card"><b>Notification Preferences</b>${[['requests','New Service Requests'],['bookings','Booking Updates'],['messages','Customer Messages'],['quotes','Quotation Responses'],['payments','Payment Received'],['opportunities','High Demand Opportunities'],['schedule','Schedule Alerts'],['trust','Trust Score Changes'],['credentials','Credential Expiry'],['reviews','Customer Reviews']].map(([key,label])=>`<label class="row" style="font-size:var(--t-caption); padding:var(--s-2) 0;">${label}<input type="checkbox" ${state.providerNotifications[key]?'checked':''} onchange="setProviderNotification('${key}', this.checked);"></label>`).join('')}</div>` : section === 'preview' ? `<div class="card"><div style="text-align:center;">${photoAvatar('self', 56)}<div style="font-size:var(--t-lead); font-weight:800; margin-top:8px;">${esc(pp.name)}</div><div style="font-size:var(--t-caption); color:var(--mist);">${esc(pp.service)}</div><div style="margin-top:9px; display:flex; align-items:center; justify-content:center; gap:5px;">${stars(providerOf({providerId:CURRENT_PROVIDER_ID}).rating,12)}<span style="font-weight:700;">${providerOf({providerId:CURRENT_PROVIDER_ID}).rating}</span><span style="color:var(--mist);">- ${providerOf({providerId:CURRENT_PROVIDER_ID}).jobs} completed jobs</span></div><div style="color:var(--success-ink); margin-top:6px;">${esc(providerOf({providerId:CURRENT_PROVIDER_ID}).badges.join(' - '))}</div><div style="font-size:var(--t-caption); text-align:left; margin-top:12px;">Service Area: ${esc(pp.barangay)} + nearby barangays<br>Starting Rate: ${rateLabel(pp.rateCentavos, pp.rateUnit)}<br>Services: ${listingsOf(CURRENT_PROVIDER_ID).filter(l=>l.isActive).map(l=>l.title).join(', ') || 'none listed yet'}</div></div></div>` : '';
+      ${connectionsEntry()}<hr style="margin:14px 0; border:0; border-top:1px solid var(--line);"><div class="card"><b>Payout &amp; Earnings</b><div class="card-body">Current payout: <b>${esc(pp.bankAccount)}</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('payout')">Manage Payout</button></div>` : section === 'security' ? `<div class="card"><b>Account &amp; Security</b><div class="card-body">This prototype signs in locally and keeps no authentication state, so there is no PIN, two-factor or session list to report.</div></div>` : section === 'notifications' ? `<div class="card"><b>Notification Preferences</b>${[['requests','New Service Requests'],['bookings','Booking Updates'],['messages','Customer Messages'],['quotes','Quotation Responses'],['payments','Payment Received'],['opportunities','High Demand Opportunities'],['schedule','Schedule Alerts'],['trust','Trust Score Changes'],['credentials','Credential Expiry'],['reviews','Customer Reviews']].map(([key,label])=>`<label class="row" style="font-size:var(--t-caption); padding:var(--s-2) 0;">${label}<input type="checkbox" ${state.providerNotifications[key]?'checked':''} onchange="setProviderNotification('${key}', this.checked);"></label>`).join('')}</div>` : section === 'preview' ? `<div class="card"><div style="text-align:center;">${photoAvatar('self', 56)}<div style="font-size:var(--t-lead); font-weight:800; margin-top:8px;">${esc(pp.name)}</div><div style="font-size:var(--t-caption); color:var(--mist);">${esc(pp.service)}</div><div style="margin-top:9px; display:flex; align-items:center; justify-content:center; gap:5px;">${stars(providerOf({providerId:CURRENT_PROVIDER_ID}).rating,12)}<span style="font-weight:700;">${providerOf({providerId:CURRENT_PROVIDER_ID}).rating}</span><span style="color:var(--mist);">- ${providerOf({providerId:CURRENT_PROVIDER_ID}).jobs} completed jobs</span></div><div style="color:var(--success-ink); margin-top:6px;">${esc(providerOf({providerId:CURRENT_PROVIDER_ID}).badges.join(' - '))}</div><div style="font-size:var(--t-caption); text-align:left; margin-top:12px;">Service Area: ${esc(pp.barangay)} + nearby barangays<br>Starting Rate: ${rateLabel(pp.rateCentavos, pp.rateUnit)}<br>Services: ${listingsOf(CURRENT_PROVIDER_ID).filter(l=>l.isActive).map(l=>l.title).join(', ') || 'none listed yet'}</div></div></div>` : '';
 }
 
 function adminSectionBody(section){
@@ -7029,7 +7193,7 @@ function providerFiltersSheet(){
     </div>`;
 }
 
-const SHEET_LABELS = { providerFilters:'Filter providers', bookingRequest:'Book an appointment', reschedule:'Propose a new time', legalDoc:'Legal document', rateWizard:'Set a service rate', verification:'Verify your account', signupGuide:'Guide me through signing up', wallet:'Your wallet', raiseCase:'Raise a case', profileSection:'Profile section', makeOffer:'Make an offer', finaliseProduce:'Record the actual quantity' };
+const SHEET_LABELS = { providerFilters:'Filter providers', bookingRequest:'Book an appointment', reschedule:'Propose a new time', legalDoc:'Legal document', rateWizard:'Set a service rate', verification:'Verify your account', signupGuide:'Guide me through signing up', wallet:'Your wallet', connections:'Your connections', raiseCase:'Raise a case', profileSection:'Profile section', makeOffer:'Make an offer', finaliseProduce:'Record the actual quantity' };
 
 const REQUEST_TIMES = ['8:00 AM','10:00 AM','1:00 PM','3:00 PM','5:00 PM'];
 
@@ -8461,6 +8625,7 @@ function sheetHTML(){
   if(state.sheet === 'verification') return verificationSheet();
   if(state.sheet === 'signupGuide') return signupGuideSheet();
   if(state.sheet === 'wallet') return walletSheet();
+  if(state.sheet === 'connections') return connectionsSheet();
   return '';
 }
 
@@ -10008,6 +10173,7 @@ function residentConcierge(){
     </div>
 
     ${frequentActionsCard()}
+    ${connectionsEntry()}
     <div class="card" style="border-radius:16px; padding:var(--s-4); margin-bottom:14px">
       <label for="concierge-input-field" style="font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:block; margin-bottom:8px;">Describe the issue</label>
       <textarea id="concierge-input-field" rows="4" oninput="conciergeInput(this)" style="width:100%; border:1px solid var(--line); border-radius:var(--r-card); padding:var(--s-3); margin-bottom:14px; font-family:inherit; font-size:var(--t-body-sm); color:var(--ink); resize:none;" placeholder="Describe what is broken, leaking, or needs maintenance...">${esc(state.conciergeInput)}</textarea>
