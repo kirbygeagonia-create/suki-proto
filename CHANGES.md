@@ -9658,3 +9658,21 @@ its own falsifier before it can be trusted. `tools/shot.cjs` keeps the unused
 `requirePaintedDialog` helper with a comment saying why it is not wired in: the four buttons are still
 dead, and a guard that reddens the walk with no shipped fix behind it blocks a build instead of
 guarding one.
+
+**Third probe, and it settles the mechanism while catching a fourth instrument error of mine.**
+`.scratch/probe-modal-mount.js` asks where the dialog's own heading actually is. `body.innerHTML` says
+it is present — and that answer is worthless, because this is a single-file app: the page's entire
+source sits in a `<script>` element inside `<body>`, so *every string the app ever contains* is "in the
+document". Asked of the painted containers instead, the heading is in none of them, no `.modal-layer`
+is mounted, and `#screen` holds 799 characters. **A scan over `body.innerHTML` is a scan over the
+source code, not over the page** — the same "a check that matches prose passes on the wrong evidence"
+class, arriving from the DOM side.
+
+So the confirmed statement is narrow and holds: from the admin Security sheet, the four
+`adminAccountAction` buttons set a modal field, `render()` repaints the layers (which is why the sheet
+gets `aria-modal="false"`), and **no dialog mounts anywhere**. The fix site is therefore not the
+predicate at all: it is that the dialog must be mounted by the surface that raises it — the admin
+account screen's modal expression has to move to a layer the sheet path also renders, or those four
+buttons have to route to the screen that owns it. `modalAboveSheet()` then answers true *and* tells the
+truth, the tally clears without touching the predicate, and the four `admin-*-modal` rows can be
+wired to `requirePaintedDialog` — which is already in `tools/shot.cjs`, waiting for a fix to guard.
