@@ -9645,3 +9645,16 @@ the dialog, or the dialog renders from the sheet; and the four rows then have to
 modal layer is actually painted, so a future regression fails by naming the button rather than
 photographing a sheet. The eight-corner sweep will read 0 of 8 clean until (a) and (b) land, and that
 is the honest state of this build rather than a number to smooth over.
+
+**The obvious fix was tried, and it is wrong in the other direction, so it went back out.** Making
+`modalAboveSheet()` ask the DOM (`document.querySelector('.modal-layer[data-layer="modal"]')`) clears
+the four admin screens and the gate's `layer-modality` needles disagree — but the real reason to
+revert is not a broken check. The rule that put the predicate on state exists because **the app raises
+a modal three ways and the third has no class at all**: the verification review's inline fixed overlay.
+A class-based paint check answers "no modal above" while that overlay is on top, so the sheet would
+keep claiming modality it does not have — the same false statement, mirrored. The honest predicate has
+to enumerate all three mechanisms, which is a larger change than a green sweep justifies, and it needs
+its own falsifier before it can be trusted. `tools/shot.cjs` keeps the unused
+`requirePaintedDialog` helper with a comment saying why it is not wired in: the four buttons are still
+dead, and a guard that reddens the walk with no shipped fix behind it blocks a build instead of
+guarding one.

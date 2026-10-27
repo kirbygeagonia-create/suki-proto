@@ -1592,6 +1592,18 @@ async function main() {
         hit.click();
         return label + ' (' + hit.tagName.toLowerCase() + (inForm ? ' in form' : '') + ')';
      };
+     /* A row named after a dialog has to reach one. clickPainted proves the control exists and fires
+        it; it says nothing about what the app painted afterwards, which is how four admin-*-modal rows
+        came to photograph a sheet for weeks — the button set a state field whose dialog lives on a
+        screen that was not mounted. Refuse, and name the control, so a dead button fails the walk by
+        its own label instead of reporting a clean screen. (Not wired into the rows yet: the four
+        buttons are still dead, so a guard here would redden the walk with no shipped fix behind it.
+        See CHANGES.md §158 and task #67.) */
+     window.requirePaintedDialog = function (label) {
+        var m = document.querySelector('.modal-layer[data-layer="modal"]');
+        if (!m || !m.firstElementChild) throw new Error(label + ' paints no dialog layer — the control is dead from this surface');
+        return 'dialog painted for ' + label;
+     };
      return true;
   })()`);
   await sleep(500);
