@@ -63,12 +63,20 @@ const MUTANTS = [
     steps: [{ needle: '    min-width:0;', to: '    /* min-width left at auto */' }] },
   { name: 'the nav row stops sharing its width and sizes to content instead',
     tally: 'nav',
-    steps: [{ needle: 'flex:1; text-align:center; padding:6px 4px 7px; min-height:var(--tap);',
-      to: 'flex:0 0 auto; text-align:center; padding:6px 4px 7px; min-height:var(--tap);' }] },
+    steps: [{ needle: 'flex:1; text-align:center; padding:var(--s-2) var(--s-1) var(--s-2); min-height:var(--tap);',
+      to: 'flex:0 0 auto; text-align:center; padding:var(--s-2) var(--s-1) var(--s-2); min-height:var(--tap);' }] },
   { name: 'the notification button is left to shrink and the bar is left unable to wrap',
     tally: 'circle',
     steps: [
       { apply: src => cutInside(src, '.notif-btn{', 'flex-shrink:0;') },
+      /* A third guard appeared after this break was written: the bar rule that keeps a
+         top-bar control from wrapping also gives it `flex:0 0 auto`, whose middle value is
+         the same shrink:0 the narrow rule declares. Two declarations of one idea, which is
+         the thing this session keeps converging — and a break that removes only one of them
+         proves nothing while still printing 0 not applied. So the break removes every
+         declaration that holds the circle open, and the surviving tally is the evidence. */
+      { needle: '  .topbar .btn, .topbar .back-btn, .topbar .notif-btn{ white-space:nowrap; flex:0 0 auto; }',
+        to: '  .topbar .btn, .topbar .back-btn, .topbar .notif-btn{ white-space:nowrap; flex:0 1 auto; }' },
       { needle: '  .topbar{ flex-wrap:wrap; }', to: '  /* no wrap */' },
     ] },
   { name: 'the waiting dot is crushed to a sliver by the heading it sits beside',
