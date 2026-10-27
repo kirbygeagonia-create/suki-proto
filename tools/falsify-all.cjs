@@ -137,17 +137,28 @@ function runOne(file) {
        prefixes, so the row used to read `printed no summary` with the cause discarded — which is
        how a single killed child turned into fourteen unproven rows on 2026-10-27: the crash line
        was the only evidence of what actually happened, and it was thrown away. */
-    .filter(l => /^(MISSED|SKIP|BROKEN|QUIET|NOTED|BASELINE|the run|Error:|TypeError:|ReferenceError:|RangeError:|SyntaxError:|throw er|\s+at )/.test(l))
+    .filter(l => /^(MISSED|PARTIAL|NOT APPLIED|SKIP|BROKEN|ABORT|QUIET|NOTED|BASELINE|the run|Error:|TypeError:|ReferenceError:|RangeError:|SyntaxError:|throw er|\s+at )/.test(l))
     .slice(0, 6)
     .map(l => l.slice(0, 158));
+  /* Every family that cannot land a needle prints a SKIP or NOT APPLIED row, but only some of them
+     fold that into the number their summary line prints. The third shape below derives `not applied`
+     as applied − caught, which is 0 for a family whose loop `continue`s on a stranded needle without
+     incrementing anything — so the coverage simply shrinks and the row reads healthy. Measured on
+     2026-10-26: nine of the fifty-three families that print an `N of M caught` summary never name a
+     skip count at all. `escaping` does count its own, and even then nothing marked its row, because
+     the trouble predicate asked only about survivors — that is the row this comment was written from.
+     The count is taken from the evidence the families already print rather than from their arithmetic,
+     and the larger of the two wins so a family that counts its own skips is unchanged. */
+  const skipLines = (out.match(/^(?:SKIP|NOT APPLIED)\b/gm) || []).length;
   for (const shape of SHAPES) {
     const m = out.match(shape.re);
     if (m) {
       const r = shape.read(m);
-      return { ...r, crashed, missed: (out.match(/^MISSED\b/gm) || []).length, notes };
+      return { ...r, skipped: Math.max(r.skipped, skipLines), crashed,
+        missed: (out.match(/^MISSED\b/gm) || []).length, notes };
     }
   }
-  return { applied: 0, caught: 0, skipped: 0, crashed, missed: 0, silent: true, notes };
+  return { applied: 0, caught: 0, skipped: skipLines, crashed, missed: 0, silent: true, notes };
 }
 
 /* Every family rewrites the target and restores it in a `finally`, so a family that never reaches
@@ -179,7 +190,8 @@ for (const f of families) {
   const r = runOne(f);
   const st = strand(TARGET);
   A += r.applied; C += r.caught; S += r.skipped;
-  const trouble = r.silent || r.caught !== r.applied || r.applied === 0 || st.stranded || st.git === false;
+  const trouble = r.silent || r.caught !== r.applied || r.applied === 0 || r.skipped > 0
+    || st.stranded || st.git === false;
   if (st.git === false) console.log('      | NOTED git is unavailable, so a stranded mutant could not be detected or repaired');
   if (st.unrecoverable) console.log('      | BROKEN the target was mutated and could not be restored: ' + st.unrecoverable);
   if (trouble) bad++;
@@ -190,6 +202,15 @@ for (const f of families) {
     + (!r.silent && r.applied === 0 ? '   <<< NOTHING APPLIED — every needle missed, so this family tested nothing'
       : '')
     + (!r.silent && r.caught !== r.applied && r.applied > 0 ? '   <<< MUTANT SURVIVED' : '')
+    /* A needle that stopped matching is the quietest coverage loss there is: every mutant the family
+       DID apply can be caught, the row prints healthy, and one rule has gone untested. On
+       2026-10-27 the aggregate carried exactly one such row (`escaping`, 5 applied / 5 caught / 1 not
+       applied, orphaned by the header convergence) and nothing about it was marked, because the
+       predicate asked only about survivors — while this file's own standing advice is to READ the
+       not-applied column. A column nobody is forced to look at is a column that goes unread. */
+    + (!r.silent && r.skipped > 0 ? '   <<< NEEDLE MISSED — ' + r.skipped + ' needle'
+        + (r.skipped === 1 ? ' no longer matches' : 's no longer match')
+        + ' the target, so that coverage is gone' : '')
     + (r.crashed ? '   <<< exited on a signal: ' + String(r.crashed).slice(0, 40) : '')
     + (st.stranded ? '   <<< LEFT THE TARGET MUTATED — restored from the commit (' + st.keep + '); every row after this one ran against a repaired file' : ''));
   if (trouble) (r.notes || []).forEach(n => console.log('      | ' + n));

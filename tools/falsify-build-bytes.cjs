@@ -59,6 +59,10 @@ let applied = 0, caught = 0, notPlanted = 0, missed = 0;
 const base = run();
 console.log('control  unmutated tree: findings=' + base.findings + ' differs=' + base.differs + ' refused=' + base.refused + ' exit=' + base.code);
 if (base.findings !== 0 || base.refused || base.code !== 0) {
+  /* BROKEN-prefixed so tools/falsify-all.cjs echoes it under the row: the copies are behind
+     the source by design (the owner leaves the public build and the installed APK stale), and a
+     family that plants a divergence cannot run against a tree that already has one. Saying that
+     in a line nobody keeps is how an accepted standing state got reported as a broken suite. */
   console.log('ABORT — the audit does not answer clean on the unmutated tree; nothing below isolates a cause.');
   process.exitCode = 1;
 } else {

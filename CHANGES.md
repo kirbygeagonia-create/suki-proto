@@ -9074,3 +9074,81 @@ neutralises exactly that, with `transform:none !important` and the shadow reset,
 paints in the desktop preview. Given the corrected premise the owner chose to keep it unchanged, which is
 the answer this section records rather than an edit. A wrong *reason* for an approval is not permission to
 spend it.
+
+## 150. A suite figure is only worth what the tree was when it printed, and one killed child inflated that cost by fourteen rows
+
+The design convergence (§148, §149) ended with a full mutant aggregate run against the final page, and
+the first attempt produced a number that was wrong in a way no single row revealed.
+
+**The pass that was not a measurement.** 63 families, 289 applied, 288 caught, 0 not applied — and
+**fifteen** rows flagged, fourteen of them as `printed no summary — nothing was proven`. The tree check
+the runner has always carried at its start and its end is what explained it: the working file was dirty.
+One family (`action-above-fold`) had died between writing its mutant and reaching its `finally`, leaving
+the Money screen's action card swapped back below the statement figures. Every family after it that
+demands a green baseline then exited early. One death, fourteen false alarms, and a headline tally that
+described a file nobody has.
+
+**The repair is per family, not per pass.** `node tools/falsify-all.cjs` now asks git after *every*
+family whether the target moved: a dirty answer names the family that caused it, copies the mutated
+bytes to `.scratch/strand-*.html` for reading, and restores from the commit rather than from a snapshot
+that may itself already be the mutant. Proven with a throwaway fixture that strands the target on
+purpose and is deleted in the same command — the row reads `LEFT THE TARGET MUTATED — restored from the
+commit`, the tree is clean after the pass, and the guard has now actually fired once, which is the only
+difference between a guard and a decoration. The notes filter also widened to keep `Error:`/`at …`
+lines: a family that dies on an uncaught exception prints a stack and none of the verdict prefixes, so
+the one piece of evidence about what happened was being discarded on the way to reporting "no summary".
+
+**The clean pass.** 63 families, **354 mutants applied, 353 caught, 2 not applied, 2 families flagged**,
+tree clean afterwards — and the two flags plus the two `not applied` were each a real finding rather than
+a cascade:
+
+- `control-reach`'s top-bar break removed two guards and the geometry held, because **four** rules hold
+  that one overflow: the bar's `flex-wrap`, the `min-width:0` on the bar's children, the bar-level
+  `flex:0 0 auto` that keeps a top-bar label from wrapping (whose middle value is `shrink:0`), and the
+  title group `.hb`'s own `min-width:0`. Identical in kind to the `flex-crush` break §149 records, and it
+  printed MISSED with `0 not applied`, which is the column nobody reads. It removes all four now and
+  reports `3 of 3 breaks caught, 0 not applied`.
+- `tap-and-summary` reported `1 not applied`: its second break planted a duplicated-width style
+  attribute on the one hand-written back button the admin review bar used, and §149's header
+  convergence moved that button inside `screenHeader()`. Re-pointed at the component, which is the
+  better place for it — the defect can now only be written where every bar's back button is made.
+  Re-run: `mutants applied 4, caught 4, not applied 0`.
+- `escaping` reported the *other* `not applied`, and nothing marked its row. Its sixth mutant took the
+  resident greeting's own interpolation, and §149 moved that greeting into `screenHeader()` too, so the
+  needle matched 0 times — while the family printed `5 of 5 caught` and the aggregate printed `1 not
+  applied` in a column with no marker beside it. **The quietest coverage loss in the suite was invisible
+  by construction**, because the trouble predicate asked only about survivors. Two repairs, both in the
+  runner: a row now prints `NEEDLE MISSED — n needle(s) no longer match the target`, and `skipped` is
+  derived from the `SKIP`/`NOT APPLIED` lines the families already print rather than from their
+  arithmetic, because **nine of the fifty-three families that print an `N of M caught` summary never fold
+  their own skip counter into the line** (measured by grepping each summary for a `not applied` clause on
+  2026-10-26), so their `not applied` is derived as applied minus caught, which is 0 for a loop that
+  `continue`s on a stranded needle without incrementing anything — the coverage shrinks and the row still
+  reads clean. The larger of the two numbers wins, so a family that counts its own skips is unchanged,
+  and the marker has been seen to fire: this family now carries a break that plants a stranded needle in
+  one family's source and requires the row to print NEEDLE MISSED, echo the SKIP line, exit non-zero and
+  invent no survivor. That break printed MISSED on its first mounting, and the runner was right: it sat
+  after the two dirty-tree breaks, whose whole assertion is that the target stays dirty, so the nested
+  pass refused with TARGET NOT CLEAN and the four booleans read as a missing marker. It is third now,
+  refuses to run unless `gitClean()` says the target is clean, and prints the nested pass's own rows when
+  it misses — because a break mounted after another break's hazard setup measures that setup.
+- The re-pointed `escaping` mutant then taught a smaller lesson on the way to passing. Its first version
+  took `screenHeader(esc(…)` as the needle and dropped `esc(` while keeping the paren that closed it;
+  the file stopped parsing, the suite answered `suite crashed: Missing } in template expression`, and
+  the family correctly printed PARTIAL rather than CAUGHT. **A mutant that does not compile tests
+  nothing**, and `PARTIAL` is now in the runner's note filter so the aggregate carries that word instead
+  of inferring a survivor from a count.
+- `build-bytes` refused to run, correctly: three of the four copies of the page (`dist/`, the staged
+  Android asset, the `preview.44` APK bundle) sit at `fd176312…` while the source is at `213c823b…`.
+  A family that proves an audit can detect a divergence cannot plant one on a tree that already has
+  it. This is the **accepted standing state** the owner ruled for the public build — re-stated here so
+  the row is read as a tripwire rather than as a broken suite — and its refusal prints `ABORT`-prefixed,
+  which is the word the aggregate now keeps, so the row carries the reason instead of a blank.
+
+**What it cost to know this.** Two full passes at ~90 minutes each, and the first one's headline number
+was carried in the runner's own summary line as if it were a verdict - `288 caught, 0 not applied`
+printed directly above `BROKEN the tree is not clean after the pass`, which is the right order for a
+careful reader and the wrong order for anyone skimming the last line. The lesson is the same one this
+repository keeps writing down in a new costume: a count is only as good as the state it was taken in, a
+runner that reports "unproven" is reporting about itself, and a guard that has never fired is not yet a
+guard.

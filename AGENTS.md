@@ -3891,6 +3891,39 @@ crushed circles where it used to read 0 — the first time that break has measur
 same session found the mirror case in the application: an approval to delete the card `:hover` lift,
 whose stated reason was that a phone has no hover, when a `@media (hover:none)` block already neutralises
 it there. Re-asked rather than executed: a wrong *reason* for an approval is not permission to spend it.
+`falsify-control-reach`'s top-bar break went the same way for the same cause and is now over-determined
+correctly: **four** rules hold that one overflow (the bar's `flex-wrap`, `min-width:0` on the bar's
+children, the bar-level `flex:0 0 auto`, and the title group's own `min-width:0`), the break removes all
+four, and it reports 1 control out of reach where removing any subset reported 0.
+
+A NOT-APPLIED ROW THAT NOTHING MARKS IS THE QUIETEST COVERAGE LOSS IN THE SUITE. `node
+tools/falsify-all.cjs` prints a `not applied` column and this file has told every reader to look at it —
+while its own trouble predicate asked only about silent rows, survivors, empty families and stranded
+mutants. So when §149's header convergence moved the resident greeting inside `screenHeader()`, the
+sixth mutant in `falsify-escaping` lost its needle, printed `NOT APPLIED`, applied 5 and caught 5, and
+the aggregate row read healthy: one rule's proof simply stopped existing, and only a number in an
+unmarked column said so. Two runner repairs, both general rather than per family. A row now prints
+`NEEDLE MISSED — n needle(s) no longer match the target, so that coverage is gone`, and `skipped` is taken
+as the larger of the family's own arithmetic and the `SKIP`/`NOT APPLIED` lines it printed, because
+**nine of the fifty-three families that print an `N of M caught` summary never fold their own skip
+counter into the line** (measured by grepping each summary for a `not applied` clause on 2026-10-26), so
+their `not applied` is derived as applied minus caught, which is 0 for a loop that `continue`s on a
+stranded needle without incrementing anything — the count shrinks and every row still reads clean.
+`PARTIAL` joined the note filter for the same reason: a gate that fails on a check other than the named
+one is not a catch, and the word carries that. The marker has been seen to fire: `node
+tools/falsify-preflight.cjs` plants a stranded needle in one family's source and requires the row to
+carry `NEEDLE MISSED`, echo the `SKIP` line, exit non-zero and invent no survivor — a string inside the
+runner's row builder would otherwise be decoration. The re-point that produced this paragraph also
+taught the compile rule the hard way — taking `screenHeader(esc(…)` as the needle and dropping `esc(`
+while keeping its closing paren left a file that does not parse, and the suite answered `suite crashed:
+Missing } in template expression`; **a mutant that does not compile tests nothing**, and a family that
+credits it is worse than one that never ran. Mutate the balanced call, or nothing. That break first ran
+**after** the two dirty-tree breaks, and printed MISSED with `exit=1` and no flagged row at all: the
+runner correctly refused to run a family against a target the previous break left dirty on purpose, so the
+guard was working and the reading was about the fixture. **A break mounted after another break's hazard
+setup measures that setup**, which is why the stranded-needle break is now third, and why it refuses to
+run at all unless `gitClean()` says the target is clean — and its MISSED line now prints the nested
+pass's own rows, because four booleans could not say which of them the child never got to answer.
 
 ---
 
