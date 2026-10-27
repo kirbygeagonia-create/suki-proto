@@ -9583,3 +9583,37 @@ in the line that paints.
 Gate 723 → 739. `node tools/falsify-wallet.cjs` 13 of 13, `node tools/falsify-connections.cjs` 7 of 7,
 both restored byte-for-byte; `tools/audit-handler-reachability.cjs` resolves every handler;
 `resident-connections` and `provider-connections` clean at every tally with no console errors.
+
+## 158. The sweep found four admin dialogs that are not told to the platform as modal, and the exit code that hid it was mine
+
+The eight-corner sweep over the bytes after §156 and §157 read **0 of 8 corners clean**, at every
+corner the same two lines: `layers that opened without dialog semantics or the caret inside them: 4`
+and `text painted on top of other text in the same card: 1`. Identical counts at 320px, 450px, 200%
+and 100% text say the cause is state, not geometry. The detail names them: `admin-security-modal`,
+`admin-password-modal`, `admin-twofa-modal` and `admin-sessions-modal`, each reported as
+`.sheet-layer "Security & Sign-in" is missing modal` — a `role="dialog"` with a name but no
+`aria-modal`, so the platform is not told the box replaces the page behind it.
+
+These are not new screens. They are the admin security dialogs §97 added to the walk when the coverage
+audit found that the gate had proved them painted and the camera had never opened one, which means the
+tally has been reading them since and no full sweep has run since then either. **A covered screen is
+not a swept screen.**
+
+Two candidate causes, and the fix is deliberately not shipped until one is measured. Either the sheet
+under those modals is genuinely visible and reachable — in which case `labelTopLayer(topLayerEl())` is
+too narrow, because it labels only the layer it computes as top and the app computes that from state
+while the camera computes it from painted `z-index`, and the two disagree wherever a modal is painted
+*inside* a sheet's own subtree. Or the sheet below is inert, in which case the tally is asking a
+question about a subtree the platform has been told to ignore, and the tally is the thing that is
+wrong. The second reading is not a getout: `setInertOutside` walks up from the layer marking each
+ancestor's siblings, so a modal nested inside the sheet it covers would leave the sheet's own root
+unmarked and still painted. Ask which by dumping the accessibility tree on one of those four screens
+and checking whether the sheet's nodes appear in it — §"A11y tree is a third surface" — before
+touching either file. The `layer-modality` and `modal-stacking` families exist because a confident
+guess in this subsystem made things worse twice.
+
+The instrument lesson from the same minute is mine and it is the one this file has written down
+before: the background run reported **exit code 0** next to a log reading "0 of 8 clean", because the
+command I launched was `node tools/sweep-text-scale.cjs > log 2>&1; echo; tail` — the pipeline's last
+process was `tail`. `tools/sweep-text-scale.cjs` itself exits `bad ? 1 : 0` and was correct. Read the
+log, never the wrapper's exit code.
