@@ -1868,10 +1868,31 @@ suite('hygiene', async () => {
   /* Counted by distinct WEIGHT, not by block. fonts.css splits every family by subset, so a
      family can arrive in eight blocks for four weights — counting blocks read 4 for Atkinson only because
      that family happens not to be subset-split, and the check would have failed a correct Poppins swap. */
-  const uiWeights = new Set(fontFaces.filter(f => f.family === firstFamily).map(f => f.weight));
+  const uiFaces = fontFaces.filter(f => f.family === firstFamily);
+  const uiWeights = new Set(uiFaces.map(f => f.weight));
   c.check('the four weights the rebuild says it carries are really four',
     uiWeights.size === 4,
     [...uiWeights].sort().join(',') || 'none');
+  /* The set alone cannot see a deleted face: Poppins declares every weight twice (latin and latin-ext),
+     so removing one leaves four distinct weights and the check above stays green while a real file is
+     gone. The observable is the *relation* between the weights — a family that splits by subset splits
+     every weight the same way, so the counts must agree, and a weight with fewer files than its
+     neighbours is a face that stopped being declared. Stated as a relation for the reason §68 gives for
+     the block count: measured today, Atkinson carries one file per weight and Poppins two, so a fixed
+     number would fail a correct change of subset convention while this passes an added subset and
+     condemns a removed one. */
+  const uiWeightCounts = [...uiWeights].sort().reduce((m, w) => {
+    m[w] = uiFaces.filter(f => f.weight === w && f.files.length > 0).length;
+    return m;
+  }, {});
+  const uiCountVals = Object.values(uiWeightCounts);
+  const uiThin = uiCountVals.length
+    ? Object.entries(uiWeightCounts).filter(([, n]) => n !== Math.max(...uiCountVals))
+    : [['every weight', 0]];
+  c.check('every weight the interface family claims is declared the same number of times',
+    uiCountVals.length > 0 && uiThin.length === 0,
+    'files per weight: ' + Object.entries(uiWeightCounts).map(([w, n]) => w + '=' + n).join(' ') +
+      (uiThin.length ? ' — thin: ' + uiThin.map(([w, n]) => w + '=' + n).join(',') : ''));
   /* The serif only stays away if the alias holds and nothing bypasses the two tokens. */
   const literalFamilies = (css.match(/font-family:\s*[^;]+/g) || [])
     .filter(d => !/var\(--font-(ui|display)\)|inherit|font-family:\s*var\(--font/.test(d));
