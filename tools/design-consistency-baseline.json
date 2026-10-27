@@ -1,17 +1,18 @@
 {
-  "inline_styles": 1014,
+  "inline_styles": 1001,
   "literal_radii": 17,
   "distinct_radii": 9,
-  "topbar_divs_handwritten": 19,
+  "topbar_divs_handwritten": 0,
   "bar_title_class_rules": 0,
   "bar_titles_self_sized": 0,
   "bar_left_groups_handwritten": 0,
   "bar_action_styles_inline": 0,
-  "screenheader_calls": 13,
-  "chip_tone_rules": 10,
+  "screenheader_calls": 32,
+  "chip_tone_rules": 5,
   "section_heading_constructs": 1,
-  "stat_tile_systems": 3,
+  "stat_tile_systems": 2,
   "literal_font_sizes": 1,
-  "literal_paddings": 111,
-  "distinct_paddings": 41
+  "literal_paddings": 14,
+  "distinct_paddings": 7,
+  "literal_z_index": 0
 }

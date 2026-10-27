@@ -9152,3 +9152,80 @@ careful reader and the wrong order for anyone skimming the last line. The lesson
 repository keeps writing down in a new costume: a count is only as good as the state it was taken in, a
 runner that reports "unproven" is reporting about itself, and a guard that has never fired is not yet a
 guard.
+
+## 151. Which layer is on top was eleven numbers, and three of them described one idea
+
+The design complaint was answered by counting definitions per idea (§147–§150): a screen name, a top bar, a
+status colour, a spacing step, a figure a reader compares. The next census asked the same question of a
+property that had never been through the token set at all: **eleven literal `z-index:` values answering nine
+distinct numbers.** Three sticky action footers — the resident's book bar, the provider detail's action row,
+the admin review's answer bar — were one idea carrying **10, 20 and 25**, and the verification review painted
+its own overlay at **50** in a file declaring `.modal-layer` at 70, because that layer has no class to inherit
+from. Which §72's focus walk already knew about that overlay, and had to learn again here.
+
+**The fix is a ladder, and it moves nothing.** `--z-sticky:20 < --z-nav:30 < --z-sheet:60 < --z-modal:70 <
+--z-map-veil:1100 < --z-toast:9999`, declared beside `--scrim`, which shares their purpose. Every element
+keeps its exact position on the ladder; the three footers collapse onto the rung below the navigation, which
+is what all three always were. Nothing else in the file sat between 10 and 20, and nothing outside the app's
+own layers competes with them, so no stacking pixel moved — a claim the eight-corner sweep then had to measure
+rather than a claim reasoned about.
+
+**The gate asserts relations, not numbers.** `the layer ladder declares every rung and keeps their order`
+reads each rung out of `:root` and requires them strictly ascending: a change of values that preserves the
+order passes, an inversion cannot. `a modal opened from a sheet sits above the sheet` already existed and had
+to be taught to resolve `var(--z-modal)` — its helper returned `null` for both rules on the first run and the
+check failed **on a build that was correct**, which is the orphaned-needle class arriving as a false alarm
+rather than as coverage loss. `no layer types its own stacking number, and the ladder is what it types
+instead` strips comments before counting, because a sentence quoting an old number is the same string to any
+scanner as a rule typing a new one — §31's lesson about a hex in a comment, met again by a stacking value —
+and carries a positive control of six `var()` uses so a dead pattern cannot read as cleanliness. Gate 655 →
+658.
+
+**The same census caught the dim, and the file had been claiming otherwise for weeks.** `--scrim` is
+commented as the one dim written by every layer, but `.sheet-scrim` typed `rgba(3,0,43,.52)` beside the
+dialog's `.48`. The first version of the check flagged `.seg-count` too — an 18px count pill on a 3% wash,
+which is a tint and not a dim — so the rule is scoped by geometry now: a rule with four zero offsets that
+paints a navy `rgba` is a dim, and it must take the token. The sheet takes it. Five checks became three and
+the difference is the false positive the broad rule produced.
+
+**Two families travelled with the change, and the one that grew taught the shape.** `falsify-compat-floor`
+needles the modal layer's full declaration to plant `inset:0`, so its needle moved to the token: 7 of 7.
+`falsify-modal-stacking` went from 3 breaks to 5: two invert the rungs, one deletes the modal's stacking, one
+puts a literal back into the classless overlay, and one gives the sheet its own alpha again. The last two
+name a *different* check than the first three — the pair between `.modal-layer` and `.sheet-layer` is
+untouched by them — so each mutant now carries its own expected label. Before that, the family compared every
+mutant against one label and reported a working guard as MISSED. **A family with one label for several rules
+will condemn whichever rule it did not think of.**
+
+**Adding the metric exposed that blessing had never finished its job.** `literal_z_index` is a new row in
+`node tools/audit-design-consistency.cjs`, ceiling 0. Writing it surfaced that the audit's one **floor**
+metric read its floor from a hardcoded number while `--bless` wrote the measured count into the baseline:
+after the header convergence blessed 32, the rule still enforced 13, so the file advertised one ceiling and
+the code applied another, and nineteen of the shared-header calls could go missing while it printed
+`floor held`. Floors now come from the baseline when the baseline carries one. The same blessing locked the
+§148–§150 gains that had never been recorded as ceilings: hand-written bars 19 → **0**, literal paddings
+111 → **14**, distinct paddings 41 → **7**, chip colour rules 10 → **5**, competing stat-tile ideas 3 →
+**2**, inline styles 1014 → **1001**, `screenHeader()` calls held at a floor of **32** instead of 13.
+
+**Then the suite's own instruments were found holding two fixtures, and they had been poisoning the readings.**
+`falsify-compat-floor` proves an audit can be blinded by editing `audit-compat-floor.cjs` — and one of its
+runs died between the edit and its `finally`, leaving `const hits = [];` in the audit and
+`compat-exception: … — too short to be a reason.` in the application. The audit then answered
+`0 of 17 patterns matched` for every caller, so the gate went red and three families
+(`camera-surfaces`, `dialog-focus`, and the stacking pair) each reported their own needles as stale. **Two of
+those were nearly "repaired" into new bugs on the strength of a reading that was really about a dead scan in
+another file.** The app and audit lines are restored, `falsify-compat-floor` reads 7 of 7 again, and the
+runner gained the check that should have existed: it compares `git status` for `tools/` before and after every
+family, prints `LEFT AN INSTRUMENT MUTATED` naming the file, and **reports rather than restores** — a tool
+file is where a session's live work legitimately lives, and `git checkout -- tools/` would delete it. The pass
+also refuses now when the list-building rule and the counting rule disagree about how many families exist,
+instead of running a subset and printing a healthy total.
+
+**Readings as printed.** `node tools/verify.cjs` → all **658** checks · `falsify-modal-stacking` **5 of 5**,
+`falsify-compat-floor` **7 of 7**, `falsify-camera-surfaces` **3 of 3**, `falsify-layer-modality` **7 of 7**,
+`falsify-escaping` **6 of 6**, each 0 not applied · `node tools/audit-compat-floor.cjs` → findings: 0,
+raw floor Chromium 108, breaking floor none · `node tools/audit-design-consistency.cjs` → no metric has grown
+since the baseline. The extended `falsify-preflight` (three new breaks for the instrument-strand report and
+the selection guard) and the eight-corner sweep are run against the committed tree, because the preflight
+refuses to mutate a target that is dirty — which is its own guard working, and the reason those readings land
+in the commit after this one rather than in it.

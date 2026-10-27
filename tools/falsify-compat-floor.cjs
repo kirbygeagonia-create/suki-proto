@@ -45,8 +45,10 @@ function runAudit() {
    same-length edits this suite has been bitten by before would be invisible to a byte count. */
 const BREAKS = [
   { name: 'plant the inset shorthand back', file: 'app',
-    from: '    position:fixed; top:0; right:0; bottom:0; left:0; background:var(--scrim); z-index:70;',
-    to: '    position:fixed; inset:0; background:var(--scrim); z-index:70;',
+    /* Re-pointed when the stacking numbers moved onto the named ladder: this needle is about
+       `top/right/bottom/left` versus `inset`, so the z-index text only has to travel with it. */
+    from: '    position:fixed; top:0; right:0; bottom:0; left:0; background:var(--scrim); z-index:var(--z-modal);',
+    to: '    position:fixed; inset:0; background:var(--scrim); z-index:var(--z-modal);',
     want: r => r.code === 1 && /inset shorthand/.test(r.out) && /breaking floor: Chromium 87/.test(r.out) },
   { name: 'plant a :has() selector', file: 'app',
     from: '  :root{', to: '  :root:has(> b){ color:red }\n  :root{',

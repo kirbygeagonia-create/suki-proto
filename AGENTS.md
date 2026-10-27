@@ -3925,6 +3925,47 @@ setup measures that setup**, which is why the stranded-needle break is now third
 run at all unless `gitClean()` says the target is clean — and its MISSED line now prints the nested
 pass's own rows, because four booleans could not say which of them the child never got to answer.
 
+A STRANDED FIXTURE IN AN INSTRUMENT REDENS THE GATE, AND EVERY FAMILY AFTER IT THEN LIES ABOUT ITSELF. The
+pass-level git guard watches `Sukinnect-next.html`, which is the file the families are the only writer of —
+but several families also edit a *tool* to prove that tool can fail: `falsify-compat-floor` blinds
+`audit-compat-floor.cjs`'s feature scan, `falsify-camera-surfaces` and `falsify-dialog-focus` edit
+`tools/shot.cjs`. On 2026-10-27 one of those runs died between the edit and its `finally` and left
+`const hits = [];` in the audit, so the audit answered `0 of 17 patterns matched` for every caller, the gate
+went red, and three families reported their own needles as stale. **Two of those were nearly "repaired" into
+new bugs on the strength of a reading that was really about a dead scan in a different file** — the cheapest
+way to corrupt a suite is to make its gate red for a reason no row names. `node tools/falsify-all.cjs` now
+compares `git status` for `tools/` before and after every family and prints
+`LEFT AN INSTRUMENT MUTATED` naming the file, and it **reports rather than restores**: a tool file is where a
+session's live work legitimately lives, so `git checkout -- tools/` would delete the very work the reader is
+trying to protect. The same pass now refuses when the list-building rule and the counting rule disagree about
+how many families exist (they are two copies of one pattern on purpose, so a mutation of either is visible as a
+disagreement), and a full pass below a floor of 40 families answers `NO CONCLUSION` instead of running a subset
+and printing a healthy total. `node tools/falsify-preflight.cjs` proves all of it — 7 breaks, 7 caught.
+
+WHICH LAYER IS ON TOP WAS ELEVEN NUMBERS, AND THREE OF THEM DESCRIBED ONE IDEA. The design census (§147)
+counted definitions per idea for headings, bars, chips and spacing; `z-index` had never been through the token
+set at all. Nine distinct values across eleven literals: three sticky action footers carried 10, 20 and 25, and
+the verification review painted its own overlay at 50 in a file declaring `.modal-layer` at 70 — because that
+layer has no class, which §72's focus walk had already discovered and had not been able to say out loud in the
+stylesheet. They are six named rungs now (`--z-sticky < --z-nav < --z-sheet < --z-modal < --z-map-veil <
+--z-toast`), every element keeping its exact position, so no stacking pixel moved. The gate asserts the
+**relations** rather than the numbers: `the layer ladder declares every rung and keeps their order` requires
+them strictly ascending, so a change of values that preserves the order passes and an inversion cannot. Two
+lessons in the wiring. `a modal opened from a sheet sits above the sheet` read literals only, so on the correct
+build it returned `null` for both rules and failed — **a check pinned to the old spelling of a value fails the
+fix, which looks exactly like the fix being wrong**; its helper resolves a literal or a `var()` now. And
+`no layer types its own stacking number` first flagged `.seg-count`, an 18px count pill on a 3% navy wash —
+a tint, not a dim — so the rule is scoped by the geometry that makes something a dim (four zero offsets
+painting a navy `rgba`), which is also what caught `.sheet-scrim` typing `rgba(3,0,43,.52)` beside `--scrim`'s
+`.48` while the token's own comment claimed every layer wrote it. Comments are stripped before counting, for
+the §31 reason: a sentence quoting an old number is the same string to a scanner as a rule typing a new one.
+`node tools/falsify-modal-stacking.cjs` proves the ladder, 5 breaks 5 caught — and two of its mutants name a
+*different* check than the other three, because inverting a rung and typing a literal into a classless overlay
+leave the modal/sheet pair perfectly ordered. **A family that compares every mutant against one label condemns
+whichever rule it did not think of.** `literal_z_index` is a ratchet metric at ceiling 0, and writing it
+surfaced that the audit's one floor metric read its floor from a hardcoded number while `--bless` wrote the
+measured count into the baseline: the file advertised 32 and the code enforced 13.
+
 ---
 
 # 32. GRADIENT USAGE

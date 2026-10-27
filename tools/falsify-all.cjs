@@ -35,6 +35,11 @@ const ROOT = path.join(__dirname, '..');
 const TOOLS = path.join(ROOT, 'tools');
 const filter = process.argv[2];
 
+/* The population is derived twice on purpose — once to build the list and once to check it — because the
+   failure mode of a suite runner is never a wrong verdict, it is a scan that quietly sees fewer files.
+   `onDisk` answers "how many families exist"; the list must equal it after the same filter, or the
+   selection rule and the counting rule disagree and every row below the disagreement is about a subset. */
+const ON_DISK = fs.readdirSync(TOOLS).filter(f => /^falsify-.*\.cjs$/.test(f) && f !== 'falsify-all.cjs');
 const families = fs.readdirSync(TOOLS)
   .filter(f => /^falsify-.*\.cjs$/.test(f))
   /* The runner is not a family. Without this it finds itself, spawns itself, and every mutant
@@ -42,6 +47,7 @@ const families = fs.readdirSync(TOOLS)
   .filter(f => f !== 'falsify-all.cjs')
   .filter(f => !filter || f.includes(filter))
   .sort();
+const expected = ON_DISK.filter(f => !filter || f.includes(filter)).sort();
 
 const TARGET = 'Sukinnect-next.html';
 /* A filter that matches nothing must not print a green zero. Found by the family that tests the
@@ -55,6 +61,24 @@ if (filter && families.length === 0) {
   console.log('NO MATCH — the filter `' + filter + '` named no family, so nothing was tested. Family file names are');
   console.log('`falsify-<name>.cjs`; `node tools/falsify-all.cjs` with no argument runs all ' +
     fs.readdirSync(TOOLS).filter(f => /^falsify-.*\.cjs$/.test(f) && f !== 'falsify-all.cjs').length + '.');
+  process.exit(1);
+}
+/* The selection rule and the counting rule are two ways of asking "which families exist", and they
+   have to answer with the same list. 40 is the floor for a FULL pass — the number of families this
+   repository has carried for weeks — so falling under it means the runner stopped seeing files rather
+   than that someone deleted thirty families. Under a filter the equality against `expected` is the
+   whole test, and it is the one a mutated pattern in the list-building expression breaks. */
+const FAMILY_FLOOR = 40;
+if (families.length !== expected.length) {
+  console.log('NO CONCLUSION — the pass selected ' + families.length + ' families and the same directory answers ' +
+    expected.length + (filter ? ' for the filter `' + filter + '`' : '') +
+    '. The selection rule and the counting rule disagree, so every row below would describe a subset.');
+  process.exit(1);
+}
+if (!filter && families.length < FAMILY_FLOOR) {
+  console.log('NO CONCLUSION — the pass named ' + families.length + ' families, below the floor of ' + FAMILY_FLOOR +
+    '. `ls tools/falsify-*.cjs | wc -l` is the real population; check the pattern and the directory before');
+  console.log('quoting any row below a refusal like this one.');
   process.exit(1);
 }
 /* A pass that starts on a dirty target measures a file nobody has. Each family rewrites
@@ -184,14 +208,37 @@ function strand(file) {
   } catch (e) { return { git: true, stranded: true, unrecoverable: String(e.message).slice(0, 80) }; }
 }
 
+/* The same hazard, one directory over, and this one cost a whole reading of the suite. Several families
+   mutate an instrument as well as the page — `falsify-compat-floor` blinds `audit-compat-floor.cjs`'s
+   feature scan to prove the scan can be blind, `falsify-camera-surfaces` edits `tools/shot.cjs`,
+   `falsify-dialog-focus` both. When one of those runs died between the edit and its restore, the fixture
+   stayed in the TOOL, and every family that demands a green gate then reported its own baseline as
+   broken: `camera-surfaces` and `dialog-focus` both read as stale needles and were nearly "repaired"
+   into new bugs, when the needles were fine and the gate was red because a scan had been switched off
+   three families earlier. The app file is watched; the tools directory was not.
+   It is REPORTED, never auto-restored. A tool file is where a session's live work legitimately lives,
+   and `git checkout -- tools/` would delete it — the same reason the pass refuses a dirty target at the
+   start rather than cleaning it for the reader. Reporting a hazard and repairing it are different acts. */
+function dirtyTools() {
+  try {
+    return execFileSync('git', ['status', '--porcelain', '--', 'tools/'], { encoding: 'utf8', cwd: ROOT })
+      .split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  } catch (e) { return null; }
+}
+const toolsBefore = gitUnavailable ? [] : dirtyTools() || [];
+
 let A = 0, C = 0, S = 0, bad = 0;
 console.log('family'.padEnd(40) + 'applied  caught  not applied  missed');
 for (const f of families) {
   const r = runOne(f);
   const st = strand(TARGET);
+  const toolsNow = gitUnavailable ? [] : (dirtyTools() || []);
+  const newly = toolsNow.filter(l => !toolsBefore.includes(l));
+  const removed = toolsBefore.filter(l => !toolsNow.includes(l));
+  toolsBefore.length = 0; toolsNow.forEach(l => toolsBefore.push(l));
   A += r.applied; C += r.caught; S += r.skipped;
   const trouble = r.silent || r.caught !== r.applied || r.applied === 0 || r.skipped > 0
-    || st.stranded || st.git === false;
+    || st.stranded || st.git === false || newly.length > 0;
   if (st.git === false) console.log('      | NOTED git is unavailable, so a stranded mutant could not be detected or repaired');
   if (st.unrecoverable) console.log('      | BROKEN the target was mutated and could not be restored: ' + st.unrecoverable);
   if (trouble) bad++;
@@ -212,7 +259,9 @@ for (const f of families) {
         + (r.skipped === 1 ? ' no longer matches' : 's no longer match')
         + ' the target, so that coverage is gone' : '')
     + (r.crashed ? '   <<< exited on a signal: ' + String(r.crashed).slice(0, 40) : '')
-    + (st.stranded ? '   <<< LEFT THE TARGET MUTATED — restored from the commit (' + st.keep + '); every row after this one ran against a repaired file' : ''));
+    + (st.stranded ? '   <<< LEFT THE TARGET MUTATED — restored from the commit (' + st.keep + '); every row after this one ran against a repaired file' : '')
+    + (newly.length ? '   <<< LEFT AN INSTRUMENT MUTATED — ' + newly.length + ' file(s) under tools/ changed and were not put back' : ''));
+  if (newly.length) newly.forEach(l => console.log('      | BROKEN ' + l + ' — every family after this one ran against it'));
   if (trouble) (r.notes || []).forEach(n => console.log('      | ' + n));
 }
 console.log('─'.repeat(72));
@@ -220,10 +269,19 @@ const dirtyAfter = gitUnavailable ? '' : dirtyTarget();
 console.log(families.length + (families.length === 1 ? ' family, ' : ' families, ') + A + ' mutants applied, ' + C + ' caught, '
   + S + ' not applied' + (bad ? ' — ' + bad + ' family needs attention' : ' — every rule is still being tested'));
 if (gitUnavailable) console.log('NOTED the target was never checked against git — no git on PATH, so a leftover mutant would not have been seen');
-else if (dirtyAfter) {
+if (dirtyAfter) {
   console.log('BROKEN the tree is not clean after the pass, so this table is a measurement of a file nobody has:');
   console.log(dirtyAfter.split(/\r?\n/).map(l => '   ' + l).join('\n'));
   bad++;
+}
+/* The pass-end read of the tools directory, distinct from the per-family one above. It is a NOTED, not a
+   BROKEN: a session legitimately carries uncommitted work in its instruments, and this runner does not
+   restore files it did not mutate. What it must never do is stay silent about them, because a fixture
+   left in a tool redens the gate and every family after it then reports its own baseline as broken. */
+const toolsLeft = gitUnavailable ? [] : (dirtyTools() || []);
+if (toolsLeft.length) {
+  console.log('NOTED ' + toolsLeft.length + ' file(s) under tools/ are modified after the pass — never restored by this runner, so read them before quoting the rows above:');
+  console.log(toolsLeft.map(l => '   ' + l).join('\n'));
 }
 process.exit(bad ? 1 : 0);
 

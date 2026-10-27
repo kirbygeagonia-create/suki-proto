@@ -1682,16 +1682,77 @@ suite('hygiene', async () => {
      sat above .modal-layer every control in those three dialogs was unreachable —
      the dialog was visible, dimmed, and inert. Only a hit-test in a real layout can
      see that, which is why the camera samples the panel; this pins the number the
-     layout has to keep. */
+     layout has to keep.
+     The number now lives in a named rung rather than in the rule, so the helper
+     resolves `var(--z-…)` against :root and falls back to a literal — a check that
+     only reads literals would have gone silently null on this change, which is the
+     orphaned-needle class this repository keeps meeting. And because the ladder
+     exists so no screen can invent its own rung, the assertion is the whole order,
+     not one pair. */
+  const ladderBlock = css.slice(css.indexOf(':root'), css.indexOf('}', css.indexOf(':root')));
+  const rungValue = (name) => {
+    const m = new RegExp('--' + name + '\\s*:\\s*(-?[0-9]+)').exec(ladderBlock);
+    return m ? parseInt(m[1], 10) : null;
+  };
   const layerZ = (sel) => {
     const rule = new RegExp('\\' + sel + '\\s*\\{([^}]*)\\}').exec(css);
-    const z = rule && /z-index:\s*(-?\d+)/.exec(rule[1]);
-    return z ? parseInt(z[1], 10) : null;
+    if (!rule) return null;
+    const lit = /z-index:\s*(-?\d+)/.exec(rule[1]);
+    if (lit) return parseInt(lit[1], 10);
+    const v = /z-index:\s*var\(--([a-z0-9-]+)\)/.exec(rule[1]);
+    return v ? rungValue(v[1]) : null;
   };
   const modalZ = layerZ('.modal-layer'), sheetZ = layerZ('.sheet-layer');
   c.check('a modal opened from a sheet sits above the sheet',
     modalZ !== null && sheetZ !== null && modalZ > sheetZ,
     '.modal-layer z-index ' + modalZ + ' against .sheet-layer ' + sheetZ);
+
+  const RUNGS = ['z-sticky', 'z-nav', 'z-sheet', 'z-modal', 'z-map-veil', 'z-toast'];
+  const rungNums = RUNGS.map(rungValue);
+  const ladderMissing = RUNGS.filter((n, i) => rungNums[i] === null);
+  const ladderOutOfOrder = [];
+  for (let i = 1; i < rungNums.length; i++) {
+    if (rungNums[i] !== null && rungNums[i - 1] !== null && rungNums[i] <= rungNums[i - 1]) {
+      ladderOutOfOrder.push('--' + RUNGS[i] + '=' + rungNums[i] + ' against --' + RUNGS[i - 1] + '=' + rungNums[i - 1]);
+    }
+  }
+  c.check('the layer ladder declares every rung and keeps their order',
+    ladderMissing.length === 0 && ladderOutOfOrder.length === 0,
+    (ladderMissing.length ? 'no value for ' + ladderMissing.join(', ') : '') +
+    (ladderOutOfOrder.length ? ' | not ascending: ' + ladderOutOfOrder.join(', ') : '') +
+    ' | rungs ' + RUNGS.map((n, i) => n + '=' + rungNums[i]).join(' < '));
+
+  /* Nine distinct numbers used to answer one question — which layer is on top. Three sticky
+     action footers carried 10, 20 and 25, and the verification review painted its own overlay at
+     50 in a file that declares .modal-layer at 70. Comments are stripped first, because a sentence
+     quoting an old number is the same string to any scanner as a rule typing a new one — the §31
+     lesson about a hex inside a comment, arriving for a stacking value. The positive control counts
+     the var() uses: a scan whose good pattern matches nothing reads exactly like cleanliness. */
+  const markupNoComments = raw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const literalZ = (markupNoComments.match(/z-index:\s*-?[0-9]/g) || []).length;
+  const tokenZ = (markupNoComments.match(/z-index:\s*var\(--z-[a-z-]+\)/g) || []).length;
+  c.check('no layer types its own stacking number, and the ladder is what it types instead',
+    literalZ === 0 && tokenZ >= 6,
+    'literal z-index ' + literalZ + ' · var(--z-*) ' + tokenZ + ' (a floor of 6 uses, so a vanished pattern cannot pass)');
+
+  /* The dim behind a layer is one decision, and the :root comment above --scrim has claimed for some
+     time that every layer writes the token. The sheet's own scrim typed `.52` beside the dialog's `.48`,
+     so the claim was a description of an intention rather than of the file — the same shape as a token
+     nothing asks for.
+     Scoped to a *full-cover* rule rather than to every navy `background:`, because the first version
+     flagged `.seg-count` — an 18px count pill on a 3% wash, which is a tint, not a dim. The predicate is
+     the geometry that makes it a dim: four zero offsets, and a navy rgba painted straight into the rule.
+     Shadows are excluded for the same reason: a cast shadow is a different idea. */
+  const scrimRules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    .filter(([, , body]) => /top:\s?0;?\s*right:\s?0;?\s*bottom:\s?0;?\s*left:\s?0/.test(body))
+    .map(([, sel, body]) => ({ sel: sel.trim(), literal: /background:\s?rgba\(3,\s?0,\s?43/.test(body),
+      token: /background:\s?var\(--scrim\)/.test(body) }));
+  const dimLiterals = scrimRules.filter(r => r.literal).map(r => r.sel);
+  const dimTokens = scrimRules.filter(r => r.token).length;
+  c.check('the dim behind a full-cover layer is the token, not a per-layer alpha',
+    dimLiterals.length === 0 && dimTokens >= 2,
+    'literal dims on ' + (dimLiterals.join(', ') || 'no cover layer') + ' · var(--scrim) on ' + dimTokens +
+    ' (two is the floor: the sheet and the dialog)');
 
   /* Category artwork is static by owner's rule, not by taste: the picture is what
      tells a plumber from an electrician, and this app once ran 33 infinite

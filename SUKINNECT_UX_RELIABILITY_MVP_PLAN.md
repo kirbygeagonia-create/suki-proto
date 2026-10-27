@@ -359,6 +359,24 @@ token and §34 forbids spending it on a brand chip. Tabular and aligned numerals
 stylesheet rule carries both halves, and `falsify-figures` proves it. The icon semantic map exists as `ICON_MEANING`
 and the gate fails a glyph that navigates without a row.
 
+**One stacking definition, added 2026-10-27 while answering the owner's design complaint.** §7's list of
+retained things said "one `:root` token set" and the file honoured it for colour, spacing and type — but not
+for which layer is on top. There were **11 literal `z-index:` values across 9 distinct numbers**: three
+sticky action footers that are one idea carried 10, 20 and 25, and the verification review painted its own
+overlay at 50 in a file declaring `.modal-layer` at 70. That is the same defect this repository already paid
+for twice (a modal under a sheet's scrim; a sheet whose `aria-modal` made the picker above it vanish from the
+accessibility tree), and it survived because the numbers were *right* — nothing disagreed, so no reading of
+the file could call it wrong. They are now six named rungs — `--z-sticky < --z-nav < --z-sheet < --z-modal <
+--z-map-veil < --z-toast` — with every element keeping its exact position on the ladder, so no pixel of
+stacking changed. The gate asserts the **relations** rather than the numbers (a change of values that keeps
+the order passes; an inversion cannot), that no layer types its own number with comments stripped first — a
+sentence quoting an old value is the same string to a scanner as a rule typing a new one — and that at least
+six uses go through the ladder, which is the positive control that stops the scan passing because its pattern
+died. `node tools/audit-design-consistency.cjs` holds it as `literal_z_index` with a ceiling of 0, and
+`node tools/falsify-modal-stacking.cjs` proves it, 4 breaks 4 caught: two invert the rungs, one deletes the
+modal's stacking entirely, and the fourth puts a literal back into the overlay that has no class to inherit
+from — which the pair check cannot see, so that break names the ladder check instead.
+
 **Button hierarchy, from R6.** The system as written has PRIMARY (`.btn`), SECONDARY (`.btn.secondary`) and
 DESTRUCTIVE (`.btn.danger`) and **no tertiary tier**, which is why the booking detail could paint two byte-identical
 `btn secondary` controls side by side and nothing in the file could call that wrong — §70 of AGENTS.md names a
@@ -721,9 +739,18 @@ nothing. The reason is a comment beside the constant and a paragraph in `CHANGES
 
 - **P1-5 chat keyboard verification** — `visualViewport` still appears zero times in the file; nothing
   on this bench emulates a soft keyboard, so the claim stays unverified until a handset leg is run.
-- **P1-6 buried primary actions** — the density probe is now `tools/probe-density.js` with a corrected
-  selector (the Phase A version counted only `.btn`, which over-stated the problem on screens whose
-  actions are tappable rows). Re-measure first, move content only where a real action is buried.
+
+**P1-6 buried primary actions — closed 2026-10-26, and it is recorded here as closed rather than left in
+the list above.** The row asked to re-measure before moving anything, and that is what happened:
+`tools/probe-density.js` now counts every pressable shape (`button, a[href], [onclick], .btn`), not only
+`.btn`, which is what over-stated Phase A's finding. Printed beside the old figure: the Phase A audit
+listed **seven** screens; the corrected metric indicts **one** — the admin's Money screen, whose two
+operations sat 2,239px down a 2.5-screen scroll beneath the three cards they change. That card was hoisted
+and extracted as `thisDeviceCard()` so its position is one line a check can order, proved by
+`node tools/falsify-action-above-fold.cjs`. The other six were re-measured and **declined**, not missed:
+Master Administrator's actions begin at 121px and what sits 2,054px down is its lock/logout pair, which
+belongs at the bottom of an account screen; Categories' only button links to fee settings on a screen whose
+own copy says the catalogue is read-only, so promoting it would have put a convenience above the content.
 
 **P2 — built on 2026-10-26 after the owner approved the whole block.**
 
@@ -893,6 +920,37 @@ read clean) · `falsify-coherence` **10/10**, the two added breaks proving that 
 instead of letting a count crush its title · `sweep-text-scale` → **8 of 8** corners, 25 tallies each, all
 clear · `audit-build-bytes` → **findings: 0**, four copies at `2691a76c…`, shell at
 `versionCode 45 / 1.2-preview.43`. The aggregate remains un-run and unquoted.
+
+**Phase C — the owner's design complaint, converted into counts and closed one commit at a time
+(2026-10-26 → 2026-10-27).** *"The Design is so worse, its not a real system in a mobile application design,
+every screens are not consistent"* is a subjective sentence, so it was rewritten as the testable one §7 implies:
+**a system is one definition per idea.** `node tools/audit-design-consistency.cjs` counts thirteen→sixteen such
+ideas and ratchets each. What the counts found, in the order they were closed, with what each was true of before
+and after:
+
+| Idea the app had several ways of saying | Was | Now |
+|---|---|---|
+| the name of the screen, sized | 43 of 83 top bars painted their heading at body size because `.topbar .title` carried the heading's font-size and `h1` is reset to `inherit` | one positional rule; `node tools/probe-bar-titles.js` reads `drill:20×48 root:24×35`, `titleEqualsSub=0`, `drift=0` |
+| the top bar itself | written by hand 19 times | 0 hand-written, 32 calls to `screenHeader()` — a **floor**, because every other metric counts ways-to-say-a-thing and this one counts the opposite |
+| a card's title accent | a `::before` gradient bar on 63 cards, which two passes each reported as "gone" because they grepped `border-left` | deleted; the pseudo-element is the lesson, not the bar |
+| a status colour | `statusColors()` pasted inline at three sites plus six typed badge classes | one `.chip.status-*` rule set; the callerless helper deleted; `chip_tone_rules` 10 → 5 |
+| spacing | 111 literal paddings across 41 distinct values | 14 across 7, and the 14 left are deliberate: 2px/3px hairlines, two values above the scale's top, and the numbers inside `calc()` |
+| which layer is on top | 11 literals across 9 numbers | six named rungs, `literal_z_index` at 0 |
+| a figure a reader compares | five scattered `text-align:right` declarations, no numeral rule at all, and Atkinson's **proportional** digits (measured: `111111` 78.16px against `000000` 124.42px) | one alignment rule and one tabular rule, with the gate asserting that anything right-aligned is also tabulated |
+| a glyph's meaning | `shield` meant both "the admin console" and "nothing under warranty" | `ICON_MEANING`, and a nav or badge glyph with no row fails the check |
+
+Three things about the method are worth more than the table. **A pixel-level claim about a phone is not settled
+on a bench**: the bar-title fix first shipped white-on-white "Log Out" on light root tabs, visible only once the
+camera was repaired to stand the app up the way the navigation does (`state.isChatOpen = false` between screens) —
+which is the fourth form of "a harness that photographs a state nobody can reach". **Ratcheting needs blessing**:
+the ceilings stayed at 19 hand-written bars after the work landed, so a build could regress most of the way back
+and still print `down from`. And the owner's own rulings were re-asked when their premises turned out to be wrong —
+the card `:hover` lift was approved for deletion on the ground that a phone has no hover, but a
+`@media (hover:none)` block already neutralises it there; given the corrected premise the owner kept it. A wrong
+*reason* for an approval is not permission to spend it.
+
+`CHANGES.md` §147–§151 carries the sequence, including the two mutant-runner failures that made the suite's own
+figures untrustworthy for an hour and what the runner gained so they cannot recur quietly.
 
 **What this report does not cover, and the rule that was missing.** `node tools/audit-report-coverage.cjs`
 answers this of the tree: it reads the §4 rows, then asks which of them §17 **lists** — a bullet or a table

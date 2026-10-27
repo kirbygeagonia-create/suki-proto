@@ -18,13 +18,22 @@
      3. stranded needle      → the family applies fewer mutants and catches every one of them, so its
                               own arithmetic says `0 not applied`; the runner must read the SKIP line
                               instead, mark the row `NEEDLE MISSED`, and exit non-zero. Mounted third
-                              because the two rows below leave the target dirty on purpose, and the
-                              runner rightly refuses to run a family against a dirty target.
-     4. dirty tree           → the pass must REFUSE before touching the file (exit 1, TARGET NOT CLEAN,
-                              and no family row anywhere in its output)
-     5. dirty tree, twice    → the refusal must not quietly restore the tree: reporting a hazard and
-                              repairing it are different acts, and a guard that repairs hides the run
-                              that made the mess
+                              because the rows below leave the target dirty on purpose, and the runner
+                              rightly refuses to run a family against a dirty target.
+     4. tool left modified    → the pass must name the file under `under tools/ are modified after the pass`,
+                                because a fixture stranded in an instrument redens the gate and every
+                                family after it then reports its own baseline as broken
+     5. same plant, blind scan → with the detector's git path pointed at a directory that cannot exist,
+                                the report must go silent — which is the evidence that row 4 came from the
+                                detector rather than from the plant
+     6. selection disagrees    → shrinking only the list-building pattern while `ON_DISK` keeps the honest
+                                one must make the pass refuse with NO CONCLUSION, not run a subset and
+                                print a healthy total
+     7. dirty tree             → the pass must REFUSE before touching the file (exit 1, TARGET NOT CLEAN,
+                                and no family row anywhere in its output)
+     8. dirty tree, twice      → the refusal must not quietly restore the tree: reporting a hazard and
+                                repairing it are different acts, and a guard that repairs hides the run
+                                that made the mess
 
    DO NOT RUN THIS WHILE ANOTHER MUTANT PASS IS ALIVE. It writes a real line into
    Sukinnect-next.html to build its fixture, and the application file is the mutex — a pass reading a
@@ -148,7 +157,68 @@ try {
   }
   }
 
-  /* 4 and 5 — dirty the tree the way an interrupted family does, and leave it dirty while asking. */
+  /* 4, 5 — the runner reports an instrument left mutated, and the report comes from the detector.
+     Several families edit an instrument as well as the page (`falsify-compat-floor` blinds
+     `audit-compat-floor.cjs`'s feature scan to prove a scan can be blinded). When one of those died
+     before its restore on 2026-10-27, the fixture stayed in the TOOL, the gate went red, and three
+     other families reported stale needles that were not stale. The app file is watched by the pass; the
+     tools directory now is too, and it is reported rather than restored, because a tool file is where a
+     session's live work legitimately lives. */
+  const TOOLS_NOTE = /under tools\/ are modified after the pass/;
+  const ALL = path.join(ROOT, 'tools', 'falsify-all.cjs');
+  const pristineAll = fs.readFileSync(ALL);
+  const plantFam = path.join(ROOT, 'tools', 'falsify-' + FILTER + '.cjs');
+  const pristinePlant = fs.readFileSync(plantFam);
+  const PLANT = '\n/* planted by tools/falsify-preflight.cjs — a tool left modified during a pass */\n';
+  const DETECTOR = "['status', '--porcelain', '--', 'tools/']";
+  for (const b of [
+    { name: 'a tool left modified is named by the pass', blind: false },
+    { name: 'the report comes from the detector, not from the plant', blind: true },
+  ]) {
+    applied++;
+    fs.writeFileSync(plantFam, pristinePlant.toString('utf8') + PLANT);
+    if (b.blind) {
+      const t = pristineAll.toString('utf8');
+      if (t.split(DETECTOR).length - 1 !== 1) {
+        console.log('MISSED  ' + b.name + ' (the detector needle matched ' + (t.split(DETECTOR).length - 1) + ')');
+        fs.writeFileSync(plantFam, pristinePlant); continue;
+      }
+      fs.writeFileSync(ALL, t.replace(DETECTOR, "['status', '--porcelain', '--', 'tools/__no_such_directory__']"));
+    }
+    const r = runRunner();
+    fs.writeFileSync(ALL, pristineAll);
+    fs.writeFileSync(plantFam, pristinePlant);
+    const noted = TOOLS_NOTE.test(r.out);
+    const named = /falsify-[^.\s]*\.cjs/.test(r.out.split(/\r?\n/).filter(l => /under tools\//.test(l) || /^\s+M tools\//.test(l)).join('\n'));
+    if (!b.blind && noted && named) { caught++; console.log('CAUGHT  ' + b.name + ' → the row names the file'); }
+    else if (b.blind && !noted) { caught++; console.log('CAUGHT  ' + b.name + ' → blinding the scan silences the report'); }
+    else console.log('MISSED  ' + b.name + ' (exit=' + r.code + ', NOTED printed=' + noted + ', file named=' + named + ')');
+  }
+
+  /* 6 — the selection rule and the counting rule have to agree. Shrinking only the list-building
+     pattern while `ON_DISK` keeps the honest one is the accident this guards against: the pass would
+     run a subset and print a healthy total about it. */
+  applied++;
+  {
+    const t = pristineAll.toString('utf8');
+    const SEL = "const families = fs.readdirSync(TOOLS)\r?\n  .filter(f => /\\^falsify-\\.\\*\\.cjs\\$/.test(f))";
+    const selRe = new RegExp(SEL);
+    if (!selRe.test(t)) {
+      console.log('MISSED  the selection-disagreement break could not find the list-building filter');
+    } else {
+      fs.writeFileSync(ALL, t.replace(selRe,
+        'const families = fs.readdirSync(TOOLS)\n  .filter(f => /^falsify-[n-z]/.test(f))'));
+      const r = runRunner();
+      fs.writeFileSync(ALL, pristineAll);
+      const refused = /NO CONCLUSION/.test(r.out) && r.code !== 0 && !/^\w.*\s\d+\s+\d+/m.test(r.out);
+      if (refused) caught++;
+      console.log((refused ? 'CAUGHT  ' : 'MISSED  ') + 'a pass that selects fewer files than exist refuses itself' +
+        (refused ? ' → exit ' + r.code : ' (exit=' + r.code + ', NO CONCLUSION printed=' + /NO CONCLUSION/.test(r.out) + ')'));
+    }
+  }
+
+
+  /* 7 and 8 — dirty the tree the way an interrupted family does, and leave it dirty while asking. */
   for (const b of [
     { name: 'a dirty target stops the pass before it mutates anything',
       expectRefusal: true },
@@ -177,4 +247,4 @@ if (after !== original) { console.log('the file did not come back identical — 
 if (!gitClean()) { console.log('the tree is still dirty after the restore — `git status` will say what is left'); process.exit(1); }
 
 console.log('\n' + caught + ' of ' + applied + ' breaks caught, ' + unmatched + ' not applied; file restored.');
-process.exit(caught === applied && applied === 4 && unmatched === 0 ? 0 : 1);
+process.exit(caught === applied && applied === 7 && unmatched === 0 ? 0 : 1);

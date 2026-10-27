@@ -66,9 +66,22 @@
   /* Text and glyphs on a filled brand surface. Typed as #fff twenty-one times,
      which made it impossible to ask "is this white, or is it on-brand white". */
   --on-brand:#FFFFFF;
-  /* The one dim behind a sheet or dialog. Written as var(--scrim) by hand in
-     every layer, so no screen could be made to agree with another. */
+  /* The one dim behind a sheet or dialog. Every layer writes this token, because the
+     sheet's own scrim used to type `rgba(3,0,43,.52)` beside the dialog's .48 and the
+     two screens could never be made to agree — which is what the sentence above
+     promised and this check now holds. */
   --scrim:rgba(3,0,43,.48);
+  /* The layer ladder, one rung per idea, in the order a thumb can actually reach.
+     A literal number here is how two screens end up disagreeing about which one is on top:
+     the modal used to sit under the sheet (70 against 60 was the fix, not the rule), and the
+     verification review still painted its own overlay at 50 beside .modal-layer's 70. The gate
+     asserts the RELATIONS between these rungs, so the order survives any change of numbers. */
+  --z-sticky:20;      /* an action footer pinned inside a scrolling screen */
+  --z-nav:30;         /* the bottom navigation */
+  --z-sheet:60;       /* a bottom sheet, and the tap-target dim inside it */
+  --z-modal:70;       /* a dialog — must outrank a sheet, which is what raised it */
+  --z-map-veil:1100;  /* the map's own loading veil, above Leaflet's panes inside the map only */
+  --z-toast:9999;     /* feedback, over everything, never over the thing it is about */
     --brand-tint-soft:#E7EDFF;
 
     /* gradients */
@@ -376,7 +389,7 @@
      the instrument hit-tests the panel and all 48 sampled points used to answer
      .sheet-scrim. */
   .modal-layer{
-    position:fixed; top:0; right:0; bottom:0; left:0; background:var(--scrim); z-index:70;
+    position:fixed; top:0; right:0; bottom:0; left:0; background:var(--scrim); z-index:var(--z-modal);
     display:flex; align-items:center; justify-content:center; padding:var(--s-4);
   }
   /* max-height:100% and a scroll, because the layer centres this box: with no cap a dialog
@@ -866,11 +879,11 @@
      the phone shell rather than the viewport, so it lands correctly on the
      device in app mode AND inside the desktop preview frame. */
   .sheet-layer{
-    position:absolute; top:0; right:0; bottom:0; left:0; z-index:60; display:flex; flex-direction:column;
+    position:absolute; top:0; right:0; bottom:0; left:0; z-index:var(--z-sheet); display:flex; flex-direction:column;
     justify-content:flex-end; pointer-events:none;
   }
   .sheet-scrim{
-    position:absolute; top:0; right:0; bottom:0; left:0; background:rgba(3,0,43,.52);
+    position:absolute; top:0; right:0; bottom:0; left:0; background:var(--scrim);
     animation:scrimIn .18s ease both; pointer-events:auto; border:none; cursor:pointer;
   }
   .sheet{
@@ -1131,10 +1144,10 @@
     flex-wrap:wrap; gap:6px 12px;
     background:var(--surface); border-top:1px solid var(--line);
     padding:var(--s-3) var(--s-5) calc(12px + var(--sab));
-    position:sticky; bottom:0; left:0; right:0; z-index:20;
+    position:sticky; bottom:0; left:0; right:0; z-index:var(--z-sticky);
   }
 
-  .bottomnav{display:flex; border-top:1px solid var(--line); background:var(--surface); flex-shrink:0; position:relative; z-index:30;}
+  .bottomnav{display:flex; border-top:1px solid var(--line); background:var(--surface); flex-shrink:0; position:relative; z-index:var(--z-nav);}
   .navitem{
     flex:1; text-align:center; padding:var(--s-2) var(--s-1) var(--s-2); min-height:var(--tap);
     /* `flex:1` sets the basis to zero but leaves min-width at the flex default of auto, which
@@ -1513,7 +1526,7 @@
     /* Leaflet puts z-indexes up to 1000 on its own panes and controls. A
        positioned element with z-index:auto does NOT create a stacking context, so
        those numbers were escaping the map box and painting over the booking
-       sheet's z-index:50 layer — the map appeared on top of the form the sheet
+       sheet's own rung on the layer ladder — the map appeared on top of the form the sheet
        was asking the resident to fill. Isolating the container keeps every one of
        Leaflet's layers inside its own frame. */
     isolation:isolate;
@@ -1522,7 +1535,7 @@
      and six seconds in measured runs, long enough that the frame reads as broken
      rather than as loading, so the wait is named (47). */
   .map-loading::after{
-    content:'Loading map…'; position:absolute; top:0; right:0; bottom:0; left:0; z-index:1100; pointer-events:none;
+    content:'Loading map…'; position:absolute; top:0; right:0; bottom:0; left:0; z-index:var(--z-map-veil); pointer-events:none;
     display:flex; align-items:center; justify-content:center;
     background:var(--background); color:var(--ink-soft);
     font-size:var(--t-caption); border-radius:inherit;
@@ -1581,7 +1594,7 @@
      and the screen title in the top bar - feedback must never hide the thing it is
      about (7.4). It now floats over the bottom nav, which showToast measures. */
   #toast-root{
-    position:absolute; left:0; right:0; bottom:16px; z-index:9999;
+    position:absolute; left:0; right:0; bottom:16px; z-index:var(--z-toast);
     display:flex; flex-direction:column; align-items:stretch; gap:8px;
     padding:0 var(--s-4); pointer-events:none;
   }
@@ -9411,7 +9424,7 @@ function residentProviderDetail(){
     </div>
   </div>
 
-  <div class="book-bar" style="background:var(--surface); border-top:1px solid var(--line); padding:var(--s-3) var(--s-5); display:flex; align-items:center; justify-content:space-between; position:sticky; bottom:0; z-index:20;">
+  <div class="book-bar" style="background:var(--surface); border-top:1px solid var(--line); padding:var(--s-3) var(--s-5); display:flex; align-items:center; justify-content:space-between; position:sticky; bottom:0; z-index:var(--z-sticky);">
     <div>
       <div style="font-size:var(--t-caption); color:var(--mist); font-weight:600;">Indicative rate</div>
       <div style="font-size:var(--t-input); font-weight:800; color:var(--deep);">${pesoShort(cheapestListing(p))} <span style="font-size:var(--t-caption); font-weight:500; color:var(--mist);">starting, per job</span></div>
@@ -9594,7 +9607,7 @@ function residentChatRoom(){
       })()}
     </div>
 
-    <div style="position:sticky; bottom:0; flex-shrink:0; background:var(--surface); border-top:1px solid var(--line); padding:var(--s-3) var(--s-4); display:flex; align-items:center; gap:10px; z-index:10; box-shadow:0 -4px 12px rgba(0,0,0,0.06);">
+    <div style="position:sticky; bottom:0; flex-shrink:0; background:var(--surface); border-top:1px solid var(--line); padding:var(--s-3) var(--s-4); display:flex; align-items:center; gap:10px; z-index:var(--z-sticky); box-shadow:0 -4px 12px rgba(0,0,0,0.06);">
       <div style="flex:1; min-height:var(--field-h); background:var(--background); border:1px solid var(--line); border-radius:var(--r-pill); padding:0 var(--s-4); display:flex; align-items:center;">
         <input type="text" id="chat-input" aria-label="Write a message" placeholder="Type a message to ${firstName}..." style="width:100%; min-height:var(--tap); border:none; background:transparent; font-family:inherit; font-size:var(--t-body-sm); padding:var(--s-3) 0; color:var(--ink);">
       </div>
@@ -11011,14 +11024,14 @@ function providerVerificationReview(){
 
     ${decided ? '<div class="card"><b class="card-title">Decision recorded</b><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.6; margin-top:8px;">' + esc(reviewStatusLine(review.status)) + ' on ' + esc(shortDate(review.decidedAt)) + ' ' + esc(clockText(review.decidedAt)) + ' by ' + esc(review.reviewer || 'this administrator') + (review.reason ? ' — ' + esc(review.reason) : '') + '.</div><button class="btn sm secondary" style="margin-top:10px;" onclick="reopenReview()">Reopen this application</button></div>' : ''}
   </div>
-  ${decided ? '' : '<div style="position:sticky; bottom:0; width:100%; margin:0 -16px; padding:var(--s-3) var(--s-4); box-sizing:content-box; background:var(--surface); border-top:1px solid var(--line); z-index:25; box-shadow:0 -4px 12px rgba(0,0,0,0.08);">'
+  ${decided ? '' : '<div style="position:sticky; bottom:0; width:100%; margin:0 -16px; padding:var(--s-3) var(--s-4); box-sizing:content-box; background:var(--surface); border-top:1px solid var(--line); z-index:var(--z-sticky); box-shadow:0 -4px 12px rgba(0,0,0,0.08);">'
     + (!complete ? '<div id="approve-why" style="font-size:var(--t-caption); color:var(--mist); margin-bottom:8px; line-height:1.45;">Approval is unavailable while ' + esc(outstanding.map(d => d.label).join(', ')) + ' ' + (outstanding.length === 1 ? 'is' : 'are') + ' outstanding.</div>' : '')
     + '<div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; align-items:stretch;">'
     + '<button class="btn sm secondary" style="width:100%; min-width:0; height:52px; color:var(--error-ink); border-color:var(--error-ink);" onclick="verificationAction(\'reject\')">Reject</button>'
     + '<button class="btn sm secondary" style="width:100%; min-width:0; height:52px;" onclick="verificationAction(\'request\')">Request update</button>'
     + '<button class="btn sm" style="width:100%; min-width:0; height:52px; opacity:' + (complete ? '1' : '0.5') + ';" ' + (complete ? 'onclick="verificationAction(\'approve_confirm\')"' : 'disabled aria-describedby="approve-why"') + '>Approve</button>'
     + '</div></div>'}
-  ${modal ? `<div data-layer="modal" style="position:fixed; top:0; right:0; bottom:0; left:0; background:var(--scrim); z-index:50; display:flex; align-items:center; justify-content:center; padding:var(--s-5);"><div class="card" style="width:100%; max-width:350px; max-height:85vh; overflow:auto"><div class="row"><b style="font-size:var(--t-body-lg);">${modal === 'document' ? (about ? esc(about.label) : 'Document') : modal === 'request' ? 'Request outstanding documents' : modal === 'flag' ? 'Flag this document' : modal === 'reject' ? 'Reject this application' : modal === 'approve_confirm' ? 'Approve this applicant?' : modal === 'approved' ? 'Approved' : modal === 'rejected' ? 'Rejected' : modal === 'request_sent' ? 'Request recorded' : 'Note saved'}</b><button onclick="state.verificationModal=null; render();" aria-label="Close" style="border:0; background:transparent; font-size:var(--t-title); cursor:pointer; min-width:var(--tap); min-height:var(--tap); display:inline-flex; align-items:center; justify-content:center;">&times;</button></div>${modal === 'document' ? `<div style="height:110px; background:var(--brand-tint-soft); border:1px solid var(--line); border-radius:var(--r-xs); margin:12px 0; display:flex; align-items:center; justify-content:center; text-align:center; padding:var(--s-3); color:var(--mist); font-size:var(--t-caption);">No image is stored in this prototype.<br>What follows is the record of the filing, not the document itself.</div><div style="font-size:var(--t-caption); line-height:1.7;">${about ? 'Document: <b>' + esc(about.label) + '</b><br>Filed as: <b>' + esc(about.detail) + '</b><br>Filed on: <b>' + esc(about.submittedAt ? shortDate(about.submittedAt) : 'not filed') + '</b>' + (about.expiresAt ? '<br>Expires: <b>' + esc(shortDate(about.expiresAt)) + '</b>' : '') + '<br>Your mark: <b>' + esc(WORD[docState(about)]) + '</b><br>Applicant: <b>' + esc(app.name) + '</b>' : 'Open a document from the list to review it.'}</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm" onclick="verificationAction('doc_state')">Mark as verified</button><button class="btn sm secondary" onclick="verificationAction('flag', ${about ? "'" + about.kind + "'" : 'null'})">Flag an issue</button></div>` : modal === 'flag' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0;">What is wrong with ${about ? esc(about.label) : 'this document'}?</div><select id="flag-issue" aria-label="Possible issue with this document" style="width:100%; min-height:var(--tap); padding:var(--s-2); border:1px solid var(--line); border-radius:var(--r-xs);"><option>Information does not match the application</option><option>Document has expired</option><option>Image is unreadable</option><option>Wrong document type</option><option>Other</option></select><textarea id="flag-note" aria-label="Administrator note about this document" placeholder="What the applicant should fix" style="width:100%; min-height:70px; margin-top:10px; padding:var(--s-2); border:1px solid var(--line); border-radius:var(--r-xs); font:inherit;"></textarea><button class="btn danger btn-block" style="margin-top:10px;" onclick="flagDocument()">Flag document</button>` : modal === 'approve_confirm' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin:12px 0;">${esc(app.name)}, ${esc(app.service)}. All ${docs.length} documents are filed and none is flagged. Approving records the decision on this device with your name and the time, and takes the application out of the pending queue.</div><div style="display:flex; gap:6px;"><button class="btn sm secondary" style="flex:1;" onclick="state.verificationModal=null; render();">Cancel</button><button class="btn sm" style="flex:1;" onclick="verificationAction('approved')">Confirm approval</button></div>` : modal === 'request' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0 8px;">Pick what you need back from ${esc(app.name)}. Only documents still outstanding are listed.</div>${outstanding.length ? outstanding.map(d => '<label class="row" style="font-size:var(--t-caption); padding:var(--s-2) 0; min-height:var(--tap);">' + esc(d.label) + '<input type="checkbox" id="request-' + d.kind + '" checked style="width:20px; height:20px; accent-color:var(--deep); flex-shrink:0;"></label>').join('') : '<div style="font-size:var(--t-caption); color:var(--mist);">Nothing is outstanding on this application.</div>'}<label class="form-label" style="margin-top:10px;">Note to attach<div style="font-size:var(--t-caption); color:var(--mist); margin-top:4px;">Kept with the review record. This prototype has no applicant inbox, so nothing is delivered.</div></label><textarea id="request-message" aria-label="Note attached to the document request" style="width:100%; min-height:70px; border:1px solid var(--line); border-radius:var(--r-xs); padding:var(--s-2); margin-top:6px; font:inherit;">Please upload the outstanding document to continue verification.</textarea><button class="btn btn-block" style="margin-top:10px;" onclick="sendDocumentRequest()">Record request</button>` : modal === 'reject' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0 8px;">A reason is required — it is what the record will show.</div><select id="reject-reason" aria-label="Reason for rejecting this application" style="width:100%; padding:var(--s-2); min-height:var(--tap); border:1px solid var(--line); border-radius:var(--r-xs);"><option>Invalid required document</option><option>Unable to verify identity</option><option>Required qualification not met</option><option>Other</option></select><textarea id="reject-note" aria-label="Reason for rejecting this application" placeholder="What the applicant should know" style="width:100%; min-height:70px; margin-top:10px; padding:var(--s-2); border:1px solid var(--line); border-radius:var(--r-xs); font:inherit;"></textarea><button class="btn danger btn-block" style="margin-top:10px;" onclick="rejectApplication()">Record rejection</button>` : `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin:12px 0;">${modal === 'approved' ? esc(app.name) + ' is approved as of ' + esc(shortDate(review.decidedAt)) + ' ' + esc(clockText(review.decidedAt)) + ' and no longer appears in the pending queue.' : modal === 'rejected' ? esc(app.name) + ' is rejected' + (review.reason ? ': ' + esc(review.reason) : '.') + ' The application stays on this device with that reason.' : modal === 'request_sent' ? 'The request is recorded against this application. The pending queue now shows it as awaiting upload.' + (review.requestMessage ? ' Your note: ' + esc(review.requestMessage) + '.' : '') : 'Your note is saved with this application on this device.'}</div><button class="btn" style="width:100%;" onclick="state.verificationModal=null; render();">Close</button>`}</div></div>` : ''}`;
+  ${modal ? `<div data-layer="modal" style="position:fixed; top:0; right:0; bottom:0; left:0; background:var(--scrim); z-index:var(--z-modal); display:flex; align-items:center; justify-content:center; padding:var(--s-5);"><div class="card" style="width:100%; max-width:350px; max-height:85vh; overflow:auto"><div class="row"><b style="font-size:var(--t-body-lg);">${modal === 'document' ? (about ? esc(about.label) : 'Document') : modal === 'request' ? 'Request outstanding documents' : modal === 'flag' ? 'Flag this document' : modal === 'reject' ? 'Reject this application' : modal === 'approve_confirm' ? 'Approve this applicant?' : modal === 'approved' ? 'Approved' : modal === 'rejected' ? 'Rejected' : modal === 'request_sent' ? 'Request recorded' : 'Note saved'}</b><button onclick="state.verificationModal=null; render();" aria-label="Close" style="border:0; background:transparent; font-size:var(--t-title); cursor:pointer; min-width:var(--tap); min-height:var(--tap); display:inline-flex; align-items:center; justify-content:center;">&times;</button></div>${modal === 'document' ? `<div style="height:110px; background:var(--brand-tint-soft); border:1px solid var(--line); border-radius:var(--r-xs); margin:12px 0; display:flex; align-items:center; justify-content:center; text-align:center; padding:var(--s-3); color:var(--mist); font-size:var(--t-caption);">No image is stored in this prototype.<br>What follows is the record of the filing, not the document itself.</div><div style="font-size:var(--t-caption); line-height:1.7;">${about ? 'Document: <b>' + esc(about.label) + '</b><br>Filed as: <b>' + esc(about.detail) + '</b><br>Filed on: <b>' + esc(about.submittedAt ? shortDate(about.submittedAt) : 'not filed') + '</b>' + (about.expiresAt ? '<br>Expires: <b>' + esc(shortDate(about.expiresAt)) + '</b>' : '') + '<br>Your mark: <b>' + esc(WORD[docState(about)]) + '</b><br>Applicant: <b>' + esc(app.name) + '</b>' : 'Open a document from the list to review it.'}</div><div style="display:flex; gap:6px; margin-top:12px;"><button class="btn sm" onclick="verificationAction('doc_state')">Mark as verified</button><button class="btn sm secondary" onclick="verificationAction('flag', ${about ? "'" + about.kind + "'" : 'null'})">Flag an issue</button></div>` : modal === 'flag' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0;">What is wrong with ${about ? esc(about.label) : 'this document'}?</div><select id="flag-issue" aria-label="Possible issue with this document" style="width:100%; min-height:var(--tap); padding:var(--s-2); border:1px solid var(--line); border-radius:var(--r-xs);"><option>Information does not match the application</option><option>Document has expired</option><option>Image is unreadable</option><option>Wrong document type</option><option>Other</option></select><textarea id="flag-note" aria-label="Administrator note about this document" placeholder="What the applicant should fix" style="width:100%; min-height:70px; margin-top:10px; padding:var(--s-2); border:1px solid var(--line); border-radius:var(--r-xs); font:inherit;"></textarea><button class="btn danger btn-block" style="margin-top:10px;" onclick="flagDocument()">Flag document</button>` : modal === 'approve_confirm' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin:12px 0;">${esc(app.name)}, ${esc(app.service)}. All ${docs.length} documents are filed and none is flagged. Approving records the decision on this device with your name and the time, and takes the application out of the pending queue.</div><div style="display:flex; gap:6px;"><button class="btn sm secondary" style="flex:1;" onclick="state.verificationModal=null; render();">Cancel</button><button class="btn sm" style="flex:1;" onclick="verificationAction('approved')">Confirm approval</button></div>` : modal === 'request' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0 8px;">Pick what you need back from ${esc(app.name)}. Only documents still outstanding are listed.</div>${outstanding.length ? outstanding.map(d => '<label class="row" style="font-size:var(--t-caption); padding:var(--s-2) 0; min-height:var(--tap);">' + esc(d.label) + '<input type="checkbox" id="request-' + d.kind + '" checked style="width:20px; height:20px; accent-color:var(--deep); flex-shrink:0;"></label>').join('') : '<div style="font-size:var(--t-caption); color:var(--mist);">Nothing is outstanding on this application.</div>'}<label class="form-label" style="margin-top:10px;">Note to attach<div style="font-size:var(--t-caption); color:var(--mist); margin-top:4px;">Kept with the review record. This prototype has no applicant inbox, so nothing is delivered.</div></label><textarea id="request-message" aria-label="Note attached to the document request" style="width:100%; min-height:70px; border:1px solid var(--line); border-radius:var(--r-xs); padding:var(--s-2); margin-top:6px; font:inherit;">Please upload the outstanding document to continue verification.</textarea><button class="btn btn-block" style="margin-top:10px;" onclick="sendDocumentRequest()">Record request</button>` : modal === 'reject' ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin:12px 0 8px;">A reason is required — it is what the record will show.</div><select id="reject-reason" aria-label="Reason for rejecting this application" style="width:100%; padding:var(--s-2); min-height:var(--tap); border:1px solid var(--line); border-radius:var(--r-xs);"><option>Invalid required document</option><option>Unable to verify identity</option><option>Required qualification not met</option><option>Other</option></select><textarea id="reject-note" aria-label="Reason for rejecting this application" placeholder="What the applicant should know" style="width:100%; min-height:70px; margin-top:10px; padding:var(--s-2); border:1px solid var(--line); border-radius:var(--r-xs); font:inherit;"></textarea><button class="btn danger btn-block" style="margin-top:10px;" onclick="rejectApplication()">Record rejection</button>` : `<div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin:12px 0;">${modal === 'approved' ? esc(app.name) + ' is approved as of ' + esc(shortDate(review.decidedAt)) + ' ' + esc(clockText(review.decidedAt)) + ' and no longer appears in the pending queue.' : modal === 'rejected' ? esc(app.name) + ' is rejected' + (review.reason ? ': ' + esc(review.reason) : '.') + ' The application stays on this device with that reason.' : modal === 'request_sent' ? 'The request is recorded against this application. The pending queue now shows it as awaiting upload.' + (review.requestMessage ? ' Your note: ' + esc(review.requestMessage) + '.' : '') : 'Your note is saved with this application on this device.'}</div><button class="btn" style="width:100%;" onclick="state.verificationModal=null; render();">Close</button>`}</div></div>` : ''}`;
 }
 
 function reopenReview(){

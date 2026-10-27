@@ -47,6 +47,12 @@ const metrics = [
   { key: 'literal_font_sizes', what: 'font-size set in px rather than through the scale', n: count(/font-size:\s?[0-9.]+px/g) },
   { key: 'literal_paddings', what: 'padding set with literal pixels', n: count(/padding:\s?[0-9.]+px/g) },
   { key: 'distinct_paddings', what: 'different padding values in use', n: distinct(/padding:\s?[0-9.]+px(?: [0-9.]+px)*/g).length },
+  /* Comments are stripped first: a sentence quoting an old stacking number is the same string to a
+     scanner as a rule typing a new one, and the file has already been fooled that way by a hex inside
+     a comment (§31). The ceiling is 0 and the gate asserts the same rule independently, so neither can
+     rot without the other noticing. */
+  { key: 'literal_z_index', what: 'layers that type their own stacking number instead of a rung',
+    n: (src.replace(/\/\*[\s\S]*?\*\//g, '').match(/z-index:\s*-?[0-9]/g) || []).length },
 ];
 
 if (!fs.existsSync(BASELINE) && !bless) {
@@ -59,10 +65,15 @@ let worse = 0;
 console.log('file: Sukinnect-next.html   ' + src.split(/\r?\n/).length + ' lines');
 metrics.forEach(m => {
   const ceil = base[m.key];
-  const flag = m.floor !== undefined
-    ? (m.n >= m.floor ? 'floor ' + m.floor + ' held' : 'BELOW FLOOR ' + m.floor)
+  /* A floor metric reads its floor from the baseline once one exists. It used to read only the
+     hardcoded number, so `--bless` wrote 32 for `screenheader_calls` while the rule still enforced 13 —
+     the file said one ceiling and the code applied another, and a build could lose half the shared
+     headers and still print "floor held". */
+  const floor = m.floor === undefined ? undefined : (ceil === undefined ? m.floor : ceil);
+  const flag = floor !== undefined
+    ? (m.n >= floor ? 'floor ' + floor + ' held' : 'BELOW FLOOR ' + floor)
     : (ceil === undefined ? 'new' : (m.n > ceil ? 'RISEN from ' + ceil : (m.n < ceil ? 'down from ' + ceil : 'at ceiling')));
-  if (m.floor !== undefined) { if (m.n < m.floor) worse++; }
+  if (floor !== undefined) { if (m.n < floor) worse++; }
   else if (ceil !== undefined && m.n > ceil) worse++;
   console.log('  ' + m.key.padEnd(26) + String(m.n).padStart(5) + '  [' + flag + ']  ' + m.what);
 });
