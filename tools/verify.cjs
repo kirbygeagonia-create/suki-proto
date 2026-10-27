@@ -6544,6 +6544,154 @@ suite('signup-guide', async () => {
   return c;
 });
 
+/* ══ the wallet: a view over the ledger, with no value stored ─══════════════
+   The deck forbids a stored-value wallet and the owner asked for the experience anyway, so the rule
+   this suite exists to hold is narrow and hard: every number on the screen must be the number the books
+   already say, and the two things that would move real money must refuse. A check that only reads the
+   sheet's words would pass on a screen that typed its own balance. */
+suite('wallet', async () => {
+  const c = makeChecker();
+  const app = boot();
+  const w = app.walletSnapshot(app.CURRENT_PROVIDER_ID);
+  /* An ORACLE, not the function under test: the figures are re-added here from BOOKINGS, so a wallet that
+     typed its own balance, dropped the hold filter, or counted a cash job fails against records that have
+     not moved. Comparing the snapshot to providerBalances() would compare a value to the call it came from
+     and could never fail — the tautology this repository keeps having to delete. */
+  const oracle = (s) => {
+    const hold = s.CONFIG.payoutHoldDays * 86400000, now = Date.now();
+    const settled = s.BOOKINGS.filter(b => b.providerId === s.CURRENT_PROVIDER_ID
+      && b.status === 'completed' && b.pricing);
+    const share = (b) => s.settlementToProvider(b.pricing);
+    const held = settled.filter(b => !s.isCashJob(b));
+    const released = held.filter(b => Date.parse(b.pricing.frozenAt || b.createdAt) + hold <= now);
+    return {
+      available: released.reduce((t, b) => t + share(b), 0),
+      pending: held.reduce((t, b) => t + share(b), 0) - released.reduce((t, b) => t + share(b), 0),
+      lifetime: settled.reduce((t, b) => t + share(b), 0),
+      releasedIds: released.map(b => b.id)
+    };
+  };
+  const want = oracle(app);
+  c.check('the wallet prints what the records add up to, field by field',
+    w.availableCentavos === want.available && w.pendingCentavos === want.pending
+      && w.lifetimeCentavos === want.lifetime,
+    'wallet ' + w.availableCentavos + '/' + w.pendingCentavos + '/' + w.lifetimeCentavos
+      + ' · records ' + want.available + '/' + want.pending + '/' + want.lifetime);
+  c.check('and at least one ledger event actually touches this account (a scan over none proves nothing)',
+    w.entryCount >= 1 && w.entries.every(e => e.amountCentavos > 0),
+    'entries ' + w.entryCount + ' · first ' + JSON.stringify(w.entries[0] || null).slice(0, 90));
+  /* Move ONE job across the hold boundary and require the wallet to move by exactly that job's share, up
+     on one figure and down on the other. This is what distinguishes a derived figure from a remembered
+     one, and the exact amount is what distinguishes it from a total that merely changed. */
+  const moved = boot();
+  const before = moved.walletSnapshot(moved.CURRENT_PROVIDER_ID);
+  const onHold = moved.BOOKINGS.find(b => b.providerId === moved.CURRENT_PROVIDER_ID
+    && b.status === 'completed' && b.pricing && !moved.isCashJob(b)
+    && Date.parse(b.pricing.frozenAt || b.createdAt) + moved.CONFIG.payoutHoldDays * 86400000 > Date.now());
+  const shareOf = onHold ? moved.settlementToProvider(onHold.pricing) : 0;
+  if (onHold) onHold.pricing.frozenAt = new Date(Date.now() - 400 * 86400000).toISOString();
+  const after = moved.walletSnapshot(moved.CURRENT_PROVIDER_ID);
+  const wantAfter = oracle(moved);
+  c.check('releasing one held job moves the wallet by exactly that job share, and agrees with the records after',
+    !!onHold && shareOf > 0
+      && after.availableCentavos - before.availableCentavos === shareOf
+      && before.pendingCentavos - after.pendingCentavos === shareOf
+      && after.availableCentavos === wantAfter.available && after.pendingCentavos === wantAfter.pending,
+    (onHold ? onHold.id : 'no job on hold') + ' · share ' + shareOf + ' · available '
+      + before.availableCentavos + ' -> ' + after.availableCentavos + ' · pending '
+      + before.pendingCentavos + ' -> ' + after.pendingCentavos);
+
+  const src = app._source;
+  c.check('nothing in the file stores a wallet balance to type into',
+    !/walletBalance\s*=/.test(src) && !/state\.walletAmount/.test(src)
+      && !/wallet.*=\s*[^\n]*el\.value/.test(src),
+    'a stored balance found: ' + /walletBalance\s*=|state\.walletAmount/.test(src));
+
+  const inSeam = app.gatewayCashSeam('in', 50000);
+  const outSeam = app.gatewayCashSeam('out', 50000);
+  c.check('both cash movements are seams that record nothing',
+    inSeam.available === false && inSeam.recorded === false && outSeam.available === false
+      && /licensed payment partner/.test(inSeam.reason) && /nothing was moved/.test(inSeam.reason),
+    JSON.stringify(inSeam).slice(0, 110));
+  const press = boot();
+  press.state.view = 'app'; press.state.role = 'provider';
+  const ledgerBefore = press.LEDGER.length;
+  const balBefore = press.walletSnapshot(press.CURRENT_PROVIDER_ID).availableCentavos;
+  press._document.getElementById('wallet-amount').value = '500';
+  press.cashMovementSeam('in');
+  c.check('pressing Cash in changes no ledger line and no balance, and says so on the sheet',
+    press.LEDGER.length === ledgerBefore
+      && press.walletSnapshot(press.CURRENT_PROVIDER_ID).availableCentavos === balBefore
+      && /nothing was moved/.test(String(press.state.walletNote)),
+    'ledger ' + ledgerBefore + ' -> ' + press.LEDGER.length + ' · balance ' + balBefore + ' -> '
+      + press.walletSnapshot(press.CURRENT_PROVIDER_ID).availableCentavos);
+
+  const tier = app.loyaltyTier(app.CURRENT_PROVIDER_ID);
+  c.check('the tier is computed from jobs and payouts, and attaches no privilege',
+    ['New', 'Active', 'Established'].includes(tier.tier) && Array.isArray(tier.privileges)
+      && tier.privileges.length === 0 && /No privilege is attached/.test(tier.note)
+      && tier.jobs === app.BOOKINGS.filter(b => b.providerId === app.CURRENT_PROVIDER_ID && b.status === 'completed').length,
+    JSON.stringify({ tier: tier.tier, jobs: tier.jobs, earned: tier.earnedCentavos }));
+  const funding = app.fundingEligibilitySeam();
+  c.check('funding eligibility declines to answer rather than inventing a decision',
+    funding.evaluated === false && funding.eligible === null && /not evaluated here/i.test(funding.reason),
+    JSON.stringify(funding).slice(0, 110));
+
+  const sheet = (() => { const s = boot(); s.state.view = 'app'; s.state.role = 'provider'; return String(s.walletSheet()); })();
+  c.check('the sheet states that it stores no money, and names the hold and the minimum',
+    /stores no money/.test(sheet) && /-day hold/.test(sheet) && /No partner is wired/.test(sheet),
+    sheet.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(-120));
+  c.check('the wallet is reached from the payout section the money already lives in',
+    /openWallet\(\)/.test(String(app.providerSectionBody('payout'))) && typeof app.openWallet === 'function',
+    String(app.providerSectionBody('payout')).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 90));
+  /* The chain's whole claim is that editing an entry after the fact is visible. A check that only asks
+     whether the head hash repeats proves determinism, which is not the property — so the second half of
+     this assertion edits a ledger line in place and requires the head to move. */
+  const chain0 = app.verifyLedgerChain();
+  const tampered = boot();
+  const headBefore = tampered.verifyLedgerChain().head;
+  tampered.LEDGER[0].lines[0].amountCentavos += 100;
+  const headAfter = tampered.verifyLedgerChain().head;
+  c.check('the chain covers every event, and an edited amount moves its head',
+    chain0.length === app.LEDGER.length && chain0.intact === true && chain0.length >= 3
+      && /^[0-9a-f]{8}$/.test(chain0.head) && headAfter !== headBefore,
+    'chain ' + chain0.length + ' of ' + app.LEDGER.length + ' · head ' + chain0.head
+      + ' · after editing one amount ' + headAfter);
+  c.check('the screen calls it a hash chain on this device and names the encryption it does not have',
+    /not a blockchain/.test(chain0.note) && /plain text/.test(chain0.note) && /Ledger chain/.test(sheet),
+    String(chain0.note).slice(0, 110));
+
+  /* ── three defects that only a screenshot showed, each pinned by the shape it left behind ──
+     The stylesheet silenced the first <b> of EVERY card of EVERY sheet, for a reason that only holds
+     where the sheet header repeats that one title. On a five-card sheet it deleted four headings, and
+     no tally could see it: text that is display:none is not clipped, does not collide, and is not
+     measured. A wallet figure painted inside a .stat box drew a card inside a card the same way. */
+  const css = String(app._source);
+  c.check('only the card a sheet header duplicates loses its title, not every card on the page',
+    /\.sheet-body > \.card:first-child > b:first-child\s*\{\s*display:none/.test(css)
+      && !/\.sheet-body \.card > b:first-child\s*\{\s*display:none/.test(css),
+    'scoped rule: ' + /\.sheet-body > \.card:first-child/.test(css) + ' · blanket rule still present: '
+      + /\.sheet-body \.card > b:first-child\s*\{\s*display:none/.test(css));
+  const cardCount = (sheet.match(/<div class="card"/g) || []).length;
+  const titleCount = (sheet.match(/<b class="card-title">/g) || []).length;
+  c.check('every card after the first still carries the heading that names it',
+    cardCount >= 4 && titleCount >= cardCount - 1,
+    'cards ' + cardCount + ' · headings ' + titleCount + ' (the first card may be titled by the sheet head)');
+  c.check('and the balance figure is a figure, not a card nested inside its own card',
+    !/class="stat"/.test(sheet) && /Available to pay out/.test(sheet),
+    'nested .stat box: ' + /class="stat"/.test(sheet));
+  const rowEls = (sheet.match(/border-bottom:1px solid var\(--line\)/g) || []).length;
+  const promised = /Its newest (\d+)(?: of \d+)?:/.exec(sheet);
+  c.check('the entry list names the rows it actually painted, never a count it did not reach',
+    rowEls === Math.min(w.entryCount, 8) && !!promised && Number(promised[1]) === rowEls
+      && !/newest eight/i.test(sheet),
+    'rows ' + rowEls + ' of ' + w.entryCount + ' events · caption says ' + JSON.stringify(promised && promised[0]));
+  c.check('a listed entry says plainly that it is not spendable money',
+    /not money that can be spent/.test(sheet) && /inside the \d+-day hold/.test(sheet),
+    sheet.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').match(/An entry is[^]{0,140}/)?.[0] || 'sentence absent');
+  return c;
+});
+
 (async () => {
   let total = 0, failed = 0;
   for (const { name, fn } of suites) {

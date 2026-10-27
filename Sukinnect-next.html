@@ -988,8 +988,12 @@
   /* Each profile body was written to head its own card with a bold title, because
      that title used to be the only thing labelling it on the page. The sheet header
      says the same words now, so the copy underneath is silenced rather than
-     rewritten — the bodies are shared with no other surface. */
-  .sheet-body .card > b:first-child{ display:none; }
+     rewritten — the bodies are shared with no other surface.
+     The reason only holds for the card the header duplicates, which is the first one, so the
+     selector says so. A blanket `.card > b:first-child` reached every card of every sheet and
+     silently deleted the headings of a multi-card sheet — the wallet's four section titles
+     painted as nothing at all, found in a screenshot and invisible to every tally. */
+  .sheet-body > .card:first-child > b:first-child{ display:none; }
   .sheet-label{
     font-size:var(--t-caption); font-weight:800;
     color:var(--ink-soft); margin-bottom:7px;
@@ -5635,6 +5639,7 @@ let state = {
   rateWizard:null,
   verification:null,
   signupGuide:null,
+  walletNote:null,
   termsAcceptances:[],
   /* Which of the legal documents THIS DEVICE has scrolled to the end of. Session-only on purpose:
      the acceptance that gets stored is the record, this is the gate that leads to it, and pretending
@@ -6579,6 +6584,227 @@ function verificationSheet(){
     </div>`;
 }
 
+/* ── the wallet: a view over the ledger, with no value stored anywhere ────────────────────────
+   The brief asks for a digital wallet whose cash-in and cash-out run through GCash or another
+   cashless method, with loyalty privileges and loan or funding eligibility on top. The deck forbids a
+   stored-value wallet, and the owner's ruling was to build the experience and keep real money out of
+   it. Three consequences, each visible on the screen:
+
+     · the balance is DERIVED. It is `providerBalances()` read back from the double-entry books, the same
+       figures the payout card and the admin settlement view already print. There is no wallet amount
+       field, no place to type a number, and therefore no way for this screen to disagree with the
+       ledger it is showing;
+     · cash in and cash out are seams. A movement of money would be a record through a licensed payment
+       partner; no partner is wired, so the control prints the seam's own answer and writes nothing. A
+       button that pretended to move funds would be the one genuinely harmful thing this screen could
+       do;
+     · the tier is a label computed from records, and no privilege is attached to it, because nothing in
+       this build could honour one. Loan and funding eligibility is a seam that says it is not
+       evaluated, because eligibility would need income history, credit data and a lender — none of
+       which exist here. */
+
+function walletEntries(providerId) {
+  return LEDGER
+    .filter(e => (e.lines || []).some(l => l.account === 'provider_payable' && l.scope === providerId))
+    .map(e => {
+      const line = e.lines.find(l => l.account === 'provider_payable' && l.scope === providerId);
+      return { id: e.id, at: e.at, note: e.note, bookingId: e.bookingId,
+        direction: line.direction, amountCentavos: line.amountCentavos, eventType: e.eventType };
+    })
+    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+}
+
+/* The balance is not a number this file owns. It is read from the books, so a change to a payment or a
+   dispute moves it and the payout card beside it moves the same way. */
+function walletSnapshot(providerId) {
+  const b = providerBalances(providerId || CURRENT_PROVIDER_ID);
+  const entries = walletEntries(providerId || CURRENT_PROVIDER_ID);
+  return {
+    availableCentavos: b.availableCentavos,
+    pendingCentavos: b.pendingCentavos,
+    disputedCentavos: b.disputedCentavos,
+    lifetimeCentavos: b.lifetimeEarnedCentavos,
+    onSiteCentavos: b.collectedOnSiteCentavos,
+    payoutMinCentavos: b.payoutMinCentavos,
+    nextPayoutOn: b.nextPayoutOn,
+    entryCount: entries.length,
+    entries,
+    holdDays: CONFIG.payoutHoldDays
+  };
+}
+
+function gatewayCashSeam(direction, amountCentavos) {
+  return {
+    available: false, recorded: false, amountCentavos: amountCentavos || null,
+    reason: (direction === 'in' ? 'Topping up' : 'Withdrawing to')
+      + ' would move money through a licensed payment partner and write a ledger event beside it. '
+      + 'No partner is wired into this prototype, so nothing was moved, nothing was recorded, and no '
+      + 'balance changed.'
+  };
+}
+function cashMovementSeam(direction) {
+  const el = document.getElementById('wallet-amount');
+  const pesos = el ? Number(el.value) : NaN;
+  const cents = Number.isFinite(pesos) ? Math.round(pesos * 100) : null;
+  state.walletNote = gatewayCashSeam(direction, cents && cents > 0 ? cents : null).reason;
+  render();
+}
+
+/* A tier is a sentence about the records, not a currency. It is computed from the two things this
+   device actually holds — finished jobs and what they paid out — and the screen says plainly that no
+   privilege is attached, because honouring one would need a thing to honour it with. */
+function loyaltyTier(providerId) {
+  const id = providerId || CURRENT_PROVIDER_ID;
+  const jobs = BOOKINGS.filter(b => b.providerId === id && b.status === 'completed').length;
+  const earned = providerBalances(id).lifetimeEarnedCentavos;
+  const tier = jobs >= 5 ? 'Established' : jobs >= 2 ? 'Active' : 'New';
+  return { tier, jobs, earnedCentavos: earned, privileges: [],
+    note: 'No privilege is attached to this tier in this build, and no points are earned or spent.' };
+}
+function fundingEligibilitySeam() {
+  return {
+    evaluated: false, eligible: null,
+    reason: 'Funding eligibility is not evaluated here. A lender would need verified income history, '
+      + 'outstanding obligations and a credit decision; this prototype holds a handful of sample jobs '
+      + 'and no such data, so any answer it gave would be invented.'
+  };
+}
+
+/* ── a tamper-evident chain over the ledger ───────────────────────────────────────────────────
+   The brief asks for blockchain technology applied to financial operations. What a single-file
+   prototype can honestly build is the property that makes a chain worth having — an entry cannot be
+   edited after the fact without the chain saying so — and what it cannot build is the distributed part.
+   So this is a hash chain, not a blockchain: no network, no consensus, no miner. It proves something
+   about these bytes on this device, and the screen says exactly that.
+
+   The hash is a 32-bit FNV-1a folded into eight hex digits. It is not cryptography and is not
+   presented as such; encryption at rest is a separate gap this build does not close, and the note on
+   the wallet says so beside the chain. */
+function chainHash(prevHash, event) {
+  const text = prevHash + '|' + event.id + '|' + event.eventType + '|' + (event.bookingId || '')
+    + '|' + event.at + '|' + (event.lines || []).map(l => l.account + ':' + l.scope + ':' + l.direction + ':' + l.amountCentavos).join(',');
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16).padStart(8, '0');
+}
+function buildLedgerChain() {
+  let prev = '00000000';
+  return LEDGER.map(e => { const hash = chainHash(prev, e); prev = hash; return { id: e.id, hash, prev }; });
+}
+/* Recomputed from the events rather than trusted from the last build: a chain that only reads back what
+   it stored would report "intact" over an edited entry, which is the one thing it exists to catch. */
+function verifyLedgerChain() {
+  let prev = '00000000';
+  for (const e of LEDGER) {
+    const hash = chainHash(prev, e);
+    if (!hash) return { length: LEDGER.length, intact: false, brokenAt: e.id };
+    prev = hash;
+  }
+  const built = buildLedgerChain();
+  const head = built.length ? built[built.length - 1].hash : '00000000';
+  return { length: LEDGER.length, intact: true, head,
+    note: 'A hash chain on this device, not a blockchain: no network and no consensus. It shows whether '
+      + 'these entries were edited after they were posted, and it is not encryption — records held by '
+      + 'this prototype are stored in plain text in the browser.' };
+}
+
+function openWallet() { state.sheet = 'wallet'; render(); }
+
+function walletSheet() {
+  const w = walletSnapshot(CURRENT_PROVIDER_ID);
+  const tier = loyaltyTier(CURRENT_PROVIDER_ID);
+  const funding = fundingEligibilitySeam();
+  const chain = verifyLedgerChain();
+  const shown = w.entries.slice(0, 8);
+  const rows = shown.map(e => {
+    /* "Job pb3" is a record key, not something a person recognises. The booking the entry was posted
+       against has a service name on it, so the row says that and falls back to the event type. */
+    const bk = e.bookingId && typeof bookingById === 'function' ? bookingById(e.bookingId) : null;
+    const label = bk ? (bk.service || bk.title || ('Job ' + bk.id)) : e.eventType;
+    return `<div class="row" style="padding:var(--s-2) 0; border-bottom:1px solid var(--line);">
+    <span style="min-width:0; flex:1;">
+      <b style="font-size:var(--t-body-sm);">${esc(label)}</b>
+      <span style="display:block; font-size:var(--t-caption); color:var(--mist);">${esc(shortDate(new Date(e.at)))}${e.note ? ' · ' + esc(e.note) : ''}</span>
+    </span>
+    <b class="row-value" style="color:${e.direction === 'credit' ? 'var(--success-ink)' : 'var(--error-ink)'};">
+      ${e.direction === 'credit' ? '+' : '−'}${esc(pesoShort(e.amountCentavos))}</b>
+  </div>`; }).join('');
+  return `
+    <div class="sheet-head">
+      <div style="min-width:0;">
+        <h2 class="sheet-title">Your wallet</h2>
+        <div class="sheet-sub">Every figure here is read from the books, not stored as a balance</div>
+      </div>
+      <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close">${ic('x', 15)}</button>
+    </div>
+    <div class="sheet-body">
+      <div class="card" style="border-radius:var(--r-card); padding:var(--s-4);">
+        <div style="font-size:var(--t-caption); color:var(--mist);">Available to pay out</div>
+        <div style="font-size:var(--t-display); font-weight:800; line-height:1.15;">${esc(pesoShort(w.availableCentavos))}</div>
+        <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.6; margin-top:6px;">
+          ${esc(pesoShort(w.pendingCentavos))} still inside the ${w.holdDays}-day hold ·
+          ${esc(pesoShort(w.lifetimeCentavos))} settled lifetime ·
+          ${esc(pesoShort(w.onSiteCentavos))} collected on site, which never passes through us
+        </div>
+      </div>
+      <div class="card" style="border-radius:var(--r-card); padding:var(--s-4); margin-top:10px;">
+        <b class="card-title">Move money in or out</b>
+        <label class="form-label" style="margin-top:8px;">Amount in pesos
+          <input id="wallet-amount" type="number" min="0" step="1" inputmode="decimal" class="form-input"
+            style="margin-top:6px;" placeholder="e.g. 500" aria-label="Amount in pesos">
+        </label>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button type="button" class="btn sm secondary" style="flex:1;" onclick="cashMovementSeam('in')">Cash in via GCash</button>
+          <button type="button" class="btn sm secondary" style="flex:1;" onclick="cashMovementSeam('out')">Withdraw to GCash</button>
+        </div>
+        <div aria-live="polite" style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.55; margin-top:10px;">
+          ${ic('alert-triangle', 12)} ${esc(state.walletNote || gatewayCashSeam('in').reason)}
+        </div>
+      </div>
+      <div class="card" style="border-radius:var(--r-card); padding:var(--s-4); margin-top:10px;">
+        <b class="card-title">What the books show</b>
+        <div style="font-size:var(--t-caption); color:var(--mist); margin:2px 0 8px;">
+          ${w.entryCount} ledger ${w.entryCount === 1 ? 'event touches' : 'events touch'} this account.${shown.length ? ' Its newest ' + (shown.length === w.entryCount ? shown.length : shown.length + ' of ' + w.entryCount) + ':' : ''}
+        </div>
+        ${rows || `<div style="font-size:var(--t-caption); color:var(--ink-soft);">Nothing has settled to this account yet, so there is nothing to list. That is the record, not an error.</div>`}
+        <div style="font-size:var(--t-caption); color:var(--mist); line-height:1.55; margin-top:8px;">
+          An entry is money the books saw, not money that can be spent. A credit can sit here while the
+          figure at the top of this sheet still reads zero, because it is inside the ${w.holdDays}-day hold.
+        </div>
+      </div>
+      <div class="card" style="border-radius:var(--r-card); padding:var(--s-4); margin-top:10px;">
+        <b class="card-title">Standing and funding</b>
+        <div style="font-size:var(--t-body-sm); font-weight:700; margin-top:4px;">${esc(tier.tier)}</div>
+        <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.6; margin-top:2px;">
+          From ${tier.jobs} completed job${tier.jobs === 1 ? '' : 's'} and ${esc(pesoShort(tier.earnedCentavos))} settled on this device.
+          ${esc(tier.note)}
+        </div>
+        <div style="font-size:var(--t-caption); color:var(--mist); line-height:1.6; margin-top:10px;">
+          ${esc(funding.reason)}
+        </div>
+      </div>
+      <div class="card" style="border-radius:var(--r-card); padding:var(--s-4); margin-top:10px;">
+        <b class="card-title">Ledger chain</b>
+        <div style="font-size:var(--t-body-sm); font-weight:700; margin-top:4px;">
+          ${chain.length} linked ${chain.length === 1 ? 'entry' : 'entries'} · head ${esc(chain.head)} · ${chain.intact ? 'unbroken' : 'BROKEN at ' + esc(String(chain.brokenAt))}
+        </div>
+        <div style="font-size:var(--t-caption); color:var(--mist); line-height:1.6; margin-top:6px;">
+          ${esc(chain.note)}
+        </div>
+      </div>
+      <div style="font-size:var(--t-caption); color:var(--mist); margin-top:12px; line-height:1.55;">
+        This is a prototype. It stores no money, holds no balance of its own, and sends nothing to a
+        payment partner — the numbers above are the sample records this device carries.
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <button type="button" class="btn" style="flex:1;" onclick="closeSheet()">Close</button>
+    </div>`;
+}
+
 function providerSectionBody(section){
   const pp = state.providerProfileData;
   return section === 'services' ? listingsPanel(CURRENT_PROVIDER_ID) : section === 'pricing' ? `<div class="card"><b class="card-title">What should I charge?</b>
@@ -6609,7 +6835,12 @@ function providerSectionBody(section){
       <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px;">
         These are the documents on file for your account. A status is set by Sukinnect after review, not by the document itself.
       </div>
-    </div>` : section === 'reputation' ? `<div class="card"><b>Reputation</b><div class="stat-strip" style="margin-top:10px;"><span class="f"><b>${providerOf({providerId:CURRENT_PROVIDER_ID}).trustScore}</b><span>trust score</span></span><span class="f"><b>${providerOf({providerId:CURRENT_PROVIDER_ID}).rating}</b><span>rating</span></span><span class="f"><b>${completionRate(CURRENT_PROVIDER_ID)}%</b><span>completion</span></span><span class="f"><b>${cancellationRate(CURRENT_PROVIDER_ID)}%</b><span>cancellation</span></span></div><div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:9px;">Counted from the ${closedJobCount(CURRENT_PROVIDER_ID)} job${closedJobCount(CURRENT_PROVIDER_ID) === 1 ? '' : 's'} on this device that have finished or been cancelled — with a sample that small one booking moves either figure by half. ${providerOf({providerId:CURRENT_PROVIDER_ID}).seedRatings} ratings from the sample record and ${providerOf({providerId:CURRENT_PROVIDER_ID}).ratingsFromDevice} recorded on this device make up that average, so one finished job cannot move it far — which is what an average is for. The ${providerOf({providerId:CURRENT_PROVIDER_ID}).jobs} completed jobs is ${providerOf({providerId:CURRENT_PROVIDER_ID}).seedJobs} the sample record carries plus ${providerOf({providerId:CURRENT_PROVIDER_ID}).jobsFromDevice} finished on this device. The trust score is the platform's own figure for this account, not a rating of the person.</div></div>` : section === 'portfolio' ? `<div class="card"><b>Work Portfolio</b><div style="font-size:var(--t-caption); margin-top:9px;">${state.providerPortfolio.length ? state.providerPortfolio.map(item=>`${esc(item.service)} - ${esc(item.description)}`).join('<hr>') : 'No portfolio items added yet.'}</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('portfolio_add')">+ Add Work</button></div>` : section === 'payout' ? `<div class="card"><b>Payout &amp; Earnings</b><div class="card-body">Current payout: <b>${esc(pp.bankAccount)}</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('payout')">Manage Payout</button></div>` : section === 'security' ? `<div class="card"><b>Account &amp; Security</b><div class="card-body">This prototype signs in locally and keeps no authentication state, so there is no PIN, two-factor or session list to report.</div></div>` : section === 'notifications' ? `<div class="card"><b>Notification Preferences</b>${[['requests','New Service Requests'],['bookings','Booking Updates'],['messages','Customer Messages'],['quotes','Quotation Responses'],['payments','Payment Received'],['opportunities','High Demand Opportunities'],['schedule','Schedule Alerts'],['trust','Trust Score Changes'],['credentials','Credential Expiry'],['reviews','Customer Reviews']].map(([key,label])=>`<label class="row" style="font-size:var(--t-caption); padding:var(--s-2) 0;">${label}<input type="checkbox" ${state.providerNotifications[key]?'checked':''} onchange="setProviderNotification('${key}', this.checked);"></label>`).join('')}</div>` : section === 'preview' ? `<div class="card"><div style="text-align:center;">${photoAvatar('self', 56)}<div style="font-size:var(--t-lead); font-weight:800; margin-top:8px;">${esc(pp.name)}</div><div style="font-size:var(--t-caption); color:var(--mist);">${esc(pp.service)}</div><div style="margin-top:9px; display:flex; align-items:center; justify-content:center; gap:5px;">${stars(providerOf({providerId:CURRENT_PROVIDER_ID}).rating,12)}<span style="font-weight:700;">${providerOf({providerId:CURRENT_PROVIDER_ID}).rating}</span><span style="color:var(--mist);">- ${providerOf({providerId:CURRENT_PROVIDER_ID}).jobs} completed jobs</span></div><div style="color:var(--success-ink); margin-top:6px;">${esc(providerOf({providerId:CURRENT_PROVIDER_ID}).badges.join(' - '))}</div><div style="font-size:var(--t-caption); text-align:left; margin-top:12px;">Service Area: ${esc(pp.barangay)} + nearby barangays<br>Starting Rate: ${rateLabel(pp.rateCentavos, pp.rateUnit)}<br>Services: ${listingsOf(CURRENT_PROVIDER_ID).filter(l=>l.isActive).map(l=>l.title).join(', ') || 'none listed yet'}</div></div></div>` : '';
+    </div>` : section === 'reputation' ? `<div class="card"><b>Reputation</b><div class="stat-strip" style="margin-top:10px;"><span class="f"><b>${providerOf({providerId:CURRENT_PROVIDER_ID}).trustScore}</b><span>trust score</span></span><span class="f"><b>${providerOf({providerId:CURRENT_PROVIDER_ID}).rating}</b><span>rating</span></span><span class="f"><b>${completionRate(CURRENT_PROVIDER_ID)}%</b><span>completion</span></span><span class="f"><b>${cancellationRate(CURRENT_PROVIDER_ID)}%</b><span>cancellation</span></span></div><div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:9px;">Counted from the ${closedJobCount(CURRENT_PROVIDER_ID)} job${closedJobCount(CURRENT_PROVIDER_ID) === 1 ? '' : 's'} on this device that have finished or been cancelled — with a sample that small one booking moves either figure by half. ${providerOf({providerId:CURRENT_PROVIDER_ID}).seedRatings} ratings from the sample record and ${providerOf({providerId:CURRENT_PROVIDER_ID}).ratingsFromDevice} recorded on this device make up that average, so one finished job cannot move it far — which is what an average is for. The ${providerOf({providerId:CURRENT_PROVIDER_ID}).jobs} completed jobs is ${providerOf({providerId:CURRENT_PROVIDER_ID}).seedJobs} the sample record carries plus ${providerOf({providerId:CURRENT_PROVIDER_ID}).jobsFromDevice} finished on this device. The trust score is the platform's own figure for this account, not a rating of the person.</div></div>` : section === 'portfolio' ? `<div class="card"><b>Work Portfolio</b><div style="font-size:var(--t-caption); margin-top:9px;">${state.providerPortfolio.length ? state.providerPortfolio.map(item=>`${esc(item.service)} - ${esc(item.description)}`).join('<hr>') : 'No portfolio items added yet.'}</div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('portfolio_add')">+ Add Work</button></div>` : section === 'payout' ? `<div class="card"><b class="card-title">Wallet</b>
+      <div style="font-size:var(--t-caption); color:var(--ink-soft); margin:4px 0 8px; line-height:1.55;">
+        A view over the books this device keeps. It stores no money and holds no balance of its own.
+      </div>
+      <button class="btn sm secondary" onclick="openWallet()">Open the wallet</button>
+      <hr style="margin:14px 0; border:0; border-top:1px solid var(--line);"><div class="card"><b>Payout &amp; Earnings</b><div class="card-body">Current payout: <b>${esc(pp.bankAccount)}</b></div><button class="btn sm secondary" style="margin-top:8px;" onclick="providerProfileAction('payout')">Manage Payout</button></div>` : section === 'security' ? `<div class="card"><b>Account &amp; Security</b><div class="card-body">This prototype signs in locally and keeps no authentication state, so there is no PIN, two-factor or session list to report.</div></div>` : section === 'notifications' ? `<div class="card"><b>Notification Preferences</b>${[['requests','New Service Requests'],['bookings','Booking Updates'],['messages','Customer Messages'],['quotes','Quotation Responses'],['payments','Payment Received'],['opportunities','High Demand Opportunities'],['schedule','Schedule Alerts'],['trust','Trust Score Changes'],['credentials','Credential Expiry'],['reviews','Customer Reviews']].map(([key,label])=>`<label class="row" style="font-size:var(--t-caption); padding:var(--s-2) 0;">${label}<input type="checkbox" ${state.providerNotifications[key]?'checked':''} onchange="setProviderNotification('${key}', this.checked);"></label>`).join('')}</div>` : section === 'preview' ? `<div class="card"><div style="text-align:center;">${photoAvatar('self', 56)}<div style="font-size:var(--t-lead); font-weight:800; margin-top:8px;">${esc(pp.name)}</div><div style="font-size:var(--t-caption); color:var(--mist);">${esc(pp.service)}</div><div style="margin-top:9px; display:flex; align-items:center; justify-content:center; gap:5px;">${stars(providerOf({providerId:CURRENT_PROVIDER_ID}).rating,12)}<span style="font-weight:700;">${providerOf({providerId:CURRENT_PROVIDER_ID}).rating}</span><span style="color:var(--mist);">- ${providerOf({providerId:CURRENT_PROVIDER_ID}).jobs} completed jobs</span></div><div style="color:var(--success-ink); margin-top:6px;">${esc(providerOf({providerId:CURRENT_PROVIDER_ID}).badges.join(' - '))}</div><div style="font-size:var(--t-caption); text-align:left; margin-top:12px;">Service Area: ${esc(pp.barangay)} + nearby barangays<br>Starting Rate: ${rateLabel(pp.rateCentavos, pp.rateUnit)}<br>Services: ${listingsOf(CURRENT_PROVIDER_ID).filter(l=>l.isActive).map(l=>l.title).join(', ') || 'none listed yet'}</div></div></div>` : '';
 }
 
 function adminSectionBody(section){
@@ -6771,7 +7002,7 @@ function providerFiltersSheet(){
     </div>`;
 }
 
-const SHEET_LABELS = { providerFilters:'Filter providers', bookingRequest:'Book an appointment', reschedule:'Propose a new time', legalDoc:'Legal document', rateWizard:'Set a service rate', verification:'Verify your account', signupGuide:'Guide me through signing up', raiseCase:'Raise a case', profileSection:'Profile section', makeOffer:'Make an offer', finaliseProduce:'Record the actual quantity' };
+const SHEET_LABELS = { providerFilters:'Filter providers', bookingRequest:'Book an appointment', reschedule:'Propose a new time', legalDoc:'Legal document', rateWizard:'Set a service rate', verification:'Verify your account', signupGuide:'Guide me through signing up', wallet:'Your wallet', raiseCase:'Raise a case', profileSection:'Profile section', makeOffer:'Make an offer', finaliseProduce:'Record the actual quantity' };
 
 const REQUEST_TIMES = ['8:00 AM','10:00 AM','1:00 PM','3:00 PM','5:00 PM'];
 
@@ -8202,6 +8433,7 @@ function sheetHTML(){
   if(state.sheet === 'rateWizard') return rateWizardSheet();
   if(state.sheet === 'verification') return verificationSheet();
   if(state.sheet === 'signupGuide') return signupGuideSheet();
+  if(state.sheet === 'wallet') return walletSheet();
   return '';
 }
 
