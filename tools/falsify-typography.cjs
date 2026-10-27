@@ -16,15 +16,30 @@ const APP = path.join(ROOT, 'Sukinnect-next.html');
 const FONTS = path.join(ROOT, 'fonts', 'fonts.css');
 const files = { APP: fs.readFileSync(APP, 'utf8'), FONTS: fs.readFileSync(FONTS, 'utf8') };
 
-/* Last-occurrence rename, because four @font-face blocks share one family line and a plain
-   replace would move all of them, which is mutant 3's break rather than this one. */
-const renameLastAtkinsonFace = s => {
-  const needle = "font-family: 'Atkinson Next'";
-  const at = s.lastIndexOf(needle);
-  return at < 0 ? s : s.slice(0, at) + "font-family: 'Atkinson Next Extra'" + s.slice(at + needle.length);
-};
+/* Withdrawing one Poppins face, by renaming its family line. Eight @font-face blocks share that one
+   line, so a plain string replace would move all eight — which is a different mutant than this one.
+   `count` is how many blocks of that weight to withdraw: ONE is the case a set of distinct weights
+   cannot see at all (every weight survives in its other subset), TWO removes the weight outright.
+   Located by indexOf on the literal weight line rather than by a RegExp built from a string, because
+   the regex form is one escaping layer away from silently matching nothing — a filter that answers
+   zero blocks makes every break print SKIP while the run still looks like a clean suite. */
+function withdrawPoppinsBlocks(s, count, weight) {
+  const familyLine = "font-family: 'Poppins'";
+  const weightLine = 'font-weight: ' + weight + ';';
+  const blocks = (s.match(/@font-face\s*\{[^}]*\}/g) || []).filter(function (b) {
+    return b.indexOf(familyLine) >= 0 && b.indexOf(weightLine) >= 0;
+  });
+  if (blocks.length < count) return s;
+  let out = s;
+  blocks.slice(0, count).forEach(function (b) {
+    const at = out.indexOf(b);
+    if (at < 0) return;
+    out = out.slice(0, at) + b.replace(familyLine, "font-family: 'Poppins Withdrawn'") + out.slice(at + b.length);
+  });
+  return out;
+}
 
-/* Single-line needles: both files are CRLF, so a needle carrying \n matches nothing and the
+/* Single-line needles: both files are CRLF, so a needle carrying a newline matches nothing and the
    mutant prints SKIP while looking like a clean run. */
 const MUTANTS = [
   { name: 'a woff2 the stylesheet promises is not on disk', where: 'FONTS', check:
@@ -36,9 +51,20 @@ const MUTANTS = [
   { name: 'the stack asks for a family the stylesheet never declares', where: 'APP', check:
     'the face the app asks for first is one the stylesheet actually declares',
     apply: s => s.replace('--font-ui:"Poppins"', '--font-ui:"Atkinson Alternate Next"') },
-  { name: 'one of the four weights loses its face', where: 'FONTS', check:
+  /* Re-pointed 2026-10-27. The break it replaces renamed the last ATKINSON face while naming a check
+     that had been amended to count the weights of the UI family — which is Poppins — so the mutation
+     could not move the number it was written to move. The family printed a survivor about a guard that
+     had already gone stale, and it did so through a SEMANTIC change rather than a spelling change: the
+     needle still matched, the mutant still applied, and only `caught === applied` hid the gap.
+       One block per mutant, one mutant per guard. Poppins declares every weight in two subsets, so
+     withdrawing ONE leaves four distinct weights and the weight-set check stays green — that is exactly
+     what the new relational check exists to see. */
+  { name: 'one subset of one weight is withdrawn while the weight set still reads four', where: 'FONTS', check:
+    'every weight the interface family claims is declared the same number of times',
+    apply: s => withdrawPoppinsBlocks(s, 1, '600') },
+  { name: 'a whole weight loses both its subsets, so the UI family is a three-weight family', where: 'FONTS', check:
     'the four weights the rebuild says it carries are really four',
-    apply: renameLastAtkinsonFace },
+    apply: s => withdrawPoppinsBlocks(s, 2, '600') },
   { name: 'a sheet titles itself in a family typed into the rule', where: 'APP', check:
     'no rule names a font family directly — every one goes through the two tokens',
     apply: s => s.replace('.sheet-title{ font-family:var(--font-display)', '.sheet-title{ font-family:"Plus Jakarta Sans"') },
