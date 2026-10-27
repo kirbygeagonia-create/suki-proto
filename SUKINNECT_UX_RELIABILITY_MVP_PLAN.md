@@ -623,7 +623,7 @@ counsel/licence decision).
 | AI asks only for the data a step needs, stepper method | **BUILT** §63, §64, §58 | Three steppers: `SIGNUP_GUIDE_STEPS`, `VERIFY_STEPS`, `RATE_WIZARD_STEPS`. Which step shows is a rule, and it is written as a rule — no model decides the order. |
 | Exchange-rate and labour-rate lookups from the web and a hosted LLM | **BUILT-AS-LABELLED-PROCEDURE**, seam named | `exchangeRateSeam()` answers no rate and names the reason, painted outside the band branch of the pricing wizard so it stays true when there is no band; `marketRateHint()` refuses the outside lookup on both branches. The app is offline by §81 and the phone build renders with no network at all. |
 | Standard/estimated labour fee, "what should I charge?" | **BUILT** §58 | `rateBandFor(trade)` computes low/mid/high over the rates the roster already holds, states the sample size, and applies the figure only when the professional confirms it. Nothing is invented when the band is empty — that branch says so. |
-| New trades: program commissioning, portfolios, barbering | OWED, needs a catalogue decision | Still additive and still unbuilt: a `SERVICES` row each, with its qualification set, pricing basis and verification requirement. Not started, because §44 makes it a catalogue decision rather than a code one. |
+| New trades: program commissioning, portfolios, barbering | DECLINED BY THE OWNER, 2026-10-27 | Asked and answered: the catalogue stays as it is. §44 makes this a catalogue decision rather than a code one, and the owner made it — no `SERVICES` row for program commissioning, portfolios or barbering is to be added on the strength of the brief. The machinery stays additive (a new row would take its qualification set, pricing basis and verification requirement), but nothing here is waiting for one. |
 | Verification: certificates, government IDs, OCR, facial recognition, identity extraction, ratings | Split | Certificates, IDs and expiry states are REAL records (`CREDENTIALS`, `APPLICATION_DOCS`, `PENDING_APPLICANTS`). The stepper is **BUILT**; **OCR and face match are seams** — `readIdDocumentSeam()` returns no fields, `matchFaceSeam()` returns no score, and saving the draft says "Nothing was sent to a reviewer, because this build has no reviewer on it." Ratings derive from completed work. §56 still forbids exposing a document where a badge is enough. |
 | Terms and Privacy at every account creation, acceptance disabled until each is scrolled to its end | **BUILT** §56 | `docScrolled()` marks a document read at its bottom, `acceptanceUnlocked()` gates the checkbox, and `noteUnscrollableDocs()` handles the pane taller than its content — the case a scroll-only gate silently blocks. Registering refuses before the tick test and names how many documents are unread. Proved by `falsify-scroll-gate.cjs`. |
 | Blockchain for encryption | **BUILT as a chain, premise still wrong** | `buildLedgerChain()` / `verifyLedgerChain()` fold each ledger event into the hash of the one before and recompute from the events, so an edited amount moves the head — asserted by a break that edits a ledger line and requires the head to change. A blockchain does not encrypt, and the wallet's own note says so: not a network, not consensus, not encryption, records stay plain text. |
@@ -640,12 +640,14 @@ counsel/licence decision).
 
 **Why the split matters more than the count.** Re-counted against the code on 2026-10-27 rather than
 against intent: **sixteen of these twenty rows are built** — screens, records, or seams that answer on
-the surface where a person would otherwise assume the work ran. Four things are still not built, and
-none of them is a task someone skipped: a **learned model** (no corpus, no inference in a single-file
-page), **three new trades** (a catalogue decision under §44, not a code decision), **chain-based
-settlement** (a production choice with a licence question attached), and a **loan or funding offering**
-(regulated lending needing a licensed partner and counsel). Each of the four says so on the screen that
-would otherwise have implied it, which is the whole discipline of this table: the failure mode this plan
+the surface where a person would otherwise assume the work ran. Four things are not built, and none of
+them is a task someone skipped: a **learned model** (no corpus, no inference in a single-file page),
+**chain-based settlement** (a production choice with a licence question attached), and a **loan or
+funding offering** (regulated lending needing a licensed partner and counsel) cannot be built here, and
+each of those three says so on the screen that would otherwise have implied it. The fourth is different
+in kind: the **three new trades** were put to the owner on 2026-10-27 and declined, because §44 makes
+that a catalogue decision rather than a code one — so it is a ruling, not an unbuilt task, and no screen
+carries a sentence about it. This is the whole discipline of the table: the failure mode this plan
 keeps meeting is a sentence that reads like a capability, and the fix has never been to drop the hard
 rows or to fake them, but to say which bucket each one is in.
 
@@ -653,7 +655,7 @@ rows or to fake them, but to say which bucket each one is in.
 
 | Item | Check | Command / method | Passes when |
 |---|---|---|---|
-| Every P2/P1 change | full gate | `node tools/verify.cjs` | all checks pass (567 today); new checks added with each rule |
+| Every P2/P1 change | full gate | `node tools/verify.cjs` | all checks pass; the command prints the count, and no figure is carried here |
 | Any new record family | refusal on a dangling `bookingId`, restored-state behaviour | `tools/falsify-storage-truth.cjs` + a new family | mutants caught, 0 not applied |
 | Reschedule wording | no claim of a changed time before agreement | new `honesty` check + `shot.cjs --probe=@…` driving the real sheet | both halves asserted, positive control included |
 | Screen coverage | the new sheet/dialogs are in the walk | `node tools/shot.cjs --list`, `audit-camera-dialog-coverage` | count rises with the flow, findings 0 |
