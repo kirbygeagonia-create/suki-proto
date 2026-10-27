@@ -9617,3 +9617,31 @@ before: the background run reported **exit code 0** next to a log reading "0 of 
 command I launched was `node tools/sweep-text-scale.cjs > log 2>&1; echo; tail` — the pipeline's last
 process was `tail`. `tools/sweep-text-scale.cjs` itself exits `bad ? 1 : 0` and was correct. Read the
 log, never the wrapper's exit code.
+
+§158's two candidate causes were both wrong, and measuring replaced them. The probe in
+`.scratch/probe-layer-inert.js` answers what the platform is told about every painted layer: on
+`admin-security-modal` there is exactly **one** layer — the sheet — carrying `aria-modal="false"`, and
+no modal anywhere in the document. `aria-modal="false"` is only ever written by
+`sheetPanel.setAttribute('aria-modal', modalAboveSheet() ? 'false' : 'true')`, and `modalAboveSheet()`
+is `layerKeys().some(k => !!state[k])` — a question about **state**, not about paint. So:
+
+1. The admin's Security & Sign-in **sheet** paints four buttons that call `adminAccountAction('pin' |
+   'password' | 'twofa' | 'sessions')`. Those set `state.adminAccountModal`. The modal markup lives in
+   the admin **account screen**, which is not mounted while the sheet is the surface. The tap sets a
+   flag, renders, and shows **nothing** — a dead control, the class §"EVERY PROFILE ACTION REACHES A
+   SCREEN" exists to catch, on four buttons at once.
+2. Because the flag is set, `modalAboveSheet()` answers true, the sheet is told it is not modal, and
+   the app declares a dialog that does not exist. The tally read the label and reported the symptom.
+3. §97's coverage claim is half false for these four rows. Each row does click a real painted button,
+   which is why it looked like a walked dialog — but it photographs the sheet, never the dialog its
+   name promises. **A row that clicks the right control on the wrong surface is an unmeasured
+   destination wearing a measured name.**
+
+The fix has two halves and neither is shipped yet, because both touch the subsystem whose two previous
+hasty repairs produced the `modal-stacking` and `layer-modality` families. (a) `modalAboveSheet()` has
+to ask whether a modal layer is mounted, not whether a field is set — otherwise the app can always
+claim a modality it is not painting. (b) Either the four sheet buttons route to the screen that owns
+the dialog, or the dialog renders from the sheet; and the four rows then have to **refuse** unless a
+modal layer is actually painted, so a future regression fails by naming the button rather than
+photographing a sheet. The eight-corner sweep will read 0 of 8 clean until (a) and (b) land, and that
+is the honest state of this build rather than a number to smooth over.
