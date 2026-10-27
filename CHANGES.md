@@ -9056,9 +9056,21 @@ applied, 0 missed; `node tools/falsify-figures.cjs` 8 of 8; `node tools/falsify-
 `node tools/sweep-text-scale.cjs` 8 of 8 corners clean, 25 tallies each, run separately against
 `cd2cfec`, `378ffc4`, `bfa13c5` and `aba1ea3`. `Sukinnect.html` untouched throughout.
 
-**One of the owner's four rulings rested on a premise this section contradicts, and was not acted on.**
-The card `:hover` lift was approved for removal on the stated ground that a phone has no hover and a stuck
+**One name for one chip colour, and a helper that lost its last caller.** Six chips reached their tone
+through the legacy `.badge-gold` / `.badge-alert` names, two standalone rules re-declared token pairs
+the tone block already owned, `.badge-verified` was a selector with no rule and no markup, and three
+places pasted `statusColors()`'s `{bg,fg}` into a `style` attribute — one of them a span that hand-rolled
+seven decisions (background, foreground, size, weight, padding, radius, case) that `.chip.status-*` and
+`.status-pill` already make together. All of it now goes through the class, `chip_tone_rules` 10 → 5, and
+`statusColors` is deleted rather than kept as a second source a future screen could reach for. The name
+stays in the comment so a reader grepping for it finds the sentence that says why it went, which is why
+the patcher's guard counts *calls* and not mentions — a bare substring count would be a needle reading
+prose as code.
+
+**One of the owner's four rulings rested on a premise this section contradicts, and was re-asked.** The
+card `:hover` lift was approved for removal on the stated ground that a phone has no hover and a stuck
 hover is a WebView artifact — but a `@media (hover:none)` block at the end of the stylesheet already
-neutralises exactly that, with `transform:none !important` and the shadow reset, so the lift is a
-desktop-preview affordance rather than a phone defect. Re-asked rather than executed, per the rule that a
-wrong *reason* for an approval is not permission to spend it.
+neutralises exactly that, with `transform:none !important` and the shadow reset, so the lift only ever
+paints in the desktop preview. Given the corrected premise the owner chose to keep it unchanged, which is
+the answer this section records rather than an edit. A wrong *reason* for an approval is not permission to
+spend it.

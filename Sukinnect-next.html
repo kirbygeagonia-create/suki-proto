@@ -443,8 +443,6 @@
   }
   /* A chip that is a control, not a label, has to be tappable (12). */
   button.chip{ min-height:var(--tap); padding:0 var(--s-3); }
-  .badge-gold{background:var(--warning-100); color:var(--warning-ink);}
-  .badge-alert{background:var(--alert-100); color:var(--error-ink);}
   .row{display:flex; align-items:center; justify-content:space-between;}
   /* A card head is a title and a count, and the two have to take turns rather than fight.
      `.chip` was given `white-space:nowrap` so a status word stops breaking mid-token ("ACCEPTE / D"),
@@ -1068,15 +1066,19 @@
   .produce-voided{ display:flex; gap:7px; align-items:flex-start; margin:9px 0 0; padding:var(--s-2) var(--s-3);
     background:var(--warning-100); border-radius:var(--r-sm); font-size:var(--t-caption); line-height:1.5;
     color:var(--warning-ink); }
-  /* Five tones, each written once. The names that arrived before this file had a vocabulary —
-     .badge-gold, .badge-alert, .status-upcoming, .status-completed — are aliased into the same rules
-     rather than re-declaring the colours, so "warning" cannot mean one amber on Home and another in
-     the list. statusColors() pastes these same tokens inline at three call sites until those move
-     onto the class, and it is written from the same token pairs for that reason. */
+  /* Five tones, each written once. The booking-state names that arrived before this file had a
+     vocabulary — .status-upcoming, .status-completed, .status-requested and the rest — are aliased
+     into the same rules rather than re-declaring the colours, so "warning" cannot mean one amber on
+     Home and another in the list. The legacy .badge-* names are gone: four chips reached their colour
+     through them and two standalone rules repeated token pairs the tone block already owned, which is
+     a second spelling rather than a second tone. A helper named statusColors used to return these
+     same token pairs to three call sites that pasted them into a style attribute; the class took all
+     three, the helper lost its last caller, and it is deleted rather than kept as a second source a
+     future screen could reach for. One status colour now has exactly one place it can be changed. */
   .chip.tone-info, .chip.tone-active, .chip.status-ongoing{ background:var(--deep-100); color:var(--deep); }
-  .chip.tone-good, .chip.status-completed, .badge-verified{ background:var(--success-100); color:var(--success-ink); }
-  .chip.tone-warn, .chip.status-upcoming, .chip.status-en_route, .chip.status-arrived, .badge-gold{ background:var(--warning-100); color:var(--warning-ink); }
-  .chip.tone-alert, .chip.status-cancelled, .badge-alert{ background:var(--error-100); color:var(--error-ink); }
+  .chip.tone-good, .chip.status-completed{ background:var(--success-100); color:var(--success-ink); }
+  .chip.tone-warn, .chip.status-upcoming, .chip.status-en_route, .chip.status-arrived{ background:var(--warning-100); color:var(--warning-ink); }
+  .chip.tone-alert, .chip.status-cancelled{ background:var(--error-100); color:var(--error-ink); }
   .chip.tone-neutral, .chip.status-requested, .chip.status-expired, .chip.status-no_show{ background:var(--background); color:var(--text-muted); box-shadow:inset 0 0 0 1px var(--line); }
   .req-terms b{font-size:var(--t-body); font-weight:800; color:var(--deep);}
   .req-terms .mut{font-size:var(--t-caption); font-weight:600; color:var(--mist);}
@@ -8933,7 +8935,7 @@ function residentHome(){
       </div>` : ''}
       <div class="row" style="margin-top:7px; gap:8px; font-size:var(--t-caption);">
         <span style="color:var(--ink-soft); min-width:0;">${esc(nextStep)}</span>
-        ${(() => { const paid = ['captured', 'collected'].includes(active.payStatus); const c = statusColors(paid ? 'completed' : 'requested'); return `<span class="chip" style="background:${c.bg}; color:${c.fg}; flex-shrink:0;">${esc(payStatusLabel(active))}</span>`; })()}
+        ${(() => { const paid = ['captured', 'collected'].includes(active.payStatus); return `<span class="chip status-${paid ? 'completed' : 'requested'}" style="flex-shrink:0;">${esc(payStatusLabel(active))}</span>`; })()}
       </div>
     </div>` : ''}
 
@@ -9601,22 +9603,6 @@ function residentChatRoom(){
   </div>`;
 }
 
-// Booking lifecycle -> one tint/ink pair, used by every list and detail screen so
-// "ongoing" cannot be green here and white there (AGENTS.md 65, 77). Text stays the
-// primary signal; color is reinforcement only (34).
-function statusColors(status){
-  if(status === 'upcoming' || status === 'en_route' || status === 'arrived')
-    return {bg:'var(--warning-100)', fg:'var(--warning-ink)'};
-  if(status === 'expired' || status === 'no_show')
-    return {bg:'var(--background)', fg:'var(--text-muted)'};
-  if(status === 'completed') return {bg:'var(--success-100)', fg:'var(--success-ink)'};
-  if(status === 'cancelled') return {bg:'var(--error-100)',   fg:'var(--error-ink)'};
-  // Nothing has been agreed yet, so a request does not take the active blue that
-  // "ongoing" means. Same treatment as .status-requested so one status cannot be
-  // quiet on Home and loud in the list.
-  if(status === 'requested') return {bg:'var(--background)',  fg:'var(--ink-soft)'};
-  return {bg:'var(--brand-tint-soft)', fg:'var(--brand-primary)'};
-}
 
 // The rating belongs to this record. This prototype stores it on the booking and
 // does not claim it moved the provider's public average.
@@ -9819,7 +9805,6 @@ function residentBookings(){
     ${filtered.length === 0 ? bookingListEmpty(filter, 'resident') : ''}
 
     ${filtered.map(b => {
-      const sc = statusColors(b.status);
 
       return `
         <div class="card" role="button" tabindex="0" onclick="openBookingDetail('${b.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openBookingDetail('${b.id}')}" style="cursor:pointer; border-radius:var(--r-md); padding:var(--s-4); margin-bottom:12px; border:1px solid var(--line); background:var(--surface);">
@@ -9831,7 +9816,7 @@ function residentBookings(){
                 <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${providerOf(b).name} · ${b.date}, ${b.time}</div>
               </div>
             </div>
-            <span style="background:${sc.bg}; color:${sc.fg}; font-size:var(--t-caption); font-weight:800; padding:3px var(--s-2); border-radius:var(--r-pill); text-transform:uppercase; letter-spacing:0.5px;">
+            <span class="chip status-pill status-${b.status}">
               ${b.status}
             </span>
           </div>
@@ -10480,7 +10465,7 @@ function adminTrustSafety(){
   const dismissed = state.adminAlertState.anomalyDismissed;
   return `
   ${screenHeader('Trust &amp; Safety', { sub:'Review unusual or risky activity', action: `<button class="btn sm onbar" onclick="stepBack();">Back</button>` })}
-  <div class="pad" style="background:var(--cloud);"><div class="card"><div class="row"><b class="card-title">Provider monitoring</b><span class="chip badge-gold">Needs review</span></div><div style="font-size:var(--t-caption); line-height:1.55; margin-top:9px;"><b>Joel Aquino - Appliance Specialist</b><br><span style="color:var(--mist);">Sample thresholds this screen is designed around — the pilot has not measured these.</span><br>Watch: cancellation rate above 15% · complaints in 14 days · rating drift<br><span style="color:var(--ink-soft);">The sample roster carries 19% cancellation and 5 complaints for this provider. A trend needs two points in time, and the pilot has produced one.</span></div><button class="btn sm secondary btn-block" style="margin-top:10px;" onclick="state.tab='admin_verifications'; state.adminProviderCategory='verified'; render();">Review Provider</button></div><div class="card"><div class="row"><b class="card-title">Anomaly alerts</b><span class="chip badge-alert">Requires review</span></div>${dismissed ? `<div style="font-size:var(--t-caption); color:var(--success-ink); margin-top:9px;">Anomaly marked as reviewed and recorded in the audit log.</div>` : `<div style="font-size:var(--t-caption); line-height:1.55; margin-top:9px;"><b>Potential review anomaly</b><br>The signal this screen is built to catch: a burst of top ratings arriving together, from accounts with no other history. The demo records carry no review timestamps, so nothing here has been detected — it is the shape of the alert, not an alert.<br><span style="color:var(--mist);">This is unusual activity and is not a fraud conclusion.</span></div><div style="display:flex; gap:6px; margin-top:10px;"><button class="btn sm" style="flex:1;" onclick="state.adminAlertState.anomalyInvestigated=true; adminLog('Anomaly investigated','Review pattern','Investigation opened'); render();">Investigate</button><button class="btn sm secondary" style="flex:1;" onclick="state.adminAlertState.anomalyDismissed=true; adminLog('Anomaly dismissed','Review pattern','Marked reviewed'); render();">Dismiss</button></div>`}</div></div>`;
+  <div class="pad" style="background:var(--cloud);"><div class="card"><div class="row"><b class="card-title">Provider monitoring</b><span class="chip tone-warn">Needs review</span></div><div style="font-size:var(--t-caption); line-height:1.55; margin-top:9px;"><b>Joel Aquino - Appliance Specialist</b><br><span style="color:var(--mist);">Sample thresholds this screen is designed around — the pilot has not measured these.</span><br>Watch: cancellation rate above 15% · complaints in 14 days · rating drift<br><span style="color:var(--ink-soft);">The sample roster carries 19% cancellation and 5 complaints for this provider. A trend needs two points in time, and the pilot has produced one.</span></div><button class="btn sm secondary btn-block" style="margin-top:10px;" onclick="state.tab='admin_verifications'; state.adminProviderCategory='verified'; render();">Review Provider</button></div><div class="card"><div class="row"><b class="card-title">Anomaly alerts</b><span class="chip tone-alert">Requires review</span></div>${dismissed ? `<div style="font-size:var(--t-caption); color:var(--success-ink); margin-top:9px;">Anomaly marked as reviewed and recorded in the audit log.</div>` : `<div style="font-size:var(--t-caption); line-height:1.55; margin-top:9px;"><b>Potential review anomaly</b><br>The signal this screen is built to catch: a burst of top ratings arriving together, from accounts with no other history. The demo records carry no review timestamps, so nothing here has been detected — it is the shape of the alert, not an alert.<br><span style="color:var(--mist);">This is unusual activity and is not a fraud conclusion.</span></div><div style="display:flex; gap:6px; margin-top:10px;"><button class="btn sm" style="flex:1;" onclick="state.adminAlertState.anomalyInvestigated=true; adminLog('Anomaly investigated','Review pattern','Investigation opened'); render();">Investigate</button><button class="btn sm secondary" style="flex:1;" onclick="state.adminAlertState.anomalyDismissed=true; adminLog('Anomaly dismissed','Review pattern','Marked reviewed'); render();">Dismiss</button></div>`}</div></div>`;
 }
 
 function adminAuditLog(){
@@ -10743,7 +10728,7 @@ function adminProviderManagementProfile(){
         return rows.length ? `<div style="font-size:var(--t-caption); line-height:1.9; margin-top:9px;">${rows.map(b =>
           `${esc(b.summary || b.request)} — ${esc(customerOf(b).name)} — ${esc(shortDate(b.completedAt || b.date))} — ${esc(pesoShort(bookingTotal(b)))} — <b>${esc(label(b.status))}</b>`
         ).join('<br>')}</div>` : `<div style="font-size:var(--t-caption); color:var(--mist); margin-top:9px;">No bookings recorded for this provider on this device.</div>`;
-      })()}</div>`:''}${section==='reviews'?`<div class="card"><b class="card-title">Reviews &amp; complaints</b><div class="stat-strip" style="margin-top:10px;"><span class="f"><b>${provider.rating}</b><span>rating</span></span><span class="f"><b>${(provider.reviews || []).length}</b><span>reviews on file</span></span><span class="f"><b>${meta.complaints}</b><span>complaints</span></span><span class="f"><b>${providerCases(provider.id).filter(caseIsOpen).length}</b><span>cases open</span></span></div></div>`:''}${section==='activity'?`<div class="card"><b class="card-title">Activity</b><div style="font-size:var(--t-caption); line-height:2; margin-top:9px;">${adminActivityRows(provider)}</div></div>`:''}${section==='notes'?`<div class="card"><b class="card-title">Internal admin notes</b><textarea id="provider-admin-note" aria-label="Internal admin note about this provider" placeholder="Add internal note about this provider..." style="width:100%; min-height:80px; margin-top:9px; padding:var(--s-2); border:1px solid var(--line); border-radius:var(--r-xs); font:inherit;">${note}</textarea><button class="btn sm secondary" style="margin-top:10px;" onclick="saveAdminProviderNote('${provider.id}', '${provider.name}')">Save note</button></div>`:''}<div class="card">${state.adminFlagged.includes(provider.id) ? `<div class="row"><b class="card-title">Account status</b><span class="chip badge-gold">Flagged for review</span></div><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:8px;">Recorded in the audit log. This prototype does not restrict, suspend or remove accounts - a decision needs a reason and a second administrator.</div>` : `<b class="card-title">Account status</b><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:6px;">Restrictive actions are not available here: they require a written reason and confirmation.</div><button class="btn sm secondary btn-block" style="margin-top:10px;" onclick="flagAccountReview('${provider.id}', '${provider.name}')">Flag for status review</button>`}</div></div>`;
+      })()}</div>`:''}${section==='reviews'?`<div class="card"><b class="card-title">Reviews &amp; complaints</b><div class="stat-strip" style="margin-top:10px;"><span class="f"><b>${provider.rating}</b><span>rating</span></span><span class="f"><b>${(provider.reviews || []).length}</b><span>reviews on file</span></span><span class="f"><b>${meta.complaints}</b><span>complaints</span></span><span class="f"><b>${providerCases(provider.id).filter(caseIsOpen).length}</b><span>cases open</span></span></div></div>`:''}${section==='activity'?`<div class="card"><b class="card-title">Activity</b><div style="font-size:var(--t-caption); line-height:2; margin-top:9px;">${adminActivityRows(provider)}</div></div>`:''}${section==='notes'?`<div class="card"><b class="card-title">Internal admin notes</b><textarea id="provider-admin-note" aria-label="Internal admin note about this provider" placeholder="Add internal note about this provider..." style="width:100%; min-height:80px; margin-top:9px; padding:var(--s-2); border:1px solid var(--line); border-radius:var(--r-xs); font:inherit;">${note}</textarea><button class="btn sm secondary" style="margin-top:10px;" onclick="saveAdminProviderNote('${provider.id}', '${provider.name}')">Save note</button></div>`:''}<div class="card">${state.adminFlagged.includes(provider.id) ? `<div class="row"><b class="card-title">Account status</b><span class="chip tone-warn">Flagged for review</span></div><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:8px;">Recorded in the audit log. This prototype does not restrict, suspend or remove accounts - a decision needs a reason and a second administrator.</div>` : `<b class="card-title">Account status</b><div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; margin-top:6px;">Restrictive actions are not available here: they require a written reason and confirmation.</div><button class="btn sm secondary btn-block" style="margin-top:10px;" onclick="flagAccountReview('${provider.id}', '${provider.name}')">Flag for status review</button>`}</div></div>`;
 }
 
 /* The queue filters decided applicants out, so the console needs a place that still
@@ -10756,7 +10741,7 @@ function adminDecidedSection(decided){
   return `<div style="font-size:var(--t-caption); color:var(--mist); margin:0 0 10px; line-height:1.5;">Decided on this device. Reopening an application returns it to the queue and adds that to its activity.</div>`
     + decided.map(a => {
       const r = reviewOf(a.id);
-      return `<div class="card" style="padding:var(--s-3); margin-bottom:10px;"><div class="row" style="align-items:flex-start;"><div style="min-width:0;"><b class="card-title">${esc(a.name)}</b><div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${esc(a.service)} · ${esc(a.barangay)}</div></div><span class="chip ${r.status === 'verified' ? '' : 'badge-alert'}" style="flex-shrink:0;">${esc(reviewStatusLine(r.status))}</span></div><div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:8px; line-height:1.5;">${esc(shortDate(r.decidedAt))} ${esc(clockText(r.decidedAt))} by ${esc(r.reviewer || 'this administrator')}${r.reason ? ' — ' + esc(r.reason) : ''}</div><button class="btn sm secondary" style="margin-top:10px;" onclick="openProviderVerification('${a.id}')">Open the decision</button></div>`;
+      return `<div class="card" style="padding:var(--s-3); margin-bottom:10px;"><div class="row" style="align-items:flex-start;"><div style="min-width:0;"><b class="card-title">${esc(a.name)}</b><div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${esc(a.service)} · ${esc(a.barangay)}</div></div><span class="chip ${r.status === 'verified' ? '' : 'tone-alert'}" style="flex-shrink:0;">${esc(reviewStatusLine(r.status))}</span></div><div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:8px; line-height:1.5;">${esc(shortDate(r.decidedAt))} ${esc(clockText(r.decidedAt))} by ${esc(r.reviewer || 'this administrator')}${r.reason ? ' — ' + esc(r.reason) : ''}</div><button class="btn sm secondary" style="margin-top:10px;" onclick="openProviderVerification('${a.id}')">Open the decision</button></div>`;
     }).join('');
 }
 
@@ -10800,7 +10785,7 @@ function adminVerifications(){
       const picked = PROVIDERS.find(p => p.id === state.adminCredentialProvider);
       const watch = PROVIDERS.filter(p => adminProviderMeta(p).credential !== 'Valid');
       return `
-    <div class="card"><div class="row"><b class="card-title">Needs a look</b><span class="chip badge-alert">${watch.length} of ${PROVIDERS.length} providers</span></div>
+    <div class="card"><div class="row"><b class="card-title">Needs a look</b><span class="chip tone-alert">${watch.length} of ${PROVIDERS.length} providers</span></div>
       ${watch.length ? watch.map(p => `<div style="font-size:var(--t-caption); line-height:1.55; margin-top:8px;"><b>${esc(p.name)}</b><br>${esc(p.credentials[0] || 'No credential on file')}<br><span style="color:var(--mist);">${esc(adminProviderMeta(p).credential)}</span></div>`).join('')
         : `<div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px;">Every credential on the roster is marked valid. Nothing is waiting on you.</div>`}
     </div>
@@ -11005,8 +10990,8 @@ function providerVerificationReview(){
                  flagged:'Flagged for review', missing:'Not submitted' };
   const decided = review.status === 'verified' || review.status === 'rejected';
   const chipTone = review.status === 'verified' ? ''
-    : review.status === 'rejected' ? 'badge-alert'
-    : review.status === 'update requested' ? 'badge-gold' : 'badge-gold';
+    : review.status === 'rejected' ? 'tone-alert'
+    : review.status === 'update requested' ? 'tone-warn' : 'tone-warn';
   return `
   ${screenHeader('Provider Verification', { back: "state.tab='admin_verifications'; render();", backLabel:'Back to pending providers', sub:'Application ' + esc(app.applicationId) })}
   <div class="pad pad-cta" style="background:var(--cloud);">
@@ -11767,7 +11752,7 @@ function opportunityRadar(){
     <div class="card" style="background:var(--grad-brand-panel); color:var(--on-brand)">
       <div class="row" style="margin-bottom:6px;">
         <span style="font-size:var(--t-caption); font-weight:800; color:var(--on-brand);"><span style="color:var(--brand-secondary); display:inline-flex; vertical-align:-2px;">${ic("zap",12)}</span> Opportunity radar</span>
-        <span class="chip ${waiting.length ? 'badge-gold' : ''}" style="font-size:var(--t-caption);">${waiting.length ? waiting.length + ' waiting' : 'nothing waiting'}</span>
+        <span class="chip ${waiting.length ? 'tone-warn' : ''}" style="font-size:var(--t-caption);">${waiting.length ? waiting.length + ' waiting' : 'nothing waiting'}</span>
       </div>
       <div style="font-size:var(--t-body-lg); font-weight:700; margin-bottom:4px;">${cat.label}</div>
       <div style="font-size:var(--t-caption); opacity:0.92; line-height:1.45; margin-bottom:12px;">
@@ -12250,7 +12235,7 @@ function providerBookings(){
               <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${esc(customerOf(b).name)} - ${b.status === 'requested' ? 'asked for ' : ''}${esc(b.date)}, ${esc(b.time)}</div>
             </div>
           </div>
-          <span class="chip" style="font-size:var(--t-caption); text-transform:uppercase; background:${statusColors(b.status).bg}; color:${statusColors(b.status).fg};">${esc(label(b.status))}</span>
+          <span class="chip status-pill status-${b.status}">${esc(label(b.status))}</span>
         </div>
         ${b.status === 'requested' ? `<div style="font-size:var(--t-caption); font-weight:800; color:var(--deep); display:flex; align-items:center; gap:5px; margin-top:4px;"><span class="wait-dot"></span> Needs your answer</div>` : ''}
         <div style="font-size:var(--t-body-sm); font-weight:700; color:var(--ink); margin-top:6px;">${bookingAmountText(b)}${b.status === 'requested' && !priceByOffer(b) ? `<span style="font-size:var(--t-caption); font-weight:600; color:var(--mist);"> indicative</span>` : ''}</div>
