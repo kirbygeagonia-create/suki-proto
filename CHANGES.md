@@ -9709,3 +9709,224 @@ bytes at `aac05ca`, logged in `.scratch/sweep-2.log`. Before that commit it was 
 two lines at every corner. That contrast is the whole argument for the diagnosis above: a geometry
 failure that does not vary with width or text size is not geometry, and a defect that disappears when
 the *walk* is corrected was never in the page.
+
+**The eight-corner run over the fixed bytes, quoted rather than paraphrased.**
+Printed by `node tools/sweep-text-scale.cjs` against the bytes after the camera fix, and the first run
+that painted the 22 admin screens as themselves. Last fourteen lines of that log, verbatim:
+
+    
+    ### 320x480 @ 200% text — short handset / split-screen at largest text (480px tall)
+      25 tallies, all clear
+    
+    ### 320x300 @ 100% text — a keyboard open on a short phone (300px of viewport left)
+      25 tallies, all clear
+    
+    ### 450x889 @ 200% text — vivo 1906 panel at the device's own largest text (450x889 @ 200%)
+      25 tallies, all clear
+    
+    ### defaultxdefault @ 100% text — default width, default text — the anchor a clean run must also produce
+      25 tallies, all clear
+    
+    8 of 8 phone corners measured clean.
+
+
+## 159. A ruling moved the admin console to the web, and twenty-two screens of the sweep quietly became a refusal page
+
+The full mutant aggregate ran for the first time since 2026-10-25 — 68 families, every one of them
+rewriting and restoring `Sukinnect-next.html` — and it flagged three families with five surviving
+mutants: `chart-collide` 5 applied / 2 caught, `focus-trap` 3 / 2, `nav-fit` 5 / 4. Each missed break
+reported the same thing: the sensor it exists to dirty read **0**.
+
+The cause was found by reading, not by running, and it was not the two guesses made before it.
+
+**Not the load.** Twelve other camera-driven families passed in the same pass — `bar-titles` 7/7,
+`blank-query` 2/2, `camera-dialog-coverage` 6/6, `camera-surfaces` 3/3, `compat-floor` 7/7,
+`control-reach` 3/3, `dialog-focus` 5/5, `double-tap` 2/2, `flex-crush` 5/5, `long-input` 2/2,
+`notification-routes` 2/2, `photo-name` 2/2. Chrome was healthy. Before reaching for "the machine was
+busy", count the siblings that use the same mechanism.
+
+**Not the typography swap.** `chart-collide` and `nav-fit` both budget by measured text width, so the
+Poppins change was the natural suspect — until the breaks' own screen lists were read: `chart-collide`
+has five breaks, the two that **caught** name `provider-dash` and the three that **missed** name
+`admin-dash` (lines 101, 114, 118). `focus-trap` drives `admin-review-document/request/approve`. A
+one-to-one mapping between "admin screen" and "missed mutant" is not a font metric.
+
+**The cause.** `render()` line 8983: `screen.innerHTML = state.appShell ? adminWebOnly() : adminTabHTML();`.
+The owner's ruling of 2026-10-27 moved the operations console to the web, so inside the app shell every
+admin screen is replaced by a page that says where it went. Correct as product. The camera's default
+surface is the shell. So every admin row in the walk has been photographing a refusal page — and a
+refusal page is a *very* clean-looking screen: no charts to collide, no overlay to escape, no nav labels
+to clip, tap targets comfortably large, contrast fine.
+
+**The size of it, counted rather than estimated: 31 of the walk's 100 rows are admin rows, and only nine
+set `state.appShell=false`.** Twenty-two admin surfaces — the dashboard, audit log, finance, trust and
+safety, marketplace intelligence, categories, the verifier list, the attention queue, every review
+screen, the verified roster, help desk, provider management, insights, the decided tab, the empty
+verifier state and produce intelligence — have been unmeasured since the ruling landed. **The
+"8 of 8 corners clean over 100 screens" figure committed at `c38add6` is therefore vacuous for roughly a
+fifth of the walk**, and so is every tap-floor, contrast and clipping number quoted for those screens.
+That figure was reported as a success in this session's own commit message.
+
+The fix is derived, not listed. `aac05ca` had already patched nine rows by matching one setup string —
+which is exactly how the other twenty-two kept lying — so the rule now sits in the single place every row
+passes through and asks the state the row actually set: if the role is admin and the shell is on, stand on
+the web surface. A row that names `state.appShell` itself wins, because that precedence is what keeps the
+second half honest.
+
+**And the second half is a finding of its own: the refusal page had zero coverage.** `grep -c adminWebOnly
+tools/shot.cjs` answered 0 — no row, so no tap floor, no contrast, no heading measurement on the only
+admin screen a phone user can actually reach. Applying the derived rule alone would have preserved that
+silence forever, because clearing the shell for every admin row means nothing ever paints the refusal
+again. So the same change adds `admin-shell-refusal`, which asks for the shell deliberately. The general
+rule: when a ruling removes a surface, sweep the instruments that measured it — and when a fix would make
+a screen unmeasurable, measure the screen the fix replaces.
+
+What is still unknown after this, stated plainly: the 22 admin screens have never been swept as themselves.
+The next eight-corner run over the fixed bytes is the first that will say anything about them, and it may
+find real defects. A clean number over a placeholder is not a clean number.
+
+**Two things this bounds, found while trying to size the damage.** Measured rather than assumed: the Node
+harness boots with `state.appShell === false`, so the **gate never had this blind spot** — its admin
+assertions run against the real console HTML, and the vacuity is confined to the camera. That is the
+difference between "a fifth of the suite is lying" and "a fifth of one instrument is", and it is why the
+first question after finding a void should be what else touches the same path. The other half is less
+comforting: `adminTabHTML` is **not in the harness export list**, so no gate check can render the admin
+console's tab markup at all. The console's coverage is therefore function-level checks on its data plus
+whatever the fixed sweep finally measures — not, and never has been, a check that the console paints.
+Exporting it is the obvious next move, and it is a small one.
+
+**The re-run of the four flagged families, and what it did and did not clear.** Read from the log, not
+inferred from the fix landing: `chart-collide` went 2 of 5 caught to **4 of 5**, and the first of those
+two new catches prints `worst escape 0px, on admin-dash at --width=320 --font-scale=2` — a line that
+could not have existed while admin-dash was a refusal page, because there was no chart on it to break.
+So the derived surface rule works: the admin screens are painted again and the sensors on them answer.
+
+The remaining survivor is a different class, and it is recorded rather than repointed under pressure:
+
+    MISSED  the headroom refusal no longer drops the numbers, so the tallest one leaves the chart
+            (findings present, but the worst escape is 0px and this break has to prove 3px)
+
+It applied (`0 not applied`), the mutation produced findings, and the *specific* evidence the break
+asserts — a value label hanging at least 3px above its own chart box at 320x638 @ 150% text — is now 0px.
+The break's own comment records that the refusal at that corner was a **shortfall** of about nine units,
+so the premise is a margin, and margins move: this build has since changed the face the figures are
+measured in (`--font-figures` carries digits in Atkinson while the words are Poppins), and the reserve is
+computed from the type. The honest reading is that the guard is no longer *reached* at that corner, which
+is a question about the application's arithmetic at 1.5 — not about whether the drop-the-numbers rule
+still protects the escape, and not answerable by editing the break. **Open**, to be settled by measuring
+whether `chartColumns` still refuses the reserve at 320x638 @ 150%, on a build where no mutant pass owns
+the file. Deleting the break would retire the only proof the vertical half of the guard exists; forcing
+the number down to 0 would make the break pass on the absence of its own evidence.
+
+Two plan rows landed with this. §13A's new-trades row reads **DECLINED BY THE OWNER, 2026-10-27** —
+put to the owner and answered "leave the catalogue as-is", so it is a ruling and not an unbuilt task, and
+the paragraph beneath the table now separates the three items that cannot be built here from the one that
+was declined. And §14's acceptance table no longer carries "(567 today)": the gate's count is printed by
+`node tools/verify.cjs`, and this document has been wrong every time it carried one.
+
+**`focus-trap` cleared one of its two survivors and not the other, and the second is a fact about the
+sensor rather than about the fix.** It went 2 of 3, the same headline as before, but a different break
+holds it: `CAUGHT one layer root loses the convention, so topLayerEl() finds nothing (24 stops behind the
+scrim)` is new — 24 focus stops were previously invisible because the review screens were a refusal page.
+The survivor is now the class-lookup break:
+
+    MISSED  the lookup goes back to class names, which the verification overlay does not have
+            (Tab still stayed inside the layer, so this is not what holds it)
+
+The premise is true, and it was checked against the markup rather than assumed: `verificationReview()`
+paints `<div data-layer="modal" style="position:fixed; …z-index:var(--z-modal)">` (line 12183) — the
+marker, no `.modal-layer` class. So a class-based `topLayerEl()` does miss it. What the run says is that
+missing it does not let the caret out. Two readings remain open, and they need different repairs:
+
+1. the break is **equivalent** here, because on that screen nothing else is focusable in the position the
+   walk reaches — the layer's own controls are the only stops, so the guarantee holds by absence rather
+   than by inerting; or
+2. something else does the work — the walk starts inside the layer and the tab order leaves through the
+   browser rather than through the page, which the tally cannot see as an escape.
+
+Either way the honest consequence is the same and is not that the rule is unneeded: **the class-name
+version of the lookup is still wrong for a different screen** — one where the review overlay sits over a
+sheet, or over a page with buttons in it — and a break that cannot fire on the current population is a
+gap in coverage, not a verdict about the code. Settled by one measurement once the mutex is free: run
+`node tools/falsify-focus-trap.cjs` with the break applied and the walk pointed at a screen where the
+classless overlay is raised above something focusable, then read the whole output rather than the count.
+What is not acceptable is lowering the tally's expectation or deleting the break, which would certify the
+rule on the absence of the evidence that named it.
+
+**`nav-fit` reported the third break of the same shape, and three in one re-run is a finding about the
+suite rather than three findings about the app.**
+
+    MISSED  the fit measures the item's box again, so it stops while the label is still clipped
+            (still 0 everywhere, so neither sensor reads this rule)
+
+That break used to report `cut=10` — it is the one that condemned measuring `.navitem.clientWidth`
+(including the item's 4px horizontal padding) instead of the label's own box, the defect an OPPO
+CPH2179 found on the device while four sessions of sweeps read 0. Reinstating the item box now changes
+nothing at any corner the family drives. Read the three survivors together and the common cause is the
+**population, not the rule**: a break fires only where the measurement it corrupts is *decisive* — the
+headroom break needs a corner where the reserve is actually refused by a margin, the focus break needs a
+classless layer raised over something focusable, the nav break needs a label within 8px of its slot. Each
+of those is a property of the seed and the corner set, and both have moved since the breaks were written:
+Poppins and `--font-figures` moved every measured text width, the admin ruling changed what is painted and
+then what is measured, and the nav work moved the floor conversion from `round` to `ceil`.
+
+So the repair is one act applied to three families, and it is measurement, not editing: for each break,
+find or construct the corner where the rule is decisive, prove the break fires there, and state in the
+family's own comment which corner carries the evidence and why. Deleting a break that reads 0 would retire
+three guards at the moment the app is least able to say whether they still work — and AGENTS already
+records that a break printing MISSED is read, not deleted, five times over. `split-figures` is the control
+case in the same run: it prints **1 of 1 caught** plus one deliberate `QUIET` observation (dropping only
+`white-space:nowrap` while `flex-shrink:0` holds breaks nothing at this corner), which is what an honest
+"this half cannot be isolated here" looks like when it is written down rather than counted.
+
+**#71 is closed by measurement, and it turned out to be two defects rather than one weak check.** The
+gate's weight assertion counted `new Set(uiWeights).size === 4`, which cannot see a deleted face: Poppins
+declares every weight in two subsets (measured on disk — 24 blocks: Poppins 8, Plus Jakarta 8, Atkinson 4,
+Fraunces 4; semibold latin and semibold latin-ext), so withdrawing one leaves four distinct weights and
+the check prints PASS beside an unclaimed WOFF2. The replacement asserts the **relation** between the
+weights — every weight of the UI family must be declared the same number of times — because a fixed count
+is what rotted: Atkinson carries one file per weight and Poppins two, so a number would have failed a
+correct change of subset convention, while a relation passes an added subset and condemns a removed face.
+Proved in memory against a mutant that lives only in a string, so no tracked file was touched while the
+sweep was reading them: `node .scratch/prove-71.js` prints the shipped file at 2/2/2/2 green and the same
+file with exactly one semibold block withdrawn at 1/2/2/2 red, while the old predicate reads green on
+**both**. Gate 739 → 740, committed at `a8e61b6`.
+
+**The second defect: that family's own break had been aiming at the wrong family for a whole pass.**
+`falsify-typography` mutant 4 renames the last **Atkinson** face and names the weight check — but since
+the Poppins swap that check filters on the *UI* family, so the mutation cannot move the number it was
+written to move. That is the survivor the chain just printed (`6 applied, 5 caught`), and it is not a
+behaviour question at all: it is the stale-needle class arriving through a *semantic* change rather than a
+text change, so the needle still matched and the mutant still applied. Re-pointed, two breaks, one per
+guard: withdraw **one** semibold block (old check green, new check red) and withdraw **both** (old check
+red, because the family is then a three-weight family). Recorded here because the family's Edit missed on
+whitespace and the re-point is owed — a check that was just proven in memory is not yet proven in the
+suite, and the difference matters the next time someone edits fonts.css.
+
+**The family re-point was written and then taken back out, deliberately.** The gate check landed and
+is proven in memory (`a8e61b6`), but the two new mutants could not be proven inside this window: the
+filter I wrote to withdraw a Poppins block matched zero blocks, and the cause was escaping, not the
+premise — a quoted heredoc ate one of the two backslashes, so the JS string held the literal letter s
+instead of the whitespace class, and the regex became
+`font-weights*600`. The premise is sound once that layer is removed, and the counts say so: 24 blocks match, 8 carry
+`font-family: 'Poppins'`, 7 carry a 600 weight, so the intersection the break needs is exactly 2. The
+repair is to use `b.indexOf('font-weight: ' + weight + ';')` and no regex at all, then run the family
+once with no other pass alive (it writes fonts.css, which the sweep reads). Reverted rather than
+committed untested: a break that returns the file unchanged prints SKIP and retires a guard while
+looking like a clean run — the failure this document has recorded five times.
+
+**Why the eight-corner figures below come from a second run.** The chain that re-ran the four flagged
+families ended with the sweep appended to the same command and **piped** rather than redirected. The
+harness then reported the task completed at exit code 0, its output file was empty, and the log stopped at
+the stage marker — while the screenshots in `.shots/` carried timestamps sixteen minutes later, proving the
+sweep had really run and really painted every corner. Nothing about the run was recoverable. So the rule
+this repository has written down twice gets a third instance and a sharper form: **a run whose output
+cannot be read is a run that did not happen**, and neither `completed` nor exit 0 is evidence about a stage
+whose stdout went nowhere. It was re-run into `.scratch/sweep-159.log`, and the numbers below are that run.
+
+The lander written for it also refuses to count processes. Measured here in one instant: `ps -W` filtered on
+`node.exe` answered 1 and `tasklist` filtered the same way answered 2, and the filtered form
+(`tasklist //FI "IMAGENAME eq node.exe"`) dies outright when spawned from this shell. A guard that is wrong
+in both directions is worse than no guard, because it reads as a measurement. The three conditions it does
+judge are the run's own eight corner headers, its final verdict line, and `git status` on the file a live
+mutant pass would own — which is the thing a process count was standing in for.
