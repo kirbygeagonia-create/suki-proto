@@ -52,7 +52,25 @@ const MUTANTS = [
   { name: 'the entry caption goes back to promising eight rows over one',
     needle: "${shown.length ? ' Its newest ' + (shown.length === w.entryCount ? shown.length : shown.length + ' of ' + w.entryCount) + ':' : ''}",
     to: ' The newest eight:',
-    label: 'the entry list names the rows it actually painted, never a count it did not reach' }
+    label: 'the entry list names the rows it actually painted, never a count it did not reach' },
+  /* The two seams landed after the wallet: an exchange feed and a bot check. Each answers with the gap,
+     so the break that matters is the seam starting to answer with a value it does not have. */
+  { name: 'the exchange seam invents a rate and a date for it',
+    needle: 'available: false, rate: null, asOf: null,',
+    to: "available: true, rate: 58.4, asOf: '2026-10-27',",
+    label: 'the exchange feed is a seam that answers no rate rather than estimating one' },
+  { name: 'the bot check reports a verdict no provider gave it',
+    needle: 'available: false, passed: null, provider: null,',
+    to: 'available: true, passed: true, provider: "recaptcha",',
+    label: 'the bot check is a seam that names all three things it does not have' },
+  { name: 'the exchange sentence goes back inside the band branch, where the other branch goes quiet',
+    needle: '${rail}${body}${feed}${confirm}${err}',
+    to: '${rail}${body}${confirm}${err}',
+    label: 'the pricing wizard says where a foreign rate would have come from, in every band state' },
+  { name: 'the register card stops saying that no bot check ran',
+    needle: '<div style="font-size:var(--t-caption); color:var(--mist); margin-top:6px; line-height:1.5;">${esc(spamCheckSeam().reason)}</div>',
+    to: '',
+    label: 'the register card states that no bot check ran, and the sign-in card does not carry the claim' }
 ];
 
 function gateOutput() {

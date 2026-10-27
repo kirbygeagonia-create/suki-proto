@@ -6375,8 +6375,7 @@ function rateWizardSheet(){
       <b class="card-title">Nothing to suggest yet</b>
       <div style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.6; margin-top:6px;">
         No provider on this device lists a rate for ${esc(w.trade || 'your trade')}, so there is no band to count
-        from. Type the amount you want to charge instead — it is your rate, and nothing here invents one for you.
-      </div>
+        from. Type the amount you want to charge instead — it is your rate, and nothing here invents one for you.</div>
       <label class="form-label" style="margin-top:12px;">Your rate in pesos
         <input id="rate-wizard-custom" type="number" min="0" step="1" inputmode="decimal" class="form-input" placeholder="e.g. 450">
       </label>
@@ -6398,6 +6397,12 @@ function rateWizardSheet(){
       </div>
     </div>` : '';
   const err = w.error ? `<div class="inline-error" role="alert" style="margin-top:10px;">${esc(w.error)}</div>` : '';
+  /* Outside the band ternary on purpose: whether a market band exists is a fact about this device's
+     roster, and the sentence that no rate was read from outside Sukinnect is true in every one of those
+     states and on every step. Inside a branch it would go quiet exactly when the wizard has nothing to say. */
+  const feed = `<div style="font-size:var(--t-caption); color:var(--mist); line-height:1.55; margin-top:10px;">
+      ${ic('alert-triangle', 12)} ${esc(exchangeRateSeam().reason)}
+    </div>`;
   const last = step === RATE_WIZARD_STEPS.length - 1;
   return `
     <div class="sheet-head">
@@ -6407,7 +6412,7 @@ function rateWizardSheet(){
       </div>
       <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close">${ic('x', 15)}</button>
     </div>
-    <div class="sheet-body">${rail}${body}${confirm}${err}</div>
+    <div class="sheet-body">${rail}${body}${feed}${confirm}${err}</div>
     <div class="sheet-foot">
       <button type="button" class="btn sm secondary" style="flex:1;" ${step === 0 ? 'disabled aria-disabled="true"' : ''}
         onclick="rateWizardGo(${step - 1})">Back</button>
@@ -6630,6 +6635,28 @@ function walletSnapshot(providerId) {
     entryCount: entries.length,
     entries,
     holdDays: CONFIG.payoutHoldDays
+  };
+}
+
+/* Two more procedures the brief asks for, each with a named seam and no network call behind it.
+   An exchange rate and a bot check are both things this build cannot do: the first needs a feed from
+   outside the application, the second needs a provider, a secret key and a server to verify the token
+   with. So the app states the gap where a person would otherwise assume the work was done, and the
+   gate holds the wording. */
+function exchangeRateSeam(currency) {
+  return {
+    available: false, rate: null, asOf: null, currency: currency || null,
+    reason: 'Every amount in this app is pesos. A rate in another currency would need an exchange feed '
+      + 'read from outside Sukinnect, and this build makes no network call at all, so there is no rate '
+      + 'to show and none is estimated.'
+  };
+}
+function spamCheckSeam() {
+  return {
+    available: false, passed: null, provider: null,
+    reason: 'No bot check runs when an account is created here. A CAPTCHA needs a provider, a secret key '
+      + 'and a server that verifies the token; this prototype has none of the three, so it does not '
+      + 'claim to have told a person from a script.'
   };
 }
 
@@ -9327,7 +9354,8 @@ function loginHTML(){
           <b>erning@demo.ph</b> for the Fruit Harvest &amp; Buy pilot. Same app, different work.</div>` : ''}
         ${isRegister ? '' : `<button type="button" class="auth-forgot" onclick="showToast('Password reset is not part of this prototype.')">Forgot password?</button>`}
 
-        ${isRegister ? `<button type="button" class="auth-forgot" id="signup-guide-open" onclick="openSignupGuide()">Guide me through signing up</button>` : ''}
+        ${isRegister ? `<button type="button" class="auth-forgot" id="signup-guide-open" onclick="openSignupGuide()">Guide me through signing up</button>
+        <div style="font-size:var(--t-caption); color:var(--mist); margin-top:6px; line-height:1.5;">${esc(spamCheckSeam().reason)}</div>` : ''}
         ${legalLinks()}
 
         <div class="auth-field" style="margin-bottom:0;">

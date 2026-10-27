@@ -129,7 +129,8 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'CREDENTIALS', 'LISTINGS'
   /* the wallet view and its two money seams */
   'openWallet', 'walletSheet', 'walletSnapshot', 'walletEntries',
   'chainHash', 'buildLedgerChain', 'verifyLedgerChain',
-  'gatewayCashSeam', 'cashMovementSeam', 'loyaltyTier', 'fundingEligibilitySeam'];
+  'gatewayCashSeam', 'cashMovementSeam', 'loyaltyTier', 'fundingEligibilitySeam',
+  'exchangeRateSeam', 'spamCheckSeam'];
 
 function boot({ appMode = false, storage = null } = {}) {
   const src = fs.readFileSync(APP, 'utf8');

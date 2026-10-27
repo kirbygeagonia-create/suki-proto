@@ -6689,6 +6689,34 @@ suite('wallet', async () => {
   c.check('a listed entry says plainly that it is not spendable money',
     /not money that can be spent/.test(sheet) && /inside the \d+-day hold/.test(sheet),
     sheet.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').match(/An entry is[^]{0,140}/)?.[0] || 'sentence absent');
+  const rate = app.exchangeRateSeam('USD');
+  c.check('the exchange feed is a seam that answers no rate rather than estimating one',
+    rate.available === false && rate.rate === null && rate.asOf === null && /no network call/.test(rate.reason),
+    JSON.stringify(rate).slice(0, 110));
+  const bot = app.spamCheckSeam();
+  c.check('the bot check is a seam that names all three things it does not have',
+    bot.available === false && bot.passed === null && /provider/.test(bot.reason) && /server/.test(bot.reason),
+    JSON.stringify(bot).slice(0, 110));
+  const wiz = (() => { const s = boot(); s.state.view = 'app'; s.state.role = 'provider'; s.openRateWizard(); return String(s.rateWizardSheet()); })();
+  /* Two halves, because the sentence sitting inside the band branch was the defect: a device whose
+     roster has no rate for the trade renders the other branch and went quiet exactly where the wizard
+     has nothing to offer. The render proves it paints; the shape proves it is outside the branch. */
+  c.check('the pricing wizard says where a foreign rate would have come from, in every band state',
+    /exchange feed/.test(wiz) && /no network call/.test(wiz)
+      && /\$\{rail\}\$\{body\}\$\{feed\}/.test(String(app._source))
+      && (String(app._source).match(/exchangeRateSeam\(\)/g) || []).length === 1,
+    'renders: ' + /exchange feed/.test(wiz) + ' · outside the branch: '
+      + /\$\{rail\}\$\{body\}\$\{feed\}/.test(String(app._source)) + ' · call sites: '
+      + (String(app._source).match(/exchangeRateSeam\(\)/g) || []).length);
+  const reg = (() => { const s = boot(); s.state.view = 'auth'; s.state.authMode = 'register'; return String(s.loginHTML()); })();
+  const sig = (() => { const s = boot(); s.state.view = 'auth'; s.state.authMode = 'login'; return String(s.loginHTML()); })();
+  /* The first version of this check demanded the not-stored sentence sit beside it, and that sentence
+     lives in a toast rather than on the card — the check was wrong about the app, not the app wrong.
+     What is true and falsifiable is the gating: the claim belongs to the surface that creates an account. */
+  c.check('the register card states that no bot check ran, and the sign-in card does not carry the claim',
+    /No bot check/.test(reg) && !/No bot check/.test(sig),
+    'register ' + (/No bot check/.test(reg) ? 'says it' : 'silent') + ' · sign-in '
+      + (/No bot check/.test(sig) ? 'also carries it' : 'free of it'));
   return c;
 });
 
