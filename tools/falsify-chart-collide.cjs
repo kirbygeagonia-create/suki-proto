@@ -56,15 +56,17 @@ function measure(screens, corner) {
     /* No line is not a zero — a camera that never reached its tally block measured nothing. */
     read[key] = line ? Number(line.slice(TALLIES[key].length).trim()) : null;
   }
-  /* The biggest single escape in PIXELS, taken from the tally's own detail lines, which read
-     `· admin-dash  "8" (chart-val r) hangs 15px above the top edge of a 264px box`. A count is a
-     fragile piece of evidence: the headroom break's whole finding is one label, and when an unrelated
-     layout change moved the escape by a hair the count went to zero and the family printed a survivor
-     that was really a threshold artefact. Requiring the size makes the break prove what the rule
-     means — the refusal put a number several pixels outside the box — instead of one pixel past a
-     comparison. */
-  read.escapePx = (out.match(/hangs \d+px/g) || []).reduce(function (mx, hit) {
-    const d = parseInt(hit.replace(/\D+/g, ''), 10);
+  /* The tally prints a fractional escape (`hangs 2.7px above the top edge of a 152px box`), so the
+     reader takes the number with its dot. Two ways this was wrong before: an integer-only pattern
+     matched nothing and the family reported a survivor about a 0px escape, and stripping non-digits
+     turned 2.7 into 27 — a reader that silently over-reads is worse than one that refuses, because it
+     can pass a break on the wrong magnitude. A count is a fragile piece of evidence: the headroom
+     break's whole finding is one label, and when an unrelated layout change moved the escape by a hair
+     the count went to zero and the family printed a survivor that was really a threshold artefact.
+     Requiring the size makes the break prove what the rule means — the refusal put a number several
+     pixels outside the box — instead of one pixel past a comparison. */
+  read.escapePx = [...out.matchAll(/hangs ([\d.]+)px/g)].reduce(function (mx, m) {
+    const d = parseFloat(m[1]);
     return d > mx ? d : mx;
   }, 0);
   return read;
