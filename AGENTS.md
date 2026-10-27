@@ -3940,7 +3940,12 @@ session's live work legitimately lives, so `git checkout -- tools/` would delete
 trying to protect. The same pass now refuses when the list-building rule and the counting rule disagree about
 how many families exist (they are two copies of one pattern on purpose, so a mutation of either is visible as a
 disagreement), and a full pass below a floor of 40 families answers `NO CONCLUSION` instead of running a subset
-and printing a healthy total. `node tools/falsify-preflight.cjs` proves all of it — 7 breaks, 7 caught.
+and printing a healthy total. `node tools/falsify-preflight.cjs` proves all of it — 7 breaks, 7 caught. That
+break was wrong **twice** before it was right, and both ways were the family's own: it first narrowed the
+*selector*, which emptied `families`, so the older `NO MATCH` guard answered first and the new refusal never
+ran (an expectation written from the intent rather than from what the child printed); it then anchored on an
+expression that occurs twice, because the `NO MATCH` message recomputes the same count inline. Narrow the
+counting rule instead, anchor on a whole declaration, and read the nested pass's rows.
 
 WHICH LAYER IS ON TOP WAS ELEVEN NUMBERS, AND THREE OF THEM DESCRIBED ONE IDEA. The design census (§147)
 counted definitions per idea for headings, bars, chips and spacing; `z-index` had never been through the token

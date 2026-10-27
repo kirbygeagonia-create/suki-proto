@@ -9221,11 +9221,27 @@ file is where a session's live work legitimately lives, and `git checkout -- too
 also refuses now when the list-building rule and the counting rule disagree about how many families exist,
 instead of running a subset and printing a healthy total.
 
-**Readings as printed.** `node tools/verify.cjs` → all **658** checks · `falsify-modal-stacking` **5 of 5**,
-`falsify-compat-floor` **7 of 7**, `falsify-camera-surfaces` **3 of 3**, `falsify-layer-modality` **7 of 7**,
-`falsify-escaping` **6 of 6**, each 0 not applied · `node tools/audit-compat-floor.cjs` → findings: 0,
-raw floor Chromium 108, breaking floor none · `node tools/audit-design-consistency.cjs` → no metric has grown
-since the baseline. The extended `falsify-preflight` (three new breaks for the instrument-strand report and
-the selection guard) and the eight-corner sweep are run against the committed tree, because the preflight
-refuses to mutate a target that is dirty — which is its own guard working, and the reason those readings land
-in the commit after this one rather than in it.
+**Readings as printed.** `node tools/verify.cjs` → all **658** checks · `node tools/falsify-preflight.cjs`
+**7 of 7** against the committed tree — its three new breaks are the instrument-strand report (a plant the
+pass names, then the same plant with the detector blinded, which must go silent), the selection-vs-counting
+refusal, and the stranded-needle marker from §150 · `falsify-modal-stacking` **5 of 5**, `falsify-compat-floor`
+**7 of 7**, `falsify-camera-surfaces` **3 of 3**, `falsify-layer-modality` **7 of 7**, `falsify-escaping`
+**6 of 6**, each 0 not applied · `node tools/audit-compat-floor.cjs` → findings: 0, raw floor Chromium 108,
+breaking floor none · `node tools/audit-design-consistency.cjs` → no metric has grown since the baseline.
+
+The selection break was wrong **twice before it was right**, and both ways were the family's own, not the
+runner's. It first narrowed the *selector*, which emptied `families`, so the older `NO MATCH` guard answered
+first and the new refusal never ran — an expectation written from the intent rather than from what the child
+actually printed. It then anchored on an expression that occurs **twice** in the file, because the `NO MATCH`
+message recomputes the same count inline. Anchor on the whole declaration, and read the nested pass's own
+rows rather than its exit code. The preflight could only run after §151 was committed, because its first
+break aborts on a dirty target — the same guard, working on its author.
+
+**And the sweep was contaminated before it was believed.** The first eight-corner run was killed because
+two gate-only families were re-run *while it was walking* — `falsify-escaping` and
+`falsify-camera-dialog-coverage` each rewrite `Sukinnect-next.html` and restore it, and the camera loads
+that file again for every corner, so a corner can be painted from bytes that exist for one second. The
+suite's mutex has always been the application file; this is the first time it was violated by the person
+holding the mutex, and the tell was two families failing in the aggregate that both pass alone. The run
+was restarted clean, and nothing was edited until it printed: **8 of 8 corners, 25 tallies each, all clear**,
+exit 0 — which is also the reading §151's closing paragraph promised would land after the commit.

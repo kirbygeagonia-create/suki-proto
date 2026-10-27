@@ -26,9 +26,10 @@
      5. same plant, blind scan → with the detector's git path pointed at a directory that cannot exist,
                                 the report must go silent — which is the evidence that row 4 came from the
                                 detector rather than from the plant
-     6. selection disagrees    → shrinking only the list-building pattern while `ON_DISK` keeps the honest
-                                one must make the pass refuse with NO CONCLUSION, not run a subset and
-                                print a healthy total
+     6. selection disagrees    → narrowing the COUNTING rule (`ON_DISK`) below the selecting one must make
+                                the pass refuse with NO CONCLUSION, not run a subset and print a healthy
+                                total. Narrowing the selector instead is answered by the older NO MATCH
+                                guard, which is a different promise.
      7. dirty tree             → the pass must REFUSE before touching the file (exit 1, TARGET NOT CLEAN,
                                 and no family row anywhere in its output)
      8. dirty tree, twice      → the refusal must not quietly restore the tree: reporting a hazard and
@@ -201,19 +202,28 @@ try {
   applied++;
   {
     const t = pristineAll.toString('utf8');
-    const SEL = "const families = fs.readdirSync(TOOLS)\r?\n  .filter(f => /\\^falsify-\\.\\*\\.cjs\\$/.test(f))";
-    const selRe = new RegExp(SEL);
-    if (!selRe.test(t)) {
-      console.log('MISSED  the selection-disagreement break could not find the list-building filter');
+    /* Shrink the COUNTING rule, not the selecting one. The first version of this break shrank the
+       selector, which emptied `families` — and the runner's older `NO MATCH` guard fired first, so the
+       nested pass refused for a reason that was not the one this break names. An expectation copied from
+       the intent rather than from a real run is the mistake this repository has now written down several
+       times; it was caught here by printing what the child actually said. Narrowing `ON_DISK` to files
+       from `d` onward leaves the filtered family in `families` (so `NO MATCH` cannot fire) while
+       `expected` answers zero, and the only rule that can report that disagreement is the new one. */
+    const SEL = "const ON_DISK = fs.readdirSync(TOOLS).filter(f => /^falsify-.*\\.cjs$/.test(f) && f !== 'falsify-all.cjs');";
+    if (t.split(SEL).length - 1 !== 1) {
+      console.log('MISSED  the selection-disagreement break could not find the counting rule (' +
+        (t.split(SEL).length - 1) + ' matches)');
     } else {
-      fs.writeFileSync(ALL, t.replace(selRe,
-        'const families = fs.readdirSync(TOOLS)\n  .filter(f => /^falsify-[n-z]/.test(f))'));
+      fs.writeFileSync(ALL, t.replace(SEL,
+        "const ON_DISK = fs.readdirSync(TOOLS).filter(f => /^falsify-[d-z].*\\.cjs$/.test(f) && f !== 'falsify-all.cjs');"));
       const r = runRunner();
       fs.writeFileSync(ALL, pristineAll);
-      const refused = /NO CONCLUSION/.test(r.out) && r.code !== 0 && !/^\w.*\s\d+\s+\d+/m.test(r.out);
+      const refused = /NO CONCLUSION/.test(r.out) && r.code !== 0 && !/count-labels\s+\d/.test(r.out);
       if (refused) caught++;
       console.log((refused ? 'CAUGHT  ' : 'MISSED  ') + 'a pass that selects fewer files than exist refuses itself' +
-        (refused ? ' → exit ' + r.code : ' (exit=' + r.code + ', NO CONCLUSION printed=' + /NO CONCLUSION/.test(r.out) + ')'));
+        (refused ? ' → exit ' + r.code + ', selection rows=' + (/count-labels\s+\d/.test(r.out) ? 'some' : 'none')
+          : ' (exit=' + r.code + ', NO CONCLUSION printed=' + /NO CONCLUSION/.test(r.out) +
+            ', NO MATCH printed=' + /NO MATCH/.test(r.out) + ')'));
     }
   }
 
