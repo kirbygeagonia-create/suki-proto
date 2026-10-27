@@ -4002,6 +4002,49 @@ measured count into the baseline: the file advertised 32 and the code enforced 1
 
 ---
 
+# 31A. OWNER RULINGS OF 2026-10-27 THAT OVERRIDE SECTIONS 30–33, 68 AND 23
+
+Sections 30, 31, 32, 33 and 68 below describe the ORIGINAL direction: a gradient brand system, and
+Fraunces for headings with Plus Jakarta Sans for the interface. Those sections are retained because
+they record WHICH measured hex is which brand colour and why the earlier draft values were wrong. They
+are no longer the instruction. The owner ruled, on 2026-10-27, in these terms:
+
+1. **"Make the Whole App color palette not in gradient anymore."** Flat everywhere: the sign-in hero,
+   the primary action, the active navigation pill, the splash, the chat header and the desktop backdrop.
+   The eight `--grad-*` tokens are gone and four solid tokens replaced them — `--surface-brand`
+   (#0352AE), `--surface-brand-deep` (#061364), `--surface-brand-soft` (#F1F5FF) and `--accent-brand`
+   (#05BCC4). Section 30's measured values still decide every colour; only the blending mechanism is
+   retired. Depth comes from the shadows and the tinted tracks.
+2. **"Simple font and style, the poppins font."** `--font-ui` is Poppins, self-hosted as eight WOFF2
+   faces, so the app still needs no network at runtime. What measuring the swap found: **Poppins has no
+   tabular figures** — `font-variant-numeric:tabular-nums` is a no-op in it, so a money column leans
+   whichever way its digits fall. A new `--font-figures` token carries digits in Atkinson, in the one
+   rule that already owns `tabular-nums`. Hierarchy comes from weight and spacing, not from a serif.
+3. **The wallet rule in section 23 is overridden for the UX, not for the money.** The owner asked for
+   an in-app digital wallet with cash-in/out through a cashless method, loyalty privileges and loan or
+   funding eligibility, and when told the deck forbids a stored value, chose to build the experience and
+   keep real money out of it. So: the wallet is a VIEW over the ledger and payments records the kernel
+   already owns — a balance is derived, never typed; cash-in and cash-out are seams that record nothing;
+   the tier attaches no privilege; funding eligibility declines to answer. Every one of those screens
+   says it is a prototype with no value stored anywhere. Section 22's separation of booking state from
+   payment state, and section 24's ban on hiding a cost, are unchanged.
+4. **"Admin access should be in only Web, not within the app."** In the app shell the admin console is
+   replaced by a stated refusal, and admin sign-in there is refused with a reason rather than silently
+   redirected.
+5. **AI surfaces are either record-derived or a named seam.** Frequent actions, market rate bands, the
+   wallet, standing tiers and connections are computed from records this device holds. What is not built
+   is named, on the screen where a person would otherwise assume it ran: OCR of an ID, face matching,
+   voice dictation, an exchange-rate feed, a usual-labour-rate lookup from outside the app, funding
+   eligibility, a bot check at sign-up, and an organisation or NGO as a party. A seam returns
+   `available: false` with a reason and records nothing. Blockchain is present as the property that makes
+   a chain worth having — a hash chain over the ledger, recomputed, that shows whether an entry was
+   edited — and the screen says plainly that it is not a blockchain, not a network, and not encryption.
+
+The history of each ruling, with the measurements and the instrument failures behind it, is in
+`CHANGES.md` sections 152 through 158.
+
+---
+
 # 32. GRADIENT USAGE
 
 **Retired by the owner's ruling of 2026-10-27** (§31's supersession note): there are no gradients to
