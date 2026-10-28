@@ -116,6 +116,14 @@ const BREAKS = [
   { name: 'value labels are painted even when the bars have no room for them', screens: 'admin-dash',
     corner: WIDE_TEXT,
     edits: [[VALROOM, '  const valRoom = true;']] },
+  /* This break is red on purpose and stays red until the TALLY is fixed. Measured 2026-10-27 with a
+     direct geometry probe (.scratch/probe-valcount-page.js, driven by .scratch/probe-valcount.js) at
+     admin-dash, 320x638 @150%: the shipped page paints 0 value labels; forcing both drop-halves open
+     paints 2, and one of them hangs 17.5px above its own plot's top edge — while this family's own
+     `escape` tally reads 0. So the headroom guard is live and doing its job, and the instrument that is
+     supposed to prove it cannot see the failure it exists to condemn. The app needs no change; the tally
+     needs a case that reaches a `.chart-val` escaping upward at this corner. Do not delete this break to
+     make the suite green — that would certify the blind sensor. */
   { name: 'the headroom refusal no longer drops the numbers, so the tallest one leaves the chart',
     screens: 'admin-dash', corner: OPPO_LARGER, minEscapePx: 3,
     edits: [[REFUSE, '']] },
@@ -150,8 +158,17 @@ try {
     const t = sum(n);
     if (t === null) console.log('MISSED  ' + b.name + '  (the camera printed none of its tallies)');
     else if (b.minEscapePx && n.escapePx < b.minEscapePx) {
-      console.log('MISSED  ' + b.name + '  (findings present, but the worst escape is ' + n.escapePx +
-        'px and this break has to prove ' + b.minEscapePx + 'px)');
+      /* The old wording asserted "findings present" from inside a branch that never looked at the sum —
+         a message claiming a fact the code had not measured, which is how this break spent two passes
+         reading like a threshold artefact. It now prints the three counts and its own sum. Measured
+         against them: at this corner one half is absorbed (the other drops the same numbers, so nothing
+         is left to escape), and with BOTH halves open a direct probe still sees a label 17.5px above its
+         plot while this tally reads 0 — so a zero here means either an absorbed mutation or a blind
+         sensor, and the line says which of the two it cannot tell. */
+      console.log('MISSED  ' + b.name + '  (worst escape ' + n.escapePx + 'px, this break has to prove ' +
+        b.minEscapePx + 'px; ' + said(n) + (t === 0 ?
+        ' — NO tally fired: either the mutation is absorbed by the guard’s other half here, or this tally' +
+        ' cannot see the escape (a direct probe sees 17.5px at this corner with both halves open)' : '') + ')');
     } else if (t > 0) {
       caught++;
       console.log('CAUGHT  ' + b.name + '  (' + said(n) + ', worst escape ' + n.escapePx + 'px, on ' +
