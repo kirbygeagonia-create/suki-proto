@@ -9827,7 +9827,27 @@ was declined. And §14's acceptance table no longer carries "(567 today)": the g
 **`focus-trap` cleared one of its two survivors and not the other, and the second is a fact about the
 sensor rather than about the fix.** It went 2 of 3, the same headline as before, but a different break
 holds it: `CAUGHT one layer root loses the convention, so topLayerEl() finds nothing (24 stops behind the
-scrim)` is new — 24 focus stops were previously invisible because the review screens were a refusal page.
+scrim)` is new.
+
+**Corrected the same day, because the sentence that followed this one was a false cause.** It read "24
+focus stops were previously invisible because the review screens were a refusal page" — but that break's
+population is `booking-sheet,offer-sheet`, resident screens the admin ruling never touched, so the catch
+cannot be credited to the admin-surface fix. The mechanism behind it is stated in `falsify-focus-trap` and
+was not re-derived here, and the honest position is that this run does not explain it. What the run DID
+establish is worse and is worth the correction: **the class-lookup break has no population at all.**
+Measured with `node .scratch/run-break3.js`, all three of its screens skip under the keyboard pass —
+
+    SKIP admin-review-request — nothing on the screen is the request-update button
+    SKIP admin-review-document — nothing on the screen is the open-document button
+    SKIP admin-review-approve — nothing on the screen is the approve button
+    keyboard stops walked: 0 across 0 screens
+
+— while the same three rows are painted without complaint by `--measure` alone (that walk answers 101
+screens, 0 skips). So the keyboard pass silently covers none of the verification review, the family's
+baseline on those rows passes because it reads 0, and its MISSED verdict was measuring an empty room. This
+is the fourth form of the trap this section has named repeatedly: not a screen missing from the table, not
+a model moved without its field, not a detached node — a mode flag that changes which rows the walk
+accepts, so a family can quote a clean number for a surface only one mode reaches.
 The survivor is now the class-lookup break:
 
     MISSED  the lookup goes back to class names, which the verification overlay does not have
