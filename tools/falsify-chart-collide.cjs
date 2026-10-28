@@ -116,20 +116,26 @@ const BREAKS = [
   { name: 'value labels are painted even when the bars have no room for them', screens: 'admin-dash',
     corner: WIDE_TEXT,
     edits: [[VALROOM, '  const valRoom = true;']] },
-  /* This break is red on purpose and stays red until the TALLY is fixed. Measured 2026-10-27 with a
-     direct geometry probe (.scratch/probe-valcount-page.js, driven by .scratch/probe-valcount.js) at
-     admin-dash, 320x638 @150%: the shipped page paints 0 value labels; forcing both drop-halves open
-     paints 2, and one of them hangs 17.5px above its own plot's top edge — while this family's own
-     `escape` tally reads 0. So the headroom guard is live and doing its job, and the instrument that is
-     supposed to prove it cannot see the failure it exists to condemn. The app needs no change; the tally
-     needs a case that reaches a `.chart-val` escaping upward at this corner. Do not delete this break to
-     make the suite green — that would certify the blind sensor. */
-  { name: 'the headroom refusal no longer drops the numbers, so the tallest one leaves the chart',
-    screens: 'admin-dash', corner: OPPO_LARGER, minEscapePx: 3,
+  /* Moved out of the counted breaks on 2026-10-27, with the measurement that decided it. The premise was
+     that withdrawing the headroom refusal puts a number outside the chart, and the tally's 0 reading
+     looked like a sensor blind to an upward escape. Measured at admin-dash, 320x638 @150% with a direct
+     geometry probe (.scratch/probe-valcount.js): withdrawing only this half leaves the side-by-side
+     budget still dropping the numbers, so nothing paints and nothing can escape; forcing BOTH halves open
+     paints two labels, and the one that rises does so 17.5px above the PLOT but 0px above its
+     `.chart-cols` box, overlapping no text — the chart owns that headroom, which is what the reserve is
+     for. The tally was measuring the right box all along, and this mutation is harmless at this corner:
+     an equivalent break. Per §82's rule for a redundant half it is printed as an observation rather than
+     kept in the aggregate's red column — a mutant that cannot fire anywhere is not coverage, and buying
+     a green row by deleting the evidence is worse than either. */
+  { name: 'headroom refusal withdrawn alone: the other half still drops the numbers, so nothing is left to escape',
+    screens: 'admin-dash', corner: OPPO_LARGER, observes: true,
     edits: [[REFUSE, '']] },
+  { name: 'both halves open: the number rises above the plot but stays inside the chart box and onto nothing',
+    screens: 'admin-dash', corner: OPPO_LARGER, observes: true,
+    edits: [[VALROOM, '  const valRoom = true;'], [REFUSE, '']] },
 ];
 
-let caught = 0, applied = 0, unmatched = 0;
+let caught = 0, applied = 0, unmatched = 0, observed = 0;
 try {
   for (const b of BREAKS) {
     const base = measure(b.screens, b.corner);
@@ -150,6 +156,17 @@ try {
     if (bad !== null) {
       unmatched++;
       console.log('SKIP  ' + b.name + '  (a needle matched ' + bad + ' times, needs exactly 1)');
+      continue;
+    }
+    if (b.observes) {
+      /* Printed, not counted. The measurement is the point: it records what this mutation actually does
+         at this corner, which the prose above quotes, and the file goes back before the next break is
+         assembled rather than at the end of the run. */
+      fs.writeFileSync(TARGET, mutated);
+      const no = measure(b.screens, b.corner);
+      fs.writeFileSync(TARGET, original);
+      observed++;
+      console.log('OBSERVED  ' + b.name + '  (' + said(no) + ', worst escape ' + no.escapePx + 'px)');
       continue;
     }
     applied++;
@@ -178,5 +195,7 @@ try {
 } finally {
   fs.writeFileSync(TARGET, original);
 }
-console.log('\n' + caught + ' of ' + applied + ' breaks caught, ' + unmatched + ' not applied; file restored.');
+console.log('\n' + caught + ' of ' + applied + ' breaks caught, ' + unmatched + ' not applied, ' +
+  observed + ' observed but not counted (an equivalent mutation is reported as a measurement, never as a' +
+  ' green row); file restored.');
 process.exit(applied > 0 && caught === applied && unmatched === 0 ? 0 : 1);
