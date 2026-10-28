@@ -9950,3 +9950,92 @@ The lander written for it also refuses to count processes. Measured here in one 
 in both directions is worse than no guard, because it reads as a measurement. The three conditions it does
 judge are the run's own eight corner headers, its final verdict line, and `git status` on the file a live
 mutant pass would own — which is the thing a process count was standing in for.
+
+## 160. A break that could not fire, a tally that turned out to be right, and two claims I retracted
+
+Four things came out of the pass that followed §159, and the honest summary is that two of my three
+diagnoses were wrong before a measurement replaced them.
+
+**The chart headroom break is equivalent, and the tally was never blind.** `falsify-chart-collide` break 5
+printed `MISSED … worst escape is 0px`, and the first explanation offered was that the reader could not
+parse a decimal: the tally writes `hangs 2.7px` and the pattern asked for `hangs \d+px`, so nothing matched
+and the number fell to zero. That was true and it was not the cause. Fixing it exposed a second bug in the
+same line — the reduce stripped non-digits and parsed an integer, so a loosened pattern would read 2.7px as
+**27**. A reader that silently over-reads is worse than one that refuses, because it can pass a break on
+the wrong magnitude. The pair is `matchAll(/hangs ([\d.]+)px/)` with `parseFloat`, at `d2b0231`.
+
+Then the mutation was applied by hand and the walk's lines printed whole, which is what this file has been
+told to do instead of reasoning: at admin-dash, 320x638 at 150 percent text, the shipped page paints **0**
+value labels; forcing **both** halves of the drop guard open paints **2**, and the one that rises sits
+17.5px above the PLOT but **0px above its own `.chart-cols` box, overlapping no text**. The chart owns that
+headroom — it is what the reserve is for — so the escape tally had been measuring the right box all along
+and the mutation is harmless at this corner. The break is equivalent, not blocked by a blind sensor.
+
+The family now distinguishes the two kinds of result instead of choosing between green and red: both
+mutations still run and print `OBSERVED` with their tally counts and worst escape, and they stay out of
+`applied` and `caught`, because a mutant that cannot fire anywhere is not coverage and a surviving mutant
+belongs in the aggregate's red column — §82's rule for the redundant half of the same guard, applied here
+at `9400bbe`. The summary line grew its clause after the existing prefix, and the prefix was tested against
+`falsify-all`'s own regex before committing: a family whose summary the runner cannot parse is reported as
+unproven, which would have turned a clean run into a phantom finding.
+
+**The keyboard pass never walks the verification review, so one break has been judging an empty room.**
+`falsify-focus-trap` break 3 swaps `topLayerEl()` back to the class names and asserts that Tab then lands
+behind the scrim. It reads MISSED, and the reason is upstream of both the app and the assertion: run with
+the family's own invocation, all three of its screens skip — `SKIP admin-review-approve — nothing on the
+screen is the approve button` and its two siblings — and the pass answers
+`keyboard stops walked: 0 across 0 screens`. A baseline that requires the tally to read 0 passes on that,
+so the family has been quoting a clean number for a surface it never entered. Stated with its confound,
+because the comparison that seemed to prove it was mode-specific was not a fair one: the no-skip figure
+(101 screens, 0 skips) came from a full `--measure` walk, while the skips came from a `--only=` subset. Two
+runs separate them and they are named in #77 in order — the subset without `--focus`, then the full walk
+with it — and break 3 is not to be re-pointed until one of them answers, because re-pointing onto a second
+empty population repeats the defect rather than fixing it.
+
+**Two of my own claims were wrong and are corrected in place rather than edited away.** The first: §159
+said focus-trap's new `24 stops behind the scrim` was previously invisible because the review screens were
+a refusal page — that break's population is `booking-sheet` and `offer-sheet`, resident screens the admin
+ruling never touched, so the fix cannot own the catch, and the corrected text says the run does not explain
+it. The second: a probe read 0 value labels because it asked for `.chart-value`, which appears once in a
+template while the painted class is `.chart-val`; it then fell through to a computed line height and
+printed a reserve of 60.5 units "against a cap of 50.2", which I quoted as a measurement. It was a fallback
+wearing one. The numbers in this section come from the corrected selector, and the general rule is the one
+§31 has been writing for pages: print the population the probe saw, and when it saw none, refuse.
+
+**One of these was bought with a rewrite of history, and only after asking.** The commit that landed §159
+reused `c38add6`'s subject — the very commit whose vacuous figure the section retires — because the
+subject checker was piped through `tail` and the shell therefore saw tail's exit 0 and committed over a
+refusal the checker had genuinely printed. `audit-commit-subjects` went to one unrecorded finding and exit
+1. Repairing it meant amending, the owner approved it, and `87d7fc5` carries a subject derived from its own
+diff with the audit back at 7 recorded, 0 findings, exit 0. The rule it leaves behind is narrower than
+"read the exit code": a checker's verdict is its exit status, and a pipeline has more than one of those.
+
+**The build copies agree again on this machine.** `node tools/build-web-dist.cjs` rebuilt `dist/` (69 files,
+11,383 KB, all 29 referenced paths resolving, no LFS pointers standing in for bytes), and the staged
+Android asset was refreshed from the source — after its previous bytes were copied to
+`.scratch/Sukinnect-asset-backup-fd176312.html` and verified identical, because `Sukinnect-Android/` is
+untracked by the owner's standing decision and `git checkout` is not an undo there.
+`node tools/audit-build-bytes.cjs` now reads source, `dist/` and the asset all at `ed87a258…` with
+`findings: 1`: the built `preview.44` APK still carries `fd176312…`. That one difference is not a repo task
+— it needs a gradle build and a handset, and the installed build's own reading is the only proof of it.
+
+**The aggregate after all of this.** Quote the run rather than this sentence: `node tools/falsify-all.cjs`,
+whose rows are in `.scratch/agg-69.log`, with the per-family figures read from the log and the totals
+summed independently of the line the runner itself prints.
+
+**The aggregate that ran after all of it, and the one row it already stale.** `node tools/falsify-all.cjs`
+answered **67 families, 395 mutants applied, 393 caught, 1 not applied, 2 missed, 4 families flagged**, and
+the rows were summed a second way with `awk` over the log rather than trusting the runner's own arithmetic
+(`rows=67 applied=395 caught=393 not_applied=1 missed=2`), with `ls tools/falsify-*.cjs` minus the runner
+also answering 67 — so no family was missing from the pass. The four flagged rows and what each one means:
+
+| row | reading | disposition |
+|---|---|---|
+| `build-bytes` 0/0/0/0 | printed no summary — nothing was proven | the four-copy comparison refuses while the built APK differs; it is a refusal, not a pass, and it clears with the install in #72 |
+| `focus-trap` 3/2 + 1 missed | the class-lookup break has no population | #77 — the three verification-review rows skip when that family invokes them, so the tally it must dirty reads 0 over 0 screens |
+| `nav-fit` 5/4 + 1 missed | the item-box break changes no outcome at any corner it drives | #75 — needs a corner where the label is within the item's own padding of its slot |
+| `trust` 5/5 + 1 not applied | NEEDLE MISSED — the `bookingsForProvider` break matched 2 and refused to apply | repaired after this pass, at `ebf2533`: scoped to the function's own body, now 6 applied / 6 caught / 0 not applied |
+
+So the figure above is stale by exactly one row, and the honest instruction to the next reader is the one
+this file has been writing for pages: quote a pass, say which pass, and let the number be `node
+tools/falsify-all.cjs` rather than a sentence carried forward.
