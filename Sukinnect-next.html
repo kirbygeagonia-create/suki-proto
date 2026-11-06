@@ -144,7 +144,10 @@
     --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px;
     --s-5:20px; --s-6:24px; --s-7:28px; --s-8:32px;
     --r-xs:8px; --r-sm:10px; --r-card:12px; --r-md:14px; --r-lg:20px; --r-sheet:28px; --r-pill:999px;
-    --tap:44px; --field-h:48px; --cta-h:50px; --nav-h:64px;
+    /* 52px for a field and for the primary action (§3.4), through the two names that already own
+       those heights so no screen invents a taller input of its own. Both stay well above the 44px
+       floor the camera enforces. */
+    --tap:44px; --field-h:52px; --cta-h:52px; --nav-h:64px;
     /* The room a column chart's axis labels need, now that they are HTML sitting to the
        left of the drawing rather than text inside its scaled viewBox. 56px is the widest
        tick the app paints (₱400 at 15px) plus its gap plus a margin, and the camera
@@ -646,6 +649,12 @@
   .mini-steps .st{ flex:1; height:4px; border-radius:var(--r-pill); background:var(--border-strong); }
   .mini-steps .st.on{ background:var(--surface-brand); }
   .mini-steps .st.now{ background:var(--brand-secondary); }
+  /* Where the job is, in words, and how far the path runs. One line, so no six-label rail has to
+     fit inside a card at 320px and break a word mid-token doing it. */
+  .step-line{ display:flex; align-items:baseline; gap:var(--s-2); margin-top:var(--s-2);
+              font-size:var(--t-caption); color:var(--md-sys-color-on-surface-variant); }
+  .step-now{ font-weight:600; color:var(--md-sys-color-on-surface); }
+  .step-of{ flex-shrink:0; }
 
   /* Sign-in: the soft brand surface, flat, and one card floated in the middle of it.
      Nothing on the card that is not needed to get in — brand mark, the account
@@ -653,7 +662,9 @@
   .auth-screen{
     display:flex; height:100%; box-sizing:border-box; overflow:hidden;
     padding:calc(var(--s-5) + var(--sat)) var(--s-4) calc(var(--s-5) + var(--sab));
-    background:var(--surface-brand-soft);
+    /* The entry screen is the surface itself (P8). A pale plate behind a white card is how a web
+       sign-in form reads; a phone fills the screen with one surface and puts the mark on it. */
+    background:var(--md-sys-color-surface);
   }
   /* The browser's default 16px paragraph margins were costing ~80px of dead
      vertical space here, which is what pushed the form past the fold on a 640pt
@@ -664,10 +675,11 @@
      optically centred even when it is too tall to centre (5, 38, 73). */
   .auth-sheet{
     margin:auto; width:100%; max-width:392px; max-height:100%;
-    box-sizing:border-box; padding:var(--s-7) var(--s-5) var(--s-6);
-    background:var(--surface); border:1px solid var(--md-sys-color-outline-variant);
-    border-radius:var(--r-lg); box-shadow:var(--shadow-md);
-    overflow-y:auto; overscroll-behavior:none; text-align:center;
+    box-sizing:border-box; padding:0 0 var(--s-6);
+    /* No border, no radius, no shadow: the card was the plate, and the plate was the defect. The
+       element still scrolls, which is what keeps a rising keyboard from burying the action. */
+    background:none; border:none; border-radius:0; box-shadow:none;
+    overflow-y:auto; overscroll-behavior:none; text-align:left;
     -ms-overflow-style:none; scrollbar-width:none;
   }
   .auth-sheet::-webkit-scrollbar{ display:none; width:0; height:0; }
@@ -10013,6 +10025,10 @@ function residentHome(){
      the stepper used to stop at four steps, so en_route and arrived had no place on
      it at all (21, 65). */
   const STAGES = ['requested', 'upcoming', 'en_route', 'arrived', 'ongoing', 'completed'];
+  /* The same six states the machine knows, in the words the app already uses for them, kept
+     beside STAGES so a bar, a label and a position cannot come apart. */
+  const STAGE_WORDS = { requested:'Requested', upcoming:'Scheduled', en_route:'On the way',
+    arrived:'Arrived', ongoing:'In progress', completed:'Completed' };
   const stageIndex = active ? STAGES.indexOf(active.status) : -1;
   /* A case under review sits outside the path: the stepper steps aside and the
      hint says where the job actually is. */
@@ -10079,9 +10095,10 @@ function residentHome(){
         </div>
         <span class="chip status-${active.status}" style="flex-shrink:0;">${esc(label(active.status))}</span>
       </div>
-      ${stageIndex >= 0 ? `<div class="mini-steps" role="img" aria-label="Stage ${stageIndex+1} of ${STAGES.length}: ${esc(label(active.status))}">
+      ${stageIndex >= 0 ? `<div class="mini-steps" role="img" aria-label="Step ${stageIndex+1} of ${STAGES.length}: ${esc(STAGE_WORDS[active.status] || label(active.status))}">
         ${STAGES.map((code, i) => `<span class="st ${i < stageIndex ? 'on' : ''}${i === stageIndex ? ' now' : ''}"></span>`).join('')}
       </div>` : ''}
+      ${stageIndex >= 0 ? `<div class="step-line"><span class="step-now">${esc(STAGE_WORDS[active.status] || label(active.status))}</span><span class="step-of">step ${stageIndex+1} of ${STAGES.length}</span></div>` : ''}
       <div class="row" style="margin-top:7px; gap:8px; font-size:var(--t-caption);">
         <span style="color:var(--ink-soft); min-width:0;">${esc(nextStep)}</span>
         ${(() => { const paid = ['captured', 'collected'].includes(active.payStatus); return `<span class="chip status-${paid ? 'completed' : 'requested'}" style="flex-shrink:0;">${esc(payStatusLabel(active))}</span>`; })()}

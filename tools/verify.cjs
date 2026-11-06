@@ -1475,8 +1475,12 @@ suite('hygiene', async () => {
      brand tokens, and the mobile-app pass spends the logo cyan through the Material 3 role name
      --md-sys-color-secondary, which DESIGN-TOKENS.md maps to the Flutter ColorScheme field. A rule
      that reaches for the brand name directly would be the second spelling the census exists to
-     catch, so the value stays declared and the exception says why. */
-  const TOKEN_EXCEPTIONS = ['--info', '--accent-brand'];
+     catch, so the value stays declared and the exception says why.
+     --surface-brand-soft is the third: §31A names it as "the field behind the sign-in card", and
+     the entry pass (P8) removed that card, so the plate it described is no longer painted by
+     anything. It stays declared because the document names it; the day a pale brand field is built
+     again, it is built from here rather than from a new hex. */
+  const TOKEN_EXCEPTIONS = ['--info', '--accent-brand', '--surface-brand-soft'];
   c.check('every :root token is reached, except the ones this file names and justifies',
     declaredTokens.length > 80 &&
       unreachedTokens.length === TOKEN_EXCEPTIONS.length &&
@@ -2211,9 +2215,15 @@ suite('login', async () => {
     && !/id="rt-resident"/.test(adminLog));
   c.check('and the Admin card has no control that cannot be answered',
     !/id="toggle-auth-mode"/.test(adminLog) && !/id="reg-name"/.test(adminReg));
-  c.check('the form sits in one centred card on the flat brand surface',
-    /\.auth-screen\{[\s\S]{0,260}?background:var\(--surface-brand-soft\)/.test(css)
-    && /\.auth-sheet\{[\s\S]{0,400}?box-shadow:var\(--shadow-md\)/.test(css));
+  /* P8: the entry screen used to be a white card floating on a pale brand plate, which is how a web
+     sign-in form reads. It is now the surface itself, so the assertion is the opposite of the one
+     this line used to make — and the guarantee that actually matters is unchanged and still pinned
+     by the check below: `.auth-sheet` is the scroller with max-height:100% and `.auth-screen` keeps
+     overflow:hidden, so a rising keyboard cannot bury the action. */
+  c.check('the entry screen is one surface, not a card floated on a plate',
+    /\.auth-screen\{[\s\S]{0,400}?background:var\(--md-sys-color-surface\)/.test(css)
+    && /\.auth-sheet\{[\s\S]{0,500}?background:none; border:none; border-radius:0; box-shadow:none;/.test(css),
+    'the screen is not the surface, or the card still carries a plate');
   /* No blended fill survives anywhere in the stylesheet, by the owner's ruling of 2026-10-27 that the
      palette is flat. Two things this has to say and cannot fake:
        · a conic-gradient with hard stops is how a segmented ring is drawn in CSS at all — the workload
