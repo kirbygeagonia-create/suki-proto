@@ -10764,7 +10764,7 @@ function residentMessagesList(){
     </div>
 
     ${shownThreads.length === 0 ? emptyState('mail', 'No unread messages', 'You have caught up on every conversation here. Open All to read the full threads.', {id:'msgs-show-all-btn', label:'Show all conversations'}) : shownThreads.map(m => `
-      <div class="card" data-open-chat-id="${m.id}" data-thread-kind="${m.kind}" data-thread-booking="${m.bookingId}" style="cursor:pointer; padding:var(--s-4); margin-bottom:10px; border-radius:var(--r-md); border:1px solid var(--line); display:flex; align-items:flex-start; gap:12px; background:var(--surface);">
+      <div class="list-row" data-open-chat-id="${m.id}" data-thread-kind="${m.kind}" data-thread-booking="${m.bookingId}" style="cursor:pointer; align-items:flex-start;">
         ${serviceAvatar(m.id, 44, '')}
         <div style="flex:1; min-width:0;">
           <div class="row" style="margin-bottom:2px;">
@@ -13308,7 +13308,7 @@ function providerDashboard(){
         <span class="wait-dot" style="margin-top:4px;"></span>
       </div>
       ${waiting.map(b => `
-        <button type="button" data-provider-booking-id="${b.id}" aria-label="Open request from ${esc(customerOf(b).name)}" style="width:100%; text-align:left; background:var(--background); border:1px solid var(--line); border-radius:var(--r-sm); padding:var(--s-3) var(--s-3); margin-top:9px; cursor:pointer; font:inherit; color:var(--ink); display:flex; align-items:center; gap:8px;">
+        <button type="button" data-provider-booking-id="${b.id}" aria-label="Open request from ${esc(customerOf(b).name)}" class="list-row" style="padding-left:var(--s-4); padding-right:var(--s-4);">
           <span style="flex:1;">
             <span style="display:block; font-size:var(--t-body-sm); font-weight:700;">${esc(b.summary)}</span>
             <span style="display:block; font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${esc(customerOf(b).name)} · Brgy. ${esc(b.barangay)} · received ${agoText(b.createdAt)}</span>
