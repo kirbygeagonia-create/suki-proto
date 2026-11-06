@@ -1251,16 +1251,14 @@
     color:var(--mist); cursor:pointer;
   }
   .nav-label{display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .navitem .ic{font-size:var(--t-title-lg); display:block; margin:0 auto var(--s-1); position:relative;}
+  /* The 24px glyph the brief asks for, through the scale token that holds 24px. An earlier
+     attempt here also gave the wrapper a fixed box for a tonal pill behind the active icon; two
+     renders later that pill painted as a detached blob with no glyph in it, because the element
+     the CSS names is not the wrapper the icon sits in. The indicator is deferred to a pass that
+     changes navItem() itself; the active state keeps position, weight, colour and the accent
+     rule below it. */
+  .navitem .ic{font-size:var(--t-title-lg); display:block; margin:0 auto var(--s-1);}
   .navitem.active{color:var(--md-sys-color-on-secondary-container); font-weight:600;}
-  /* The active destination is marked by a tonal pill behind the icon, not by a heavier word:
-     NavigationBar's indicator. Colour, icon treatment and position all say "you are here", so the
-     state does not rest on colour alone (§72). */
-  .navitem.active .ic::before{
-    content:''; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-    width:56px; height:32px; border-radius:var(--r-pill);
-    background:var(--md-sys-color-secondary-container);
-  }
   .statgrid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
   /* A number you can press is a control, and stays a tile. A number you can only
      read is not: four equal tiles gave the answer and the two facts that merely

@@ -10090,3 +10090,61 @@ found one confirmed duplicate: `Downloads/SUKINNECT_CORRECTIVE_VISUAL_REDESIGN_I
 hashes identical (`ef548dd2…`) to the archived copy; everything else there — pitch-deck v2, master-plan
 DOCX files, the concept-note lineage, the UX *PROMPT* sibling of the live plan, `Sukinnect-Release/`
 with its zip — is listed for the owner's decision, untouched.
+
+## 162. The mobile-app visual pass: one icon family, one chrome system, discovery first, and the AI category art retired
+
+Brief: `Downloads/SUKINNECT_MOBILE_APP_UI_REDESIGN_PROMPT.md`, implemented on branch
+`feat/mobile-app-visual-pass` in slices, one commit each. Before it began the tree was dirty with
+exactly the two mutations `falsify-bar-titles` and `falsify-figures` write — bytes archived to
+`.scratch/debris-2026-11-05/`, both files restored, the gate re-run before any number was quoted.
+That is the documented recovery for a cancelled mutant pass, not a repair of someone's work.
+
+**What landed.** Material Symbols (Apache-2.0, official repository, commit `10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7`,
+retrieved 2026-11-05) replaces the inline reicon-derived set: 47 glyphs, outlined and filled, drawn
+in their own 960-unit box through an unchanged `ic(name,size)`. Each trade now draws its own glyph
+instead of an abstract shape, and gains a `short` tile label. `SERVICE_ART`, `CAT_ART_PX` and
+`catArt()` are gone and the seven AI PNGs are unreferenced — left on disk in the repository and moved
+out of the staged Android bundle, because deleting them is the owner's call. Page and hairline went
+neutral (`#F6F7FB` / `#E6E8EF`): "everything is tinted lavender" was true of both, and the brand tint
+is now reserved for selection. The digits moved to Plus Jakarta Sans after measurement — Atkinson is
+tabular but paints a slashed zero, Jakarta is tabular and slashless, Poppins carries no tabular
+feature at all (184.33px for `111111` against 361.73px for `000000`) — while the words stay Poppins by
+the ruling of 2026-10-27. The top bar is one light surface on every screen, 56px, with a bare
+chevron; a pushed screen has one bottom bar rather than two stacked; the service grid moved under the
+search field and became four columns with an eighth "All services" tile, so its bottom edge lands at
+471px against a navigation top of 757px at 390x844. Status text is sentence case.
+`assets/ICON-LICENSES.md` and `DESIGN-TOKENS.md` are generated from what the page ships, and README's
+Assets table matches it.
+
+**Gates updated, not weakened.** The 48-entry icon ceiling became a population rule — every glyph is
+reached by a call site or named as a deliberate addition — after the audit learned two more ways a
+name arrives (`navItem(id,icon,label)` and `AUTH_ROLE_ICON`), which is how deleting `route` and
+`wrench` blanked the FSM glyph and the provider role chip. The four category-raster checks became the
+drawn-glyph contract, with comments stripped first, because a sentence explaining the retirement
+names the same path as a rule that would still use it. The figures check asserts a relation instead
+of pinning the literal "Atkinson Next", and the brand-bar-ink check now asks the stronger question
+the new chrome implies: no control in a bar paints on-brand ink at all.
+
+**What the instruments could not see, and what they caught.** The baseline walk was already all-zero
+across 25 tallies while every §2.2 finding was real — those sensors measure geometry and contrast,
+not proportion or language. Making the bar light then produced 75 contrast failures, then 12, then 0:
+white ink left behind by four controls written for the brand plate, invisible to the gate because the
+gate calls handlers and contrast is paint. `tools/probe-visual-contract.js` adds the five tallies the
+brief asked for; `tools/falsify-visual-contract.cjs` proves all five can fail (5 of 5 caught, 0
+missed, 0 not applied). Its own first run reported one break as SKIP over a needle written with \n
+against a CRLF file — the family's assumption, not a stale rule — so needles are normalised to the
+target's separator now.
+
+**Reverted, and why.** The tonal pill behind the active navigation icon was attempted twice and
+painted as a detached blob with no glyph inside it: the element the CSS names is not the wrapper the
+icon sits in. An identical-or-worse reading after a change is a falsified hypothesis, so it is out,
+and the active state keeps position, weight, colour and the accent rule. A real indicator needs
+`navItem()` itself to own a positioned wrapper.
+
+**Not done, stated plainly.** The brief's Slices 4 and 5 are partial: the login/splash redesign, the
+sheet pattern, the labelled booking stepper (P10), monogram avatars (A3), the admin console's numeral
+column (P6) and the provider/admin screens still carry the old proportions. The 12px `label` role was
+not adopted, because AGENTS.md §68's 14px floor is an owner accessibility ruling measured on two
+handsets. The built APK copy still disagrees (`audit-build-bytes` findings 1) because rebuilding it is
+the acceptance step. None of this has been looked at on a handset, and no screen-reader output was
+heard.
