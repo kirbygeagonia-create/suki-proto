@@ -10039,3 +10039,54 @@ also answering 67 — so no family was missing from the pass. The four flagged r
 So the figure above is stale by exactly one row, and the honest instruction to the next reader is the one
 this file has been writing for pages: quote a pass, say which pass, and let the number be `node
 tools/falsify-all.cjs` rather than a sentence carried forward.
+
+## 161. The three visual-redesign documents left the root for Old/ — the archive pass the owner asked for
+
+**What moved.** `SUKINNECT_GRAB_INSPIRED_VISUAL_REDESIGN_PROMPT.md`, `SUKINNECT_VISUAL_REDESIGN_PLAN.md`
+and `SUKINNECT_CORRECTIVE_VISUAL_REDESIGN_IMPLEMENTATION_PROMPT.md` were moved with `git mv` into
+`Old/2026-10-10_visual-redesign-prompts/`. `sha256sum` was run on each before and after the move and
+the values are identical, and `git diff -M --stat` reports 100% similarity for all three renames —
+the files are byte-for-byte what they were, and their history follows them.
+
+**Why these three and nothing else.** The brief's status is settled in its own record: the corrective
+opens by superseding the older prompt and plan wherever they conflict on assets, fonts, visualization
+libraries or implementation; the plan's P2 was overtaken by the corrective's asset replacement and its
+typography work by the owner's 2026-10-27 ruling (§152); the corrective's asset and chart work is
+implemented and still verified by today's gates. No tool, page, netlify path or build allowlist reads
+any of them: `grep -rn` over `tools/`, both HTML files and `netlify.toml` for the three names answers
+nothing outside this change-log's history. The plan's per-phase verdicts, and the evidence each one
+still carries, are written out in the folder's README requirement checklist.
+
+**What stayed, deliberately.** `Sukinnect.html` and `reicon.js` stay at the root: `build-web-dist.cjs`
+lists both in its SERVE allowlist and refuses a build when a listed path is missing, and the owner's
+decision on 2026-11-05 was to keep them while `Sukinnect.html` remains the shipped file. The tag
+`legacy-sukinnect-v1` was created now anyway, at `950eab7` — the last commit that changed the shipped
+file — so the exact prototype bytes stay findable without the move. `SUKINNECT_UX_RELIABILITY_MVP_PLAN.md`
+stays too: seven tools read it by path (`audit-citations`, `audit-matrix-coverage`,
+`audit-report-coverage`, `audit-row-instruments`, and their `falsify-*` counterparts).
+`avatars/avatar-{13,14,16,17}.png` (7,135 / 5,861 / 7,039 / 8,321 bytes, added 2026-09-29) are
+referenced by neither page; they are listed as deletion candidates in the index, awaiting approval,
+not deleted.
+
+**The records.** `Old/INDEX.md` is the master table (archived, still-live, deleted-from-tree-but-
+restorable, deletion candidates, and the list-only scan of the repo's parent, Downloads, Desktop and
+Documents). The folder README carries per-file hashes and the requirement checklists, including the
+two files history deleted — `SUKINNECT_MASTER_IMPLEMENTATION_PROMPT.md` and
+`SUKINNECT_UIUX_REDESIGN_PROMPT.md`, both last held by `108bdb4~1`, and the never-authored `lottie/`
+of `fab842b` — each with its restore command and a rule that they are not restored without asking.
+
+**Verifier over the move.** `node tools/verify.cjs` → all 740 checks passed. `node
+tools/build-web-dist.cjs` → `dist/ — 69 files, 11383 KB`, all 29 referenced paths resolve, no LFS
+pointers, and its own unpublished list names `Old` explicitly; `find dist -type d -name Old` and a
+`*redesign*`/`Old/` file search answer zero. `node tools/audit-build-bytes.cjs` → source, `dist/` and
+the staged Android asset all agree at `ed87a258…` with findings 1 (the built `preview.44` APK still
+carries `fd176312…` — handset work for #72, untouched here). `node tools/audit-open-items.cjs` still
+runs and answers 43 deferral claims, no refusal. The re-run of the old_PATH greps after the move finds
+mentions of the three files only in `CHANGES.md` history and in the new `Old/` records — the one live
+mention, README's "three prompt documents stay at the root", is updated by this section's README edit.
+
+**Nothing outside the repository was moved or deleted.** The outside scan (list-only, in the index)
+found one confirmed duplicate: `Downloads/SUKINNECT_CORRECTIVE_VISUAL_REDESIGN_IMPLEMENTATION_PROMPT (1).md`
+hashes identical (`ef548dd2…`) to the archived copy; everything else there — pitch-deck v2, master-plan
+DOCX files, the concept-note lineage, the UX *PROMPT* sibling of the live plan, `Sukinnect-Release/`
+with its zip — is listed for the owner's decision, untouched.

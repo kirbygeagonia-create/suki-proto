@@ -43,8 +43,7 @@ The Netlify homepage serves `Sukinnect-next.html`. `netlify.toml` runs
 `node tools/build-web-dist.cjs` and publishes the `dist/` it writes, so the deploy carries only what
 the two pages actually ask for — the HTML files, the logo, `assets/`, `avatars/`, `fonts/`,
 `leaflet/`, and `reicon.js`, the older page's icon library — 60 files, about 11 MB. The pitch deck,
-`AGENTS.md`, this file, the change log, the three prompt documents, `schema/` and `tools/` stay in
-the repository and off the internet. Publishing the root had made every one of them fetchable at a
+`AGENTS.md`, this file,the change log, `SUKINNECT_UX_RELIABILITY_MVP_PLAN.md`, `schema/` and `tools/` stay in the repository and off the internet. The three 2026-10-10 visual-redesign documents do not sit at the root any more: they were archived to `Old/2026-10-10_visual-redesign-prompts/`, whose `INDEX.md` is the master record. Publishing the root had made every one of them fetchable at a
 guessable path; a subset built from an explicit list is the version of this that cannot leak by
 accident, and the build refuses to finish when the app starts asking for something the list does not
 carry. Prove it yourself: remove `'avatars'` from `SERVE` and the run exits 1 reporting 17 of the 29
