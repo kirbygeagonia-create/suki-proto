@@ -134,3 +134,18 @@ card (P1 is partly done: the components exist — `.list`, `.list-row`, `.tile`,
 is not yet a stepper with one prominent primary action per state. The sheet pattern, the messages rows
 and the profile rows inherit the old markup. None of these is a defect the instruments would catch;
 they are the pass's remaining work, and §10 lists them rather than describing them as done.
+
+## Ledger, latest (after Slice 5b and the sweep that caught it)
+
+| # | Now | What changed since the last table |
+|---|---|---|
+| A3 | **fixed** | Monograms replace the cartoon faces across the UI. The third attempt worked because the boundary came from the next function's declaration rather than from "the next brace on its own line", which had been cutting `serviceAvatar` in half. `serviceAvatar`'s photo-first branch went too. A record with no name paints the person glyph, not an invented initial. |
+| P1 | **further** | the provider's waiting requests and the conversation list are rows of `.list-row` with a hairline between siblings; the card-in-card is gone on both. The Home active-booking block remains a single card, which is what §3.5 reserves cards for. |
+| §5 Profile | **done** | the destructive action is a text button at the bottom, through a `.btn.text-danger` tier the button system did not have — the same shape as the §70 lesson: the rule existed, the vocabulary did not. |
+| Sweep | **caught what the walk could not** | the initials were sized by `Math.round(size * 0.4)`, which is 22px on a 56px disc — a step the scale owns — and 44px once the platform doubles the text, which it does not. Six of eight corners reported it while the default-width walk read zero. The size now comes from `--t-body`. |
+
+**Still remaining, unchanged from the last table:** the provider job flow as a stepper with one
+prominent primary action per state, the concierge's prompt chips, P9's long subtitles, the 3px chart
+overhang at 200% text (pre-existing, two fixes measured and reverted), the APK rebuild, and every
+handset leg. The pass is not complete and does not claim to be.
+
