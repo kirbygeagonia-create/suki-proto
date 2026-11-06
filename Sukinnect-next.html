@@ -108,6 +108,11 @@
     --md-sys-color-primary-container:var(--brand-tint);
     --md-sys-color-on-primary-container:var(--brand-navy);
     --md-sys-color-secondary:var(--brand-secondary);
+    /* The navigation indicator's pair. #05BCC4 is the logo's cyan (§30) and is a rule, not a fill,
+       so the pill sits on the deck's pale periwinkle with the deck's navy on it — both measured
+       from the same source as every other colour in this app. */
+    --md-sys-color-secondary-container:var(--brand-tint-soft);
+    --md-sys-color-on-secondary-container:var(--brand-primary);
     --md-sys-color-surface:var(--surface);
     --md-sys-color-surface-container:var(--md-page);
     --md-sys-color-on-surface:var(--text-primary);
@@ -139,7 +144,7 @@
     --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px;
     --s-5:20px; --s-6:24px; --s-7:28px; --s-8:32px;
     --r-xs:8px; --r-sm:10px; --r-card:12px; --r-md:14px; --r-lg:20px; --r-sheet:28px; --r-pill:999px;
-    --tap:44px; --field-h:48px; --cta-h:50px; --nav-h:62px;
+    --tap:44px; --field-h:48px; --cta-h:50px; --nav-h:64px;
     /* The room a column chart's axis labels need, now that they are HTML sitting to the
        left of the drawing rather than text inside its scaled viewBox. 56px is the widest
        tick the app paints (₱400 at 15px) plus its gap plus a margin, and the camera
@@ -259,10 +264,13 @@
     }
   .screen::-webkit-scrollbar{display:none;}
   .topbar{
-    /* --sat is 0 in the desktop preview and the real notch height on a phone, so
-       the same rule keeps the title clear of both (7.1). */
-    background:var(--deep); color:var(--text-on-brand);
-    padding:calc(18px + var(--sat)) var(--s-5) var(--s-4);
+    /* One bar, everywhere (P3). It used to be a filled brand plate with white ink and a ringed
+       circle around the back control, which is how a web header reads; a Material/iOS top bar is a
+       surface with ink on it, 56px tall, and a bare chevron. --sat is still 0 in the desktop
+       preview and the real notch height on a phone, so the safe-area padding stays. */
+    background:var(--md-sys-color-surface); color:var(--md-sys-color-on-surface);
+    min-height:56px;
+    padding:calc(var(--s-3) + var(--sat)) var(--s-4) var(--s-3);
     display:flex; align-items:center; justify-content:space-between;
   }
   /* The screen title is an <h1> so a 30-screen app has an outline a screen reader
@@ -288,12 +296,12 @@
      top bar cannot decline the size now. Measured before and after with
      node tools/shot.cjs --probe=@tools/probe-bar-titles.js */
   .topbar h1{font-family:var(--font-display); font-size:var(--t-title); font-weight:600;}
-  .topbar .sub{font-size:var(--t-body); opacity:0.78; margin-top:2px;}
+  .topbar .sub{font-size:var(--t-body); color:var(--md-sys-color-on-surface-variant); margin-top:2px;}
   /* Root tabs - the ones the bottom nav lands on - carry a large title, the way a
      real app header does. Detail and drill-in screens stay compact so the back
      button and the subject fit (7.2). render() marks the screen with data-root. */
-  .screen[data-root="1"] .topbar{ padding-bottom:18px; }
-  .screen[data-root="1"] .topbar h1{ font-size:var(--t-title-lg); letter-spacing:-.3px; }
+  .screen[data-root="1"] .topbar{ padding-bottom:var(--s-4); }
+  .screen[data-root="1"] .topbar h1{ font-size:var(--t-title-lg); font-weight:700; letter-spacing:-.3px; }
   /* The identity/back group inside the bar. min-width:0 lets a long name ellipsize
      instead of pushing the actions off the screen. */
   .topbar .hb{ display:flex; align-items:center; gap:10px; min-width:0; }
@@ -308,7 +316,7 @@
      made the same "leave the app" action look like two things depending on which screen painted
      it — so the idea now has a name and the bar keeps its own rule. The 44px floor above is
      untouched: this is mass, not reach. */
-  .btn.onbar{ background:rgba(255,255,255,0.12); color:var(--on-brand); box-shadow:none; }
+  .btn.onbar{ background:var(--md-sys-color-secondary-container); color:var(--md-sys-color-on-secondary-container); box-shadow:none; }
   /* A top bar's title group has to be allowed to give up width, or it pushes an action clean
      out of the bar — which then clips it, because the bar's own overflow is hidden for the
      gradient glow. Measured at 320px with the phone's text at 200%: "Mark all as read" was
@@ -333,9 +341,31 @@
      as 80px and 130px. */
   .pad-cta{ padding-bottom:calc(var(--nav-h) + var(--cta-h) + var(--s-7) + var(--sab)); }
   .card{
-    background:var(--md-sys-color-surface); border:1px solid var(--line); border-radius:var(--r-md);
+    background:var(--md-sys-color-surface); border:1px solid var(--md-sys-color-outline-variant);
+    border-radius:var(--r-tile);
     padding:var(--s-3) var(--s-3); margin-bottom:8px;
   }
+  /* A list of cards reads as a web dashboard (P1). A native list is full-width rows with a
+     hairline between them and no card at all, and the card keeps its job for the few primary
+     objects. The row is 64px with one line and a subtitle, 72px with a leading element (§3.1);
+     the divider is inset past the leading tile so it never runs under an icon. */
+  .list{ background:var(--md-sys-color-surface); border-top:1px solid var(--md-sys-color-outline-variant);
+         border-bottom:1px solid var(--md-sys-color-outline-variant); }
+  .list-row{
+    display:flex; align-items:center; gap:var(--s-3); min-height:64px;
+    padding:var(--s-3) var(--s-4); background:none; border:none; width:100%;
+    font-family:inherit; text-align:left; cursor:pointer; color:var(--md-sys-color-on-surface);
+  }
+  .list-row + .list-row{ box-shadow:inset 0 1px 0 var(--md-sys-color-outline-variant); }
+  .list-row:active{ background:var(--md-sys-color-surface-container); }
+  /* The category container: 40px in a row, 56px in the grid, one tonal pair per trade (§4.4). */
+  .tile{
+    display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
+    width:40px; height:40px; border-radius:var(--r-md);
+    background:var(--tile-bg, var(--md-sys-color-secondary-container));
+    color:var(--tile-fg, var(--md-sys-color-on-secondary-container));
+  }
+  .tile.lg{ width:56px; height:56px; border-radius:var(--r-tile); }
   /* Sixteen cards typed the same three declarations over .card. The radius was
      already var(--r-md) and the border already var(--line) — so this is the card,
      with more air, named once (69). */
@@ -857,14 +887,14 @@
        which a falsifier found by surviving. Removing only one of the two leaves the geometry
        intact, so the break that proves them removes both; do not read either as redundant. */
     flex-shrink:0;
-    background:rgba(255,255,255,0.15); border:none; border-radius:50%; width:var(--tap); height:var(--tap);
-    display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-on-brand);
+    background:var(--md-sys-color-secondary-container); border:none; border-radius:50%; width:var(--tap); height:var(--tap);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--md-sys-color-on-secondary-container);
     position:relative; transition:background 0.2s;
   }
-  .notif-btn:hover{background:rgba(255,255,255,0.25);}
+  .notif-btn:hover{background:var(--md-sys-color-primary-container);}
   .notif-dot{
     position:absolute; top:7px; right:8px; width:8px; height:8px;
-    background:var(--brand-secondary); border-radius:50%; border:1.5px solid var(--brand-navy);
+    background:var(--md-sys-color-secondary); border-radius:50%; border:1.5px solid var(--md-sys-color-surface);
   }
 
   .notif-item{
@@ -1199,7 +1229,13 @@
     position:sticky; bottom:0; left:0; right:0; z-index:var(--z-sticky);
   }
 
-  .bottomnav{display:flex; border-top:1px solid var(--line); background:var(--surface); flex-shrink:0; position:relative; z-index:var(--z-nav);}
+  .bottomnav{display:flex; border-top:1px solid var(--md-sys-color-outline-variant); background:var(--md-sys-color-surface); flex-shrink:0; position:relative; z-index:var(--z-nav);}
+  /* D5: the sticky "Book Appointment" bar sat directly on the tab bar and the two covered about
+     150px of an 844px screen. A pushed screen now has ONE bottom bar — its own sticky action — and
+     the navigation goes with it, which is what a phone does. History is untouched: the chevron,
+     the browser Back and the handset's Back all still run through the same stepBack() the back
+     suite asserts. */
+  #screen:not([data-root="1"]) + #navbar .bottomnav{ display:none; }
   .navitem{
     flex:1; text-align:center; padding:var(--s-2) var(--s-1) var(--s-2); min-height:var(--tap);
     /* `flex:1` sets the basis to zero but leaves min-width at the flex default of auto, which
@@ -1214,8 +1250,16 @@
     color:var(--mist); cursor:pointer;
   }
   .nav-label{display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .navitem .ic{font-size:var(--t-title); display:block; margin-bottom:2px;}
-  .navitem.active{color:var(--deep); font-weight:800;}
+  .navitem .ic{font-size:var(--t-title-lg); display:block; margin:0 auto var(--s-1); position:relative;}
+  .navitem.active{color:var(--md-sys-color-on-secondary-container); font-weight:600;}
+  /* The active destination is marked by a tonal pill behind the icon, not by a heavier word:
+     NavigationBar's indicator. Colour, icon treatment and position all say "you are here", so the
+     state does not rest on colour alone (§72). */
+  .navitem.active .ic::before{
+    content:''; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    width:56px; height:32px; border-radius:var(--r-pill);
+    background:var(--md-sys-color-secondary-container);
+  }
   .statgrid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
   /* A number you can press is a control, and stays a tile. A number you can only
      read is not: four equal tiles gave the answer and the two facts that merely
@@ -1239,7 +1283,9 @@
   .stat .lbl{font-size:var(--t-caption); color:var(--mist); margin-top:2px;}
   /* A status pill is a chip that shouts. It used to re-declare its own geometry, which is how a
      second pill size existed beside the first. */
-  .status-pill{ text-transform:uppercase; letter-spacing:.4px; }
+  /* Sentence case (§3.3). A status is a word a person reads, not a heading; the pill keeps its
+     colour, its tint and its nowrap, and loses only the shouting. */
+  .status-pill{ text-transform:none; letter-spacing:0; }
   .status-upcoming{background:var(--warning-100); color:var(--warning-ink);}
   .status-completed{background:var(--verified-100); color:var(--success-ink);}
   .status-cancelled{background:var(--alert-100); color:var(--error-ink);}
@@ -1406,8 +1452,12 @@
   /* Topbar — one flat brand surface. The cyan aura that used to sit behind the title was a
    radial gradient, and the owner ruled the palette flat: the bar is one colour now. */
   .topbar{
-    background:var(--surface-brand);
-    box-shadow:0 2px 12px rgba(3,0,43,.28);
+    /* One bar for every screen (P3). This block used to re-declare the brand plate after the
+       rule above, which is why a change to the rule above appeared to do nothing: the later
+       declaration won, and the camera then measured 75 white-on-blue failures while every
+       handler-level check stayed green. The brand colour is spent on what a person can act on. */
+    background:var(--md-sys-color-surface);
+    box-shadow:0 1px 0 var(--md-sys-color-outline-variant);
     position:relative; overflow:hidden;
   }
   .topbar h1{ letter-spacing:-0.2px; }
@@ -1520,7 +1570,7 @@
   .navitem{ position:relative; border-radius:var(--r-md); padding:var(--s-2) var(--s-1) var(--s-2); transition:color .18s ease; }
   .navitem:hover{ color:var(--deep-600); }
   .navitem .ic{ transition:transform .22s var(--ease-spring); filter:grayscale(.35); opacity:.85; }
-  .navitem.active{ color:var(--deep); }
+  .navitem.active{ color:var(--md-sys-color-on-secondary-container); }
   .navitem.active .ic{ filter:none; opacity:1; transform:translateY(-1px) scale(1.14); }
   .navitem.active::after{
     content:""; position:absolute; bottom:3px; left:50%; transform:translateX(-50%);
@@ -1714,13 +1764,15 @@
 
   /* Circular back buttons for dark topbars */
   .back-btn{
-    width:var(--tap); height:var(--tap); border-radius:50%; flex-shrink:0;
+    /* The hit area is unchanged at the tap floor; only the plate around it goes. A circle with a
+       translucent fill and a hairline ring is the browser's own habit, not a phone's. */
+    width:var(--tap); height:var(--tap); border-radius:var(--r-sm); flex-shrink:0;
     display:inline-flex; align-items:center; justify-content:center;
-    background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.30);
-    color:var(--text-on-brand); cursor:pointer; padding:0;
+    background:none; border:none;
+    color:var(--md-sys-color-on-surface); cursor:pointer; padding:0;
     transition:background .15s ease, transform .12s ease;
   }
-  .back-btn:hover{ background:rgba(255,255,255,.26); }
+  .back-btn:hover{ background:var(--md-sys-color-surface-container); }
   .back-btn:active{ transform:scale(.92); }
   /* ============================================================
      SUKINNECT POLISH PASS (3/3)
@@ -1751,7 +1803,7 @@
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   .chat-head-tag{
-    background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.32); color:var(--on-brand);
+    background:var(--md-sys-color-secondary-container); border:1px solid transparent; color:var(--md-sys-color-on-secondary-container);
     font-size:var(--t-caption); font-weight:700; padding:var(--s-1) var(--s-3); border-radius:var(--r-pill);
     white-space:nowrap;
     /* The name of the person you are talking to outranks the distance to them, so
@@ -8397,7 +8449,7 @@ function statusCard(b) {
   if (b.status === 'completed' || b.status === 'cancelled' || b.status === 'expired' || b.status === 'no_show') {
     return `<div class="card card-lg">
           <div class="row" style="margin-bottom:10px;">
-            <span style="font-size:var(--t-caption); font-weight:800; text-transform:uppercase; color:var(--ink-soft);">${label(b.status)}</span>
+            <span style="font-size:var(--t-caption); font-weight:600; color:var(--md-sys-color-on-surface-variant);">${label(b.status)}</span>
             <span style="font-size:var(--t-caption); color:var(--mist);">${esc(payStatusLabel(b))}</span>
           </div>
           <div style="display:flex; flex-direction:column; gap:6px; font-size:var(--t-caption); color:var(--ink-soft);">
@@ -8413,7 +8465,7 @@ function statusCard(b) {
   const next = nextStepFor(b.status);
   return `<div class="card card-lg" style="${live ? 'border:1px solid var(--success); background:var(--success-100);' : ''}">
           <div class="row" style="margin-bottom:10px;">
-            <span style="font-size:var(--t-caption); font-weight:800; text-transform:uppercase; color:${live ? 'var(--success-ink)' : 'var(--ink-soft)'}; display:flex; align-items:center; gap:5px;">
+            <span style="font-size:var(--t-caption); font-weight:600; color:${live ? 'var(--success-ink)' : 'var(--md-sys-color-on-surface-variant)'}; display:flex; align-items:center; gap:5px;">
               ${live ? '<span class="live-dot"></span>' : ic('calendar', 12)} ${label(b.status)}
             </span>
             <!-- An ETA is a promise about a journey still happening. This rendered
@@ -10500,7 +10552,7 @@ function residentProviderDetail(){
   return `
   ${screenHeader('Provider details', { backId:'back-from-detail-btn', backLabel:'Back to results', action:`<div style="display:flex; align-items:center; gap:6px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.20); padding:var(--s-1) var(--s-3); border-radius:var(--r-pill); flex-shrink:0;">
       ${stars(p.rating,12,true)}
-      <span style="font-size:var(--t-body); font-weight:800; color:var(--on-brand); line-height:1;">${p.rating.toFixed(1)}</span>
+      <span style="font-size:var(--t-body); font-weight:800; color:var(--md-sys-color-on-surface); line-height:1;">${p.rating.toFixed(1)}</span>
     </div>` })}
 
   <div class="pad pad-cta" style="background:var(--cloud);">
@@ -10875,7 +10927,7 @@ function residentBookingDetail(){
        hand-rolled around it, so this screen and the provider's job screen — the same
        booking seen from two sides — cannot drift in casing, in spacing, or in whether
        the title is a heading at all. They had already done all three. */
-    action: `<span style="background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.32); color:var(--on-brand); font-size:var(--t-caption); font-weight:800; padding:var(--s-1) var(--s-3); border-radius:var(--r-pill); text-transform:uppercase; letter-spacing:0.5px; flex-shrink:0;">${statusText}</span>`
+    action: `<span style="background:var(--md-sys-color-secondary-container); border:1px solid transparent; color:var(--md-sys-color-on-secondary-container); font-size:var(--t-caption); font-weight:600; padding:var(--s-1) var(--s-3); border-radius:var(--r-pill); flex-shrink:0;">${statusText}</span>`
   })}
 
   <div class="pad" style="background:var(--cloud);">

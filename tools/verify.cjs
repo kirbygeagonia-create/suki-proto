@@ -1294,16 +1294,26 @@ suite('hygiene', async () => {
      corner, which is what caught this one. The population is deliberately narrow: `.chat-head` and
      the message bubbles also paint on-brand text and need no root variant, because they bring their
      own dark surface with them. */
-  const BAR_CONTROLS = ['.onbar', '.back-btn', '.notif-btn'];
+  const BAR_CONTROLS_OLD_REMOVED = null; /* the list and the root-variant scan moved into the check
+     below, which now asks the stronger question; see the comment there. */
+  /* The mobile-app pass made the bar ONE surface — light on every screen, not light on four tabs
+     and brand on the rest — so the question is no longer "does this control have a root-tab
+     variant" but "does any control that lives in a bar still paint on-brand ink at all", which on a
+     white bar is white on white. The chat header, its tag, the sent bubble and the concierge's
+     floating button keep on-brand text and bring their own dark surface, as the comment above
+     says; a bar control appearing anywhere else is the finding. Same hazard, asserted one step
+     earlier than the camera's contrast tally, and stronger: the old form forgave a brand control on
+     a drill-in because a drill-in WAS brand. */
+  const BAR_CONTROLS = ['.onbar', '.back-btn', '.notif-btn', '.title', '.sub'];
+  const DARK_BY_DESIGN = ['.chat-head', '.chat-head-tag', '.chat-bubble-out', '.concierge-fab'];
   const onBrandCss = css.replace(/\/\*[\s\S]*?\*\//g, '');
   const onBrand = (onBrandCss.match(/\.[a-z-]+\{[^{}]*color:var\(--on-brand\)/g) || [])
     .map(r => /\.[a-z-]+\{/.exec(r)[0].slice(0, -1));
-  const needRoot = BAR_CONTROLS.filter(c => onBrand.includes(c));
-  const unrooted = needRoot.filter(c => !new RegExp('\\[data-root="1"\\][^{]*' + c.replace('.', '\\.')).test(onBrandCss));
-  c.check('every control painted for the brand bar has a root-tab variant, because that bar is white',
-    onBrand.includes('.onbar') && needRoot.length >= 1 && unrooted.length === 0,
-    'onBrand=' + onBrand.join(',') + ' barControlsChecked=' + needRoot.join(',')
-      + ' unrooted=[' + unrooted.join(', ') + ']');
+  const onBarInLightBar = BAR_CONTROLS.filter(c => onBrand.includes(c));
+  const unexplained = onBrand.filter(c => !DARK_BY_DESIGN.includes(c));
+  c.check('no control in the app bar paints on-brand ink, because every bar is a light surface now',
+    onBarInLightBar.length === 0 && unexplained.length === 0,
+    'bar controls still on-brand=' + onBarInLightBar.join(',') + ' unexplained=' + unexplained.join(','));
 
   /* a button that reports success without changing anything is the bug class this
      whole rebuild was asked to remove */
