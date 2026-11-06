@@ -126,8 +126,9 @@ an inversion cannot. In Flutter: `elevations` inside a `Scaffold`, then a route,
 | bottom sheet | `.sheet-layer`, `.sheet` | `showModalBottomSheet` |
 | snackbar | `.toast` | `ScaffoldMessenger.showSnackBar` |
 | empty state | `.empty`, `.empty-icon`, `.empty-title`, `.empty-body` | an icon + title + one line + one action |
-| stepper (booking tracker) | the labelled step row | `Stepper` / a custom row of step chips |
-| avatar (monogram) | initials on a tone derived from the name | `CircleAvatar` with a `Text` child |
+| stepper — compact, on a card | `.mini-steps` + `.step-line`, from `stepBar(status)` | a `Row` of six `Expanded` bars and one `Text` line |
+| stepper — labelled, on the screen that owns the job | `.stepper` `.sp` `.step-mark` `.slabel` `.ssub`, from `stepPath(booking)` | `Stepper` with `Step(isComplete, isSelected)` |
+| avatar (monogram) | `.mono-avatar`, from `photoAvatar(person, size)` | `CircleAvatar` with a `Text` child |
 | rating | `★ 4.9 · 214 jobs`, one line, never wrapping | a `Row` of `Text` with `--font-figures` |
 
 ## 7. Rules a port must keep

@@ -10270,3 +10270,78 @@ the missing check* — arriving one tier over.
 sub-floor type, content under the nav, unreachable controls, horizontal overflow, no console errors),
 741 gate checks, and the eight-corner sweep running against this state.
 
+
+## 166. The job path became one component, and the pass found the screen had four buttons for two decisions
+
+**What the brief asked.** §5's row for "Provider Dashboard / Job / Jobs" wants "the 6-step job flow
+as a stepper with a single prominent primary action per state", and its row for booking detail/tracking
+wants a "labeled vertical or horizontal stepper … the current step highlighted". §5's last row wants
+"no page-specific one-offs" anywhere.
+
+**What was there.** The stepper existed once, inside `residentHome()`, with its own array of six state
+codes AND its own object of six step words. That second list is the defect: it called the state the
+machine names `Accepted` a step called `Scheduled`, so the Home card and the tracking card told one
+visit two different stories in two vocabularies. The provider's job screen had no path at all.
+
+**What landed.**
+
+- `JOB_STAGES`, `stageIndexOf()`, `stepBar()` and `stepPath()` are top level, beside `label()`,
+  `stateHint()` and `nextStepFor()` — the three functions that already owned the state vocabulary.
+  The step word is `label(code)`. `STAGE_WORDS` is deleted, not corrected, because a second list of
+  names for one vocabulary is the class of defect, not an instance of it.
+- `stepPath()` is a labelled vertical stepper: every step named, the current one carrying the
+  machine's own hint, and each step already walked carrying the stamp the record wrote for it
+  (`STEP_STAMPS`, with `createdAt` for the request) — and nothing at all where no record wrote one.
+  A stepper may not invent the minute something happened.
+- `timelineRows(b, { skipPath: true })` is the same function with one new option. The tracking card
+  used to print the six path words as event rows; now the path is the stepper's business and the
+  event list prints only what the path cannot hold — a reschedule, a case, a walk-away. When the job
+  has LEFT the path (cancelled, unanswered, no one home) the stepper paints nothing and the whole
+  history stays, because there the event list is the only account there is.
+- The provider's job screen: `jobActionBar(b, { answerAbove })`. Reading the painted button list —
+  not a tally — found four buttons for two decisions: the request card offered "Accept request" and
+  "Decline", and the action bar below offered the same acts again as "Accept this request" and
+  "Decline this request". The bar now keeps the path and the notes and drops the moves when the
+  answer is above, and the surviving button takes its words from `JOB_VERBS` — one name for one act.
+- The client on that screen is a monogram, and its status cell prints `label()` instead of
+  `text-transform:capitalize` over `label()`.
+- The concierge's two example prompts are a `CONCIERGE_PROMPTS` table drawn through `button.chip`,
+  which already decides their padding, border, background and colour. They were carrying all four
+  inline, so a third prompt would have been a third copy of a component.
+- P9: the provider dashboard's "2 more scheduled jobs" row packed date, hour and the job's own words
+  into one caption. The date and hour keep line one; the summary gets line two.
+
+**Two gate checks had to be re-pointed, and neither was relaxed.** `no control in the app bar paints
+on-brand ink` kept a hand-kept list of four exempt class names; the stepper's filled disc was a
+fifth honest case and the chat tag had already left the list on its own. It measures now: a rule may
+carry white ink exactly when the same declaration block brings its own dark surface, with a floor of
+three such rules so a scan matching nothing cannot pass. `the accept button says accept, not
+accepted` asserted that the string `>Accepted<` appeared nowhere on the screen, which the path is
+entitled to do; it is scoped to `<button>` now and additionally REQUIRES the step word to be present,
+so a build with no stepper at all fails it rather than passing it.
+
+**Instruments added.** `tools/probe-action-duplication.js`, `tools/probe-step-words-agree.js`,
+`tools/probe-flat-palette.js` (the pass's third, fourth and fifth probes), each with its own
+invention-of-findings history written in its header: the action probe scored booking LISTS against
+one booking's moves (16 phantom defects) and then condemned "Open document" for appearing once per
+document in a list; the step-word probe compared every chip on a screen to the first booking it
+found (2 phantom defects) and then read `state.selectedBookingId` as the screen's subject, which is a
+global that survives navigation and reported "screens about one job: 101" — every screen in the app,
+including the login page. The rules that survived are asserted at the unit the real case lived in: a
+card, and the screen that paints the path.
+
+`tools/falsify-painted-contracts.cjs` runs six breaks over five screens: three plants and three
+refusals, where a refusal is the probe losing its own subject and answering `NO CONCLUSION` instead
+of zero. It taught two more lessons: a gradient planted BEFORE a `background` shorthand paints
+nothing, so that break was equivalent rather than caught; and a probe that filters its surfaces by
+the words it already expects is blind to the novel word it exists to catch.
+
+`tools/falsify-one-action.cjs` proves the new gate check three ways — the bar ignoring the flag, the
+caller forgetting to set it, and one primary left standing while two buttons carry the same words.
+The first two condemn the same painting from two doors, which is recorded rather than smoothed over.
+
+**Numbers, from the runs that printed them.** `node tools/verify.cjs` 741 → 742.
+`node tools/shot.cjs --list` 101 → 102 screens (the provider's job path sits below the fold, so the
+walk gained a row that scrolls to it — a picture of the wrong card is not a measurement).
+`node tools/falsify-one-action.cjs` 3 of 3. `node tools/falsify-painted-contracts.cjs` 6 of 6,
+0 not applied, page and probes restored.
