@@ -35,6 +35,49 @@ When information conflicts, investigate the repository and supplied project docu
 
 ---
 
+# 0. STARTUP CONTEXT AND REQUIRED READING (added 6 November 2026)
+
+This section sits above the original instructions and does not replace them. Everything in sections 1–95 still applies.
+
+## 0.1 Required reading order
+
+Do not assume your platform loads this file automatically. Follow these steps.
+
+1. Read `AI_CONTEXT_INDEX.md` (the short, authoritative map of the whole project).
+2. Read this file completely, or at least this section and the sections your task touches.
+3. Read `SUKINNECT_STARTUP_MASTER_PLAN.md` and the pitch deck (`SEAIT SUKINNECT - PITCHDECK.pdf` or `.pptx`; they are the same content).
+4. Read `README.md` and `CHANGES.md`.
+5. Inspect the application (`Sukinnect-next.html`, `Sukinnect.html`, `schema/sukinnect.reference.sql`, `tools/`).
+6. Verify the actual implementation before making recommendations or code changes (`node tools/verify.cjs`).
+
+## 0.2 Where the business context now lives
+
+- **`SUKINNECT_STARTUP_MASTER_PLAN.md`** is the single master business and product-strategy document: identity, problem, market, personas, business model, competitive positioning, trust and verification strategy, technology strategy, prioritised feature roadmap (P0–P3), go-to-market, pilot and expansion, KPIs, operations, risks, and the **conflict register (Appendix A)**.
+- **`AI_CONTEXT_INDEX.md`** is the entry point for AI assistants.
+- This file remains the detailed **development, product-rule and design** instruction document. Business assumptions in §6, §57–§62 below are context, not requirements; the master plan carries the current, tagged version of them.
+
+## 0.3 Supplied November 2026 business documents (in the repository root)
+
+- `Sukinnect_Master_Plan_Revised_November_2026.docx` — revised master plan (freemium + commission, AI roadmap, partners, break-even analysis)
+- `Sukinnect_Market_Research_and_Business_Development_Plan.docx` — desk research and a reassessment of commission, subscriptions and competitors
+- `Potential_Collaborations_and_New_and_Refine_Features.docx` — prospective partners and newly proposed features
+
+Treat them as **working documents**. Their financial and market figures are planning assumptions. The Market Research plan contains *recommendations*; the feature notes contain *proposals*. Neither is an approved requirement until the project owner says so.
+
+## 0.4 Rules that follow from the November review
+
+- **Do not implement features from the feature notes** (voice onboarding, ID OCR, facial recognition, blockchain, an in-app wallet, loans, an NGO programme, subscriptions) unless the owner has resolved the relevant conflict in `SUKINNECT_STARTUP_MASTER_PLAN.md` Appendix A. Several contradict the deliberate design recorded in §23 and §87 below.
+- **No stored-value wallet.** It was removed on purpose (`CHANGES.md` §8). Sukinnect is not an e-wallet, lender or insurer; payments go through licensed partners.
+- **Commission is an open owner decision.** The code carries a configurable default (`commissionRateDefault`); the Master Plan says 1.2%, the Market Research plan recommends 8–12%, the deck says validate per category. Do not present any of them as the settled business rate.
+- **Funding figures differ across documents** (deck ₱2.3 M; Master Plan ₱1,867,769 budget / ₱2,080,000 ask). Do not quote a single ask as settled.
+- **Prospective partners are not partners** until confirmed in writing. Do not add their names or logos to the application.
+- **Demo data does not mirror the pilot.** The pilot barangays are Poblacion, Polonuling, Cebuano, Kablon and Bunao; the demo data mostly uses others. Changing demo data is a prototype change and needs an explicit request.
+- **Private documents stay private.** Netlify publishes only the explicit `SERVE` list in `tools/build-web-dist.cjs`. Do not add strategy documents, the pitch deck, the `.docx` files, prompts, `schema/` or `tools/` to `SERVE` without the owner's explicit approval.
+- **Keep one master context each** for business (`SUKINNECT_STARTUP_MASTER_PLAN.md`) and development (this file). Do not create competing copies.
+- **Name check.** Line 50 below says "Konekista"; the owner's team name is "Konekta". The mismatch is logged as conflict C12 and has not been silently changed.
+
+---
+
 # 1. PROJECT IDENTITY
 
 Project name:
@@ -96,6 +139,8 @@ When something is not established by the sources, say that it is an assumption, 
 The pitch deck supplied with the project is the same project context regardless of whether it is provided as PDF or PPTX.
 
 Do not treat the PDF and PPTX as separate specifications.
+
+Added 6 November 2026: the three November 2026 `.docx` business documents in the repository root are additional project references (see §0.3). They are working documents, not a fourth specification that overrides the pitch deck. Where they disagree with the deck, with each other, or with the code, record the conflict in `SUKINNECT_STARTUP_MASTER_PLAN.md` Appendix A instead of choosing silently.
 
 ---
 
@@ -4808,6 +4853,8 @@ Therefore:
 
 Do not hard-code arbitrary final commission rules into the prototype unless explicitly requested.
 
+Added 6 November 2026: the November documents give different answers (Master Plan 1.2%, Market Research plan 8–12%, with a lower Pro-tier rate), and the working code defaults to 10% as an admin-editable configuration value with a per-category override. The produce (fruit) commission is deliberately `null` (undecided). Keep the rate configurable and audited; do not describe any figure as the final business rate. See conflict C1 in `SUKINNECT_STARTUP_MASTER_PLAN.md`.
+
 ---
 
 # 60. PLANNING BUDGET CONTEXT
@@ -4827,6 +4874,8 @@ These are project planning assumptions.
 They are NOT current system functionality.
 
 Do not create application features merely because a budget line exists.
+
+Added 6 November 2026: the November documents use a ₱1,867,769 approved budget and a ₱2,080,000 funding ask (budget plus a ₱212,231 cash buffer), whereas this section records the deck's ₱2.3 million. The two have not been reconciled (conflict C2). Do not quote one as settled.
 
 ---
 
@@ -5680,6 +5729,8 @@ The intended production direction is payment-partner integration without a store
 Do not erase the prototype behavior unless asked.
 
 Do not incorrectly claim that a wallet is part of the confirmed system.
+
+Added 6 November 2026: the feature notes in `Potential_Collaborations_and_New_and_Refine_Features.docx` propose an in-app digital wallet with cash-in/out, loan eligibility and wallet-based privileges, while the revised Master Plan says Sukinnect must not present itself as an e-wallet, lender or insurer. The prototype removed its stored-value wallet on purpose. Correct interpretation: the wallet, lending and blockchain proposals are *unresolved proposals* (conflicts C4 and C5), not confirmed product direction and not implemented behaviour. Do not build them, and do not delete the proposals from the record.
 
 Another example:
 

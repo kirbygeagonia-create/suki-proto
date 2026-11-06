@@ -8,6 +8,36 @@ The product spec, brand rules and the prototype-versus-production discipline liv
 **[`AGENTS.md`](AGENTS.md)**. Read it before changing anything. The money model in this
 rebuild is summarised in **[`CHANGES.md`](CHANGES.md)**.
 
+## Start here: the project knowledge system
+
+Sukinnect is a startup *and* a prototype. This map says where each kind of answer lives, so a new
+developer, collaborator or AI coding agent does not have to rediscover the project.
+
+| If you want to know… | Open |
+|---|---|
+| The one-page orientation (what is real, what is simulated, which file to trust) | **[`AI_CONTEXT_INDEX.md`](AI_CONTEXT_INDEX.md)** — AI assistants start here |
+| The startup: problem, market, model, roadmap, KPIs, risks, and the list of unresolved document conflicts | **[`SUKINNECT_STARTUP_MASTER_PLAN.md`](SUKINNECT_STARTUP_MASTER_PLAN.md)** |
+| The detailed development, product and design rules | **[`AGENTS.md`](AGENTS.md)** (new §0 sits at the top) |
+| The pitch deck | `SEAIT SUKINNECT - PITCHDECK.pdf` / `.pptx` (same content; Git LFS) |
+| The November 2026 business documents | `Sukinnect_Master_Plan_Revised_November_2026.docx`, `Sukinnect_Market_Research_and_Business_Development_Plan.docx`, `Potential_Collaborations_and_New_and_Refine_Features.docx` — working documents; all figures are assumptions |
+| The running prototype | `Sukinnect-next.html` (working rebuild) · `Sukinnect.html` (earlier shipped version) |
+| The rebuild's decisions and audit history | [`CHANGES.md`](CHANGES.md) · handset checks in [`DEVICE-PASS.md`](DEVICE-PASS.md) |
+| The intended production data shape | `schema/sukinnect.reference.sql` (reference only; not loaded by the app) |
+| Verification and build instruments | `tools/` — start with `node tools/verify.cjs` |
+
+**Reading order for an AI agent** (do not assume your platform loads `AGENTS.md` by itself):
+`AI_CONTEXT_INDEX.md` → `AGENTS.md` → `SUKINNECT_STARTUP_MASTER_PLAN.md` and the pitch deck →
+this README and `CHANGES.md` → the application files → verify the implementation before changing
+anything.
+
+**Status in one line:** a prototype with demo data and simulated payments and AI — no server, no
+authentication, no real users or bookings. Planning figures in any document are targets, not
+traction.
+
+**Private documents stay private.** The strategy documents, the `.docx` files, the pitch deck, the
+prompts, `schema/` and `tools/` are not published; Netlify serves only the explicit list in
+`tools/build-web-dist.cjs`.
+
 ## Clone and run
 
 Large assets (`reicon.js`, the pitch deck) are Git LFS files. Install LFS **before** cloning or
