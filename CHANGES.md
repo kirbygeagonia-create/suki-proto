@@ -10148,3 +10148,44 @@ not adopted, because AGENTS.md §68's 14px floor is an owner accessibility rulin
 handsets. The built APK copy still disagrees (`audit-build-bytes` findings 1) because rebuilding it is
 the acceptance step. None of this has been looked at on a handset, and no screen-reader output was
 heard.
+
+## 163. The follow-up cuts: the entry sheet, the tracker's words, and two chart attempts withdrawn
+
+Four things happened after §162 was written, and two of them are worth more than the fixes.
+
+**The entry screen overflowed its own sheet by 6px** once the fields went to 52px, and the height was
+not the cause. `.auth-forgot` carries `margin-left:-6px; margin-right:-6px` — a widening that only
+made sense while `.auth-sheet` had 20px of inner padding. Removing the card's padding turned that
+widening into an overflow past the clipping box, and the camera's `controls no tap can reach` tally
+named it at the anchor corner. The margins go; the 44px floor stays. The three legal documents were
+also painted as `.auth-switch` chips — each a 44px pill, so the row wrapped to three lines — and
+became text links at the same floor. Two lessons in one defect: **a rule that removes a container's
+padding has to audit the children that were compensating for it**, and **reusing a component's class
+for a different idea inherits that component's mass.**
+
+**The tracker now names its step.** Six marks on the active-booking card said a job was somewhere on
+a path without saying where. One line, built from the same `STAGES` array the marks are drawn from and
+the same `label()` the app already uses, says the step and the count. Six labels across a 320px card
+would be the collision this file has been asked to avoid five times over, so the naming is a line
+rather than a rail.
+
+**Two chart fixes were made, measured, and taken back.** The axis label that hangs 3px outside its
+plot at default width and 200% text was answered first by anchoring the last *drawn* label to the
+right — which cleared the escape and laid "Sep 14" and "Oct 26" 34x43px on top of each other, because
+a right-anchored edge label points back into its neighbour. The second attempt clamped the label's
+position instead and changed neither tally. Two identical-or-worse readings are two falsified
+hypotheses, so both are reverted and the escape stands as a finding. `git diff` over the whole branch
+shows no line of chart code changed by this pass, which is what makes it pre-existing rather than
+mine, and the earlier session that measured the same band reached the same conclusion in the comment
+that is now back where it was.
+
+**The monogram swap is withdrawn, and the reason is the interesting part.** Two splices of
+`photoFor`/`photoAvatar` left the suite unable to boot — the second failed with
+`CUSTOMERS is not defined` across all 23 checks in the suite — and the gate caught both, so the file
+was restored from the copy taken before the edit and the cartoon faces stay. I did not establish
+*which* line of the inserted block read `CUSTOMERS` before its declaration, and I am not going to
+write a mechanism I did not verify. What is established is the shape of the failure: a bulk text
+replacement moved a helper across a `const` boundary, nothing about the rendered screens would have
+shown it, and only the suite noticed. That is why this change belongs with the harness, which boots
+the page and can see a reference order, and not with another string splice.
+
