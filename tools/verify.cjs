@@ -1831,20 +1831,37 @@ suite('hygiene', async () => {
      nothing else in this suite would notice. */
   const appDir = require('path').dirname(require('./harness.cjs').APP);
   const fsx = require('fs');
-  const artMap = src.slice(src.indexOf('const SERVICE_ART = {'), src.indexOf('const CAT_ART_PX'));
-  const artPaths = [...artMap.matchAll(/([a-z]+):\s*'([^']+)'/g)].map(m => ({ id: m[1], file: m[2] }));
   const catalogue = boot().SERVICES;
-  c.check('the art map is keyed by every category the catalogue holds',
-    catalogue.every(s => artPaths.some(a => a.id === s.id)),
-    'missing an entry for: ' + catalogue.filter(s => !artPaths.some(a => a.id === s.id)).map(s => s.id).join(','));
-  c.check('and every entry names a file that is actually on disk',
-    artPaths.length > 0 && artPaths.every(a => fsx.existsSync(require('path').join(appDir, a.file))),
-    'dangling: ' + artPaths.filter(a => !fsx.existsSync(require('path').join(appDir, a.file))).map(a => a.file).join(','));
-  c.check('category art is local — no CDN, no absolute URL, no base64 payload',
-    artPaths.every(a => /^assets\/[a-z0-9/-]+\.png$/.test(a.file)) &&
-    !/src="https?:|src="data:image/.test(src));
-  c.check('the tile image states its size and stays out of the accessibility tree',
-    /width="' \+ CAT_ART_PX \+ '" height="' \+ CAT_ART_PX/.test(src) && /alt=""/.test(src));
+  /* The seven machine-generated category PNGs are retired (mobile-app pass, §4.6). The four checks
+     above used to pin the raster contract — one file per category, on disk, local, sized, hidden
+     from the accessibility tree — and the equivalent assertions for a drawn glyph are these: every
+     category the catalogue holds names a glyph, that glyph carries real path data, the inline set
+     is the only icon source, and nothing in the page asks for a category raster at all. A blank
+     tile is still the failure being guarded; what changed is that a missing PNG is no longer how it
+     would happen. */
+  const iconKeys = new Set([...src.matchAll(/^  '?([a-z0-9-]+)'?: \{o:/gm)].map(m => m[1]));
+  const noGlyph = catalogue.filter(s => !iconKeys.has(s.icon));
+  const thinGlyph = catalogue.filter(s => {
+    const at = src.indexOf("  '" + s.icon + "': {o:");
+    const at2 = at < 0 ? src.indexOf('  ' + s.icon + ': {o:') : at;
+    if (at2 < 0) return true;
+    return src.slice(at2, at2 + 120).indexOf('d="', 10) < 0 || src.slice(at2, at2 + 120).length < 118;
+  });
+  c.check('every category the catalogue holds draws a glyph from the inline set',
+    catalogue.length >= 7 && noGlyph.length === 0,
+    'no glyph for: ' + noGlyph.map(s => s.id + '->' + s.icon).join(','));
+  c.check('and every category glyph carries real path data',
+    thinGlyph.length === 0, 'thin geometry: ' + thinGlyph.map(s => s.id).join(','));
+  /* Comments are stripped first, for the reason this repository already writes down twice: a
+     sentence explaining that the seven rasters were retired names the same path as a rule that
+     still asks for one. The history stays in the file; it is not a use. */
+  const codeOnlyForArt = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  c.check('no category asks for a raster any more',
+    !/SERVICE_ART|CAT_ART_PX|function catArt\(/.test(codeOnlyForArt) && !/assets\/category-art/.test(codeOnlyForArt),
+    'still referenced: ' + ['SERVICE_ART', 'CAT_ART_PX', 'function catArt(', 'assets/category-art']
+      .filter(p => codeOnlyForArt.includes(p)).join(','));
+  c.check('the tile glyph is sized where it is painted, not by a raster box',
+    /ic\(s\.icon,\s*28\)/.test(src));
   c.check('the flat SVG scene table is gone, not merely unused', !/const CAT_ART = \{/.test(src));
 
   /* The keyboard surface. Each of these was true-once-and-broke: a focus ring that

@@ -574,7 +574,9 @@
   /* CSS-Only Pure Vector Avatars */
   
 
-  .catgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
+  /* Four columns: seven trades plus "All services" is two tidy rows (§4.4), and this is the first
+     thing on the most important screen, so it has to fit above the fold at 320 px too. */
+  .catgrid{display:grid; grid-template-columns:repeat(4,1fr); gap:var(--s-2);}
   /* Nine centimetres of tile so the main entry point of the app is a comfortable
      thumb target, icon badge top-left and the label bottom-left. The service
      colour is confined to the badge: it is a secondary cue, the brand is not (45). */
@@ -585,18 +587,17 @@
     font-size:var(--t-body); font-weight:700; cursor:pointer; color:var(--ink);
     line-height:1.2;
   }
+  /* The word a person reads, under the picture. 14px — the floor the camera enforces — centred,
+     two lines of room, and the whole cell stays the tap target. */
+  .cat-label{ display:block; margin-top:var(--s-2); font-size:var(--t-caption); font-weight:500;
+             line-height:1.2; color:var(--md-sys-color-on-surface); }
+  .cat .pilot-tag{ margin-top:var(--s-1); }
   /* The tile art is a small scene per trade, drawn inline. Inline because the
      WebView loads this file from disk with no network (81), it stays crisp at any
      pixel ratio, and it adds no binary to the APK. Each scene is painted in its
      own trade hue and nothing else: brand blue still owns the header, the buttons
      and the nav (45). */
-  .cat .art{
-    width:60px; height:60px; border-radius:19px; flex-shrink:0; overflow:hidden;
-    display:flex; align-items:center; justify-content:center;
-    /* The render carries its own plate, light and contact shadow, so the tile paints
-       nothing behind it. The radius still clips the square image to the tile shape. */
-  }
-  .cat .art svg, .cat .art img{ width:100%; height:100%; display:block; }
+  /* .cat .art sized the retired raster; the tile is .tile.lg now (§4.4). */
 
   /* The category scenes never move. This is a project-owner rule, not a taste
      call: the picture is what tells a plumber from an electrician, and six
@@ -2096,6 +2097,9 @@ const SERVICES = [
 // decision: one hue per trade, ink >=4.5:1 on its own tint AND on --background, and
 // delivery takes the logo's cyan family so it no longer reads identical to plumbing.
 // Brand blue stays dominant — these remain secondary cues (45).
+/* The tile and the row ask one function for a trade's tonal pair, so the pair has one source
+   and no screen invents a third shade beside it. */
+function serviceTheme(id){ return SERVICE_THEME[id] || SERVICE_THEME.plumbing; }
 const SERVICE_THEME = {
   plumbing:{bg:'#E7EDFF', fg:'#0352AE'},
   electrical:{bg:'#FFF3D6', fg:'#8A5A00'},
@@ -2159,29 +2163,9 @@ function serviceMeta(serviceId){
 // Static by rule and by nature — a PNG cannot move, and no transform is applied to it
 // or its wrapper. Provenance, dimensions, byte cost, and the reason the CC0 3dicons
 // collection was researched and then not used are in assets/category-art/ASSET-LICENSES.md.
-const SERVICE_ART = {
-  plumbing:   'assets/category-art/plumbing.png',
-  electrical: 'assets/category-art/electrical.png',
-  cleaning:   'assets/category-art/cleaning.png',
-  tutoring:   'assets/category-art/tutoring.png',
-  appliance:  'assets/category-art/appliance.png',
-  delivery:   'assets/category-art/delivery.png',
-  fruit:      'assets/category-art/fruit.png',
-};
-const CAT_ART_PX = 60;
-
-function catArt(serviceId){
-  const file = SERVICE_ART[serviceId];
-  /* Width and height are stated so the image cannot shift the grid while it decodes,
-     and decoding="sync" so a re-render does not flash an empty frame. alt="" because
-     the label under the tile is the accessible name; the picture is decoration. */
-  if (file) return '<img src="' + file + '" width="' + CAT_ART_PX + '" height="' + CAT_ART_PX +
-    '" alt="" decoding="sync" draggable="false">';
-  // A category added later, or an asset that did not ship, still renders a tile. The
-  // gate asserts every SERVICES id has a file on disk, so this is a fallback and not
-  // a state the shipped app is ever in.
-  return ic(serviceMeta(serviceId).icon, 24);
-}
+  /* The seven AI-generated category PNGs are retired: each trade draws its own glyph
+     from the one icon family, and the licence record is assets/ICON-LICENSES.md. The PNG files stay
+     on disk, unreferenced, pending the owner's approval to delete (brief §4.5 and §4.6). */
 
 // Accepts a provider object or a provider id.
 function serviceByProvider(providerOrId){
@@ -7183,7 +7167,10 @@ function startDiscovery(query){
 // the two entry points cannot drift apart.
 function openCategory(serviceId){
   state.searchQuery = '';
-  state.providerFilters = Object.assign(blankFilters(), { serviceId: serviceId });
+  /* "All services" is the grid's eighth tile (§4.4). It is not a category, so it clears the
+     service filter instead of filtering to a trade nobody holds — otherwise the tile that
+     promises the whole catalogue would be the one tile that shows nothing. */
+  state.providerFilters = Object.assign(blankFilters(), { serviceId: serviceId === 'all' ? null : serviceId });
   state.tab = 'results';
   runDiscovery();
 }
@@ -10070,7 +10057,12 @@ function residentHome(){
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </button>
       </div>
+    </div>    <div class="section-label">Browse by service</div>
+    <div class="catgrid">
+      ${SERVICES.map(s=>`<button type="button" class="cat" data-service="${s.id}"><span class="tile lg" style="--tile-bg:${serviceTheme(s.id).bg}; --tile-fg:${serviceTheme(s.id).fg}">${ic(s.icon,28)}</span><span class="cat-label">${esc(s.short || s.label)}</span>${s.pilot ? '<span class="chip pilot-tag">pilot</span>' : ''}</button>`).join('')}
+      <button type="button" class="cat" data-service="all"><span class="tile lg">${ic('grid',28)}</span><span class="cat-label">All services</span></button>
     </div>
+
 
     <!-- A job in motion is the reason the app was opened, so it sits above the
          browsing rather than below it: the category grid is for finding someone
@@ -10116,10 +10108,6 @@ function residentHome(){
       </div>
     </div>` : ''}
 
-    <div class="section-label spaced">Browse by service</div>
-    <div class="catgrid">
-      ${SERVICES.map(s=>`<button type="button" class="cat" data-service="${s.id}"><span class="art">${catArt(s.id)}</span><span>${esc(s.label)}</span></button>`).join('')}
-    </div>
 
     <div class="section-label">${repeat.length ? 'Book again' : 'Highly rated nearby'}</div>
     <div class="hscroll" style="display:flex; gap:8px;">
