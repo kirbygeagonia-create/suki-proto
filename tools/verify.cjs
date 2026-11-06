@@ -2746,11 +2746,21 @@ suite('honesty', async () => {
      providers hold a flagged one. One concept must be one count on one screen. */
   const dashHtml = paint('admin', 'admin_dashboard');
   const said = (re) => { const m = dashHtml.match(re); return m ? +m[1] : null; };
+  /* The attention rows used to lead with a bare numeral in a fixed 60px column (P6). The count now
+     rides in a chip beside the words it counts, so the reader asks for both orders and prefers the
+     trailing one — the leading one would match the 20 inside ic('file-text',20) and report a
+     disagreement that does not exist. */
+  const saidNear = (words) => {
+    const after = dashHtml.match(new RegExp(words + '[^0-9]{0,60}?(\\d+)', 'i'));
+    if (after) return +after[1];
+    const before = dashHtml.match(new RegExp('(\\d+)[^0-9]{0,60}?' + words, 'i'));
+    return before ? +before[1] : null;
+  };
   const k = app.adminCounts();
   const pairs = [
-    ['applications', said(/(\d+)\s+Provider applications need review/i), said(/(\d+)\s+Applications to review/i), k.pendingVerification],
-    ['open cases',   said(/(\d+)\s+Cases open for review/i),           said(/(\d+)\s+Cases open(?!\s+for)/i),    k.liveCases],
-    ['credentials',  said(/(\d+)\s+Credentials expiring or expired/i), null,                                      k.expiringSoon],
+    ['applications', saidNear('Provider applications need review'), said(/(\d+)\s+Applications to review/i), k.pendingVerification],
+    ['open cases',   saidNear('Cases open for review'),             said(/(\d+)\s+Cases open(?!\s+for)/i),    k.liveCases],
+    ['credentials',  saidNear('Credentials expiring or expired'),   null,                                      k.expiringSoon],
   ];
   const disagreeing = pairs
     .filter(([, shown, alsoShown, truth]) => shown !== null && shown !== truth)

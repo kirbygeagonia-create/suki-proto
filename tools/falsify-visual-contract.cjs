@@ -88,5 +88,8 @@ for (const b of BREAKS) {
 fs.writeFileSync(TMP, PRISTINE);
 console.log('falsify-visual-contract → ' + caught + ' of ' + BREAKS.length +
   ' breaks caught, ' + missed + ' missed, ' + notApplied + ' not applied, ' + skipped + ' skipped');
+/* The aggregate parses a summary anchored at line start; a verdict only this family's own name
+   can read is a verdict the suite reports as unproven. */
+console.log(caught + ' of ' + BREAKS.length + ' breaks caught, ' + notApplied + ' not applied');
 fs.unlinkSync(TMP);
 process.exit(missed + notApplied > 0 ? 1 : 0);

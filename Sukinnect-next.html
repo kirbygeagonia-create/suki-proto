@@ -411,6 +411,13 @@
     padding:var(--s-2) var(--s-3); margin-bottom:8px; cursor:pointer; font:inherit; color:var(--ink);
     min-height:var(--tap);
   }
+  /* The count rides with the sentence it quantifies. The column it used to sit in was the defect:
+     a coloured numeral in a 60px gutter, no icon, and a gap between the number and its meaning.
+     The chip is nowrap by the chip rule, so it cannot break mid-word, and it moves to its own line
+     before it is ever allowed to wrap because .card-head and .jr-t are wrappable. */
+  .count-chip{ font-size:var(--t-caption); font-weight:600; padding:2px var(--s-2); margin-left:var(--s-1);
+              background:var(--md-sys-color-secondary-container); color:var(--md-sys-color-on-secondary-container); }
+
   .job-row .jr-time, .job-row .jr-state, .job-row .jr-count{
     font-size:var(--t-body); font-weight:800; color:var(--deep); flex-shrink:0; min-width:60px;
   }
@@ -568,6 +575,12 @@
      "Call the Sukinnect line", and the same pair on the provider profile — so the row said both were equally
      the next thing to do, and no rule in the stylesheet could say otherwise. Demotion is about mass, not
      reach: `.btn` already sets min-height:var(--tap), so the fallback stays a full 44px target. */
+  /* The tonal tier §3.5 names: a filled action with no border and no shadow, quieter than the
+     primary, stronger than text. It is the Material FilledButton.tonal, and it is what a pair of
+     equal secondary actions should be. */
+  .btn.tonal{background:var(--md-sys-color-secondary-container); color:var(--md-sys-color-on-secondary-container); border:none; box-shadow:none; font-weight:600;}
+  .btn.tonal:hover{background:var(--md-sys-color-primary-container);}
+
   .btn.tertiary{background:transparent; border:1px solid transparent; color:var(--text-secondary); box-shadow:none; font-weight:700;}
   .btn.sm{padding:var(--s-2) var(--s-3); min-height:var(--tap); font-size:var(--t-body); border-radius:var(--r-sm);}
   /* Destructive actions keep error semantics but use the darker ink: a white label on
@@ -10572,11 +10585,11 @@ function residentProviderDetail(){
     <div class="card card-hero" style=" margin-bottom:12px">
       <div class="row card-head" style="align-items:flex-start; margin-bottom:14px;">
         <div style="display:flex; gap:12px; align-items:center; min-width:0;">
-          <div style="width:52px; height:52px; border-radius:50%; background:var(--brand-primary); display:flex; align-items:center; justify-content:center; color:var(--on-brand); font-weight:700; font-size:var(--t-lead); flex-shrink:0;">
+          <div style="width:64px; height:64px; border-radius:50%; background:var(--md-sys-color-primary-container); display:flex; align-items:center; justify-content:center; color:var(--on-brand); font-weight:700; font-size:var(--t-lead); flex-shrink:0;">
             ${p.name.split(' ').map(n=>n[0]).join('')}
           </div>
           <div style="min-width:0;">
-            <div style="font-size:var(--t-lead); font-weight:700; color:var(--ink);">${p.name}</div>
+            <div style="font-size:var(--t-title); font-weight:600; color:var(--md-sys-color-on-surface);">${p.name}</div>
             <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px; display:flex; align-items:center; gap:3px;">
               <span style="color:var(--error-ink); display:inline-flex;">${ic("map-pin",12)}</span> Barangay ${p.barangay}
             </div>
@@ -10627,7 +10640,7 @@ function residentProviderDetail(){
     ${capabilityCard(p)}
 
     <div style="display:flex; gap:10px; margin-bottom:12px;">
-      <button class="btn secondary" style="flex:1; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md); padding:var(--s-3); font-size:var(--t-body-sm); font-weight:700; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.04);" data-chat-provider-id="${p.id}">
+      <button class="btn tonal" style="flex:1;" data-chat-provider-id="${p.id}">
         ${ic("chat",14)} Chat Inquiries
       </button>
       <a class="btn tertiary" href="tel:${DEMO_HOTLINE}" style="flex:1; border-radius:var(--r-md); padding:var(--s-3); font-size:var(--t-body-sm); display:flex; align-items:center; justify-content:center; gap:6px; text-decoration:none;">
@@ -10667,7 +10680,7 @@ function residentProviderDetail(){
     </div>
   </div>
 
-  <div class="book-bar" style="background:var(--surface); border-top:1px solid var(--line); padding:var(--s-3) var(--s-5); display:flex; align-items:center; justify-content:space-between; position:sticky; bottom:0; z-index:var(--z-sticky);">
+  <div class="book-bar" style="background:var(--md-sys-color-surface); border-top:1px solid var(--md-sys-color-outline-variant); padding:var(--s-3) var(--s-4); display:flex; align-items:center; justify-content:space-between; gap:var(--s-3); position:sticky; bottom:0; z-index:var(--z-sticky); box-shadow:0 -4px 14px rgba(3,0,43,.10);">
     <div>
       <div style="font-size:var(--t-caption); color:var(--mist); font-weight:600;">Indicative rate</div>
       <div style="font-size:var(--t-input); font-weight:800; color:var(--deep);">${pesoShort(cheapestListing(p))} <span style="font-size:var(--t-caption); font-weight:500; color:var(--mist);">starting, per job</span></div>
@@ -11073,7 +11086,7 @@ function residentBookings(){
               </div>
             </div>
             <span class="chip status-pill status-${b.status}">
-              ${b.status}
+              ${esc(label(b.status))}
             </span>
           </div>
 
@@ -11278,28 +11291,28 @@ function adminDashboard(){
          on a device holding two disputes in total, and "6 applications" beside a
          queue of three. -->
     <button type="button" class="job-row" onclick="state.tab='admin_disputes'; render();" aria-label="Open disputes">
-      <span class="jr-count">${k.liveCases}</span>
-      <span style="min-width:0; flex:1;"><span class="jr-t">Cases open for review</span><span class="jr-s">${k.liveCases ? 'Under review' : 'Nothing under review'}</span></span>
+      <span class="tile" style="--tile-bg:var(--warning-100); --tile-fg:var(--warning-ink);">${ic('alert-triangle',20)}</span>
+      <span style="min-width:0; flex:1;"><span class="jr-t">Cases open for review <span class="chip count-chip">${k.liveCases}</span></span><span class="jr-s">${k.liveCases ? 'Under review' : 'Nothing under review'}</span></span>
       <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',14)}</span>
     </button>
     <button type="button" class="job-row" onclick="state.tab='admin_verifications'; state.adminProviderCategory='pending'; render();" aria-label="Open verification queue">
-      <span class="jr-count">${k.pendingVerification}</span>
-      <span style="min-width:0; flex:1;"><span class="jr-t">Provider applications need review</span><span class="jr-s">${k.missingDocs} still outstanding</span></span>
+      <span class="tile" style="--tile-bg:var(--brand-tint-soft); --tile-fg:var(--brand-primary);">${ic('file-text',20)}</span>
+      <span style="min-width:0; flex:1;"><span class="jr-t">Provider applications need review <span class="chip count-chip">${k.pendingVerification}</span></span><span class="jr-s">${k.missingDocs} still outstanding</span></span>
       <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',14)}</span>
     </button>
     <button type="button" class="job-row" onclick="state.tab='admin_verifications'; state.adminProviderCategory='credentials'; render();" aria-label="Open credential monitor">
-      <span class="jr-count">${k.expiringSoon}</span>
-      <span style="min-width:0; flex:1;"><span class="jr-t">Credentials expiring or expired</span><span class="jr-s">Renewal due</span></span>
+      <span class="tile" style="--tile-bg:var(--error-100); --tile-fg:var(--error-ink);">${ic('shield',20)}</span>
+      <span style="min-width:0; flex:1;"><span class="jr-t">Credentials expiring or expired <span class="chip count-chip">${k.expiringSoon}</span></span><span class="jr-s">Renewal due</span></span>
       <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',14)}</span>
     </button>
     <button type="button" class="job-row" onclick="state.adminScreen='intelligence'; render();" aria-label="Open marketplace intelligence">
-      <span class="jr-count">1</span>
-      <span style="min-width:0; flex:1;"><span class="jr-t">Electrical supply gap in San Isidro</span><span class="jr-s">No nearby provider (sample)</span></span>
+      <span class="tile" style="--tile-bg:var(--success-100); --tile-fg:var(--success-ink);">${ic('chart',20)}</span>
+      <span style="min-width:0; flex:1;"><span class="jr-t">Electrical supply gap in San Isidro <span class="chip count-chip">1</span></span><span class="jr-s">No nearby provider (sample)</span></span>
       <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',14)}</span>
     </button>
     <button type="button" class="job-row" onclick="state.adminScreen='categories'; render();" aria-label="Open the category catalogue">
-      <span class="jr-count">${SERVICES.filter(s => s.pilot).length}</span>
-      <span style="min-width:0; flex:1;"><span class="jr-t">Pilot category under review</span><span class="jr-s">${SERVICES.length} categories live</span></span>
+      <span class="tile" style="--tile-bg:var(--background); --tile-fg:var(--text-secondary);">${ic('fruit',20)}</span>
+      <span style="min-width:0; flex:1;"><span class="jr-t">Pilot category under review <span class="chip count-chip">${SERVICES.filter(s => s.pilot).length}</span></span><span class="jr-s">${SERVICES.length} categories live</span></span>
       <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',14)}</span>
     </button>
 

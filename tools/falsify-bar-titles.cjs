@@ -45,14 +45,20 @@ const PRISTINE = {
 const CHECK_POS = 'a screen name is sized by the bar it sits in, not by a class a screen can forget';
 const CHECK_SELF = 'no bar hand-types its own heading size';
 const CHECK_ONBAR = 'a control that sits in the brand bar takes the class, not a typed style';
-const CHECK_ROOT = 'every control painted for the brand bar has a root-tab variant, because that bar is white';
+/* The mobile-app pass made every bar one light surface, so the rule is no longer "a brand-bar
+   control needs a root variant" but "no bar control paints on-brand ink at all". The label moved
+   with the check; the break below moved with the label. */
+const CHECK_ROOT = 'no control in the app bar paints on-brand ink, because every bar is a light surface now';
 
 const POS_RULE = '  .topbar h1{font-family:var(--font-display); font-size:var(--t-title); font-weight:600;}';
-const ROOT_RULE = '  .screen[data-root="1"] .topbar h1{ font-size:var(--t-title-lg); letter-spacing:-.3px; }';
+const ROOT_RULE = '  .screen[data-root="1"] .topbar h1{ font-size:var(--t-title-lg); font-weight:700; letter-spacing:-.3px; }';
 const COMPONENT_H1 = '<div><h1 class="title">${title}</h1>';
 const COMPONENT_H1_SIZED = '<div><h1 class="title" style="font-size:var(--t-lead)">${title}</h1>';
 const ONBAR_USE = '<button id="mark-all-notifs-btn" class="btn sm onbar"';
-const ONBAR_RULE = '  .btn.onbar{ background:rgba(255,255,255,0.12); color:var(--on-brand); box-shadow:none; }';
+const ONBAR_RULE = '  .btn.onbar{ background:var(--md-sys-color-secondary-container); color:var(--md-sys-color-on-secondary-container); box-shadow:none; }';
+/* What the control looked like when it was written for a brand-colour bar — the hazard the
+   rewritten check now forbids, and what the sixth break puts back to prove the check fires. */
+const ONBAR_ON_DARK = '  .btn.onbar{ background:rgba(255,255,255,0.12); color:var(--on-brand); box-shadow:none; }';
 /* The exact statement the camera now runs between clearModals() and the walk's own navigation. */
 const ROOT_ONBAR = '  .screen[data-root="1"] .btn.onbar{ background:var(--brand-tint-soft); color:var(--deep); }';
 const CLEAR_CHAT = '         try { state.isChatOpen = false; } catch (e) {}';
@@ -103,11 +109,13 @@ const BREAKS = [
     expect: CHECK_ONBAR },
   { name: 'the on-bar rule is deleted, so the six controls that take it paint nothing',
     file: 'app', from: ONBAR_RULE, to: '  /* no on-bar rule */', expect: CHECK_ONBAR },
-  /* The one this pass found in the pixels rather than the source: a root tab's bar is white,
-     so the translucent-white pill with white text painted 1:1 on rgb(255,255,255) at seven
-     screens. Deleting the inverted rule returns exactly that. */
-  { name: 'the root-tab variant of the on-bar control is deleted, so its text matches its own bar',
-    file: 'app', from: ROOT_ONBAR, to: '  /* no root variant */', expect: CHECK_ROOT },
+  /* The one this pass found in the pixels rather than the source: a bar control written for the
+     brand plate paints white on white once the plate is a light surface, and the camera measured
+     1:1 on rgb(255,255,255) at seven screens. Deleting the root-tab variant is no longer the
+     hazard — every bar is light now, so that mutant would be equivalent. Painting the control
+     back into on-brand ink is, and that is what this break does. */
+  { name: 'the on-bar control goes back to on-brand ink, which is invisible on a light bar',
+    file: 'app', from: ONBAR_RULE, to: ONBAR_ON_DARK, expect: CHECK_ROOT },
 ];
 
 let applied = 0, caught = 0, notApplied = 0, missed = 0;
