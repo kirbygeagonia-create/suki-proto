@@ -10236,3 +10236,37 @@ own baseline: the audit reports the built APK disagreeing with the source, which
 until the owner rebuilds it after acceptance. The family is right to refuse — the invariant it guards
 is genuinely unmet — and the fix is a rebuild, not a relaxed needle.
 
+## 165. Slice 5b: the monograms land on the third attempt, two lists stop being cards, and a tier gains its missing member
+
+**A3, done.** The cartoon faces are out of the UI. The first two attempts at this change died the same
+way and neither death was in the app: the splice located the end of `photoAvatar()` by searching for
+the next `}` on its own line, which lives *inside* the following function's template, so it cut
+`serviceAvatar` in half and the suite crashed. The third attempt takes its boundary from the next
+function's **declaration** — a string that exists exactly once — and asserts uniqueness before
+writing. The first version also read `CUSTOMERS`, which is declared 36 lines further down than the
+helper, and the temporal dead zone punished it; the resolver now reads only the object the caller
+holds, the profile the app greets from, and `PROVIDERS`, all of which are above it. A record with no
+name paints the person glyph rather than an invented initial or a question mark, because the disc must
+not claim an identity the record does not hold. `serviceAvatar`'s photo-first branch goes with it: a
+helper that returns a face whenever `PRO_PHOTOS` has an id would undo the change on exactly the rows
+§4.4 is about.
+
+**P1, two lists.** The provider's waiting requests and the conversation list were bordered, filled,
+rounded blocks sitting inside another block — the card-in-card that reads as a web dashboard. Each is
+now a row of the list component with a hairline between siblings, and the request list stops adding
+9px of margin per item, which was the other half of why six of them looked like six cards. The data
+attributes, handlers and aria labels are unchanged: this is a container decision, not a behaviour one.
+
+**A tier that could not say what the rule said.** §5 asks for the destructive action as a text button
+at the bottom. The button system had primary, secondary, tertiary and destructive-fill and **no
+destructive member of the demotion tier**, so both hubs hand-typed the same inline recipe — surface
+fill, alert border, error ink — which is a per-screen one-off and the same visual weight as the
+primary action above it. `.btn.text-danger` is the missing vocabulary: one class, the same 44px floor,
+the pairing already measured at 5.5:1. This is the same shape as the §70 lesson this file already
+records — *when a stated rule cannot be expressed, look for the missing vocabulary before looking for
+the missing check* — arriving one tier over.
+
+**Measured after:** 101 screens with every failure tally zero (tap floor, contrast, clipping,
+sub-floor type, content under the nav, unreachable controls, horizontal overflow, no console errors),
+741 gate checks, and the eight-corner sweep running against this state.
+
