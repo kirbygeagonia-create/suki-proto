@@ -1460,7 +1460,13 @@ suite('hygiene', async () => {
   const rootBlock = css.slice(css.indexOf(':root'), css.indexOf('}', css.indexOf(':root')));
   const declaredTokens = [...rootBlock.matchAll(/(--[a-z0-9-]+)\s*:/g)].map(m => m[1]);
   const unreachedTokens = declaredTokens.filter(d => !src.includes('var(' + d + ')'));
-  const TOKEN_EXCEPTIONS = ['--info'];
+  /* --info is kept declared because AGENTS.md §31 names it and §34 forbids spending it on a brand
+     chip. --accent-brand joins it on the same reasoning: §31A names it as one of the four flat
+     brand tokens, and the mobile-app pass spends the logo cyan through the Material 3 role name
+     --md-sys-color-secondary, which DESIGN-TOKENS.md maps to the Flutter ColorScheme field. A rule
+     that reaches for the brand name directly would be the second spelling the census exists to
+     catch, so the value stays declared and the exception says why. */
+  const TOKEN_EXCEPTIONS = ['--info', '--accent-brand'];
   c.check('every :root token is reached, except the ones this file names and justifies',
     declaredTokens.length > 80 &&
       unreachedTokens.length === TOKEN_EXCEPTIONS.length &&
@@ -1648,13 +1654,43 @@ suite('hygiene', async () => {
   const quoted = new Set([...body.matchAll(/\bic\(\s*['"]([a-z0-9-]+)['"]/g)].map(m => m[1]));
   const carried = new Set([...body.matchAll(/\bicon:\s*'([a-z0-9-]+)'/g)].map(m => m[1]));
   const empties = new Set([...body.matchAll(/\bemptyState\(\s*'([a-z0-9-]+)'/g)].map(m => m[1]));
-  const asked = new Set([...quoted, ...carried, ...empties]);
+  const asked = new Set([...quoted, ...carried, ...empties,
+    /* a fourth way a name arrives: reaching for the drawing directly rather than through ic(),
+       which is how the nav's filled variant is pinned further down this file. */
+    ...new Set([...body.matchAll(/\bICONS\.([a-z0-9-]+)\b/g)].map(m => m[1])),
+    /* a fifth and sixth way, both found by deleting a glyph and watching a screen lose it:
+       a nav item's second argument, and the role-icon map the sign-in chips read. */
+    ...new Set([...body.matchAll(/\bnavItem\(\s*'[^']*',\s*'([a-z0-9-]+)'/g)].map(m => m[1])),
+    ...new Set((/\bAUTH_ROLE_ICON\s*=\s*\{([^}]*)\}/.exec(body) || [, ''])[1]
+      .matchAll(/'([a-z0-9-]+)'/g).map(m => m[1]))]);
   const missing = [...asked].filter(n => !defined.has(n));
   c.check('every glyph the app can reach has a drawing', missing.length === 0, 'missing: ' + missing.join(','));
   c.check('and the names were actually looked for', asked.size >= 30 && defined.size >= asked.size,
     asked.size + ' reachable, ' + defined.size + ' drawn');
   c.check('no glyph key is declared twice', dupes === 0, dupes + ' duplicate entry(ies)');
-  c.check('the set stays the size of an icon system', defined.size <= 48, defined.size + ' entries');
+  /* The old rule was a ceiling of 48 entries, standing in for "nobody accumulates glyphs nobody
+     uses". The mobile-app pass replaces the seven AI-generated category rasters with drawn glyphs
+     for the trades themselves, gives the home grid its eighth "All services" tile and gives the
+     admin's Help Desk a support icon, so the set legitimately grows to 52 — and simply typing a
+     bigger number would have kept the proxy and lost the rule. It is replaced by what the number
+     was standing for: every entry is either reached by a call site or on a named allow-list, so an
+     unused glyph added tomorrow is still a finding, and every trade the catalogue declares still
+     has a drawing even if no `ic('name')` in markup reaches it (AGENTS.md: a name carried by a
+     data row is invisible to a grep for ic(). */
+  const DECLARED_ADDITIONS = new Set(['plumbing', 'electrical', 'cleaning', 'tutoring',
+    'appliance', 'delivery', 'fruit', 'grid', 'help']);
+  const unaccounted = [...defined].filter(n => !asked.has(n) && !DECLARED_ADDITIONS.has(n));
+  c.check('every declared glyph is reached by a call site or named as an addition',
+    unaccounted.length === 0, 'unaccounted: ' + unaccounted.join(','));
+  /* A trade draws its OWN glyph now — the icon field equals the category id rather than an
+     abstract shape name — so the assertion is about that pairing, not about a literal list.
+     The pattern tolerates the `short` label the mobile-app pass adds between them. */
+  const trades = [...body.matchAll(/\{id:'([a-z]+)',label:'[^']*',(?:short:'[^']*',)?icon:'([a-z0-9-]+)'/g)];
+  const wrongGlyph = trades.filter(m => m[1] !== m[2]).map(m => m[1] + '->' + m[2]);
+  const tradeGaps = trades.filter(m => !defined.has(m[2])).map(m => m[1]);
+  c.check('every trade in the catalogue draws its own named glyph',
+    trades.length >= 7 && wrongGlyph.length === 0 && tradeGaps.length === 0,
+    trades.length + ' trades, mismatched ' + wrongGlyph.join(',') + ', undrawn ' + tradeGaps.join(','));
   /* reicon.js is 8 MB of LFS for a set the file now draws itself, and a page that
      waits for a custom element to register shows a screen with no icons for four
      seconds when it never does. The rebuild loads neither. */
@@ -1901,10 +1937,25 @@ suite('hygiene', async () => {
      name --font-figures — and the check that matters is the probe's measurement, not this shape
      assertion; this is what stops the rule quietly dropping the face again. */
   const figureRule = /\.row > b[\s\S]{0,260}?font-variant-numeric:tabular-nums/.exec(css);
+  /* The face for digits has to be one the browser measured as TABULAR and WITHOUT a slashed zero.
+     Measured 2026-11-05 with node tools/shot.cjs --probe=@tools/probe-zero-style.js:
+       Atkinson Next      364.05 / 364.05 — tabular, and a slashed zero, seen in the screenshot
+       Plus Jakarta Sans  345.61 / 345.61 — tabular, plain round zero
+       Poppins            184.33 / 361.73 — carries no tabular feature at all
+     So the digits are Jakarta's while the words stay Poppins by the owner's ruling of 2026-10-27.
+     The previous form of this check pinned the literal "Atkinson Next" inside the declaration, so
+     it failed the FIX rather than the bug — the assertion is the relation (a figures face of its
+     own, distinct from the UI face) plus the measured choice. */
+  const figuresFace = /--font-figures:\s*"([^"]+)"/.exec(css);
+  const uiFace = /--font-ui:\s*"([^"]+)"/.exec(css);
   c.check('the figures name their own face, because the UI face has no tabular digits',
     !!figureRule && /font-family:var\(--font-figures\)/.test(figureRule[0]) &&
-    /--font-figures:\s*"Atkinson Next"/.test(css),
-    !figureRule ? 'no shared numeral rule found' : 'rule declares tabular-nums without --font-figures');
+    !!figuresFace && !!uiFace && figuresFace[1] !== uiFace[1] &&
+    figuresFace[1] === 'Plus Jakarta Sans',
+    !figureRule ? 'no shared numeral rule found'
+    : !figuresFace || !uiFace ? 'no figures or UI face declared'
+    : figuresFace[1] === uiFace[1] ? 'the figures inherit the UI face, which is not tabular'
+    : 'rule declares tabular-nums without --font-figures');
 
   c.check('no rule names a font family directly — every one goes through the two tokens',
     literalFamilies.length === 0, literalFamilies.map(d => d.slice(0, 46)).join(' | '));
@@ -3650,7 +3701,11 @@ suite('honesty', async () => {
     const unknownTrade = a.serviceMeta('not-a-category');
     const catalogueOk = unknownTrade.label === 'Service not on this roster'
       && unknownTrade.id === null && a.serviceMeta('plumbing').label === 'Plumbing'
-      && a.serviceMeta('plumbing').icon === 'droplet';
+      && a.serviceMeta('plumbing').icon === 'plumbing';
+      /* The mobile-app pass made each trade draw its OWN glyph (droplet → plumbing), so the
+         needle that pinned the old abstract name would have failed the fix rather than the bug.
+         The assertion is the same one — an unknown trade must not inherit a real one, and a real
+         trade resolves to itself — with the spelling the catalogue now uses. */
     /* A category that does not exist must not inherit one that does: the pilot's
        harvest-and-buy mode set, its safety rules and its commission basis all live in
        that row's overrides. */
