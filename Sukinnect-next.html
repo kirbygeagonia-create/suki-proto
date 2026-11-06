@@ -754,7 +754,7 @@
     display:block; width:100%; text-align:center; margin:-6px 0 var(--s-5);
     font-size:var(--t-body); color:var(--deep); font-weight:700;
     background:none; border:none; font-family:inherit; cursor:pointer;
-    min-height:var(--tap); padding:var(--s-3) var(--s-2); margin-left:-6px; margin-right:-6px;
+    min-height:var(--tap); padding:var(--s-3) 0;
   }
   .auth-divider{
     display:flex; align-items:center; gap:var(--s-3); margin:var(--s-4) 0 var(--s-3);
@@ -1684,6 +1684,15 @@
   .auth-input-label{
     display:block; font-size:var(--t-body); font-weight:700; color:var(--ink-soft); cursor:pointer;
   }
+  /* The three documents are links out of the form, not a choice between roles. As chips they each
+     took a 44px pill and the row wrapped to three lines, which is what pushed the action past the
+     sheet. As text they keep the same tap floor and give the height back. */
+  .auth-link{
+    background:none; border:none; font-family:inherit; font-size:var(--t-caption); font-weight:600;
+    color:var(--md-sys-color-primary); text-decoration:underline;
+    min-height:var(--tap); padding:0 var(--s-1); cursor:pointer;
+  }
+
   .auth-switch{
     background:none; border:none; padding:0; font:inherit; font-size:var(--t-body);
     min-height:var(--tap); display:inline-flex; align-items:center;
@@ -9349,8 +9358,8 @@ function legalDocSheet(){
     </div>`;
 }
 function legalLinks(){
-  return `<div style="display:flex; flex-wrap:wrap; gap:4px 14px; justify-content:center; margin-top:14px;">
-    ${LEGAL_DOCUMENTS.map(d => `<button type="button" class="auth-switch" style="font-size:var(--t-caption);" onclick="openLegalDoc('${d.id}')">${esc(d.label)}</button>`).join('')}
+  return `<div style="display:flex; flex-wrap:wrap; gap:0 var(--s-3); justify-content:flex-start; margin-top:var(--s-2);">
+    ${LEGAL_DOCUMENTS.map(d => `<button type="button" class="auth-link" onclick="openLegalDoc('${d.id}')">${esc(d.label)}</button>`).join('')}
   </div>`;
 }
 
@@ -9581,7 +9590,7 @@ function loginHTML(){
           <label class="row" style="align-items:flex-start; gap:10px; font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; min-height:var(--tap);">
             <input type="checkbox" id="reg-terms" style="margin-top:3px; width:20px; height:20px; flex-shrink:0;" ${acceptanceUnlocked() ? '' : 'disabled aria-disabled="true"'} ${err.terms ? 'aria-invalid="true" aria-describedby="err-terms"' : ''}>
             <span>I have read and accept ${agreedDocs.map(d => `<b>${esc(d.title)}</b>`).join(' and ')}${readDocs.length ? `, and I have read the ${readDocs.map(d => `<b>${esc(d.title)}</b>`).join(' and ')}` : ''}.
-            ${acceptDocs.map(d => `<button type="button" class="auth-switch" style="font-size:var(--t-caption);" onclick="openLegalDoc('${esc(d.id)}')">${docIsRead(d.id) ? 'Re-read' : 'Read'} ${esc(d.title)}</button>`).join(' ')}</span>
+            ${acceptDocs.map(d => `<button type="button" class="auth-link" onclick="openLegalDoc('${esc(d.id)}')">${docIsRead(d.id) ? 'Re-read' : 'Read'} ${esc(d.title)}</button>`).join(' ')}</span>
             ${acceptanceUnlocked() ? '' : `<span class="auth-hint" style="display:block; font-size:var(--t-caption); color:var(--mist); margin-top:4px;">${ic('lock',11)} This box stays off until you have opened each document above and scrolled it to the end.</span>`}
           </label>
           ${err.terms ? `<div class="inline-error auth-error" id="err-terms" role="alert">${ic('alert-triangle',13)} ${err.terms}</div>` : ''}

@@ -71,3 +71,44 @@ Screenshots saved as `.shots-before/` (123 PNGs).
 nav, sticky bar, sheet) · 3 components (list row, card, buttons, chips, stepper, empty state,
 monogram) · 4 resident flow · 5 provider and admin · 6 retire the AI images, update every gate,
 `ICON-LICENSES.md` + `DESIGN-TOKENS.md` + README assets + Android re-sync.
+
+## Verdicts after Slices 2-6 (updated as the work landed)
+
+The table above was written at Slice 0. What the pass then achieved, and what it did not:
+
+| # | Now | Evidence |
+|---|---|---|
+| D1 | **fixed** | chips already held `nowrap`; the four uppercase status spellings are sentence case |
+| D2 | **fixed** | the empty results screen reads `No provider matches "leak"` in the screenshot |
+| D3 | **fixed** | the rating figure no longer paints white-on-white; `splitChips` tally 0 |
+| D4 | **fixed by the chrome pass** | the bell sits at the right of the same header row on Resident Home |
+| D5 | **fixed** | a pushed screen has one bottom bar; the probe counts `fixedBars: 1` on Provider Detail |
+| D6 | **fixed** | digits render in Plus Jakarta Sans — measured tabular and slashless |
+| D7 | **partly** | tiles load here; the offline placeholder is still owed |
+| P1 | **partly** | cards are flat with a neutral hairline and `.list`/`.list-row` exist; the Home and provider cards still nest a card inside a card |
+| P2 | **fixed** | grid bottom 471px against nav top 757px at 390×844, four columns, eight tiles |
+| P3 | **fixed** | one light bar on every screen, 56px, bare chevron |
+| P4 | **partly** | neutral surfaces and sentence case landed; body copy is still bold in several places and the provider nav still ellipsizes `Bookin…`/`Messa…` at 320px, which is the documented floor behaviour |
+| P5 | **fixed** | page `#F6F7FB`, hairline `#E6E8EF`, brand tint reserved for selection |
+| P6 | **not touched** | the admin rows already use `.job-row` with a chevron from an earlier pass; the numeral column was not re-audited |
+| P7 | **partly** | 24px Material Symbols throughout; `FSM` still says `FSM` (owner decision), and the active-state pill was attempted and reverted |
+| P8 | **fixed** | the entry screen is one surface: logo on white, display title, segmented control, 52px fields and action, outlined "Create a new account" |
+| P9 | **not touched** | long subtitles still sit in glanceable rows |
+| P10 | **fixed** | the marks carry a line naming the step and the count |
+| A1 | **fixed in code** | `SERVICE_ART`, `CAT_ART_PX`, `catArt()` gone; PNGs unreferenced, removed from `dist/` and from the staged Android bundle |
+| A2 | **fixed** | one family, licence recorded, generated from the shipped map |
+| A3 | **attempted and reverted** | two splices of `photoAvatar`/`photoFor` damaged neighbouring functions under text surgery and the gate caught the crash; the cartoon faces remain, and this needs a pass that edits the helper with the harness rather than a bulk text replacement |
+| A4 | **fixed** | each trade draws its own glyph and carries a `short` label |
+| A5 | **untouched**, as required | |
+
+**One finding the sweep produced that is not mine.** At default width with 200% text the provider
+dashboard's weekly chart keeps `Oct 26` hanging 3px sideways of its box. `git diff` over the whole
+pass shows no line of chart code changed — `chartColumns`, `chartScale`, `chart-cat` and the gutter
+token are untouched — so this is a pre-existing large-text case that the wider 101-screen sweep now
+reaches. It is reported, not smoothed over, and the other seven corners are clean.
+
+**Commands a reader can run, in this state:** `node tools/verify.cjs` (741), `node tools/shot.cjs
+--measure` (101 screens), `node tools/sweep-text-scale.cjs` (eight corners), `node
+tools/falsify-visual-contract.cjs` (5 of 5), `node tools/measure.cjs`, `node
+tools/audit-build-bytes.cjs` (three copies agree; the built APK differs until it is rebuilt),
+`node tools/shot.cjs --probe=@tools/probe-visual-contract.js`.
