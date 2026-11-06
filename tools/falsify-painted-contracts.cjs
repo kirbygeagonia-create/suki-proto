@@ -29,29 +29,42 @@ const EOL = pageOriginal.indexOf('\r\n') >= 0 ? '\r\n' : '\n';
 const PROBE_FLAT = 'tools/probe-flat-palette.js';
 const PROBE_WORDS = 'tools/probe-step-words-agree.js';
 const PROBE_ACTION = 'tools/probe-action-duplication.js';
+const PROBE_MAP = 'tools/probe-offline-map.js';
 const probeOriginals = {};
-[PROBE_FLAT, PROBE_WORDS, PROBE_ACTION].forEach(p => { probeOriginals[p] = fs.readFileSync(path.join(ROOT, p), 'utf8'); });
+[PROBE_FLAT, PROBE_WORDS, PROBE_ACTION, PROBE_MAP].forEach(p => { probeOriginals[p] = fs.readFileSync(path.join(ROOT, p), 'utf8'); });
 
 const ONLY = 'provider-job,provider-job-path,booking-tracking,resident-home,admin-dash';
 const POPULATION = ONLY.split(',').length;
 
-function runProbe(probeFile) {
+function runProbe(probeFile, opts) {
   let out = '';
+  const args = [path.join(ROOT, 'tools', 'shot.cjs'), '--probe=@' + probeFile, '--only=' + ((opts && opts.only) || ONLY)];
+  if (opts && opts.offline) args.push('--offline');
   try {
     out = execFileSync(process.execPath,
-      [path.join(ROOT, 'tools', 'shot.cjs'), '--probe=@' + probeFile, '--only=' + ONLY],
+      args,
       { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   } catch (err) { out = (err.stdout || '') + (err.stderr || ''); }
   const answers = out.split(/\r?\n/).filter(l => l.indexOf('probe →') >= 0);
   const findings = answers.reduce((n, l) => { const m = /"findings":(\d+)/.exec(l); return n + (m ? Number(m[1]) : 0); }, 0);
   const refusals = answers.filter(l => l.indexOf('NO CONCLUSION') >= 0).length;
   const scored = answers.filter(l => /"scored":1/.test(l)).length;
-  return { answers: answers.length, findings, refusals, scored, raw: out.slice(0, 400) };
+  return { answers: answers.length, findings, refusals, scored, answersText: answers.join("\n"), raw: out.slice(0, 400) };
 }
 
 function countIn(text, needle) { return text.split(needle).length - 1; }
 
 const BREAKS = [
+  /* The offline map leg needs --offline, which the family does not pass by default; the run
+     below adds it for this probe only. */
+  { name: 'the map gives up and paints an empty box',
+    file: PAGE, probe: PROBE_MAP, expect: 'findings', offline: true, only: 'provider-detail',
+    from: "    el.innerHTML = mapFallback(fallbackLines || ['No map tiles on this device right now.']);",
+    to: "    el.innerHTML = '';" },
+  { name: 'the offline map probe cannot find the fallback on a screen that mounted a map',
+    file: path.join(ROOT, PROBE_MAP), probe: PROBE_MAP, expect: 'findings', offline: true, only: 'provider-detail',
+    from: "    fallback = screen.querySelector('.map-fallback');",
+    to: "    fallback = screen.querySelector('.no-such-fallback');" },
   { name: 'a card paints a linear gradient',
     file: PAGE, probe: PROBE_FLAT, expect: 'findings',
     from: '.card{' + EOL + '    background:var(--md-sys-color-surface);',
@@ -80,14 +93,22 @@ const BREAKS = [
 
 const baseline = {};
 [PROBE_FLAT, PROBE_WORDS, PROBE_ACTION].forEach(p => { baseline[p] = runProbe(p); });
-console.log('baseline: ' + [PROBE_FLAT, PROBE_WORDS, PROBE_ACTION]
+baseline[PROBE_MAP] = runProbe(PROBE_MAP, { only: 'provider-detail', offline: true });
+/* The map probe is scored on one screen — the only screen in the walk that mounts a map by default.
+   A population guard that demands the same count from every probe would condemn a probe for asking a
+   narrower question, which is the opposite of what the guard is for. */
+const EXPECTED = {};
+EXPECTED[PROBE_FLAT] = POPULATION; EXPECTED[PROBE_WORDS] = POPULATION;
+EXPECTED[PROBE_ACTION] = POPULATION; EXPECTED[PROBE_MAP] = 1;
+console.log('baseline: ' + [PROBE_FLAT, PROBE_WORDS, PROBE_ACTION, PROBE_MAP]
   .map(k => k.replace('tools/probe-', '').replace('.js', '') + ' answers=' + baseline[k].answers +
     ' findings=' + baseline[k].findings + ' refusals=' + baseline[k].refusals + ' scored=' + baseline[k].scored).join(' | '));
-if ([PROBE_FLAT, PROBE_WORDS, PROBE_ACTION].some(k => baseline[k].answers !== POPULATION)) {
-  console.log('the walk did not answer on all ' + POPULATION + ' screens — the instrument is not reaching its population');
+if ([PROBE_FLAT, PROBE_WORDS, PROBE_ACTION, PROBE_MAP].some(k => baseline[k].answers !== EXPECTED[k])) {
+  console.log('a probe did not answer on its own population: ' + [PROBE_FLAT, PROBE_WORDS, PROBE_ACTION, PROBE_MAP]
+    .map(k => k.replace('tools/probe-', '').replace('.js', '') + '=' + baseline[k].answers + '/' + EXPECTED[k]).join(' '));
   process.exit(1);
 }
-if ([PROBE_FLAT, PROBE_WORDS, PROBE_ACTION].some(k => baseline[k].findings !== 0)) {
+if ([PROBE_FLAT, PROBE_WORDS, PROBE_ACTION, PROBE_MAP].some(k => baseline[k].findings !== 0)) {
   console.log('a probe already reports findings before any break');
   process.exit(1);
 }
@@ -110,7 +131,7 @@ try {
     applied++;
     restoreAll();
     fs.writeFileSync(b.file, target.replace(b.from, b.to));
-    const r = runProbe(b.probe);
+    const r = runProbe(b.probe, b);
     restoreAll();
     if (r.answers === 0) { console.log('MISSED  ' + b.name + '  (no answer printed; camera said: ' + r.raw.replace(/\s+/g, ' ').slice(0, 120) + ')'); continue; }
     if (b.expect === 'findings') {
@@ -119,6 +140,14 @@ try {
     } else if (b.expect === 'refusals') {
       if (r.refusals > 0) { caught++; console.log('CAUGHT  ' + b.name + '  → refusals=' + r.refusals); }
       else console.log('MISSED  ' + b.name + '  (answered ' + r.answers + ' times with no refusal, so a blind read looked clean)');
+    } else if (b.expect === 'abstain') {
+      /* A probe that cannot find its subject on a screen that genuinely has one must say so. This
+         probe abstains (mapsOnScreen 0) rather than refusing, because "no map on this screen" is a
+         legitimate answer — so the break is caught by the population it reports going to zero while
+         the screen still holds a map mount. */
+      const maps = (r.answersText.match(/"mapsOnScreen":([0-9]+)/) || ['?', 'ABSENT'])[1];
+      if (maps === '0') { caught++; console.log('CAUGHT  ' + b.name + '  → reported no map on a screen that mounts one'); }
+      else console.log('MISSED  ' + b.name + '  (still saw a map: ' + maps + ')');
     } else {
       if (r.scored === 0 && r.findings === 0) { caught++; console.log('CAUGHT  ' + b.name + '  → nothing scored, so nothing was condemned'); }
       else console.log('MISSED  ' + b.name + '  (still scored ' + r.scored + ' screens)');

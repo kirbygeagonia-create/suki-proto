@@ -17,6 +17,7 @@
      node tools/shot.cjs --width=390 --height=844 --dpr=2
      node tools/shot.cjs --measure             # also run the audit over each painted frame
      node tools/shot.cjs --reduced-motion      # emulate prefers-reduced-motion: reduce
+     node tools/shot.cjs --offline             # emulate a device with no network at all
      node tools/shot.cjs --probe=@file         # evaluate an expression after the page settles
      node tools/shot.cjs --desktop             # the phone frame inside the desktop shell
      node tools/shot.cjs --out=.shots          # where the PNGs go
@@ -62,6 +63,12 @@ const MEASURE = has('measure');
 /* Asks Chrome to report prefers-reduced-motion, so a claim that the app honours
    that setting can be measured instead of assumed. */
 const REDUCED = has('reduced-motion');
+/* §1.7 promises the app needs no network but map tiles, and §81 forbids a remote dependency for
+   anything essential. That was evidenced by a tally counting the requests that DID leave, plus a
+   reading of mapFallback(). This makes it a run: Chrome is told the device is offline, so a tile
+   that never arrives is the case a reviewer on a bus actually gets, and any other asset that
+   needed the network shows up as a blank image the tallies already count. */
+const OFFLINE = has('offline');
 /* Asks Chrome for prefers-color-scheme: dark. The app declares no color-scheme, so this is not
    a question about a theme it has — it is the question of what the *browser* paints on the
    controls the app leaves to the user agent, which is exactly the Android-in-dark-mode case no
@@ -1549,6 +1556,11 @@ async function main() {
   if (TIMEZONE) {
     await session.send('Emulation.setTimezoneOverride', { timezoneId: TIMEZONE });
     console.log('  emulating timezone: ' + TIMEZONE);
+  }
+  if (OFFLINE) {
+    await session.send('Network.enable', {});
+    await session.send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+    console.log('  emulating an offline device: no request may leave it');
   }
 
   const loaded = new Promise(resolve => {
