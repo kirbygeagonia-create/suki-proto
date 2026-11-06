@@ -1903,6 +1903,9 @@
   .mono-avatar{
     display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
     border-radius:50%; background:var(--mono-bg); color:var(--mono-fg);
+    /* The letters come from the scale, not from arithmetic on the disc: 22px is a step the scale
+       owns, but 22 × the platform's 200% text is 44px, which is not, and six corners reported it. */
+    font-size:var(--t-body);
     font-family:var(--font-ui); font-weight:600; line-height:1;
     border:2px solid rgba(255,255,255,.92); box-shadow:0 2px 8px rgba(3,0,43,.22);
     vertical-align:middle;
@@ -2443,7 +2446,7 @@ function photoAvatar(providerOrId, size = 40, style = ''){
   const init = initialsOf(name);
   /* A record with no name paints the person glyph, not an invented initial and not a question mark:
      the disc then says "nobody is named here" without claiming an identity it does not hold. */
-  return '<span class="mono-avatar" aria-label="' + esc(name || 'No name on this record') + '" style="width:' + size + 'px; height:' + size + 'px; font-size:' + Math.round(size * 0.4) + 'px; --mono-bg:' + tone.bg + '; --mono-fg:' + tone.fg + ';' + style + '">' + (init ? esc(init) : ic('user', Math.round(size * 0.5))) + '</span>';
+  return '<span class="mono-avatar" aria-label="' + esc(name || 'No name on this record') + '" style="width:' + size + 'px; height:' + size + 'px; --mono-bg:' + tone.bg + '; --mono-fg:' + tone.fg + ';' + style + '">' + (init ? esc(init) : ic('user', Math.round(size * 0.5))) + '</span>';
 }
 // The disc carries the trade, and the trade is what a marketplace row is about. It used to be
 // photo-first — a real face wherever one existed — which put a cartoon person on every list in
