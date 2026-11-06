@@ -39,6 +39,15 @@ const BREAKS = [
   { name: 'one layer root loses the convention, so topLayerEl() finds nothing',
     only: 'booking-sheet,offer-sheet',
     edits: [['<div class="sheet-layer" data-layer="sheet">', '<div class="sheet-layer">']] },
+  /* READ, NOT DELETED — MISSED for the same kind of reason, and the premise is documented in
+     AGENTS.md. The break swaps the convention-based lookup for `.modal-layer`, which was condemned
+     because the verification review painted a fixed overlay with NO class at all — the one surface a
+     class search could not see. The layer-ladder pass gave that overlay a named rung, so the class
+     search now finds it and Tab stays inside the layer: correct behaviour, not a blind sensor. The
+     sibling break above still proves the live hazard — a layer root that loses data-layer is found by
+     nothing and the walk escapes. This row is kept as the record that the convention and the class are
+     two spellings of one idea today; if a fourth surface is ever added without both, it becomes live
+     again by itself. */
   { name: 'the lookup goes back to class names, which the verification overlay does not have',
     only: 'admin-review-document,admin-review-request,admin-review-approve',
     edits: [['if (modalAboveSheet()) return document.querySelector(\'[data-layer="modal"]\');',

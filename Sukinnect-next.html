@@ -1890,6 +1890,17 @@
   .seg-count{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 var(--s-1); border-radius:var(--r-pill); background:rgba(3,0,43,.12); font-size:var(--t-caption); font-weight:800; }
   .seg-btn.on .seg-count{ background:rgba(255,255,255,.22); }
   .img-avatar{ border-radius:50%; object-fit:cover; flex-shrink:0; display:inline-block; vertical-align:middle; border:2px solid rgba(255,255,255,.92); box-shadow:0 2px 8px rgba(3,0,43,.22); background:var(--brand-tint-soft); }
+  /* A monogram: initials on a tone derived from the name. Same circle, same plate and same shadow
+     as the disc it replaces, so no layout moves — what changes is that nothing here claims to be a
+     photograph of a person the prototype does not have. */
+  .mono-avatar{
+    display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
+    border-radius:50%; background:var(--mono-bg); color:var(--mono-fg);
+    font-family:var(--font-ui); font-weight:600; line-height:1;
+    border:2px solid rgba(255,255,255,.92); box-shadow:0 2px 8px rgba(3,0,43,.22);
+    vertical-align:middle;
+  }
+
   body.app-mode{ background:var(--cloud); display:block; padding:0; min-height:100vh; }
   body.app-mode .phone{ width:100%; height:100vh; height:100dvh; border:none; border-radius:0; box-shadow:none; }
   body.app-mode .devicebar{ display:none; }
@@ -2378,16 +2389,61 @@ function photoFor(providerOrId){
   const id = (providerOrId && typeof providerOrId === 'object') ? providerOrId.id : providerOrId;
   return PRO_PHOTOS[id] || GENERIC_AVATAR;
 }
-function photoAvatar(providerOrId, size = 40, style = ''){
-  const nm = (providerOrId && typeof providerOrId === 'object') ? providerOrId.name : '';
-  return '<img class="img-avatar" src="' + photoFor(providerOrId) + '" alt="' + (nm || '') + '" style="width:' + size + 'px; height:' + size + 'px;' + style + '">';
+/* The name behind an avatar reference, so a monogram can be built from it. An object carries its
+   own name; the persona keys resolve through the profile the app greets from; a provider id is looked
+   up in PROVIDERS, which is declared above this. Nothing here reads a record declared further down
+   the file: the first attempt at this change did, and the suite died on the temporal dead zone. */
+function avatarName(providerOrId){
+  if (providerOrId && typeof providerOrId === 'object') return providerOrId.name || null;
+  if (typeof providerOrId === 'string'){
+    if (providerOrId === 'resident') return state.profileData.name;
+    if (providerOrId === 'admin') return (state.adminProfileData && state.adminProfileData.name) || state.profileData.name || null;
+    if (providerOrId === 'self') return (state.providerProfileData && state.providerProfileData.name) || null;
+    const p = PROVIDERS.find(x => x.id === providerOrId);
+    if (p) return p.name;
+  }
+  return null;
 }
 
-// Tinted disc carrying the trade's own icon — now photo-first: a real face
-// wherever we have one, the trade disc when we do not.
+/* Two initials, taken as they are and upper-cased only for the disc. */
+function initialsOf(name){
+  if (!name) return null;
+  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return null;
+  return (parts[0].charAt(0) + (parts.length > 1 ? parts[parts.length - 1].charAt(0) : '')).toUpperCase();
+}
+
+/* A deterministic tone from the name, drawn from the pairs SERVICE_THEME already measured, so the
+   same person is the same disc on every screen and no screen invents a colour. */
+const MONO_TONES = ['plumbing', 'electrical', 'cleaning', 'tutoring', 'appliance', 'delivery', 'fruit'];
+function monoTone(name){
+  const s = String(name || '');
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return SERVICE_THEME[MONO_TONES[h % MONO_TONES.length]];
+}
+
+/* The image slot stays. A real upload later is an <img>, and this is the only place that decides
+   which of the two a person gets — so the decision is one function, not a per-screen guess. */
+function hasRealPhoto(providerOrId){ return false; }
+
+function photoAvatar(providerOrId, size = 40, style = ''){
+  const name = avatarName(providerOrId);
+  if (hasRealPhoto(providerOrId)){
+    return '<img class="img-avatar" src="' + photoFor(providerOrId) + '" alt="' + esc(name || '') + '" style="width:' + size + 'px; height:' + size + 'px;' + style + '">';
+  }
+  const tone = monoTone(name);
+  const init = initialsOf(name);
+  /* A record with no name paints the person glyph, not an invented initial and not a question mark:
+     the disc then says "nobody is named here" without claiming an identity it does not hold. */
+  return '<span class="mono-avatar" aria-label="' + esc(name || 'No name on this record') + '" style="width:' + size + 'px; height:' + size + 'px; font-size:' + Math.round(size * 0.4) + 'px; --mono-bg:' + tone.bg + '; --mono-fg:' + tone.fg + ';' + style + '">' + (init ? esc(init) : ic('user', Math.round(size * 0.5))) + '</span>';
+}
+// The disc carries the trade, and the trade is what a marketplace row is about. It used to be
+// photo-first — a real face wherever one existed — which put a cartoon person on every list in
+// the app while the icons and the brand were two other visual languages (§4.4, A3).
 function serviceAvatar(providerOrId, size = 40, style = ''){
   const id = (providerOrId && typeof providerOrId === 'object') ? providerOrId.id : providerOrId;
-  if (PRO_PHOTOS[id]) return photoAvatar(providerOrId, size, style);
+  /* no photo branch: the trade disc is the row affordance (§4.4) */
   const s = serviceByProvider(providerOrId);
   return '<div class="svc-avatar" style="width:' + size + 'px; height:' + size
        + 'px; background:' + s.bg + '; color:' + s.fg + ';' + style + '">'
