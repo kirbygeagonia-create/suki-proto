@@ -675,6 +675,25 @@
               font-size:var(--t-caption); color:var(--md-sys-color-on-surface-variant); }
   .step-now{ font-weight:600; color:var(--md-sys-color-on-surface); }
   .step-of{ flex-shrink:0; }
+  /* The whole path, every step named. The compact bar above answers "how far along" on a card
+     where six words cannot fit; this answers it on the screen where the job is the subject, and it
+     is vertical so no step word has to share a line with its neighbour at 320px. */
+  .stepper{ display:flex; flex-direction:column; }
+  .stepper .sp{ display:flex; gap:var(--s-3); position:relative; padding-bottom:var(--s-3); }
+  .stepper .sp::before{ content:''; position:absolute; left:11px; top:26px; bottom:2px; width:2px;
+                        background:var(--border-strong); }
+  .stepper .sp.done::before{ background:var(--surface-brand); }
+  .stepper .sp:last-child{ padding-bottom:0; }
+  .stepper .sp:last-child::before{ display:none; }
+  .stepper .step-mark{ width:24px; height:24px; border-radius:50%; flex-shrink:0; display:flex;
+                  align-items:center; justify-content:center; box-sizing:border-box;
+                  border:2px solid var(--border-strong); background:var(--surface); color:var(--ink-soft); }
+  .stepper .sp.done .step-mark{ border-color:var(--surface-brand); background:var(--surface-brand); color:var(--on-brand); }
+  .stepper .sp.now .step-mark{ border-color:var(--surface-brand); color:var(--surface-brand); }
+  .stepper .sp.now .slabel{ color:var(--ink); font-weight:700; }
+  .stepper .slabel{ font-size:var(--t-body-sm); color:var(--md-sys-color-on-surface-variant); line-height:1.35; }
+  .stepper .ssub{ font-size:var(--t-caption); color:var(--ink-soft); margin-top:2px; line-height:1.45; }
+  .stepper .stext{ min-width:0; }
 
   /* Sign-in: the soft brand surface, flat, and one card floated in the middle of it.
      Nothing on the card that is not needed to get in — brand mark, the account
@@ -3408,6 +3427,49 @@ function stateHint(status) { return (BOOKING_STATES[status] || { hint: '' }).hin
 /* What happens after this state — the same table, because a tracking card that
    typed these sentences itself could disagree with the machine that owns them. */
 function nextStepFor(status) { return (BOOKING_STATES[status] || { next: '' }).next; }
+
+/* The path a booking walks, at the top level, because both sides of the same job draw it: the
+   household's tracking card and the provider's job screen. The words are label(), not a second
+   list of step names — the resident's Home card used to keep its own, and called the state the
+   machine names "Accepted" a step called "Scheduled", which is one booking telling two stories. */
+const JOB_STAGES = ['requested', 'upcoming', 'en_route', 'arrived', 'ongoing', 'completed'];
+function stageIndexOf(status) { return JOB_STAGES.indexOf(status); }
+/* The one-line form for a card: a six-mark bar and the step named beside its position. */
+function stepBar(status){
+  const i = stageIndexOf(status);
+  if (i < 0) return '';
+  const word = esc(label(status));
+  return `<div class="mini-steps" role="img" aria-label="Step ${i + 1} of ${JOB_STAGES.length}: ${word}">
+    ${JOB_STAGES.map((code, j) => `<span class="st ${j < i ? 'on' : ''}${j === i ? ' now' : ''}"></span>`).join('')}
+  </div>
+  <div class="step-line"><span class="step-now">${word}</span><span class="step-of">step ${i + 1} of ${JOB_STAGES.length}</span></div>`;
+}
+/* The full form for the screen where the job is the subject. A step already walked carries the
+   stamp the record wrote for it, and nothing at all when no record wrote one — the stepper may
+   not invent the minute something happened. */
+function stepPath(booking){
+  if (!booking) return '';
+  const i = stageIndexOf(booking.status);
+  if (i < 0) return '';
+  return `<div class="stepper">` + JOB_STAGES.map((code, j) => {
+    const done = j < i, now = j === i;
+    const field = code === 'requested' ? 'createdAt' : STEP_STAMPS[code];
+    const stamp = field ? booking[field] : null;
+    const sub = now ? stateHint(code) : (done && stamp ? agoText(stamp) : '');
+    return `<div class="sp${done ? ' done' : ''}${now ? ' now' : ''}">
+      <span class="step-mark" aria-hidden="true">${done ? ic('check', 13) : ''}</span>
+      <div class="stext"><div class="slabel">${esc(label(code))}</div>${sub ? `<div class="ssub">${esc(sub)}</div>` : ''}</div>
+    </div>`;
+  }).join('') + `</div>`;
+}
+/* The events the path cannot hold: an answer that moved a day, a case, a walk-away. Printed under
+   the stepper because the stepper is where the job is and these are what else happened to it —
+   repeating the six path words twice on one screen is the duplicated indicator §7 forbids. */
+function trackNoteRows(booking){
+  const rows = timelineRows(booking, { skipPath: true });
+  if (!rows.trim()) return '';
+  return `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:var(--s-3); padding-top:var(--s-3); border-top:1px solid var(--line); line-height:1.6;">${rows}</div>`;
+}
 
 class IllegalTransition extends Error {
   constructor(from, to) {
@@ -7861,11 +7923,17 @@ function offerTermsCard(p, d, pay, cash, fm){
 
 /* The tracking view reads the events the machine wrote, so a step cannot look
    finished unless something actually finished it. */
-function timelineRows(b) {
+function timelineRows(b, opts) {
+  /* The path rows are the stepper's business while the job is still on the path; off it —
+     cancelled, unanswered, no one home, under review — the event list is the only account
+     of what happened, so nothing is skipped and the whole history stays on screen. */
+  const skipPath = !!(opts && opts.skipPath) && stageIndexOf(b.status) >= 0;
   const steps = bookingTimeline(b.id);
   if (!steps.length) return `<div style="color:var(--mist);">${ic('clock', 12)} Request recorded</div>`;
-  return steps.map((e, i) => {
-    const last = i === steps.length - 1;
+  const shown = steps.filter(e => !(skipPath && JOB_STAGES.indexOf(e.to) >= 0 && e.kind !== 'reschedule'));
+  if (!shown.length) return '';
+  return shown.map((e, i) => {
+    const last = i === shown.length - 1;
     const when = agoText(e.at);
     /* A reschedule is not a change of state: the job stays "Accepted" and only its day and hour
        move. Printed under the status label it would read as the same step twice — the repeated
@@ -8484,7 +8552,7 @@ function answerResidentOffer(id, decision){
 }
 
 function statusCard(b) {
-  const steps = timelineRows(b);
+  const steps = stepPath(b) + trackNoteRows(b);
   const first = esc(providerOf(b).name.split(' ')[0]);
 
   if (b.status === 'requested') {
@@ -8505,9 +8573,7 @@ function statusCard(b) {
             </span>
             <span style="font-size:var(--t-caption); color:var(--mist); white-space:nowrap;">No charge yet</span>
           </div>
-          <div style="display:flex; flex-direction:column; gap:6px; font-size:var(--t-caption); color:var(--ink-soft);">
-            ${steps}
-          </div>
+          ${steps}
           <p style="font-size:var(--t-caption); color:var(--mist); line-height:1.5; margin:10px 0 0;">
             ${!offered
               ? `Nothing is charged yet, and no time is fixed until the provider accepts. They can also decline &mdash; you can then try another match. A request left unanswered for ${CONFIG.acceptTtlMinutes} minutes lapses on its own.`
@@ -8537,9 +8603,7 @@ function statusCard(b) {
             <span style="font-size:var(--t-caption); font-weight:600; color:var(--md-sys-color-on-surface-variant);">${label(b.status)}</span>
             <span style="font-size:var(--t-caption); color:var(--mist);">${esc(payStatusLabel(b))}</span>
           </div>
-          <div style="display:flex; flex-direction:column; gap:6px; font-size:var(--t-caption); color:var(--ink-soft);">
-            ${steps}
-          </div>
+          ${steps}
           ${b.cancelReason ? `<div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">${esc(b.cancelReason)}.</div>` : ''}
           ${b.disputeId ? `<div style="font-size:var(--t-caption); color:var(--mist); margin-top:8px;">A case was raised on this job and has since been closed.</div>` : ''}
         </div>`;
@@ -8561,9 +8625,7 @@ function statusCard(b) {
               : b.status === 'arrived' && b.arrivedAt ? `<span style="font-size:var(--t-caption); font-weight:700; color:var(--brand-primary);">At the door · ${esc(clockText(b.arrivedAt))}</span>`
               : ''}
           </div>
-          <div style="display:flex; flex-direction:column; gap:6px; font-size:var(--t-caption); color:var(--ink-soft);">
-            ${steps}
-          </div>
+          ${steps}
           ${next ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin-top:10px;">Next: ${next}.</div>` : ''}
           ${rescheduleRow(b)}
         </div>${rescheduleCard(b)}`;
@@ -10107,17 +10169,9 @@ function residentHome(){
     .filter(x => x.o && x.b.status === 'requested' && x.b.id !== (active && active.id))
     .sort((x, y) => Date.parse(y.o.at) - Date.parse(x.o.at))[0] || null;
   const hasUnread = NOTIFICATIONS.some(n=>n.unread);
-  /* The path a visit walks and the one line about what is happening both come from
-     BOOKING_STATES now. They were typed a second time here — which is how a
-     stepper and a tracking card could tell the same story in different words — and
-     the stepper used to stop at four steps, so en_route and arrived had no place on
-     it at all (21, 65). */
-  const STAGES = ['requested', 'upcoming', 'en_route', 'arrived', 'ongoing', 'completed'];
-  /* The same six states the machine knows, in the words the app already uses for them, kept
-     beside STAGES so a bar, a label and a position cannot come apart. */
-  const STAGE_WORDS = { requested:'Requested', upcoming:'Scheduled', en_route:'On the way',
-    arrived:'Arrived', ongoing:'In progress', completed:'Completed' };
-  const stageIndex = active ? STAGES.indexOf(active.status) : -1;
+  /* Where the job is now, in the machine’s own words, and what happens next. The path itself is
+     stepBar() and stepPath() at the top level, because the provider’s job screen walks the same six
+     steps, and a second list of step names is how the two sides start disagreeing about one job. */
   /* A case under review sits outside the path: the stepper steps aside and the
      hint says where the job actually is. */
   /* A request with an offer on it is not waiting for a provider any more, and the
@@ -10183,10 +10237,7 @@ function residentHome(){
         </div>
         <span class="chip status-${active.status}" style="flex-shrink:0;">${esc(label(active.status))}</span>
       </div>
-      ${stageIndex >= 0 ? `<div class="mini-steps" role="img" aria-label="Step ${stageIndex+1} of ${STAGES.length}: ${esc(STAGE_WORDS[active.status] || label(active.status))}">
-        ${STAGES.map((code, i) => `<span class="st ${i < stageIndex ? 'on' : ''}${i === stageIndex ? ' now' : ''}"></span>`).join('')}
-      </div>` : ''}
-      ${stageIndex >= 0 ? `<div class="step-line"><span class="step-now">${esc(STAGE_WORDS[active.status] || label(active.status))}</span><span class="step-of">step ${stageIndex+1} of ${STAGES.length}</span></div>` : ''}
+      ${stepBar(active.status)}
       <div class="row" style="margin-top:7px; gap:8px; font-size:var(--t-caption);">
         <span style="color:var(--ink-soft); min-width:0;">${esc(nextStep)}</span>
         ${(() => { const paid = ['captured', 'collected'].includes(active.payStatus); return `<span class="chip status-${paid ? 'completed' : 'requested'}" style="flex-shrink:0;">${esc(payStatusLabel(active))}</span>`; })()}
@@ -11009,7 +11060,9 @@ function residentBookingDetail(){
     ${emptyState('alert-triangle', 'That booking is not on this account', 'This profile has no record with that reference, so there is nothing here to show. Open one from Bookings.')}
   </div>`;
   
-  const statusText = label(b.status).toUpperCase();
+  /* Sentence case, like every other status word in the app: the chip in the bar and the step in the
+     path name one fact, and a shouted chip beside a written step is the duplicated indicator 7 names. */
+  const statusText = label(b.status);
 
   return `
   ${screenHeader('Booking details', {
@@ -12877,9 +12930,16 @@ function capabilityCard(p){
     </div>`;
 }
 
-function jobActionBar(b) {
-  const moves = providerJobMoves(b);
-  if (!moves.length) return '';
+function jobActionBar(b, opts) {
+  /* The request card at the top of this same screen already offers the two answers a
+     "requested" job has. Printing them again below gave the provider four buttons for two
+     decisions, worded differently — "Accept request" up top and "Accept this request"
+     here. When the caller says the answer is above, this card keeps the path and the
+     notes and drops the moves. */
+  const answerAbove = !!(opts && opts.answerAbove);
+  const allMoves = providerJobMoves(b);
+  if (!allMoves.length) return '';
+  const moves = answerAbove ? allMoves.filter(m => m.kind === 'note') : allMoves;
   /* Every verb acts on its own, except a case: that needs a reason from a
      person before the status may move, so it opens the form instead. An offer is
      not a move at all — it opens the sheet where the price gets named. */
@@ -12895,7 +12955,9 @@ function jobActionBar(b) {
   const notes = moves.filter(m => m.kind === 'note').map(m => `
         <div class="move-note">${esc(m.text)}</div>`).join('');
   return `<div class="card card-lg">
-      <div style="font-size:var(--t-caption); font-weight:800; color:var(--ink-soft); margin-bottom:10px;">Your next step</div>
+      <div style="font-size:var(--t-caption); font-weight:800; color:var(--ink-soft); margin-bottom:10px;">${answerAbove ? 'Where this job is' : 'Your next step'}</div>
+      ${stepPath(b)}
+      ${trackNoteRows(b)}
       <div style="display:flex; flex-direction:column; gap:8px;">
         ${buttons}${notes}
       </div>
@@ -13541,7 +13603,7 @@ function requestActionCard(b){
       <div style="display:flex; gap:8px; margin-top:12px;">
         ${priceByOffer(b) && !currentOffer(b.id)
           ? `<button type="button" class="btn" style="flex:1.4; border-radius:var(--r-sm);" onclick="openMakeOffer('${b.id}')">Make an offer</button>`
-          : `<button type="button" class="btn" style="flex:1.4; border-radius:var(--r-sm);" id="accept-request-btn" ${busy ? 'disabled' : ''}>${busyAction === 'accept' ? `<span class="spinner"></span> Accepting&hellip;` : currentOffer(b.id) && currentOffer(b.id).status === 'accepted' ? 'Confirm the visit' : 'Accept request'}</button>`}
+          : `<button type="button" class="btn" style="flex:1.4; border-radius:var(--r-sm);" id="accept-request-btn" ${busy ? 'disabled' : ''}>${busyAction === 'accept' ? `<span class="spinner"></span> Accepting&hellip;` : currentOffer(b.id) && currentOffer(b.id).status === 'accepted' ? 'Confirm the visit' : JOB_VERBS.upcoming}</button>`}
         <button type="button" class="btn secondary" style="flex:1; border-radius:var(--r-sm);" id="decline-request-btn" ${busy ? 'disabled' : ''}>Decline</button>
       </div>
     </div>`;
@@ -13564,7 +13626,7 @@ function providerBookings(){
       <div class="card" data-provider-booking-id="${b.id}" style="cursor:pointer; border-radius:var(--r-md); padding:var(--s-4); margin-bottom:12px; border:1px solid var(--line); background:var(--surface);">
         <div class="row" style="align-items:flex-start; margin-bottom:8px;">
           <div style="display:flex; gap:12px; align-items:center;">
-            <img class="img-avatar" src="${photoFor(b.id)}" alt="${esc(customerOf(b).name)}" style="width:40px; height:40px;">
+            ${photoAvatar(customerOf(b), 40)}
             <div>
               <div style="font-size:var(--t-body); font-weight:700; color:var(--ink); line-height:1.3;">${esc(b.summary)}</div>
               <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${esc(customerOf(b).name)} - ${b.status === 'requested' ? 'asked for ' : ''}${esc(b.date)}, ${esc(b.time)}</div>
@@ -13601,11 +13663,11 @@ function providerBookingDetail(){
     ${isOpen ? requestActionCard(booking) : ''}
     <div class="card">
       <div style="display:flex; gap:12px; align-items:center; margin-bottom:14px;">
-        <img class="img-avatar" src="${photoFor(booking.id)}" alt="${esc(customerOf(booking).name)}" style="width:44px; height:44px;">
+        ${photoAvatar(customerOf(booking), 44)}
         <div><div style="font-size:var(--t-input); font-weight:800;">${esc(booking.summary)}</div><div style="font-size:var(--t-caption); color:var(--mist);">Client: ${esc(customerOf(booking).name)}</div></div>
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:var(--t-body-sm); line-height:1.45;">
-        <div><div style="color:var(--mist);">Status</div><b style="text-transform:capitalize;">${label(booking.status)}</b></div>
+        <div><div style="color:var(--mist);">Status</div><b>${esc(label(booking.status))}</b></div>
         <div><div style="color:var(--mist);">${isOpen ? 'Requested slot' : 'Schedule'}</div><b>${esc(booking.date)}, ${esc(booking.time)}</b></div>
         <div><div style="color:var(--mist);">${priceByOffer(booking) ? 'Offer' : (isOpen ? 'Indicative fee' : 'Service fee')}</div><b>${bookingAmountText(booking)}</b></div>
         <div><div style="color:var(--mist);">Client phone</div><b ${onJob ? '' : 'style="font-weight:600; color:var(--ink-soft);"'}>${onJob ? esc(customerOf(booking).phone) : 'Withheld'}</b></div>
@@ -13643,7 +13705,7 @@ function providerBookingDetail(){
     </div>
 
     ${finaliseCard(booking)}
-    ${jobActionBar(booking)}
+    ${jobActionBar(booking, { answerAbove: isOpen })}
     ${rescheduleRow(booking)}
     ${rescheduleCard(booking)}
     ${receiptCard(booking)}

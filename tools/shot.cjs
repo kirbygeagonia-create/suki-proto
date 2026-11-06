@@ -1158,6 +1158,12 @@ const SCREENS = [
   ['provider-bookings',`state.view='app'; state.role='provider'; state.tab='bookings'; render();`],
   ['provider-job',     `state.view='app'; state.role='provider'; state.tab='bookings'; render();
                         openProviderBooking(pendingProviderRequests()[0].id);`],
+  /* The path itself sits below the fold on a job that has already started, so the picture a reader
+     gets of the stepper is of nothing unless the entry scrolls to it. A job on the path, not a
+     request waiting at step one, because that is the state where six steps are worth drawing. */
+  ['provider-job-path', `state.view='app'; state.role='provider'; state.tab='bookings'; render();
+                        openProviderBooking(bookingsForProvider().find(b => b.status === 'ongoing').id);
+                        document.querySelector('.stepper').scrollIntoView();`],
   ['provider-profile', `state.view='app'; state.role='provider'; state.tab='profile'; render();`],
   /* The profile modules open as sheets, and until now no sheet like this was in the table at
      all — so the resident's spending card and the provider's new credential list had never been

@@ -1305,15 +1305,21 @@ suite('hygiene', async () => {
      earlier than the camera's contrast tally, and stronger: the old form forgave a brand control on
      a drill-in because a drill-in WAS brand. */
   const BAR_CONTROLS = ['.onbar', '.back-btn', '.notif-btn', '.title', '.sub'];
-  const DARK_BY_DESIGN = ['.chat-head', '.chat-head-tag', '.chat-bubble-out', '.concierge-fab'];
   const onBrandCss = css.replace(/\/\*[\s\S]*?\*\//g, '');
-  const onBrand = (onBrandCss.match(/\.[a-z-]+\{[^{}]*color:var\(--on-brand\)/g) || [])
-    .map(r => /\.[a-z-]+\{/.exec(r)[0].slice(0, -1));
+  const onBrandRules = onBrandCss.match(/\.[a-z-]+\{[^{}]*color:var\(--on-brand\)[^{}]*\}/g) || [];
+  const onBrand = onBrandRules.map(r => /\.[a-z-]+\{/.exec(r)[0].slice(0, -1));
   const onBarInLightBar = BAR_CONTROLS.filter(c => onBrand.includes(c));
-  const unexplained = onBrand.filter(c => !DARK_BY_DESIGN.includes(c));
+  /* The exemption used to be a list of four names, which went stale the moment one of them stopped
+     painting on-brand ink (the chat tag has) and refuses the next honest case on sight (the stepper's
+     filled disc did). It is a measurement now: a rule may carry white ink exactly when the same
+     declaration block brings its own dark surface, which is the only way white-on-white cannot happen. */
+  const DARK_SURFACE = /background:var\(--(surface-brand|deep|brand-primary|md-sys-color-primary)\)/;
+  const explained = onBrandRules.filter(r => DARK_SURFACE.test(r)).map(r => /\.[a-z-]+\{/.exec(r)[0].slice(0, -1));
+  const unexplained = onBrand.filter(c => !explained.includes(c));
   c.check('no control in the app bar paints on-brand ink, because every bar is a light surface now',
-    onBarInLightBar.length === 0 && unexplained.length === 0,
-    'bar controls still on-brand=' + onBarInLightBar.join(',') + ' unexplained=' + unexplained.join(','));
+    onBarInLightBar.length === 0 && unexplained.length === 0 && explained.length >= 3,
+    'bar controls still on-brand=' + onBarInLightBar.join(',') + ' unexplained=' + unexplained.join(',') +
+    ' explained-by-own-dark-surface=' + explained.length + ' (need 3)');
 
   /* a button that reports success without changing anything is the bug class this
      whole rebuild was asked to remove */
@@ -2588,8 +2594,52 @@ suite('journeys', async () => {
   const asked = BOOKINGS.find(b => b.status === 'requested' && b.providerId === app.CURRENT_PROVIDER_ID);
   if (asked) {
     go('provider', 'provider_booking_detail', () => { state.selectedProviderBookingId = asked.id; });
+    /* The hazard is a BUTTON wearing the past tense. The step path names the same word on purpose —
+       it is the path, not an action — so the screen must contain both: an action that reads
+       "Accept this request" and a step that reads "Accepted". Dropping the second half would let a
+       build with no stepper at all pass this check. */
+
+
     c.check('the accept button says accept, not accepted',
-      /Accept this request/.test(html()) && !/>Accepted</.test(html()));
+      /Accept this request/.test(html()) &&
+      !/<button[^>]*>[^<]*\bAccepted\b/.test(html()) &&
+      /class="slabel">Accepted</.test(html()),
+      'buttons wearing the past tense=' + (html().match(/<button[^>]*>[^<]*Accepted[^<]*/) || ['none'])[0].slice(0, 60));
+
+  /* One prominent action per state, measured on the painted screen. The request card at the top of
+     this screen and the action bar at the bottom used to offer the SAME two answers in two
+     wordings — "Accept request" and "Accept this request" — four buttons for two decisions. No
+     tally can see that: nothing is clipped, nothing collides, every control is 44px. So the count
+     of primary buttons is asserted per state, with a population floor so a loop that reached no
+     booking cannot report clean. */
+  const primaryButtons = (markup) => (markup.match(/<button[^>]*class="[^"]*"[^>]*>/g) || [])
+    .filter(t => {
+      const cls = /class="([^"]*)"/.exec(t)[1].trim().split(/\s+/);
+      return cls.length === 1 && cls[0] === 'btn';
+    });
+  const priorJob = state.selectedProviderBookingId;
+  const reachedStates = [];
+  const duplicateWordings = [];
+  ['requested', 'upcoming', 'en_route', 'arrived', 'ongoing', 'completed'].forEach(function (st) {
+    const row = BOOKINGS.filter(b => b.providerId === app.CURRENT_PROVIDER_ID && b.status === st)[0];
+    if (!row) return;
+    reachedStates.push(st);
+    go('provider', 'provider_booking_detail', () => { state.selectedProviderBookingId = row.id; });
+    const screen = html();
+    const offered = app.providerJobMoves(row).filter(m => m.kind !== 'note').length;
+    const primes = primaryButtons(screen);
+    if (primes.length !== (offered ? 1 : 0)) {
+      duplicateWordings.push(row.id + ' (' + st + ') offers ' + offered + ' move(s) but paints ' + primes.length + ' primary button(s)');
+    }
+    const words = (screen.match(/<button[^>]*>([\s\S]*?)<\/button>/g) || [])
+      .map(t => t.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()).filter(Boolean);
+    const twice = words.filter((w, i) => words.indexOf(w) !== i);
+    if (twice.length) duplicateWordings.push(row.id + ' repeats "' + twice[0] + '"');
+  });
+  state.selectedProviderBookingId = priorJob;
+  c.check('the provider’s job screen offers exactly one primary action per state, named once',
+    duplicateWordings.length === 0 && reachedStates.length >= 3,
+    duplicateWordings.join(' | ') + ' | states reached=' + reachedStates.join(','));
   }
 
   /* ── the money axis only ever holds codes ── */
