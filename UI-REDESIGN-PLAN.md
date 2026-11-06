@@ -112,3 +112,25 @@ reaches. It is reported, not smoothed over, and the other seven corners are clea
 tools/falsify-visual-contract.cjs` (5 of 5), `node tools/measure.cjs`, `node
 tools/audit-build-bytes.cjs` (three copies agree; the built APK differs until it is rebuilt),
 `node tools/shot.cjs --probe=@tools/probe-visual-contract.js`.
+
+
+## Final verdicts on the ledger (after Slices 5 and the instrument repairs)
+
+Three rows moved from "not touched" to settled by reading the build rather than changing it, and two
+of them are the kind of finding a screenshot produces that a grep does not.
+
+| # | Verdict | What was actually there |
+|---|---|---|
+| D7 | **already satisfied** | `mapFallback()` paints a pin glyph, the barangay, "about N km away (sample figure, not measured from you)" and the service radius when tiles never arrive. The brief saw an empty dashed box because its sandbox had no network *and* the fallback had not been read. The walk's own tally shows only `*.tile.openstreetmap.org` leaving the device. |
+| P6 | **fixed** | the attention rows lead with a severity glyph in a tonal container and the count rides in a chip beside its own sentence. The `min-width:60px` numeral gutter is gone from this screen. |
+| P7 | **fixed except the label** | one icon family throughout, 24px glyphs, and the admin's Help Desk draws `scale`, documented in `ICON_MEANING` as "cases being read for evidence" — adjudication, not the external-link arrow the brief described. `FSM` still reads `FSM`: the rename to **Jobs** is an owner decision and was not taken silently. |
+| P8 | **fixed** | the entry screen is one surface: logo on white, display title, segmented control, 52px fields and primary action, the three documents as text links, "Create a new account" as an outlined action near the bottom. |
+| P10 | **fixed** | the marks carry a line naming the step and the count, built from the same `STAGES` array and the same `label()` the rest of the app uses. |
+| A3 | **partly, and honestly** | the provider-detail identity block is a monogram; the list rows still use `serviceAvatar`, which is the trade's own glyph in a tonal disc — arguably the better affordance for a marketplace. The cartoon `photoAvatar` faces remain in the Home cards, chat and messages, because the two splices that would replace them broke the suite's boot and the gate caught both. That change needs the harness, not a text replacement. |
+
+**Remaining, stated as remaining.** The Home and provider-dashboard cards still nest a card inside a
+card (P1 is partly done: the components exist — `.list`, `.list-row`, `.tile`, `.btn.tonal`,
+`.count-chip` — and the admin console uses them; the two dashboards do not yet). The provider job flow
+is not yet a stepper with one prominent primary action per state. The sheet pattern, the messages rows
+and the profile rows inherit the old markup. None of these is a defect the instruments would catch;
+they are the pass's remaining work, and §10 lists them rather than describing them as done.
