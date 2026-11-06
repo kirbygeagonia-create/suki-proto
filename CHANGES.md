@@ -10189,3 +10189,50 @@ replacement moved a helper across a `const` boundary, nothing about the rendered
 shown it, and only the suite noticed. That is why this change belongs with the harness, which boots
 the page and can see a reference order, and not with another string splice.
 
+## 164. Slice 5, and three instruments that had been quietly pinned to spellings this pass rewrote
+
+**The admin console stopped being an HTML list (P6).** Each "Needs attention" row led with a coloured
+numeral in a `min-width:60px` gutter — the bare number, the gap, the missing icon the brief names. The
+numeral becomes a severity glyph in a tonal container (warning, brand, error, success, neutral — the
+semantic inks already measured for contrast, so no colour is invented) and the count moves into a chip
+beside the words it counts. The rows are still `.job-row`s with a chevron, which an earlier pass had
+already earned.
+
+**The bookings pill said "ongoing".** Removing `text-transform:uppercase` from the status pill was
+right, and one of four call sites had been letting the transform do the capitalising of a raw state
+code. A lowercase word is not clipped, collides with nothing, is on the scale and clears contrast:
+only reading the markup found it. Every chip now prints `label(b.status)`.
+
+**Provider detail toward §5**: a 64px identity monogram, the name at title-lg, the chat action on the
+named tonal tier instead of a hand-typed inline style, and the sticky action bar carrying the one soft
+shadow §3.1 allows it. §5 asks for chat and contact as *two equal* tonal buttons; making them literally
+equal is the defect §70 and `.btn.tertiary` exist to prevent — two byte-identical quiet buttons read as
+equally the next thing to do — so the call keeps its demotion and the deviation is listed rather than
+resolved by a silent edit. The monogram's ink had to follow its container: moving the plate from brand
+blue to the pale primary container left white initials on it at 1.45:1, measured at four screens the
+moment the plate changed.
+
+**Three instruments were stale, not the app.** `falsify-bar-titles` died in its own pre-flight over two
+needles pinned to spellings this pass rewrote (the root heading gained `font-weight:700`; the on-bar
+control moved off translucent white onto the tonal pair), and its sixth break named a check that no
+longer exists — deleting a root-tab variant is *equivalent* now that every bar is light, so the break
+is repointed at the hazard the new rule actually forbids and reads 7 of 7. The gate's queue-number
+reader assumed the count sat before the words; it prefers the trailing chip now, because the leading
+pattern would match the `20` inside `ic('file-text',20)`. And `falsify-visual-contract` printed its
+verdict behind its own name, which the aggregate cannot parse, so the row read "nothing was proven" —
+it prints the conventional summary line as well now. All three are the same rule arriving again: **an
+instrument's assumption about how code is shaped is part of what the code has to respect.**
+
+**Two findings closed by reading rather than by changing.** D7 was reported as an empty dashed box in
+the brief's sandbox; this build already degrades to a pin glyph, the barangay, an honestly-labelled
+sample distance and the service radius through `mapFallback()`, and the walk's network tally shows only
+`*.tile.openstreetmap.org` leaving the device. P7's icon complaint is resolved by the family swap: the
+admin's Help Desk draws `scale`, which `ICON_MEANING` documents as "cases being read for evidence" —
+adjudication, not the external-link arrow the brief saw. Neither was re-drawn, because both were
+already right and the honest move was to say so.
+
+**What the mutation suite still refuses, and why that is correct.** `falsify-build-bytes` aborts on its
+own baseline: the audit reports the built APK disagreeing with the source, which is the accepted state
+until the owner rebuilds it after acceptance. The family is right to refuse — the invariant it guards
+is genuinely unmet — and the fix is a rebuild, not a relaxed needle.
+
