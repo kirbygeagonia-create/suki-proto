@@ -10413,8 +10413,7 @@ function residentConcierge(){
       ${state.conciergePhotoAttached && !state.conciergePhotoError ? `<button type="button" class="auth-switch" style="display:block; margin:-6px auto 12px;" onclick="removeConciergePhoto()">Remove photo</button>` : ''}
 
       <div class="hscroll" style="display:flex; gap:8px; margin-bottom:16px;">
-        <button type="button" class="chip" style="background:var(--background); border:1px solid var(--line); color:var(--ink-soft); font-weight:600; padding:6px 12px; border-radius:var(--r-pill);" onclick="setExampleText('My sink has been leaking since this morning and there is water all over the kitchen.')">${ic("droplet",13)} Try: Sink leak</button>
-        <button type="button" class="chip" style="background:var(--background); border:1px solid var(--line); color:var(--ink-soft); font-weight:600; padding:6px 12px; border-radius:var(--r-pill);" onclick="setExampleText('Our main circuit breaker trips whenever the refrigerator turns on.')">${ic("zap",13)} Try: Tripping breaker</button>
+        ${CONCIERGE_PROMPTS.map(p => `<button type="button" class="chip" onclick="setExampleText('${jsStr(p.text)}')">${ic(p.icon, 13)} Try: ${esc(p.label)}</button>`).join('')}
       </div>
 
       ${state.conciergeError ? `<div class="inline-error" id="concierge-error" role="alert">${ic("alert-triangle",12)} ${state.conciergeError}</div>` : ''}
@@ -10542,6 +10541,16 @@ function conciergeInput(el){
 // categories, then asks the question a provider would need answered. Trades are
 // tested in list order and matched on whole words only, so "dishwasher" cannot
 // be read as a shipment and "a slight leak" cannot be read as a lighting fault.
+/* Two ways to start. These were two hand-typed buttons carrying their own padding, border,
+     background and colour — every one of which button.chip already decides — so a third prompt
+     would have been a third copy of the same inline style rather than a third row of a table. */
+const CONCIERGE_PROMPTS = [
+  { icon:'droplet', label:'Sink leak',
+    text:'My sink has been leaking since this morning and there is water all over the kitchen.' },
+  { icon:'zap', label:'Tripping breaker',
+    text:'Our main circuit breaker trips whenever the refrigerator turns on.' },
+];
+
 const CONCIERGE_SORTS = [
   { id:'electrical', words:['breaker','breakers','wiring','wire','wires','socket','sockets','outlet','outlets','light','lights','fan','fans','surge','power','fuse','fuses','electric','electrical','switch','switches'],
     ask:'Does the breaker trip immediately, or only once the appliance has been running for a while?', ans:['Trips right away','Only after a while'] },
@@ -13404,7 +13413,8 @@ function providerDashboard(){
     ${beyond.length ? `<button type="button" class="card card-quiet" style="width:100%; text-align:left; font:inherit; color:var(--ink); display:flex; align-items:center; gap:8px; margin-top:8px; cursor:pointer;" onclick="state.tab='bookings'; render();" aria-label="Open the bookings tab to see ${beyond.length} more scheduled job${beyond.length === 1 ? '' : 's'}">
       <span style="flex:1; min-width:0;">
         <span style="display:block; font-size:var(--t-body-sm); font-weight:700;">${beyond.length} more scheduled job${beyond.length === 1 ? '' : 's'}</span>
-        <span style="display:block; font-size:var(--t-caption); color:var(--mist); margin-top:2px;">next: ${esc(beyond[0].date)} at ${esc(beyond[0].time)} — ${esc(beyond[0].summary)}</span>
+        <span style="display:block; font-size:var(--t-caption); color:var(--mist); margin-top:2px;">Next: ${esc(beyond[0].date)}, ${esc(beyond[0].time)}</span>
+        <span style="display:block; font-size:var(--t-caption); color:var(--ink-soft); margin-top:2px; line-height:1.45;">${esc(beyond[0].summary)}</span>
       </span>
       <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',14)}</span>
     </button>` : ''}
