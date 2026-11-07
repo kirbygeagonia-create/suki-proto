@@ -45,6 +45,18 @@ const DEFAULT_CASES = [
   { why: 'narrowest phone, largest text (the worst corner the platform allows)', scale: '2', width: '320' },
   { why: 'default panel width, largest text', scale: '2', width: '' },
   { why: 'vivo 1906 at 450 CSS px, the OPPO setting that started this (1.35)', scale: '1.35', width: '450' },
+  /* 360 CSS px was the width this build's own brief named and this sweep had never run: the seven
+     corners all came from a device that had been photographed, and no device here reports 360 — it is
+     the density-3.0 phone (1080 physical px), the most common Android layout width there is. Running it
+     found three defects on the first pass, all the same one: the booking sheet's payment rail left
+     2px of "Cash on Arrival" past its own scroller on all three sheets, at the *default* text size,
+     which means no corner pairing narrow-with-large-text was ever going to see it. A clipped chip is
+     §5's named failure ("never half-cut chips"), and 2px is not a scroll a thumb will finish, so the
+     rail now wraps. Both scales are kept because the fix is a wrap: it has to stay whole on the way up.
+     The height is the camera's default 844 — 740 reads identically here, and the corner names what it
+     measured rather than what it guesses. */
+  { why: '360 CSS px — the density-3.0 Android width, default text (where the payment chip was half-cut)', scale: '1', width: '360' },
+  { why: '360 CSS px at the OPPO text setting (the wrap has to hold above 100% too)', scale: '1.35', width: '360' },
   /* The corner a photograph of a real handset produced, and then a measurement of that same handset
      corrected. The first version said "360 CSS px at 1.35" because the device reports
      `Override density: 360`, which is the DENSITY, not the layout width: 720 physical px over

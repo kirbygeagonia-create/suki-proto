@@ -1169,8 +1169,14 @@ const SCREENS = [
      gets of the stepper is of nothing unless the entry scrolls to it. A job on the path, not a
      request waiting at step one, because that is the state where six steps are worth drawing. */
   ['provider-job-path', `state.view='app'; state.role='provider'; state.tab='bookings'; render();
-                        openProviderBooking(bookingsForProvider().find(b => b.status === 'ongoing').id);
-                        document.querySelector('.stepper').scrollIntoView();`],
+                        const onPath = bookingsForProvider().find(b => b.status === 'ongoing')
+                          || bookingsForProvider().find(b => JOB_STAGES.indexOf(b.status) >= 0);
+                        if (!onPath) throw new Error('the signed-in provider holds no job at a stage the path draws');
+                        openProviderBooking(onPath.id);
+                        const st = document.querySelector('.stepper');
+                        const sc = document.getElementById('screen');
+                        sc.style.scrollBehavior = 'auto';
+                        sc.scrollTop += st.getBoundingClientRect().top - 12;`],
   ['provider-profile', `state.view='app'; state.role='provider'; state.tab='profile'; render();`],
   /* The profile modules open as sheets, and until now no sheet like this was in the table at
      all — so the resident's spending card and the provider's new credential list had never been
@@ -1646,6 +1652,7 @@ async function main() {
   }
 
   const manifest = [];
+  const skipped = [];
   /* Wide enough for the longest screen name in the table, so the column stays readable as the
      table grows — six of the names added in §63 are longer than the fixed 20 this printed at,
      and the output started running "resident-payment-modalshows" together, which is the same
@@ -1673,6 +1680,14 @@ async function main() {
             item, which reads isChatOpen=false, data-root=1, title 24px Resident Profile. A setup
             that moves the model without moving the field measures a state nobody can reach. */
          try { state.isChatOpen = false; } catch (e) {}
+         /* The same trap one level up. Nine rows of the walk sign in as the fruit harvester with
+            applyProviderIdentity('p7'), and it is a module binding rather than a screen-local, so
+            every provider row after the first of them was measured against p7's bookings while its
+            own name still said "provider". That is how provider-job-path died at every corner: it
+            asks for a job already on the path, and the harvester holds none. A row that wants
+            another account sets it in its own entry; a row that names a screen gets the account that
+            screen's name claims. */
+         try { if (typeof CURRENT_PROVIDER_ID !== 'undefined' && CURRENT_PROVIDER_ID !== 'p1') applyProviderIdentity('p1'); } catch (e) {}
          /* The app pays back the entries it owns with real history.back() calls, which is
             right on a phone and wrong here: the walk jump-cuts between screens, and a back()
             past the page's own entries leaves the file entirely and Chrome closes the target.
@@ -1684,7 +1699,7 @@ async function main() {
       const err = await session.evaluate(`(function(){
          try { ${nav} return ''; } catch(e){ return String(e && e.message || e); }
       })()`);
-      if (err) { console.log('  SKIP ' + name + ' — ' + err); continue; }
+      if (err) { console.log('  SKIP ' + name + ' — ' + err); skipped.push({ name, why: err }); continue; }
       /* Let transitions settle: the app animates sheets and toasts, and a shot
          taken mid-flight photographs a half-moved screen. */
       await session.evaluate(`(function(){
@@ -1826,6 +1841,14 @@ async function main() {
     generatedAt: new Date().toISOString(), viewport: { width: WIDTH, height: HEIGHT, dpr: DPR },
     appMode: APP_MODE, url, screens: manifest, consoleErrors
   }, null, 2));
+  /* A row that throws in its own setup paints nothing, and every tally in the run is then a
+     measurement of one screen fewer than the table claims. The old tell was the screen count in a
+     sentence nobody compares against --list; this is the same fact as a number the sweep already
+     fails on, because sweep-text-scale.cjs treats any count it does not recognise as must-be-zero. */
+  console.log('\ncamera rows that never painted a screen (a skipped row is a screen nobody measured): ' +
+    skipped.length);
+  skipped.forEach(s => console.log('  ' + s.name + ' — ' + s.why));
+
   if (MEASURE) {
     const flat = (key) => manifest.flatMap(m => (m.audit && m.audit[key] || []).map(x => ({ screen: m.name, ...x })));
     const tally = (rows, label, fmt) => {

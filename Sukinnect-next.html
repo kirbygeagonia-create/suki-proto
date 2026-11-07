@@ -1132,7 +1132,11 @@
   }
   .pick:active{background:var(--cloud);}
   .pick.on{background:var(--deep); border-color:var(--deep); color:var(--text-on-brand);}
-  .req-rail{display:flex; gap:8px;}
+  /* The chips scroll, and when the panel is too narrow for the last one to be whole the rail
+     wraps rather than leaving a chip half-cut — §5 names that as the failure, and 360 CSS px is
+     where it showed: three booking sheets each clipped 2px of "Cash on Arrival". A rail that
+     fits still paints one row, so this only fires when a control would otherwise be cut. */
+  .req-rail{display:flex; gap:8px; flex-wrap:wrap;}
   .req-addr{display:flex; flex-direction:column; gap:8px;}
   .req-addr .pick{width:100%; justify-content:flex-start; text-align:left; white-space:normal; border-radius:var(--r-card);}
   .req-provider{
@@ -4945,7 +4949,7 @@ function chartColumns(rows, opts) {
      harness — the previous rule is kept verbatim, so a check that never sees a box still sees the
      behaviour it was written against. */
   const rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-  let slotPx = 0, tickGapPx = 0, labelPx = 0, tickPx = 0, valuePx = 0;
+  let slotPx = 0, tickGapPx = 0, labelPx = 0, tickPx = 0, valuePx = 0, plotPx = 0;
   /* Declared outside the measure block, and true by default, because the path with no layout to
      measure — the Node harness — has to keep painting every label the markup checks read. */
   let topClear = true;
@@ -4962,6 +4966,7 @@ function chartColumns(rows, opts) {
       const plot = box.querySelector('.chart-plot');
       const pw = plot ? plot.getBoundingClientRect().width : 0;
       if (pw > 0) {
+        plotPx = pw;
         const unitPx = pw / CHART_W;   /* one viewBox unit, in the pixels the plot will use */
         slotPx = pw / rows.length;
         const widest = rows.reduce((a, r) =>
@@ -5068,6 +5073,9 @@ function chartColumns(rows, opts) {
   const shapes = [];
   const labels = [];
   const ticks = [];
+  /* The right edge of the last category label this axis actually kept, in the pixels the plot is
+     about to have. -Infinity so the first label is always painted. */
+  let lastCatRight = -Infinity;
   sc.ticks.forEach((t, ti) => {
     const y = padTop + inner - (t / sc.top) * inner;
     shapes.push(`<line x1="${CHART_PAD.l}" y1="${y.toFixed(1)}" x2="${CHART_W - CHART_PAD.r}" y2="${y.toFixed(1)}" stroke="var(--line)" stroke-width="1" ${t === 0 ? '' : 'stroke-dasharray="2 4"'}></line>`);
@@ -5115,9 +5123,42 @@ function chartColumns(rows, opts) {
        measures a defect this rule would fix — and a change with no failing check behind it is
        the kind of edit this file keeps getting wrong. */
     const cxPct = (x + bw / 2) / CHART_W * 100;
-    const anchor = cxPct > 80 ? ' r' : (cxPct < 20 ? ' l' : '');
-    if (topVal > 0 && valRoom) labels.push(`<span class="chart-val${anchor}" style="left:${pctX(x + bw / 2)}; top:${pctY(topY - 5)};">${esc(fmt(topVal))}</span>`);
-    if (i % stride === 0) labels.push(`<span class="chart-cat${anchor}" style="left:${pctX(x + bw / 2)}; top:${pctY(h - 8)};">${esc(r.label)}</span>`);
+    /* The band this replaces was a guess about where a label starts to overflow, and the guess was
+       made at one width: a label centred at 79.06% of a 220px plot hangs 2.5px past it at 200% text
+       while the same percentage on a wider plot is clean. So ask the box and the glyph instead — a
+       label is right-anchored when its own half-width would cross the plot's right edge,
+       left-anchored when it would cross the left, and centred only when it provably fits between
+       them. Each kind gets its own reach: a bar's number is narrower than a date, and budgeting the
+       wider one for both right-anchors value labels that do not need it. With no layout to measure
+       — the Node harness — the band is kept verbatim, because the render checks read these classes
+       out of markup and there is no box to ask. */
+    const anchorFor = reach => {
+      if (!(plotPx > 0 && reach > 0)) return cxPct > 80 ? ' r' : (cxPct < 20 ? ' l' : '');
+      const cx = cxPct / 100 * plotPx;
+      if (cx + reach / 2 > plotPx - 0.5) return ' r';
+      if (cx - reach / 2 < 0.5) return ' l';
+      return '';
+    };
+    const catAnchor = anchorFor(labelPx);
+    const valAnchor = anchorFor(valuePx);
+    if (topVal > 0 && valRoom) labels.push(`<span class="chart-val${valAnchor}" style="left:${pctX(x + bw / 2)}; top:${pctY(topY - 5)};">${esc(fmt(topVal))}</span>`);
+    if (i % stride === 0) {
+      /* Where this label will actually paint, given the anchor just chosen: a right-anchored word
+         runs left from its point, a left-anchored one runs right, a centred one splits. Only the
+         right-anchored case is checked against the neighbour, because only that one reaches BACK —
+         it is the hazard this rule was written for, and a guard that also caught centred overlaps
+         would quietly take the thinning budget's own proof away with it. Centred and left neighbours
+         are the stride rule's business, and falsify-chart-collide has to be able to see it stop. The
+         rule needs both numbers to exist, so the Node harness — no box, no measurement — keeps
+         painting every stride-kept label the markup checks read. */
+      const cxPx = cxPct / 100 * plotPx;
+      const catLeft = catAnchor === ' r' ? cxPx - labelPx : (catAnchor === ' l' ? cxPx : cxPx - labelPx / 2);
+      const reachesBack = catAnchor === ' r' && catLeft <= lastCatRight + 4;
+      if (!(plotPx > 0 && labelPx > 0) || !reachesBack) {
+        labels.push(`<span class="chart-cat${catAnchor}" style="left:${pctX(x + bw / 2)}; top:${pctY(h - 8)};">${esc(r.label)}</span>`);
+        lastCatRight = catLeft + labelPx;
+      }
+    }
   });
   return `<div class="chart-cols"><div class="chart-plot"><svg viewBox="0 0 ${CHART_W} ${h}" role="img" aria-label="${esc(o.aria || chartSummary(rows, fmt))}">${shapes.join('')}</svg>${labels.join('')}</div>${ticks.join('')}</div>`
     + chartSrSummary(rows, fmt);

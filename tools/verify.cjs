@@ -2074,6 +2074,20 @@ suite('hygiene', async () => {
     prefixes.length + ' prefixes [' + prefixes.join(' ') + '], hour guard '
       + (hourGuard ? 'present' : 'MISSING'));
 
+  /* A walk row that throws in its own setup paints nothing, and until 2026-11-06 the only evidence
+     was a screen count nobody compared against --list: provider-job-path skipped at every corner of
+     every sweep from the day it was added, and eleven corners printed "0 failing tallies" over 101 of
+     102 screens while the stepper it was written to measure went unseen. The camera prints a tally a
+     sweep fails on now, and the tally is only honest if the SKIP branch feeds it — so the print and
+     the push are asserted as one statement, at a distance, because a push that moved out of the
+     branch is a tally that reads 0 forever. */
+  const skipPrint = camera.indexOf("console.log('  SKIP ' + name");
+  const skipPush = camera.indexOf('skipped.push({ name, why: err })');
+  const skipTally = camera.indexOf('camera rows that never painted a screen');
+  c.check('a camera row that never paints is counted by the run, not only printed',
+    skipPrint > -1 && skipPush > -1 && skipTally > -1 && Math.abs(skipPush - skipPrint) < 200,
+    'SKIP print at ' + skipPrint + ', push at ' + skipPush + ', tally line at ' + skipTally);
+
   /* The commit-subject instrument is the only one whose subject is the messages this repository writes, and both of
      its halves fail by printing something reassuring. The list was originally scoped `origin/main..HEAD`, which by
      construction cannot see a collision with anything already merged — measured 2026-10-24, five minutes after PR #9
