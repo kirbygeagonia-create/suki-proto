@@ -30,8 +30,9 @@ const PROBE_FLAT = 'tools/probe-flat-palette.js';
 const PROBE_WORDS = 'tools/probe-step-words-agree.js';
 const PROBE_ACTION = 'tools/probe-action-duplication.js';
 const PROBE_MAP = 'tools/probe-offline-map.js';
+const PROBE_HOLES = 'tools/probe-painted-holes.js';
 const probeOriginals = {};
-[PROBE_FLAT, PROBE_WORDS, PROBE_ACTION, PROBE_MAP].forEach(p => { probeOriginals[p] = fs.readFileSync(path.join(ROOT, p), 'utf8'); });
+[PROBE_FLAT, PROBE_WORDS, PROBE_ACTION, PROBE_MAP, PROBE_HOLES].forEach(p => { probeOriginals[p] = fs.readFileSync(path.join(ROOT, p), 'utf8'); });
 
 const ONLY = 'provider-job,provider-job-path,booking-tracking,resident-home,admin-dash';
 const POPULATION = ONLY.split(',').length;
@@ -65,6 +66,10 @@ const BREAKS = [
     file: path.join(ROOT, PROBE_MAP), probe: PROBE_MAP, expect: 'findings', offline: true, only: 'provider-detail',
     from: "    fallback = screen.querySelector('.map-fallback');",
     to: "    fallback = screen.querySelector('.no-such-fallback');" },
+  { name: 'a Home card interpolates a field the record does not have',
+    file: PAGE, probe: PROBE_HOLES, expect: 'findings', only: 'resident-home',
+    from: '<div class="card-title">${esc(active.request)}</div>',
+    to: '<div class="card-title">${active.noSuchField}</div>' },
   { name: 'a card paints a linear gradient',
     file: PAGE, probe: PROBE_FLAT, expect: 'findings',
     from: '.card{' + EOL + '    background:var(--md-sys-color-surface);',
@@ -94,21 +99,22 @@ const BREAKS = [
 const baseline = {};
 [PROBE_FLAT, PROBE_WORDS, PROBE_ACTION].forEach(p => { baseline[p] = runProbe(p); });
 baseline[PROBE_MAP] = runProbe(PROBE_MAP, { only: 'provider-detail', offline: true });
+baseline[PROBE_HOLES] = runProbe(PROBE_HOLES, { only: 'resident-home' });
 /* The map probe is scored on one screen — the only screen in the walk that mounts a map by default.
    A population guard that demands the same count from every probe would condemn a probe for asking a
    narrower question, which is the opposite of what the guard is for. */
 const EXPECTED = {};
 EXPECTED[PROBE_FLAT] = POPULATION; EXPECTED[PROBE_WORDS] = POPULATION;
-EXPECTED[PROBE_ACTION] = POPULATION; EXPECTED[PROBE_MAP] = 1;
-console.log('baseline: ' + [PROBE_FLAT, PROBE_WORDS, PROBE_ACTION, PROBE_MAP]
+EXPECTED[PROBE_ACTION] = POPULATION; EXPECTED[PROBE_MAP] = 1; EXPECTED[PROBE_HOLES] = 1;
+console.log('baseline: ' + [PROBE_FLAT, PROBE_WORDS, PROBE_ACTION, PROBE_MAP, PROBE_HOLES]
   .map(k => k.replace('tools/probe-', '').replace('.js', '') + ' answers=' + baseline[k].answers +
     ' findings=' + baseline[k].findings + ' refusals=' + baseline[k].refusals + ' scored=' + baseline[k].scored).join(' | '));
-if ([PROBE_FLAT, PROBE_WORDS, PROBE_ACTION, PROBE_MAP].some(k => baseline[k].answers !== EXPECTED[k])) {
+if ([PROBE_FLAT, PROBE_WORDS, PROBE_ACTION, PROBE_MAP, PROBE_HOLES].some(k => baseline[k].answers !== EXPECTED[k])) {
   console.log('a probe did not answer on its own population: ' + [PROBE_FLAT, PROBE_WORDS, PROBE_ACTION, PROBE_MAP]
     .map(k => k.replace('tools/probe-', '').replace('.js', '') + '=' + baseline[k].answers + '/' + EXPECTED[k]).join(' '));
   process.exit(1);
 }
-if ([PROBE_FLAT, PROBE_WORDS, PROBE_ACTION, PROBE_MAP].some(k => baseline[k].findings !== 0)) {
+if ([PROBE_FLAT, PROBE_WORDS, PROBE_ACTION, PROBE_MAP, PROBE_HOLES].some(k => baseline[k].findings !== 0)) {
   console.log('a probe already reports findings before any break');
   process.exit(1);
 }
