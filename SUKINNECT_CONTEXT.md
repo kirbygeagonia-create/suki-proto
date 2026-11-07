@@ -140,7 +140,11 @@ partners or quotes.** Do not push. Business questions go to the owner as decisio
 | Payments | **simulated** — `MockGateway`; no money moves; no value stored | README money model; `falsify-pay-records` |
 | Smart Match | **typed per provider in seed data**, and the results screen says "Sorted by: Smart Job Match" while `providerMatches()` only filters — the score is not computed and not sorted | `PROVIDERS[].smartMatch`, `providerMatches()`; roadmap B1 |
 | AI concierge | keyword matching over six trades, honestly labelled as not reading pictures | `CONCIERGE_SORTS`, `matchConciergeService` |
-| Consent at sign-up, moderator role, service-business role, subscriptions, promoted listings, tamper-evident log, event instrumentation, OCR/liveness, voice, CAPTCHA | **in plan, not built** | roadmap feature register F1–F21 |
+| Terms and Privacy consent: scroll gate, short pane counts as read, versioned persisted record | **built** (F8) | the legal-document sheet, `docScrolled`, `state.termsAcceptances`; `falsify-legal-truth` |
+| Tamper-evident ledger chain — labelled "not a blockchain, not a network, not encryption" | **built** (F10) | `chainHash`, `buildLedgerChain`, `verifyLedgerChain`; a gate check tampers with a record and requires the head to move |
+| Pricing band and the provider rate wizard; standing tier; connections; wallet as a derived view | **built, computed from records on this device** (F5, F13, F20, F12) | `rateBandFor`, `openRateWizard`, the tier ternary, `connectionsSheet`, `walletSheet` |
+| OCR / liveness, exchange rates, bot check, funding eligibility, an organisation as a party | **named seams that decline** — they say what is missing and record nothing (F6, F7, F9, F14, F21) | `seam(ocr.reason)`, `exchangeRateSeam`, `spamCheckSeam`, `gatewayCashSeam` |
+| Computed matching and sorting, moderator and service-business roles, subscriptions, promoted listings, event instrumentation and the KPI console, voice input | **in plan, not built** | roadmap F1–F2, F15–F19 |
 | Visual system | flat brand palette, one icon family (Material Symbols, Apache-2.0, 48 glyphs), one top-bar/nav/sheet system | `assets/ICON-LICENSES.md`, `DESIGN-TOKENS.md` |
 | Backend, real accounts, real payments, legal sufficiency of the draft terms | **not started**; design and seams only | Master Plan §9; `SUKINNECT_STARTUP_ROADMAP.md` |
 

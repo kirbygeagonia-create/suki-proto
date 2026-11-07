@@ -8,6 +8,28 @@ The product spec, brand rules and the prototype-versus-production discipline liv
 **[`AGENTS.md`](AGENTS.md)**. Read it before changing anything. The money model in this
 rebuild is summarised in **[`CHANGES.md`](CHANGES.md)**.
 
+## Startup status (6 November 2026)
+
+Sukinnect is no longer only a prototype exercise: it is a **pre-revenue startup with a working
+prototype and no production backend**. Launch is Tupi, South Cotabato, in five barangays — Poblacion,
+Polonuling, Cebuano, Kablon and Bunao — and the 12-month pilot is a **gated validation** plan whose
+base case is not expected to break even inside the year. That is the plan's own position, stated so a
+reader cannot mistake the pilot for a launch.
+
+| | |
+|---|---|
+| Built in the prototype | discovery, provider profiles and verification records, booking lifecycle, ledger and payments behind a mock gateway, disputes, chat, admin review, the fruit-harvest pilot, a versioned consent gate, a hash-chained (not blockchain) ledger, a derived wallet view, connections and a standing tier |
+| Simulated, and labelled as such | the AI concierge's analysis, the payment gateway, "money held with a licensed partner", ID/OCR/liveness, bot checks, exchange rates, funding eligibility |
+| In plan, not built as of this date (see the F1–F21 register in `SUKINNECT_STARTUP_ROADMAP.md`) | a computed matching engine, event instrumentation and the KPI console, moderator and service-business roles, subscriptions and promoted listings, real payments, any server |
+| Decided by the owner, not by this repository | the pilot fee (1.2 % vs 1.0 %, cap 1.3 %), the wallet contradiction, Fruit Harvest & Buy, public-chain anchoring, voice input, the final legal text, which vendors to evaluate |
+
+The full picture is in two files: **[`SUKINNECT_CONTEXT.md`](SUKINNECT_CONTEXT.md)** — the read-first
+file for humans and AI, which answers what the product is, which document decides what, and what must
+not be claimed — and **[`SUKINNECT_STARTUP_ROADMAP.md`](SUKINNECT_STARTUP_ROADMAP.md)** — the goals,
+needs register, F1–F21 feature register, C1–C12 conflict ledger and traceability table. The business
+sources themselves (`*.docx`, with the financial and investor terms they contain) are **kept local and
+are not committed**; see `.gitignore`.
+
 ## Start here: the project knowledge system
 
 Sukinnect is a startup *and* a prototype. This map says where each kind of answer lives, so a new
@@ -297,6 +319,18 @@ For a job with a ₱800 base at the pilot's 10 %:
 | Sukinnect earns | ₱80.00 |
 | Parts/materials (if any) | charged at cost, **not commissioned**, reimbursed to the provider |
 
+**Superseded, 6 November 2026.** The 10 % above is what this build's configuration still defaults to
+(`commissionRateDefault = 0.10`), and it is the pitch deck's figure. The authoritative business
+document — `Sukinnect_Master_Plan_Revised_27Oct2026.docx` §6.2 — sets the transaction fee at
+**1.2 % with a hard cap of 1.3 %** (1.0 % as the stated alternative), which makes the same ₱800 job
+earn **₱9.60**, not ₱80. The plan also forbids Sukinnect absorbing gateway fees in the pilot: at
+1.2 % with an absorbed QR Ph / Maya / GCash fee the platform loses ₱2.41 / ₱6.44 / ₱10.38 per ₱800
+booking. The change to the code, the cap enforcement and the gateway-fee line are an open owner
+decision (conflict C1/C2 in
+[`SUKINNECT_STARTUP_ROADMAP.md`](SUKINNECT_STARTUP_ROADMAP.md)) and are not made here, because this is
+the developer documentation and not the business document. No figure in this repository is presented
+as the settled rate.
+
 - The fee is deducted **from the provider's share**, so the price on the card is the price
   the customer pays. Nothing appears at the till that was not on the card.
 - **Booking status and payment status are separate fields**, always displayed separately.
@@ -471,9 +505,13 @@ measurement rather than chosen for taste:
 ## Honest labelling
 
 Demo data is `source:'demo'`, records you create in a session are `source:'live'`. Pilot
-targets (150 providers, 3,000 users, 6,000 bookings) are planning assumptions and are never
-presented as activity. There is no server: an AI concierge that describes, analyses and
-matches is a simulated flow, and the screens say so.
+targets — **150 verified providers, 3,000 registered users, 3,270 completed bookings** over twelve
+months (base case; the 15,200-booking figure is a post-validation multi-town stretch scenario, not a
+forecast) — are planning assumptions and are never presented as activity. Corrected 6 November 2026:
+this line previously said 6,000 bookings, which is the pitch deck's number and is superseded by
+`Sukinnect_Master_Plan_Revised_27Oct2026.docx` §4.3 (conflict C3 in
+[`SUKINNECT_STARTUP_ROADMAP.md`](SUKINNECT_STARTUP_ROADMAP.md)). There is no server: an AI concierge
+that describes, analyses and matches is a simulated flow, and the screens say so.
 
 ## Assets
 

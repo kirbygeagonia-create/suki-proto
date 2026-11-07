@@ -10608,3 +10608,70 @@ guards over one hazard are only safe when each still has a failure only it can s
   to its before-frame**, one row without a pair because `provider-job-path` is a new screen.
 - `node tools/audit-design-consistency.cjs` → `inline_styles 1119 [RISEN from 1001]`,
   `literal_radii 20 [RISEN from 17]`; the ceilings were left un-blessed on purpose.
+
+
+## 170. The repository stops describing a prototype, and the two Word documents stop being committable
+
+**What this pass was.** A documentation pass under
+`C:\Users\ADMIN\Downloads\SUKINNECT_STARTUP_DOCS_AND_AI_CONTEXT_PROMPT.md`, run **before** the backend
+and features prompt because that one builds against the register this one produces. No code, no tool,
+no asset was changed: `git diff --stat` for this pass names documents and `.gitignore` only, and
+`node tools/verify.cjs` answers the same 743 checks before and after.
+
+**What was added.**
+
+- `Sukinnect_Master_Plan_Revised_27Oct2026.docx` copied from Downloads into the project root, proven
+  the same file by sha256 (`fa96a580…` both sides). The collaboration notes needed no copy — the root's
+  file is byte-identical to the original (`4f64abcc…`), which is the check that turned a filename
+  difference into a proven match.
+- `docs/readable/` — readable markdown copies of both, generated with `python-docx` 1.2.0 because
+  pandoc is not installed here. Fidelity measured, not asserted: **31 tables, 242 table rows and 41
+  headings, all three matching the `.docx`**, no table padded (so no merged cell was flattened), and
+  five figures spot-checked by counting `<w:t>` text nodes: ₱2,080,000 6/6, 1.2% 18/18, 3,270 6/6,
+  ₱252,154 7/7, 20,604 3/3.
+- `SUKINNECT_CONTEXT.md` (157 lines) — the read-first file, written to answer the brief's ten
+  fresh-AI questions from itself alone, and deliberately free of the confidential numbers.
+- `SUKINNECT_STARTUP_ROADMAP.md` (228 lines) — goals as conditions, the needs register with every owner
+  cell blank, refined features, F1–F21, the scope guard, C1–C12, proposed edits to the Master Plan, and
+  traceability that says **none yet** wherever no test proves the claim.
+- `CLAUDE.md`, `.cursor/rules/sukinnect.mdc`, `.github/copilot-instructions.md`, and a READ FIRST block
+  prepended to `AGENTS.md`. Formats checked against each tool's own documentation, not against memory:
+  Cursor's legacy `.cursorrules` is **not** supported, so it was not created.
+- `AGENTS.md` §96 (precedence, the fee decision, claims discipline, and the honest-labelling rule for
+  AI output), plus dated supersession notes immediately under §6, §59 and §60. No older sentence was
+  edited or deleted and nothing was renumbered — the notes sit between a heading and its first
+  paragraph, so every line keeps its number. §95 is still at its own line and the heading count is 99.
+- `README.md`: a Startup status section near the top; the honest-labelling line corrected from the
+  deck's 6,000 bookings to the plan's 3,270 base / 15,200 stretch, labelled as targets; and the
+  ₱800-at-10% worked example kept (it is what the code still does) with a note that the plan's 1.2%
+  makes the same job earn ₱9.60 and that the change is an open owner decision.
+
+**What stopped being committable.** `gh repo view --json visibility` answers **PUBLIC**, and three
+business `.docx` were tracked on this branch. None reached `origin/main`, so nothing was published and
+no history needed repairing. They are removed from the index with `git rm --cached` — the files stay on
+disk, unread, for every local AI — and `*.docx` plus `docs/readable/` are ignored with the reason
+written beside the rule. The consequence is stated rather than hidden: a fresh clone has no readable
+copies, which is exactly why the safe facts live in a committed file.
+
+**Two corrections worth keeping.** The brief's feature-register seed said "not found" for eight rows
+that exist in this build — the pricing band and wizard (F5), the consent gate with its scroll rule and
+versioned record (F8), the hash-chained ledger (F10), the wallet as a derived view (F12), the standing
+tier (F13), connections (F20), and the named refusals for exchange rates, bot checks, funding
+eligibility and organisations (F6, F9, F14, F21). And the Smart Match row was verified rather than
+copied: the seed scores are 96/91/94/87/93/89/84/78 typed per provider, the results screen prints
+`${p.smartMatch.score}% Match` under a header that says "Sorted by: Smart Job Match", and
+`providerMatches()` is a `PROVIDERS.filter(...)` with no score and no sort. The screen claims an
+ordering the code does not perform. It is recorded as the honest current state with its code pointers
+and left for the backend prompt, because relabelling it here would be a documentation change pretending
+to be a fix.
+
+**Missing source, recorded.** `Sukinnect_2_08M_Profitability_ROI_Monthly_Model.xlsx`, which the Master
+Plan cites as the basis for every figure in §4.3 and §6–§8, is not on this laptop (searched Downloads,
+Desktop and Documents). Nothing was recomputed to fill the gap.
+
+**Decisions this pass surfaced and did not make.** C1 the fee, C2 the gateway line, C3 the targets,
+C4 the seed geography, C5 the missing roles, C6 the other revenue streams, **C7 the wallet — the
+owner's own two documents contradict each other**, C8 the money-held wording, C9 what "blockchain for
+encryption" means, C10 Fruit Harvest & Buy, **C11 "hatian", which is not guessed at**, and C12 the team
+name. All twelve are in the roadmap's ledger with an open decision column, and seven open questions are
+listed under it.

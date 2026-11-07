@@ -290,6 +290,14 @@ Every new feature should strengthen one of these journeys.
 
 # 6. TARGET GEOGRAPHY AND MARKET CONTEXT
 
+> **Superseded on 2026-11-06 by `Sukinnect_Master_Plan_Revised_27Oct2026.docx`** (readable copy:
+> `docs/readable/`). What that document decides, and what this section still describes, are
+> recorded in `SUKINNECT_STARTUP_ROADMAP.md` §6 — the text below is kept
+> as the history of the decision, not as the current instruction. Read
+> `SUKINNECT_CONTEXT.md` first.
+> This section is superseded for one thing: **the pilot targets: the completed-bookings figure is 3,270 base / 15,200 stretch, not the deck's 6,000**.
+
+
 The current beachhead is Tupi, South Cotabato.
 
 The pitch deck presents Tupi as the initial local marketplace environment because it is small enough to build marketplace density and measure behavior while providing a foundation for replication.
@@ -4859,6 +4867,14 @@ Do not fabricate actual providers or actual marketplace traction.
 
 # 59. BUSINESS MODEL CONTEXT
 
+> **Superseded on 2026-11-06 by `Sukinnect_Master_Plan_Revised_27Oct2026.docx`** (readable copy:
+> `docs/readable/`). What that document decides, and what this section still describes, are
+> recorded in `SUKINNECT_STARTUP_ROADMAP.md` §6 — the text below is kept
+> as the history of the decision, not as the current instruction. Read
+> `SUKINNECT_CONTEXT.md` first.
+> This section is superseded for one thing: **the commission: 1.2% of completed booking value with a hard cap of 1.3%, gateway fees not absorbed in the pilot; the deck's 10% is legacy**.
+
+
 The pitch deck describes the primary intended revenue model as:
 
 commission on completed transactions.
@@ -4886,6 +4902,14 @@ Added 6 November 2026: the November documents give different answers (Master Pla
 ---
 
 # 60. PLANNING BUDGET CONTEXT
+
+> **Superseded on 2026-11-06 by `Sukinnect_Master_Plan_Revised_27Oct2026.docx`** (readable copy:
+> `docs/readable/`). What that document decides, and what this section still describes, are
+> recorded in `SUKINNECT_STARTUP_ROADMAP.md` §6 — the text below is kept
+> as the history of the decision, not as the current instruction. Read
+> `SUKINNECT_CONTEXT.md` first.
+> This section is superseded for one thing: **the budget and funding figures: the 27 October plan supersedes the deck's, and the amounts are in the local `.docx`, not in a committed file**.
+
 
 The pitch deck contains a proposed 12-month pilot budget of ₱2.3 million.
 
@@ -5994,4 +6018,64 @@ The final result should not look like disconnected demo screens.
 It should feel like ONE application.
 
 It should feel like SUKINNECT.
+
+# 96. STARTUP CONTEXT, SOURCE PRECEDENCE AND THE 27 OCTOBER BUSINESS PLAN (added 6 November 2026)
+
+Sukinnect is a pre-revenue startup with a working single-file prototype and no production
+backend. This section does not replace §1–§95; it says which document outranks which, and what
+a reader of this file must not take as current.
+
+## 96.1 Precedence
+
+| Question | Authority |
+|---|---|
+| Business facts: geography, fee and cap, gateway rule, funding, investors, risks, allowed claims | `Sukinnect_Master_Plan_Revised_27Oct2026.docx` |
+| Partnerships and the intent of new features | `Potential_Collaborations_and_New_and_Refine_Features.docx` — proposed, in-plan only |
+| Engineering discipline, prototype-versus-production rules, honest labelling | this file |
+| What is actually implemented | `Sukinnect-next.html` and `node tools/verify.cjs` |
+| History and why | `CHANGES.md`, `DEVICE-PASS.md` |
+| Goals, needs, the feature register, the conflict ledger | `SUKINNECT_STARTUP_ROADMAP.md` |
+| Read-first orientation for any AI tool | `SUKINNECT_CONTEXT.md` |
+
+The two `.docx` files, and the readable copies under `docs/readable/`, are **not committed**:
+the repository is public and the Master Plan carries a funding ask, a valuation, an investor
+split, a liquidation waterfall and budget lines. They sit in this folder for every local AI, and
+`.gitignore` says why. A tool that skips ignored files must still get the safe facts from
+`SUKINNECT_CONTEXT.md`.
+
+## 96.2 The fee decision, stated once
+
+- **1.2%** of completed booking value, **1.0%** as the stated alternative, **hard cap 1.3%**.
+- Gateway fees are **not absorbed** in the pilot: cash/direct, or a separate disclosed line paid
+  by the payer. Charging 1.2% while absorbing the fee loses money on every online booking.
+- The prototype still carries a configurable **10%** default and prints it in the admin console.
+  That is legacy, it is conflict **C1**, and changing it is a code decision the owner has not yet
+  made. Nothing in this repository may present any single figure as the settled business rate.
+- Subscription, promoted-listing and partner revenue are **assumptions**, unvalidated, and count
+  as zero until a paid pilot or a signed agreement exists.
+
+## 96.3 Claims discipline
+
+Official statistics are facts. Every Sukinnect forecast, target, price, conversion rate and
+financial scenario is an assumption until field data, a signed agreement or a dated quotation
+supports it. Prospective partners are proposed — the collaboration notes say in their own words
+that they "do not imply existing formal partnerships or institutional endorsements". New features
+are in plan, not delivered. The full list of what must not be claimed is §5 of
+`SUKINNECT_CONTEXT.md`, lifted from the Master Plan §1.
+
+## 96.4 Honest labelling for AI output (a rule, not a tone)
+
+Every AI-flavoured result in the app must say which of these it is, in words a user can read on
+the screen where the result appears:
+
+1. **rule-based, computed from records on this device** — and it must name the signals it used;
+2. **simulated** — a flow that looks functional and is hard-coded or local demo state;
+3. **suggestion from an external model, with source and date** — which this build cannot produce,
+   so it does not claim to.
+
+None may be shown as fact, as a verified result, or with a precision the method cannot support.
+A user must be able to override it, and what they chose must be recorded. A reason that was not
+computed must not appear; a score that was typed into a seed must not be presented as a match
+the system produced. This is the rule the current Smart Match surface breaks, and it is the first
+row of the backend brief.
 
