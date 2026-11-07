@@ -125,7 +125,28 @@ try {
       + String(r.out).trim().split('\n').pop());
   }
 } finally {
-  fs.writeFileSync(APP, baseApp, 'utf8');
-  fs.writeFileSync(TOOL, baseTool, 'utf8');
+  /* Measured 2026-11-06: this restore threw `UNKNOWN: unknown error, open …audit-compat-floor.cjs`
+     and the family died with its own fixture still in the file, so every family the runner started
+     after it read a blinded audit — and the runner's LEFT AN INSTRUMENT MUTATED row is the only
+     reason that was visible at all. The repository sits under OneDrive, and the sync can hold a file
+     open long enough for writeFileSync to fail on a path that is plainly writable a moment later.
+     So put it back until it takes, and if it still will not, say which file and where the bytes are,
+     because a silent failure here is a corrupted suite. */
+  putBack(APP, baseApp, 'the page');
+  putBack(TOOL, baseTool, 'the audit');
+}
+function putBack(file, bytes, what) {
+  for (let attempt = 1; attempt <= 6; attempt++) {
+    try { fs.writeFileSync(file, bytes, 'utf8'); return true; }
+    catch (err) {
+      const wait = 250 * attempt;
+      try { const s = Date.now(); while (Date.now() - s < wait) {} } catch (e) {}
+      if (attempt === 6) {
+        console.log('NOT RESTORED  ' + what + ' at ' + file + ' — ' + err.message);
+        console.log('  the bytes to put back are in HEAD: git checkout -- ' + file);
+        return false;
+      }
+    }
+  }
 }
 console.log('\n' + caught + ' of ' + applied + ' breaks caught, ' + unmatched + ' not applied; both files restored.');
