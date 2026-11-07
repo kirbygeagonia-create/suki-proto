@@ -46,11 +46,17 @@ shell it shows a stated refusal.
 ## 4. Business decisions that bind the engineering
 
 - Transaction fee **1.2%** of completed booking value, **1.0%** is the stated alternative, **hard cap
-  1.3%**. The prototype currently carries a configurable **10%** default — that is legacy and is a
-  conflict (C1), not the business rate.
+  1.3%**. **The code carries this now** (7 Nov 2026): `commissionRateDefault = 0.012`, `commissionRateCap
+  = 0.013`, enforced at every read, in `setConfig` and in the admin form. The deck's **10%** is legacy
+  in the documents, and 1.0% remains an open owner choice (C1) that is one `setConfig` call away.
 - **Gateway fees are not absorbed in the pilot.** Customers pay cash/direct, or the gateway fee is a
   separate, disclosed line paid by the payer. Charging 1.2% while absorbing the fee loses ₱2.41–₱10.38
-  per ₱800 online booking (Master Plan §6.3).
+  per ₱800 online booking (Master Plan §6.3). **Built 7 Nov 2026** as a pass-through: the fee is inside
+  the payer's total, outside `platformRevenueCentavos`, settles through its own ledger account and
+  event, is excluded from a refund, and `assertGatewayNotAbsorbed` throws at the seam if a breakdown
+  would put the loss on the platform. The rates in `CONFIG.gatewayFees` are **published-page figures
+  with a dated source and no signed quote on file** — the screen says so, and the plan requires the
+  quote before launch.
 - **No stored-value wallet, no lending, no insurance underwriting.** Licensed partners do those.
 - Payments, lending and insurance go through **licensed** providers; a rate or fee shown to a user must
   trace to a signed quote, not a published page.
@@ -110,7 +116,7 @@ ledger (C1–C12) in `SUKINNECT_STARTUP_ROADMAP.md` with an owner-decision colum
 
 | Command | What it proves |
 |---|---|
-| `node tools/verify.cjs` | the gate — 743 checks as of 6 Nov 2026, run it again for a current number |
+| `node tools/verify.cjs` | the gate — 766 checks as of 7 Nov 2026, run it again for a current number |
 | `node tools/shot.cjs --measure` | real Chrome over the DevTools protocol: tap targets, contrast, clipping, unreachable controls, painted `undefined` |
 | `node tools/measure.cjs` | token, glyph and heading census of the file |
 | `node tools/falsify-all.cjs` | the mutation suite — **only under the clean-tree procedure** |
@@ -138,6 +144,7 @@ partners or quotes.** Do not push. Business questions go to the owner as decisio
 | Discovery, booking, records, chat, admin review, fruit pilot | **built in the prototype**, over on-device records | `node tools/verify.cjs`; `node tools/shot.cjs --list` (102 screens) |
 | Persistence | prototype-only: `localStorage` behind a Store adapter, versioned schema | `hydrate()`/`persist()`, `falsify-storage-truth` |
 | Payments | **simulated** — `MockGateway`; no money moves; no value stored | README money model; `falsify-pay-records` |
+| Fee, cap and gateway pass-through | **the plan's rule is the code's rule** (7 Nov 2026): 1.2% with a 1.3% cap enforced at every read, in `setConfig` and in the form; the processor's fee is a disclosed line the payer funds, outside platform revenue and outside a refund, and a breakdown that would absorb it throws at the seam | `CONFIG_DEFAULTS.commissionRateDefault`, `assertWithinFeeCap`, `gatewayFeeFor`, `assertGatewayNotAbsorbed`, `payGatewayFee`; `node tools/falsify-business-rules.cjs` |
 | Smart Match | **typed per provider in seed data**, and the results screen says "Sorted by: Smart Job Match" while `providerMatches()` only filters — the score is not computed and not sorted | `PROVIDERS[].smartMatch`, `providerMatches()`; roadmap B1 |
 | AI concierge | keyword matching over six trades, honestly labelled as not reading pictures | `CONCIERGE_SORTS`, `matchConciergeService` |
 | Terms and Privacy consent: scroll gate, short pane counts as read, versioned persisted record | **built** (F8) | the legal-document sheet, `docScrolled`, `state.termsAcceptances`; `falsify-legal-truth` |
@@ -145,7 +152,7 @@ partners or quotes.** Do not push. Business questions go to the owner as decisio
 | Pricing band and the provider rate wizard; standing tier; connections; wallet as a derived view | **built, computed from records on this device** (F5, F13, F20, F12) | `rateBandFor`, `openRateWizard`, the tier ternary, `connectionsSheet`, `walletSheet` |
 | OCR / liveness, exchange rates, bot check, funding eligibility, an organisation as a party | **named seams that decline** — they say what is missing and record nothing (F6, F7, F9, F14, F21) | `seam(ocr.reason)`, `exchangeRateSeam`, `spamCheckSeam`, `gatewayCashSeam` |
 | Sign-up guide (typed, one question at a time) with the browser's own dictation behind a named seam | **built** (F3) | `openSignupGuide`, `SIGNUP_GUIDE_STEPS`, `speechSeam`; the `signup-guide` suite, 8 checks |
-| Computed matching and sorting, moderator and service-business roles, an onboarding/verification stepper, subscriptions, promoted listings, event instrumentation and the KPI console | **in plan, not built** | roadmap F1–F2, F4, F15–F19 |
+| Computed matching and sorting, moderator and service-business roles, an onboarding/verification stepper, the subscription and promotion models, event instrumentation and the KPI console | **in plan, not built** — the paid and regulated *flags* exist and are all off (`CONFIG.featureFlags`, read by `featureEnabled`), so none of it can be reached by accident; no subscription or promotion record, price or ledger account is modelled yet | roadmap F1–F2, F4, F15–F19 |
 | Visual system | flat brand palette, one icon family (Material Symbols, Apache-2.0, 48 glyphs), one top-bar/nav/sheet system | `assets/ICON-LICENSES.md`, `DESIGN-TOKENS.md` |
 | Backend, real accounts, real payments, legal sufficiency of the draft terms | **not started**; design and seams only | Master Plan §9; `SUKINNECT_STARTUP_ROADMAP.md` |
 

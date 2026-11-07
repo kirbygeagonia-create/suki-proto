@@ -2787,11 +2787,16 @@ const BOOKINGS = [
     date:dayLabel(5), time:'9:00 AM', status:'upcoming',
     amountCentavos:176000, payStatus:'pending_site', payMethod:'cash',
     /* Two trees at the listed ₱800 each, plus the drop nets she charged for. The
-       block is frozen by the same freezePricing the plumber's job goes through. */
-    pricing:{ frozenAt:isoMinutesAgo(11 * 60), commissionRate:0.10, baseCentavos:160000,
+       block is frozen by the same freezePricing the plumber's job goes through — and re-frozen
+       by hand on 2026-11-06 when the pilot fee moved from the deck's 10% to the Master Plan's
+       1.2%, because a record whose terms disagree with the money it shows is the defect §77
+       exists to prevent. 1.2% of ₱1,600.00 is ₱19.20; the ₱160.00 of parts is passed through
+       uncommissioned, and cash on site means there is no processing fee in this total at all. */
+    pricing:{ frozenAt:isoMinutesAgo(11 * 60), commissionRate:0.012, baseCentavos:160000,
               inclusions:[{ label:'Parts and materials', amountCentavos:16000 }],
-              passThroughCentavos:16000, commissionCentavos:16000, fixedFeeCentavos:0, taxCentavos:0,
-              providerShareCentavos:144000, customerTotalCentavos:176000, platformRevenueCentavos:16000 },
+              passThroughCentavos:16000, commissionCentavos:1920, fixedFeeCentavos:0, taxCentavos:0,
+              gatewayFeeCentavos:0, gatewayFee:null, payMethod:'cash',
+              providerShareCentavos:158080, customerTotalCentavos:176000, platformRevenueCentavos:1920 },
     barangay:'Poblacion', address:'Blk 4 Lot 12, Rizal St., Poblacion',
     lat:6.3671, lng:124.9331, notes:'',
     createdAt:isoMinutesAgo(12 * 60), source:'demo'
@@ -2940,13 +2945,43 @@ function defaultListingFor(providerId) { return listingsOf(providerId).find(l =>
    would be inventing a compliance position.
    --------------------------------------------------------------------------- */
 const CONFIG_DEFAULTS = {
-  commissionRateDefault: 0.10,
+  /* 2026-11-06: the transaction fee is the 27 October Master Plan's, not the deck's. The plan says
+     1.2% of completed booking value with 1.0% as the stated alternative and a HARD CAP of 1.3%, and
+     it says Sukinnect does not absorb gateway fees during the pilot. Both halves are enforced below,
+     in setConfig and at the read, so a stored dump cannot carry a rate the business has not chosen.
+     [OWNER DECISION] 1.0% versus 1.2% is still open (conflict C1); the cap is not. */
+  commissionRateDefault: 0.012,
+  commissionRateCap: 0.013,                    /* hard ceiling on every commission the platform takes */
   commissionRateByCategory: {},          /* per-category overrides, set by admin */
   /* null is the value, not a missing one. The deck validates take rates per
      category during the pilot and says nothing about a fee on produce, so the
      platform charges none and the admin screen shows "undecided" rather than a
      number that would read as policy. */
   produceCommissionRate: null,
+  /* The processor's published rates, copied from the Master Plan §6.3 table with the date they were
+     read. They are NOT a signed quote: the plan says to confirm each with a dated merchant agreement,
+     so every figure shown to a user carries the source and the date rather than a bare percentage,
+     and the pilot rule attached to them is that the platform does not absorb them.
+     cash and direct settle outside the gateway and have no fee line at all. */
+  gatewayFees: {
+    gcash:  { rate: 0.0223,  fixedCentavos: 0,     source: 'PayMongo published standard pricing, checked 2026-10-27, ex-VAT; no signed quote on file' },
+    maya:   { rate: 0.0179,  fixedCentavos: 0,     source: 'PayMongo published standard pricing, checked 2026-10-27, ex-VAT; no signed quote on file' },
+    qrph:   { rate: 0.0134,  fixedCentavos: 0,     source: 'PayMongo published standard pricing, checked 2026-10-27, ex-VAT; no signed quote on file' },
+    card:   { rate: 0.03125, fixedCentavos: 1339,  source: 'PayMongo published standard pricing, checked 2026-10-27, ex-VAT; no signed quote on file' },
+    cash:   null,
+    direct: null
+  },
+  /* Every paid or regulated capability the pilot has not been given permission to sell starts off.
+     A flag off is not a hidden button: the screen that would carry it is not rendered, the posting
+     path that would move money is refused, and a gate check proves both. They are here as data so
+     the decision to turn one on is a configuration change with an audit entry, not a code change. */
+  featureFlags: {
+    subscriptions: false,
+    promotedListings: false,
+    partnerRevenue: false,
+    lendingReferral: false,
+    voiceInput: false
+  },
   fixedFeeCentavos: 0,                   /* booking or processing fee, ₱0 at pilot */
   taxRate: 0,                            /* applies to the platform fee only */
   cancellationFeeBeforeAcceptCentavos: 0,
@@ -2968,6 +3003,11 @@ function setConfig(patch, actor) {
   const changed = [];
   Object.keys(patch).forEach(key => {
     if (!(key in CONFIG_DEFAULTS)) throw new Error('unknown configuration key: ' + key);
+    /* The cap is enforced on the way IN, not only on the way OUT. An admin who typed 8% would
+     otherwise get a stored value, an audit row and a receipt that disagrees with the plan. */
+    if (key === 'commissionRateDefault') assertWithinFeeCap(patch[key], 'the default rate');
+    if (key === 'commissionRateByCategory') Object.keys(patch[key] || {}).forEach(c => assertWithinFeeCap(patch[key][c], c));
+    if (key === 'produceCommissionRate' && patch[key] !== null) assertWithinFeeCap(patch[key], 'the produce rate');
     if (CONFIG[key] === patch[key]) return;
     const entry = { key, from: CONFIG[key], to: patch[key],
                     at: new Date().toISOString(), actor: (actor && actor.role) || 'admin' };
@@ -2994,6 +3034,10 @@ const ACCOUNTS = {
   provider_payable:           { kind: 'liability', scope: 'provider', label: 'Earnings owed to a provider' },
   dispute_hold:               { kind: 'liability', scope: 'booking',  label: 'Frozen while a case is open' },
   tax_payable:                { kind: 'liability', scope: null,       label: 'Output tax owed on platform fees' },
+  /* Not revenue. The customer's own money, held only long enough to reach the processor, which is
+     the difference between the pilot rule (do not absorb gateway fees) and a platform that quietly
+     pays them and calls the booking profitable. */
+  gateway_fee_payable:        { kind: 'liability', scope: 'booking',  label: 'Processing fee the payer funded, owed to the processor' },
   platform_fee_revenue:       { kind: 'revenue',   scope: null,       label: 'Commission on completed work' },
   platform_fixed_fee_revenue: { kind: 'revenue',   scope: null,       label: 'Booking and processing fees' },
   cancellation_compensation:  { kind: 'expense',   scope: 'provider', label: 'Paid to a provider for a late cancellation' }
@@ -3088,21 +3132,74 @@ function accountBalance(account, scope) {
      price the provider published. Nothing is hidden and nothing appears at the
      till that was not on the card (AGENTS.md 24).
    --------------------------------------------------------------------------- */
+/* One ceiling, asked at every read, so the cap is a property of the money model rather than of the
+   admin form. A rate above it is refused rather than silently lowered: a booking priced at a
+   clamped rate would disagree with the rate the provider was shown, and a silently-clamped number
+   is the same defect class as a green check agreeing with a bug. */
+/* One predicate for every paid or regulated capability the pilot has not been given permission to
+   sell. Off is the default and off is unreachable: a screen asks this before it renders the
+   affordance, and a posting path asks it before it books a line. A flag that only hides a button
+   would leave the money path open, which is the half that matters.
+   [OWNER DECISION] turning one on is a configuration change with an audit entry, not a code change. */
+function featureEnabled(flag) {
+  const f = CONFIG.featureFlags || {};
+  return f[flag] === true;
+}
+
+/* A rate is shown with one decimal because the plan's rate HAS a decimal. Math.round(0.012 * 100)
+   is 1, which would have printed "Commission earned at 1%" beside a table computing 1.2% — a
+   documentation bug the moment the number moved off whole percent. */
+function ratePercent(rate) { return String(Math.round(rate * 1000) / 10); }
+
+function assertWithinFeeCap(rate, where) {
+  const cap = CONFIG.commissionRateCap;
+  if (typeof rate !== 'number' || !isFinite(rate))
+    throw new GuardRejected('a commission rate must be a number: ' + where);
+  if (rate < 0) throw new GuardRejected('a commission rate cannot be negative: ' + where);
+  /* 1.3 / 100 is not the same float as 0.013, and the ceiling entered as itself was refused as
+     above itself. The tolerance is one billionth of a rate — a fifth decimal place, far below any
+     rate a person can type or a plan can mean — and it is here rather than in the parse so that a
+     stored dump carrying drift is judged the same way as a fresh entry. */
+  if (rate - cap > 1e-9)
+    throw new GuardRejected('the commission rate for ' + where + ' is ' + (Math.round(rate * 1000) / 10) +
+      '%, above the ' + (Math.round(cap * 1000) / 10) + '% cap the pilot is bound to.');
+  return rate;
+}
+
 function commissionRateFor(categoryId) {
   const override = CONFIG.commissionRateByCategory[categoryId];
-  return (typeof override === 'number' && override >= 0 && override < 1)
-    ? override : CONFIG.commissionRateDefault;
+  if (typeof override === 'number' && override >= 0 && override < 1) return assertWithinFeeCap(override, categoryId);
+  return assertWithinFeeCap(CONFIG.commissionRateDefault, 'the default rate');
+}
+
+/* What the processor charges for settling THIS amount, by the method the customer chose. Cash and
+   direct return null because no processor is in the path. The VAT the plan adds to gateway fees is
+   modelled at the published ex-VAT rate plus CONFIG.taxRate, so the figure a customer is shown is
+   the figure the platform would actually owe — which is the point of not absorbing it. */
+function gatewayFeeFor(method, amountCentavos) {
+  const spec = CONFIG.gatewayFees[String(method || 'cash')];
+  if (!spec) return null;
+  const gross = Math.round(amountCentavos * spec.rate) + Math.round(spec.fixedCentavos || 0);
+  const vat = Math.round(gross * CONFIG.taxRate);
+  return { method: String(method), rate: spec.rate, fixedCentavos: Math.round(spec.fixedCentavos || 0),
+           amountCentavos: gross + vat, source: spec.source };
 }
 
 function computeBreakdown(opts) {
   const base = Math.round(opts.baseCentavos);
   const inclusions = opts.inclusions || [];
   const passThrough = inclusions.reduce((sum, i) => sum + Math.round(i.amountCentavos), 0);
-  const rate = opts.commissionRate !== undefined ? opts.commissionRate : commissionRateFor(opts.categoryId);
+  const rate = opts.commissionRate !== undefined ? assertWithinFeeCap(opts.commissionRate, 'a quoted rate')
+                                                  : commissionRateFor(opts.categoryId);
   const commission = Math.round(base * rate);
   const fixedFee = Math.round(opts.fixedFeeCentavos !== undefined ? opts.fixedFeeCentavos : CONFIG.fixedFeeCentavos);
   const tax = Math.round((commission + fixedFee) * CONFIG.taxRate);
-  return {
+  /* The fee is charged on what the payer actually settles, so it is computed after the service
+   * money is known and added to the customer's total rather than taken out of anybody's share. */
+  const settledCentavos = base + passThrough + fixedFee + tax;
+  const gateway = gatewayFeeFor(opts.payMethod, settledCentavos);
+  const gatewayFee = gateway ? gateway.amountCentavos : 0;
+  const breakdown = {
     baseCentavos: base,
     inclusions: inclusions.map(i => ({ label: i.label, amountCentavos: Math.round(i.amountCentavos) })),
     passThroughCentavos: passThrough,
@@ -3110,10 +3207,35 @@ function computeBreakdown(opts) {
     commissionCentavos: commission,
     fixedFeeCentavos: fixedFee,
     taxCentavos: tax,
+    gatewayFeeCentavos: gatewayFee,
+    gatewayFee: gateway,
+    payMethod: String(opts.payMethod || 'cash'),
     providerShareCentavos: base - commission,
-    customerTotalCentavos: base + passThrough + fixedFee + tax,
+    /* The payer funds the processing fee on top of the service money. That is the whole of the
+     pilot rule: the platform's revenue is commission plus the fixed fee, and never the processor's
+     cut, so the fee cannot be absorbed by being left out of what the customer pays. */
+    customerTotalCentavos: settledCentavos + gatewayFee,
     platformRevenueCentavos: commission + fixedFee
   };
+  assertGatewayNotAbsorbed(breakdown);
+  return breakdown;
+}
+
+/* The rule, stated as a refusal rather than as a comment. A breakdown where the customer's total
+   does not contain the processing fee, or where the platform's revenue does, is a breakdown in
+   which Sukinnect has absorbed it — which loses money on every online booking and contradicts the
+   fee the plan says it charges. It throws at the seam, before any ledger line exists. */
+function assertGatewayNotAbsorbed(b) {
+  const fee = b.gatewayFeeCentavos || 0;
+  if (fee > 0) {
+    const service = b.baseCentavos + b.passThroughCentavos + b.fixedFeeCentavos + b.taxCentavos;
+    if (b.customerTotalCentavos < service + fee)
+      throw new GuardRejected('a gateway fee cannot be absorbed by Sukinnect: the customer total is ' +
+        b.customerTotalCentavos + ' against ' + service + ' of service money plus a ' + fee + ' fee.');
+    if (b.platformRevenueCentavos > b.commissionCentavos + b.fixedFeeCentavos)
+      throw new GuardRejected('a gateway fee is not platform revenue; it is money the payer routed to the processor.');
+  }
+  return b;
 }
 
 /* A booking keeps the terms that were agreed, not a live pointer into a rate
@@ -3247,17 +3369,19 @@ function seedHistoricalLedger() {
     if (!listing) return;
     const provider = providerOf(b);
     b.listingId = listing.id;
+    /* A job the record says was paid on site never passed through us; everything
+       else in the demo roster was booked through the partner. Read from the code,
+       never from the words on screen — and read BEFORE the price is frozen, because the method
+       decides whether there is a processing fee inside the total at all. */
+    if (!b.payMethod) b.payMethod = b.payStatus === 'pending_site' ? 'cash' : 'gcash';
     b.pricing = Object.assign({ frozenAt: b.createdAt, commissionRate: commissionRateFor(listing.categoryId) },
       computeBreakdown({
         baseCentavos: listing.basePriceCentavos,
         categoryId: listing.categoryId,
+        payMethod: b.payMethod,
         inclusions: spec.partsCentavos ? [{ label:'Parts and materials', amountCentavos: spec.partsCentavos }] : []
       }));
     b.amountCentavos = b.pricing.customerTotalCentavos;
-    /* A job the record says was paid on site never passed through us; everything
-       else in the demo roster was booked through the partner. Read from the code,
-       never from the words on screen. */
-    if (!b.payMethod) b.payMethod = b.payStatus === 'pending_site' ? 'cash' : 'gcash';
     if (!b.payStatus) b.payStatus = 'unpaid';
     b.summary = b.summary || listing.title;
     void provider;
@@ -3306,7 +3430,29 @@ function settlementLines(booking) {
     lines.push({ account:'platform_fixed_fee_revenue', direction:'credit', amountCentavos: p.fixedFeeCentavos });
   if (p.taxCentavos > 0)
     lines.push({ account:'tax_payable', direction:'credit', amountCentavos: p.taxCentavos });
+  /* Without this line the settlement does not balance, which is the point: the customer sent
+     service money plus the processing fee, so a settlement that books only the service money has
+     absorbed the fee by arithmetic. assertBalanced would throw, and the fee cannot be lost. */
+  if ((p.gatewayFeeCentavos || 0) > 0)
+    lines.push({ account:'gateway_fee_payable', scope: booking.id, direction:'credit', amountCentavos: p.gatewayFeeCentavos });
   return lines;
+}
+
+/* The processor's cut leaves the platform's custody on the same day the job settles. It is posted
+   as its own event rather than folded into the payout, because a payout line that carried the fee
+   would make it look like part of what the provider was paid — and the plan's whole reason for the
+   rule is that the fee must stay visible as a separate, disclosed amount. */
+function payGatewayFee(booking) {
+  const p = booking.pricing;
+  const fee = p && p.gatewayFeeCentavos || 0;
+  if (fee <= 0) return null;
+  if (ledgerFor(booking.id).some(e => e.eventType === 'gateway.fee_paid')) return null;
+  return postEvent('gateway.fee_paid', [
+    { account:'gateway_fee_payable', scope: booking.id, direction:'debit', amountCentavos: fee },
+    { account:'escrow_held', direction:'credit', amountCentavos: fee }
+  ], { bookingId: booking.id, at: p.frozenAt,
+       note: 'Processing fee (' + p.payMethod + ') paid to the processor from the payer\'s money',
+       source: booking.source || 'live' });
 }
 
 /* Zero is not a transaction. A harvest-only job has a price; a pure fruit sale has
@@ -3353,10 +3499,12 @@ function settleBooking(booking) {
       { account:'platform_fee_revenue', direction:'credit', amountCentavos: p.commissionCentavos }
     ], { bookingId: booking.id, at: p.frozenAt, note: 'Cash settled on site', source: 'demo' });
   }
-  return postEvent('booking.settled',
+  const settled = postEvent('booking.settled',
     [{ account:'customer_deposit', scope: booking.id, direction:'debit', amountCentavos: p.customerTotalCentavos }]
       .concat(settlementLines(booking)),
     { bookingId: booking.id, at: p.frozenAt, note: 'Released on completion', source: 'demo' });
+  payGatewayFee(booking);
+  return settled;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -3537,6 +3685,7 @@ function onAccept(booking, actor) {
     freezePricing(booking, computeBreakdown({
       baseCentavos: listing ? listing.basePriceCentavos : provider.rateCentavos,
       categoryId: listing ? listing.categoryId : provider.serviceId,
+      payMethod: booking.payMethod,
       inclusions: []
     }));
     booking.listingId = listing ? listing.id : booking.listingId || null;
@@ -3897,6 +4046,14 @@ const PAY_METHODS = {
 };
 
 function payMethodLabel(booking){ return PAY_METHODS[booking.payMethod] || PAY_METHODS.gcash; }
+/* The words a rate table needs. They are not read from PAY_METHODS above, because that map carries
+   the string a booking displays — and for GCash that string includes the demo household's masked
+   number, which has no business sitting beside a percentage. These name every method the plan
+   prices, including the ones this build cannot take money through; the screen says which. */
+const GATEWAY_METHOD_NAMES = {
+  gcash: 'GCash', maya: 'Maya', qrph: 'QR Ph', card: 'Card',
+  cash: 'Cash on Arrival', direct: 'Direct to the provider'
+};
 /* The fruit leg of a settled buy job, read off the record the offer left behind.
    It sits beside the service lines and never inside them: the money the buyer handed
    over for the crop is not a service fee, not platform revenue, and not something
@@ -4061,7 +4218,12 @@ function refundableCentavos(booking) {
   if (isCashJob(booking)) return creditedFor(booking.id, 'platform_fee_revenue');
   if (!isSettled(booking)) return Math.max(0, accountBalance('customer_deposit', booking.id));
   const already = paymentsFor(booking.id).filter(x => x.type === 'refund').reduce((t, x) => t + x.amountCentavos, 0);
-  return Math.max(0, p.customerTotalCentavos - already);
+  /* The processing fee is not in what the platform can give back. The payer funded it, the
+     processor earned it by settling the payment, and returning it would mean Sukinnect paying
+     for somebody else's service — which is the absorption the 1.2% rule exists to prevent, arriving
+     on the refund path rather than the booking path. */
+  const refundableTotal = p.customerTotalCentavos - (p.gatewayFeeCentavos || 0);
+  return Math.max(0, refundableTotal - already);
 }
 
 /* A refund takes money out of every place the settlement put it in, in the same
@@ -4081,8 +4243,12 @@ function refundLines(booking, amountCentavos) {
     return [{ account:'customer_deposit', scope: booking.id, direction:'debit', amountCentavos: amountCentavos },
             { account:'escrow_held', direction:'credit', amountCentavos: amountCentavos }];
 
-  const total = p.customerTotalCentavos;
-  const debits = postedCredits(booking).map(c => ({
+  const total = p.customerTotalCentavos - (p.gatewayFeeCentavos || 0);
+  /* The fee line is skipped rather than proportioned: it was settled and paid away, so there is
+     nothing here to reverse, and debiting it again is what drove the account negative. The
+     denominator excludes it too, so the remaining lines still add up to exactly the money leaving
+     the platform. */
+  const debits = postedCredits(booking).filter(c => c.account !== 'gateway_fee_payable').map(c => ({
     account: c.account, scope: c.scope, direction: 'debit',
     amountCentavos: Math.min(c.amountCentavos, Math.round(c.amountCentavos * amountCentavos / total))
   })).filter(l => l.amountCentavos > 0);
@@ -4128,8 +4294,13 @@ function refundBooking(booking, amountCentavos, actor, note) {
   postEvent('payment.refunded', lines,
     { bookingId: booking.id, note: note || 'Refunded after review', source: booking.source });
 
+  /* The row says what was not returned, because a refund row that shows only the amount sent reads
+     as though the whole payment came back — and the difference is the processor's fee, which the
+     payer funded and the platform cannot give. */
+  const feeHeld = (booking.pricing.gatewayFeeCentavos || 0);
   const row = recordPayment(booking, 'refund', amount === cap ? 'refunded' : 'partially_refunded',
-    amount, note || 'Refunded after review');
+    amount, (note || 'Refunded after review') +
+      (feeHeld > 0 ? ' — the ' + peso(feeHeld) + ' processing fee stays with the payment processor' : ''));
   row.byActor = (actor && actor.role) || 'admin';
   return row;
 }
@@ -4387,6 +4558,7 @@ function answerOffer(bookingId, decision, actor){
   if (t.labourCentavos > 0) {
     freezePricing(b, computeBreakdown({
       baseCentavos: t.labourCentavos,
+      payMethod: b.payMethod,
       categoryId: providerOf(b).serviceId, inclusions: []
     }));
   } else {
@@ -5224,7 +5396,7 @@ function statementCard() {
         <span class="chip">From the ledger</span>
       </div>
       <div class="row"><span>Services sold, completed jobs</span><b>${peso(st.grossServicesCentavos)}</b></div>
-      <div class="row"><span>Commission earned at ${Math.round(CONFIG.commissionRateDefault * 100)}%</span><b>${peso(st.commissionEarnedCentavos)}</b></div>
+      <div class="row"><span>Commission earned at ${ratePercent(CONFIG.commissionRateDefault)}% (cap ${ratePercent(CONFIG.commissionRateCap)}%)</span><b>${peso(st.commissionEarnedCentavos)}</b></div>
       <div class="row"><span>Booking and processing fees</span><b>${peso(st.fixedFeesCentavos)}</b></div>
       <div class="row"><span>Reversed by refunds</span><b style="color:var(--error-ink)">${st.refundsReversedCentavos ? '−' + peso(st.refundsReversedCentavos) : peso(0)}</b></div>
       <div class="row" style="border-top:1px solid var(--line); padding-top:8px; margin-top:4px;">
@@ -5270,14 +5442,16 @@ function configPanel() {
   return `<div class="card card-lg">
       <div class="row card-head" style="margin-bottom:10px;"><b class="card-title">Fees and settlement</b><span class="chip">Pilot assumptions</span></div>
       <p style="font-size:var(--t-caption); color:var(--mist); line-height:1.55; margin:0 0 12px;">
-        These are the deck's planning figures, not rates in force — the deck says launch monetization must
-        not be assumed and take rates are validated per category during the pilot.
+        These are planning figures, not rates in force. The fee and its ceiling come from the
+        27 October Master Plan (1.2%, hard cap 1.3%, gateway fees not absorbed); whether the pilot
+        charges 1.2% or 1.0% is still the owner's decision, and take rates are validated per
+        category during the pilot.
       </p>
       ${fields.map(([key, label2, kind]) => `
         <label class="form-label" style="display:block; margin-bottom:10px;">${label2}
           <input id="cfg-${key}" class="form-input" style="margin-top:5px;" type="number" min="0" inputmode="decimal"
-                 min="0" step="${kind === 'percent' ? '1' : '1'}"
-                 value="${kind === 'percent' ? Math.round(CONFIG[key] * 100) : kind === 'peso' ? toPesos(CONFIG[key]) : CONFIG[key]}">
+                 min="0" step="${kind === 'percent' ? '0.1' : '1'}"
+                 value="${kind === 'percent' ? ratePercent(CONFIG[key]) : kind === 'peso' ? toPesos(CONFIG[key]) : CONFIG[key]}">
           <span style="font-size:var(--t-caption); color:var(--mist);">${kind === 'percent' ? 'percent' : kind === 'peso' ? 'peso' : kind}</span>
         </label>`).join('')}
       <div class="row" style="padding:var(--s-3) 0; border-top:1px solid var(--line);">
@@ -5288,14 +5462,32 @@ function configPanel() {
         <div class="row" style="padding:var(--s-2) 0;">
           <span style="font-size:var(--t-body-sm);">${esc(cat.label)}</span>
           <span style="display:flex; align-items:center; gap:6px;">
-            <input id="cfgcat-${cat.id}" type="number" min="0" max="40" step="1" inputmode="numeric"
+            <input id="cfgcat-${cat.id}" type="number" min="0" max="${ratePercent(CONFIG.commissionRateCap)}" step="0.1" inputmode="decimal"
                    aria-label="${esc(cat.label)} commission rate, percent"
                    style="width:62px; min-height:var(--tap); padding:var(--s-2) var(--s-2); border:1px solid var(--line); border-radius:var(--r-xs); font:inherit; font-size:var(--t-caption);"
-                   value="${CONFIG.commissionRateByCategory[cat.id] !== undefined ? Math.round(CONFIG.commissionRateByCategory[cat.id] * 100) : ''}"
-                   placeholder="${Math.round(CONFIG.commissionRateDefault * 100)}">
+                   value="${CONFIG.commissionRateByCategory[cat.id] !== undefined ? ratePercent(CONFIG.commissionRateByCategory[cat.id]) : ''}"
+                   placeholder="${ratePercent(CONFIG.commissionRateDefault)}">
             <span style="font-size:var(--t-caption); color:var(--mist);">%</span>
           </span>
         </div>`).join('')}
+      <!-- The processor's own rates, as configuration rather than as a number a screen remembered.
+           The plan requires them confirmed by a signed merchant quote before launch, so the date the
+           figure was read and the fact that no quote is on file belong on the same line as the rate.
+           Read-only: nothing here is editable, because the platform does not set what it pays. -->
+      <div class="row" style="padding:var(--s-3) 0; border-top:1px solid var(--line);">
+        <span style="font-size:var(--t-caption); font-weight:800; color:var(--ink-soft); flex:1;">What the payment partner charges</span>
+        <span class="chip">Read-only</span>
+      </div>
+      ${(() => {
+        const offered = requestPaymentOptions().map(o => o.code);
+        return Object.keys(CONFIG.gatewayFees).map(method => {
+          const spec = CONFIG.gatewayFees[method];
+          return `<div class="row">
+            <span style="font-size:var(--t-body-sm); flex:1; min-width:0;">${esc(GATEWAY_METHOD_NAMES[method] || method)}${spec ? '' : ' <span class="mut">no processor</span>'}${offered.indexOf(method) < 0 ? ' <span class="mut">not offered in this build</span>' : ''}</span>
+            <b style="white-space:nowrap;">${spec ? ratePercent(spec.rate) + '%' + (spec.fixedCentavos ? ' + ' + peso(spec.fixedCentavos) : '') : peso(0)}</b>
+          </div>${spec && spec.source ? `<div style="font-size:var(--t-caption); color:var(--mist); line-height:1.5;">${esc(spec.source)}</div>` : ''}`;
+        }).join('');
+      })()}
       <button type="button" class="btn" style="width:100%; margin-top:12px; border-radius:var(--r-card);" onclick="commitConfig()">Save changes</button>
       <div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">
         Saved rates apply to bookings made after the change. Jobs already accepted keep the terms frozen
@@ -5311,7 +5503,10 @@ function configPanel() {
 }
 function fmtCfg(v) {
   if (typeof v !== 'number') return String(v);
-  if (v < 1 && v > 0) return Math.round(v * 100) + '%';
+  /* A rate is printed with its decimal here too. Math.round(0.012 * 100) is 1, so the audit line
+     read "commissionRateDefault 1% → 1%" for the change from 1.2% to 1.0% — two different business
+     decisions recorded as the same edit, in the one log §29 exists to make auditable. */
+  if (v < 1 && v > 0) return ratePercent(v) + '%';
   if (Number.isInteger(v) && v >= 1000) return pesoShort(v);
   return String(v);
 }
@@ -5319,7 +5514,9 @@ function commitConfig() {
   const patch = {};
   const read = (id, fn) => { const el = document.getElementById(id); if (el && el.value !== '' && el.value != null) patch[id] = fn(Number(el.value)); };
   const KEYS = {
-    'cfg-commissionRateDefault': v => v / 100,
+    /* Rounded to five decimals so a rate entered as the cap stores the same number as the cap.
+       Without this the audit row reads 0.013000000000000001 and the next reader wonders. */
+    'cfg-commissionRateDefault': v => Math.round((v / 100) * 100000) / 100000,
     'cfg-fixedFeeCentavos': v => Math.round(v * 100),
     'cfg-taxRate': v => v / 100,
     'cfg-cancellationFeeAfterAcceptCentavos': v => Math.round(v * 100),
@@ -5334,8 +5531,12 @@ function commitConfig() {
     const el = document.getElementById(id);
     if (!el || el.value === '') return;
     const n = Number(el.value);
-    if (!Number.isFinite(n) || n < 0) { bad.push(id.replace('cfg-', '')); return; }
-    if (id.endsWith('commissionRateDefault') && n > 40) { bad.push('commission cannot exceed 40% here'); return; }
+    if (!Number.isFinite(n) || n < 0) { bad.push(id.replace('cfg-', '') + ' must be a number of zero or more'); return; }
+    /* The ceiling is the plan's, read from CONFIG, not a number typed into the form. A percentage
+       above it is refused here so the admin sees which field, and refused again inside setConfig so
+       no other caller can slip past this input. */
+    if (id.endsWith('commissionRateDefault') && n > CONFIG.commissionRateCap * 100) {
+      bad.push('commission cannot exceed ' + ratePercent(CONFIG.commissionRateCap) + '%'); return; }
     patch[id] = KEYS[id](n);
   });
   const catPatch = {};
@@ -5343,10 +5544,17 @@ function commitConfig() {
     const el = document.getElementById('cfgcat-' + cat.id);
     if (el && el.value !== '') {
       const n = Number(el.value);
-      if (Number.isFinite(n) && n >= 0 && n <= 40) catPatch[cat.id] = n / 100;
+      if (Number.isFinite(n) && n >= 0 && n <= CONFIG.commissionRateCap * 100)
+        catPatch[cat.id] = Math.round(n * 1000) / 100000;
+      else if (Number.isFinite(n) && n > CONFIG.commissionRateCap * 100)
+        bad.push(esc(cat.label) + ' rate cannot exceed ' + ratePercent(CONFIG.commissionRateCap) + '%');
     }
   });
-  if (bad.length) { showToast('Check ' + bad.join(', ') + ' — a rate cannot be negative.', 'error'); return; }
+  /* One sentence per reason, and each reason is the reason that fired. A single tail — "a rate
+     cannot be negative" — told an admin who typed 8% that their problem was a minus sign, which is
+     the same defect this file names on every other surface: a refusal whose words describe a
+     different rule than the one that stopped the save. */
+  if (bad.length) { showToast(bad.join(' · '), 'error'); return; }
   const clean = {};
   Object.keys(KEYS).forEach(id => { if (patch[id] !== undefined) clean[id.replace('cfg-', '')] = patch[id]; });
   if (Object.keys(catPatch).length) clean.commissionRateByCategory = Object.assign({}, CONFIG.commissionRateByCategory, catPatch);
@@ -6946,6 +7154,10 @@ function loyaltyTier(providerId) {
     note: 'No privilege is attached to this tier in this build, and no points are earned or spent.' };
 }
 function fundingEligibilitySeam() {
+  if (!featureEnabled('lendingReferral')) {
+    return { available: false, decided: false, referral: null,
+      reason: 'No lending referral is offered in this build: the feature flag lendingReferral is off, and approval of any credit decision belongs to a licensed lender, never to Sukinnect.' };
+  }
   return {
     evaluated: false, eligible: null,
     reason: 'Funding eligibility is not evaluated here. A lender would need verified income history, '
@@ -7660,9 +7872,13 @@ function draftListing(p, d) {
 }
 function draftBreakdown(p, d) {
   const listing = draftListing(p, d);
+  /* The same resolution the sheet paints and the submit stores, so the fee shown while a person
+     chooses is the fee on the record. Reading it from the draft rather than from a parameter keeps
+     one source for the choice. */
   return computeBreakdown({
     baseCentavos: listing ? listing.basePriceCentavos : p.rateCentavos,
     categoryId: listing ? listing.categoryId : p.serviceId,
+    payMethod: requestChoices(d).pay.code,
     inclusions: []
   });
 }
@@ -7917,6 +8133,7 @@ function termsCard(p, d, pay, cash) {
   if (fm && fm.offerRequired) return offerTermsCard(p, d, pay, cash, fm);
   return `<div class="row"><span>${esc(listing ? listing.title : p.service)}</span><b>${peso(b.baseCentavos)}</b></div>
           <div class="row"><span>Sukinnect service fee</span><b class="mut">nothing added to your total</b></div>
+          ${b.gatewayFeeCentavos ? `<div class="row"><span>Payment processing fee <span class="mut">kept by the payment partner</span></span><b>${peso(b.gatewayFeeCentavos)}</b></div>` : ''}
           <div class="row" style="border-top:1px solid var(--line); padding-top:8px; margin-top:4px;">
             <span style="font-weight:800; color:var(--ink);">You pay</span>
             <b style="font-size:var(--t-body-lg);">${peso(b.customerTotalCentavos)}</b>
@@ -7930,6 +8147,7 @@ function termsCard(p, d, pay, cash) {
               : 'Pay with ' + esc(pay.label) + ' once the provider confirms the scope and price.'}
             Our fee comes out of the provider's share, which is why the amount above matches
             the amount on their card.
+            ${b.gatewayFeeCentavos ? 'The processing fee is the payment partner\'s charge for settling your payment — it is in the total because you fund it, not because we earn it.' : ''}
           </p>`;
 }
 /* What the resident agrees to when the price is still to be negotiated: the visit,
@@ -8438,14 +8656,17 @@ function receiptCard(b) {
       ${p.inclusions.map(i => `<div class="row"><span>${esc(i.label)} <span class="mut">at cost</span></span><b>${peso(i.amountCentavos)}</b></div>`).join('')}
       ${p.fixedFeeCentavos ? `<div class="row"><span>Booking fee</span><b>${peso(p.fixedFeeCentavos)}</b></div>` : ''}
       ${p.taxCentavos ? `<div class="row"><span>VAT on the platform fee</span><b>${peso(p.taxCentavos)}</b></div>` : ''}
+      ${p.gatewayFeeCentavos ? `<div class="row"><span>Payment processing <span class="mut">to the processor</span></span><b>${peso(p.gatewayFeeCentavos)}</b></div>` : ''}
       <div class="row" style="border-top:1px solid var(--line); padding-top:8px; margin-top:4px;">
         <span style="font-weight:800; color:var(--ink);">Total</span><b style="font-size:var(--t-body-lg);">${peso(p.customerTotalCentavos)}</b>
       </div>
       <div class="row"><span class="mut">${esc(providerOf(b).name.split(' ')[0])} keeps</span><b class="mut">${peso(p.providerShareCentavos)}</b></div>
-      <!-- The rate sits with the amount on one unwrapped line: "₱40.00 at 10%"
+      <!-- The rate sits with the amount on one unwrapped line: "₱9.60 · 1.2%"
          broke across two, so the figure and its percentage no longer read as one
-         fact, and the long label pushed them both around. -->
-      <div class="row"><span class="mut">Sukinnect fee <span class="mut">from their share</span></span><b class="mut" style="white-space:nowrap;">${peso(p.commissionCentavos)} · ${Math.round(p.commissionRate * 100)}%</b></div>
+         fact, and the long label pushed them both around. The rate is printed
+         through ratePercent() rather than Math.round(rate * 100), because a receipt
+         that rounds 1.2% to "1%" documents a fee the platform does not charge. -->
+      <div class="row"><span class="mut">Sukinnect fee <span class="mut">from their share</span></span><b class="mut" style="white-space:nowrap;">${peso(p.commissionCentavos)} · ${ratePercent(p.commissionRate)}%</b></div>
       <!-- The tense follows the ledger, not the receipt's existence. A job whose money is
            only authorised reads "Held, not yet paid" a few rows above this, and a line
            saying "How it was paid" underneath it was the same defect §17 and §19 fixed on
@@ -8453,6 +8674,9 @@ function receiptCard(b) {
       <div class="row"><span class="mut">${isSettled(b) ? 'Paid with' : 'To be paid with'}</span><b class="mut">${esc(payMethodLabel(b))}</b></div>
       ${cash ? `<div style="font-size:var(--t-caption); color:var(--mist); margin-top:6px; line-height:1.5;">
         Handed over on site — Sukinnect never held this money. Only our own fee can be reversed here; the visit itself is settled between you.</div>` : ''}
+      ${!cash && p.gatewayFeeCentavos ? `<div style="font-size:var(--t-caption); color:var(--mist); margin-top:6px; line-height:1.5;">
+        The ${peso(p.gatewayFeeCentavos)} processing fee is charged by the payment partner for settling this payment. Sukinnect does not keep it, so it is not part of what we earn on this job, and a refund returns the service money without it.
+        ${p.gatewayFee && p.gatewayFee.source ? 'Rate source: ' + esc(p.gatewayFee.source) + '.' : ''}</div>` : ''}
       ${rows.length ? `<div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--line); font-size:var(--t-caption); color:var(--mist); line-height:1.7;">
         ${rows.map(r => `<div>${esc(String(r.at).slice(11, 16))} &middot; ${esc(r.type)} ${peso(r.amountCentavos)} &middot; <b style="color:var(--ink-soft);">${esc(r.status)}</b>${cash && r.type === 'collection' ? ' &middot; handed over on site' : ''}</div>`).join('')}
       </div>` : ''}
@@ -9553,6 +9777,13 @@ function legalLinks(){
    hides the button when the engine is missing leaves a reviewer unable to tell "not on this browser"
    from "never built". */
 function speechSeam(){
+  /* Two different noes, said apart. `feature off` is a decision the platform made; `no engine` is a
+     fact about the browser. Collapsing them would let a reviewer conclude the feature was never
+     built, which is the mistake this file keeps calling a defect. */
+  if (!featureEnabled('voiceInput')) {
+    return { available: false, engine: null, featureOff: true,
+      reason: 'Dictation is switched off for this pilot build: the feature flag voiceInput is off, so no microphone is opened and nothing is listened for. Type the answer instead — the guide accepts either.' };
+  }
   const Ctor = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
   if (!Ctor) {
     return { available: false, engine: null,

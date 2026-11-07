@@ -441,23 +441,101 @@ suite('ledger', async () => {
   const app = boot();
   const { LEDGER, BOOKINGS, ACCOUNTS, postEvent, accountBalance, computeBreakdown,
           platformStatement, providerStatement, providerBalances, settlementLines, settlementToProvider,
-          CONFIG, setConfig } = app;
+          CONFIG, setConfig, isSettled, refundableCentavos, refundLines, featureEnabled,
+          assertGatewayNotAbsorbed } = app;
 
-  /* the deck's own worked example must be reproducible */
+  /* The Master Plan's worked example, and the arithmetic the deck's used to prove. The property is
+     unchanged — a ₱800 job is priced, commissioned and split in front of the test — the number is
+     the one the business decided: 1.2% of ₱800.00 is ₱9.60, and the provider keeps ₱790.40. */
   const d = computeBreakdown({ baseCentavos: 80000, categoryId: 'plumbing' });
-  c.check('₱800 at the pilot rate takes ₱80', d.commissionCentavos === 8000, String(d.commissionCentavos));
-  c.check('and leaves the provider ₱720', d.providerShareCentavos === 72000, String(d.providerShareCentavos));
+  c.check('₱800 at the pilot fee takes ₱9.60', d.commissionCentavos === 960, String(d.commissionCentavos));
+  c.check('and leaves the provider ₱790.40', d.providerShareCentavos === 79040, String(d.providerShareCentavos));
   c.check('the customer pays the price on the card', d.customerTotalCentavos === 80000, String(d.customerTotalCentavos));
   c.check('commission plus share equals the base',
     d.commissionCentavos + d.providerShareCentavos === d.baseCentavos);
 
+  /* ---- the gateway fee, from the plan's rule that the platform does not absorb it ----
+     Four separate claims, because one number can be right while the other three are wrong:
+     the fee exists for an online method and does not exist for cash; it is inside what the
+     payer is charged; it is NOT inside what the platform earns; and it cannot be booked as
+     though it were, which is proved by making the ledger try and watching it refuse. */
+  const online = computeBreakdown({ baseCentavos: 80000, categoryId: 'plumbing', payMethod: 'gcash' });
+  const offline = computeBreakdown({ baseCentavos: 80000, categoryId: 'plumbing', payMethod: 'cash' });
+  c.check('a cash job carries no processing fee at all',
+    offline.gatewayFeeCentavos === 0 && offline.customerTotalCentavos === 80000,
+    String(offline.gatewayFeeCentavos));
+  c.check('an online job discloses the fee as its own amount',
+    online.gatewayFeeCentavos > 0 && online.gatewayFee && online.gatewayFee.source.length > 20
+      && /2026-10-27/.test(online.gatewayFee.source),
+    JSON.stringify(online.gatewayFee).slice(0, 120));
+  c.check('the fee is inside what the payer is charged',
+    online.customerTotalCentavos === 80000 + online.gatewayFeeCentavos,
+    online.customerTotalCentavos + ' against 80000 + ' + online.gatewayFeeCentavos);
+  c.check('and is not inside what the platform earns',
+    online.platformRevenueCentavos === online.commissionCentavos + online.fixedFeeCentavos,
+    String(online.platformRevenueCentavos));
+
+  /* The two refusals the rule is actually made of. Each hands the kernel a breakdown that is
+     identical to a good one in every field except the one that would move the loss onto
+     Sukinnect, and requires the seam to say no — naming which no it said, so neither clause can
+     be quietly deleted while the other keeps the check green. */
+  c.check('a breakdown that leaves the fee out of what the payer is charged is refused',
+    (() => {
+      const absorbed = Object.assign({}, online, {
+        customerTotalCentavos: online.customerTotalCentavos - online.gatewayFeeCentavos });
+      try { assertGatewayNotAbsorbed(absorbed); return false; }
+      catch (err) { return /cannot be absorbed/.test(err.message); }
+    })(), 'the kernel accepted a breakdown that absorbs the fee');
+  c.check('a breakdown that counts the fee as platform revenue is refused',
+    (() => {
+      const counted = Object.assign({}, online, {
+        platformRevenueCentavos: online.platformRevenueCentavos + online.gatewayFeeCentavos });
+      try { assertGatewayNotAbsorbed(counted); return false; }
+      catch (err) { return /not platform revenue/.test(err.message); }
+    })(), 'the kernel accepted the processor\'s cut as its own earnings');
+  c.check('and a cash breakdown is not refused, because there is nothing to absorb',
+    (() => { try { assertGatewayNotAbsorbed(offline); return true; } catch (e) { return false; } })(),
+    'the guard refused a booking that carries no processing fee');
+  c.check('a settlement that absorbed the fee cannot be booked', (() => {
+    /* The absorption test, run against the ledger rather than argued: take a real online job,
+     * drop the fee out of what the customer is recorded as paying, and try to post the
+     * settlement. The credit side still carries the fee, so the event does not balance — which
+     * is the accounting form of the business rule, and the reason the rule cannot be broken by
+     * a screen that forgets to add the line. */
+    const b = BOOKINGS.find(x => x.pricing && x.pricing.gatewayFeeCentavos > 0);
+    if (!b) return false;
+    const absorbed = Object.assign({}, b.pricing,
+      { customerTotalCentavos: b.pricing.customerTotalCentavos - b.pricing.gatewayFeeCentavos });
+    const fake = Object.assign({}, b, { pricing: absorbed });
+    const lines = [{ account: 'customer_deposit', scope: b.id, direction: 'debit',
+                    amountCentavos: absorbed.customerTotalCentavos }].concat(settlementLines(fake));
+    try { postEvent('test.absorbed-fee', lines, { bookingId: b.id }); return false; }
+    catch (err) { return /does not balance/.test(err.message); }
+  })(), 'a fee-absorbing settlement was accepted by the ledger');
+  c.check('a refund returns the service money and not the processor\'s fee', (() => {
+    const b = BOOKINGS.find(x => x.pricing && x.pricing.gatewayFeeCentavos > 0 && isSettled(x));
+    if (!b) return false;
+    const cap = refundableCentavos(b);
+    return cap === b.pricing.customerTotalCentavos - b.pricing.gatewayFeeCentavos
+      && refundLines(b, cap).every(l => l.account !== 'gateway_fee_payable');
+  })(), 'the refund path was funding the processor out of the platform');
+  c.check('paid and regulated features are off, and nothing in the books is waiting for them',
+    ['subscriptions', 'promotedListings', 'partnerRevenue', 'lendingReferral', 'voiceInput']
+      .every(f => CONFIG.featureFlags[f] === false)
+      && Object.keys(ACCOUNTS).every(a => !/subscription|promotion|partner/i.test(a))
+      && LEDGER.every(e => !/subscription|promotion|partner/i.test(e.eventType)),
+    JSON.stringify(CONFIG.featureFlags));
+  c.check('a flag is read by the kernel, not by the markup',
+    featureEnabled('voiceInput') === false && featureEnabled('nothing') === false,
+    String(featureEnabled('voiceInput')));
+
   /* parts are collected for the provider, never commissioned */
   const p = computeBreakdown({ baseCentavos: 50000, categoryId: 'cleaning',
                                inclusions: [{ label: 'Cleaning supplies', amountCentavos: 1500 }] });
-  c.check('a parts charge does not raise the commission', p.commissionCentavos === 5000, String(p.commissionCentavos));
+  c.check('a parts charge does not raise the commission', p.commissionCentavos === 600, String(p.commissionCentavos));
   c.check('the customer total includes the parts', p.customerTotalCentavos === 51500, String(p.customerTotalCentavos));
   c.check('settlement to the provider includes the parts',
-    settlementToProvider(p) === 45000 + 1500, String(settlementToProvider(p)));
+    settlementToProvider(p) === 49400 + 1500, String(settlementToProvider(p)));
   c.check('so the split still balances',
     settlementToProvider(p) + p.commissionCentavos === p.customerTotalCentavos);
 
@@ -470,7 +548,8 @@ suite('ledger', async () => {
   c.check('every ledger event balances', unbalanced.length === 0,
     unbalanced.map(e => e.eventType).join(','));
   c.check('the seed wrote real history', LEDGER.length > 0, String(LEDGER.length));
-  const KINDS = ['payment.authorized', 'payment.voided', 'booking.settled', 'booking.settled_cash', 'dispute.held'];
+  const KINDS = ['payment.authorized', 'payment.voided', 'booking.settled', 'booking.settled_cash',
+                 'dispute.held', 'gateway.fee_paid'];
   c.check('only money movements appear at boot',
     LEDGER.every(e => KINDS.includes(e.eventType)),
     LEDGER.map(e => e.eventType).filter(t => !KINDS.includes(t)).join(','));
@@ -566,7 +645,12 @@ suite('ledger', async () => {
     payable === owed, payable + ' vs ' + owed);
 
   /* configuration is a decision, not a constant, and history survives it */
-  c.check('the default rate is the deck’s worked example', CONFIG.commissionRateDefault === 0.10);
+  c.check('the default rate is the 1.2 percent of the Master Plan under a 1.3 percent cap',
+    CONFIG.commissionRateDefault === 0.012 && CONFIG.commissionRateCap === 0.013,
+    CONFIG.commissionRateDefault + ' / cap ' + CONFIG.commissionRateCap);
+  c.check('no seed froze a rate above the cap',
+    BOOKINGS.filter(b => b.pricing).every(b => b.pricing.commissionRate <= CONFIG.commissionRateCap),
+    BOOKINGS.filter(b => b.pricing && b.pricing.commissionRate > CONFIG.commissionRateCap).map(b => b.id).join(','));
   c.check('no booking inherits today’s rate table',
     BOOKINGS.filter(b => b.pricing).every(b => typeof b.pricing.commissionRate === 'number'));
   const before = LEDGER.length;
@@ -1066,30 +1150,114 @@ suite('admin', async () => {
   c.check('the dashboard no longer quotes an invented month', !/42,800|48,200|42\.8k/.test(dash));
   c.check('and no longer splits revenue that was never earned', !/Revenue allocation|Community programs/.test(dash));
 
-  /* configuration is editable, audited, and does not rewrite history */
+  /* configuration is editable, audited, capped, and does not rewrite history. The values typed here
+     used to be 18% and 25% — both of which the Master Plan forbids, so the block was proving that a
+     rate could be saved rather than that the right rate is saved. 1.0% is the plan's stated
+     alternative and 1.3% is exactly the ceiling, so the legal path is still exercised. */
   const before = CONFIG.commissionRateDefault;
   const frozenJob = BOOKINGS.find(b => b.pricing);
   const frozenRate = frozenJob.pricing.commissionRate;
-  el('cfg-commissionRateDefault').value = '18';
+  el('cfg-commissionRateDefault').value = '1';
   el('cfg-taxRate').value = '12';
   el('cfg-payoutMinCentavos').value = '250';
-  el('cfgcat-plumbing').value = '25';
+  el('cfgcat-plumbing').value = '1.3';
   commitConfig();
-  c.check('a saved rate takes effect', CONFIG.commissionRateDefault === 0.18, String(CONFIG.commissionRateDefault));
+  c.check('a saved rate takes effect', CONFIG.commissionRateDefault === 0.01, String(CONFIG.commissionRateDefault));
   c.check('a VAT setting is recorded, not assumed silently', CONFIG.taxRate === 0.12, String(CONFIG.taxRate));
-  c.check('a per-category override is stored separately', CONFIG.commissionRateByCategory.plumbing === 0.25);
+  c.check('a per-category override is stored separately', CONFIG.commissionRateByCategory.plumbing === 0.013,
+    String(CONFIG.commissionRateByCategory.plumbing));
   c.check('the change is written to a log', CONFIG_AUDIT.length >= 3 && CONFIG_AUDIT[0].actor === 'admin');
   c.check('and the job booked earlier keeps the rate it agreed', frozenJob.pricing.commissionRate === frozenRate);
   const withTax = app.computeBreakdown({ baseCentavos: 100000, categoryId: 'plumbing' });
-  c.check('a new job pays the category rate', withTax.commissionCentavos === 25000, String(withTax.commissionCentavos));
+  c.check('a new job pays the category rate', withTax.commissionCentavos === 1300, String(withTax.commissionCentavos));
   c.check('and VAT now appears, on the platform fee only',
-    withTax.taxCentavos === Math.round((25000 + CONFIG.fixedFeeCentavos) * 0.12), String(withTax.taxCentavos));
+    withTax.taxCentavos === Math.round((1300 + CONFIG.fixedFeeCentavos) * 0.12), String(withTax.taxCentavos));
+  /* The ceiling, twice: the form refuses it so an admin sees which field, and the kernel refuses it
+     again so no other caller can go around the form. A refusal is asserted as a stored value that
+     did NOT move, which is the only way to tell a guard from a toast. */
+  c.check('a rate above the cap is refused at the form', (() => {
+    el('cfg-commissionRateDefault').value = '8'; commitConfig();
+    return CONFIG.commissionRateDefault === 0.01;
+  })(), String(CONFIG.commissionRateDefault));
+  c.check('and refused inside setConfig, not only by the form', (() => {
+    let msg = '';
+    try { setConfig({ commissionRateDefault: 0.08 }, { role: 'admin' }); } catch (e) { msg = e.message; }
+    return /cap/.test(msg) && CONFIG.commissionRateDefault === 0.01;
+  })(), 'the save went through anyway');
+  c.check('a per-category override above the cap is refused too, and names the category', (() => {
+    let msg = '';
+    try { setConfig({ commissionRateByCategory: { cleaning: 0.05 } }, { role: 'admin' }); } catch (e) { msg = e.message; }
+    return /cleaning/.test(msg) && CONFIG.commissionRateByCategory.cleaning === undefined;
+  })(), 'an override slipped past the ceiling');
+
+  /* ---- what the console says when it says no, and what it says about its own figures ----
+     Three refusals used to share one sentence and two rates used to share one rendering, so the
+     words a person acted on described a rule that had not fired. Each is asserted from the painted
+     surface or the toast the app raised, never from the source text that explains the fix. */
+  c.check('an over-cap rate is refused in words about the ceiling, not about signs', (() => {
+    const v = boot();
+    v.state.view = 'app'; v.state.role = 'admin';
+    v.state.tab = 'admin_dashboard'; v.state.adminScreen = 'finance';
+    v.render();
+    const e = id => v._document.getElementById(id);
+    /* The harness will hand out a fake element for any id, so the field's presence in the painted
+     markup is the precondition — otherwise this types into a control the screen never drew. */
+    if (!e('screen').innerHTML.includes('id="cfg-commissionRateDefault"')) return false;
+    e('cfg-commissionRateDefault').value = '8';
+    v.commitConfig();
+    const said = (e('toast-root').children || [])
+      .map(t => (t.children || []).map(k => k.textContent).join('')).join(' | ');
+    return /cannot exceed 1\.3%/.test(said) && !/negative/.test(said)
+      && v.CONFIG.commissionRateDefault === 0.012;
+  })(), 'the refusal named a rule that had not fired');
+  c.check('and a per-category override is refused in words that name the trade', (() => {
+    const v = boot();
+    v.state.view = 'app'; v.state.role = 'admin';
+    v.state.tab = 'admin_dashboard'; v.state.adminScreen = 'finance';
+    v.render();
+    const cleaning = v.SERVICES.find(s => s.id === 'cleaning');
+    const e = id => v._document.getElementById(id);
+    if (!e('screen').innerHTML.includes('id="cfgcat-cleaning"')) return false;
+    e('cfgcat-cleaning').value = '5';
+    v.commitConfig();
+    const said = (e('toast-root').children || [])
+      .map(t => (t.children || []).map(k => k.textContent).join('')).join(' | ');
+    return said.indexOf(cleaning.label + ' rate cannot exceed 1.3%') >= 0
+      && v.CONFIG.commissionRateByCategory.cleaning === undefined;
+  })(), 'the override refusal did not say which trade it refused');
+  c.check('the console lists every priced gateway method with its dated source', (() => {
+    const v = boot();
+    const html = String(v.configPanel());
+    const methods = Object.keys(v.CONFIG.gatewayFees);
+    const offered = v.requestPaymentOptions().map(o => o.code);
+    /* The population guard: a scan that found no priced method is not a clean table, and a table
+     that omits one is the defect this check is for. */
+    if (methods.length < 4) return false;
+    return methods.every(m => {
+      const name = v.GATEWAY_METHOD_NAMES[m];
+      const at = name ? html.indexOf(name) : -1;
+      if (at < 0) return false;
+      const row = html.slice(at, at + 700);
+      const spec = v.CONFIG.gatewayFees[m];
+      const carriesSource = spec
+        ? /checked 2026-10-27/.test(row) && /no signed quote/.test(row)
+        : /no processor/.test(row) && /₱0\.00/.test(row);
+      const saysUnreachable = offered.indexOf(m) >= 0 || /not offered in this build/.test(row);
+      return carriesSource && saysUnreachable;
+    });
+  })(), 'a gateway rate was configured without being shown, or shown without its source');
+  c.check('the change log prints a rate with the decimal the rate has', (() => {
+    const v = boot();
+    v.setConfig({ commissionRateDefault: 0.01 }, { role: 'admin' });
+    const row = v.CONFIG_AUDIT.filter(a => a.key === 'commissionRateDefault').slice(-1)[0];
+    return !!row && row.from === 0.012 && /1\.2% → 1%/.test(String(v.configPanel()));
+  })(), 'two different rates printed the same in the audit log');
   c.check('the split still reconciles with tax on',
     withTax.providerShareCentavos + withTax.commissionCentavos + withTax.passThroughCentavos + withTax.fixedFeeCentavos + withTax.taxCentavos
       === withTax.customerTotalCentavos);
   c.check('a negative rate is refused', (() => {
     el('cfg-commissionRateDefault').value = '-5'; commitConfig();
-    return CONFIG.commissionRateDefault === 0.18;
+    return CONFIG.commissionRateDefault === 0.01;
   })());
   setConfig({ commissionRateDefault: before, taxRate: 0, commissionRateByCategory: {} }, { role: 'admin' });
 
@@ -2990,6 +3158,24 @@ suite('honesty', async () => {
       v.isSettled(v.bookingById('b3')) && /Paid with/.test(paid) &&
       !/To be paid with/.test(paid);
   })(), 'a held payment was described in the past tense');
+  /* A rate that stopped being whole started being rounded away. The receipt is the document a
+     person keeps, so "₱6.00 · 1%" beside a commission computed at 1.2% is not a formatting
+     quibble: it tells the provider a fee different from the one the ledger booked. Both halves
+     are asserted — the figure and its rate on one line as the records produce them, and the
+     rounded-away form absent — with a population control, because on a seed of whole-percent
+     rates the second half could not fail and would be decoration. */
+  c.check('a receipt prints the rate it charged, to the decimal the rate has', (() => {
+    const v = boot();
+    const priced = v.BOOKINGS.filter(b => b.pricing && b.pricing.commissionRate);
+    const halfPercent = priced.filter(b => Math.round(b.pricing.commissionRate * 1000) % 10 !== 0);
+    if (halfPercent.length === 0) return false;
+    return halfPercent.every(b => {
+      const html = String(v.receiptCard(b));
+      const exact = v.peso(b.pricing.commissionCentavos) + ' · ' + v.ratePercent(b.pricing.commissionRate) + '%';
+      const rounded = v.peso(b.pricing.commissionCentavos) + ' · ' + Math.round(b.pricing.commissionRate * 100) + '%';
+      return html.includes(exact) && !html.includes(rounded);
+    });
+  })(), 'a receipt rounded 1.2% to 1%');
 
   /* ── the provider insights ───────────────────────────────────────────────
      Three of these cards drew numbers that no record contained: an earnings line
@@ -3208,11 +3394,19 @@ suite('honesty', async () => {
 
   /* Helpers agreeing with the records is not the same claim as the card printing them. */
   const spendingHtml = app.residentSectionBody('spending');
-  const derived = new Set([app.pesoShort(spendBefore)]
-    .concat(app.residentSpendByService(app.residentPaid()).map(x => app.pesoShort(x.centavos))));
-  const stray = [...new Set((spendingHtml.match(/₱[\d,]+/g) || []))].filter(m => !derived.has(m));
+  /* Centavos, not formatted strings. pesoShort prints ₱601.48 while the token the regex reads off
+     the card is ₱601, so the two sets stopped intersecting the moment a figure stopped being a whole
+     peso — which is exactly what a 1.2% fee produces on a ₱525 job. Parsing the printed amount back
+     into centavos tests the number, and it is a stronger check than the one it replaces: a wrong
+     decimal used to read as a match. */
+  const toCentavosFromPrint = m => Math.round(Number(m.replace(/[^\d.]/g, '')) * 100);
+  const derived = new Set([spendBefore]
+    .concat(app.residentSpendByService(app.residentPaid()).map(x => x.centavos)));
+  const printed = [...new Set((spendingHtml.match(/₱[\d,]+(?:\.\d\d)?/g) || []).map(toCentavosFromPrint))];
+  const stray = printed.filter(v => !derived.has(v));
   c.check('every peso figure on the spending card is one the records produce',
-    stray.length === 0 && derived.size > 0, 'stray: ' + stray.join(', '));
+    stray.length === 0 && derived.size > 0,
+    'stray: ' + stray.map(v => app.peso(v)).join(', ') + ' against ' + derived.size + ' derived');
 
   const receiptsHtml = app.residentSectionBody('receipts');
   c.check('no receipt names a booking that has not been paid',
@@ -4742,7 +4936,7 @@ suite('fruit', async () => {
   c.check('the combined visit is the one carrying an open rate', (() => {
     const both = app.offerTotals({ mode:'harvest_and_buy', labourCentavos:160000, produceCentavos:660000 });
     return both.produceFeeUndecided === true && both.produceFeeWaived === false &&
-      both.produceFeeCentavos === 0 && both.platformFeeCentavos === 16000;
+      both.produceFeeCentavos === 0 && both.platformFeeCentavos === 1920;
   })(), 'the undecided state must belong to harvest_and_buy alone');
   c.check('a sale stays free even once a produce rate exists', (() => {
     const keep = CONFIG.produceCommissionRate;
@@ -6674,13 +6868,24 @@ suite('verification', async () => {
    where one exists, and an honest refusal where it does not. */
 suite('signup-guide', async () => {
   const c = makeChecker();
-  const seam = boot().speechSeam();
-  c.check('the dictation seam names the engine it found, or says none is exposed',
+  /* Two states, because the flag is a decision and the engine is a fact about the browser, and a
+     reviewer who sees only one of them cannot tell 'the pilot switched it off' from 'this phone
+     cannot do it'. Off is the default, so the default is what the first check reads. */
+  const offSeam = boot().speechSeam();
+  c.check('dictation is off by default and the seam names the flag, not the browser',
+    offSeam.available === false && offSeam.featureOff === true
+      && /voiceInput/.test(offSeam.reason) && !/no speech recognition engine/.test(offSeam.reason),
+    JSON.stringify(offSeam).slice(0, 120));
+  const voiceOn = boot();
+  voiceOn.CONFIG.featureFlags.voiceInput = true;
+  const seam = voiceOn.speechSeam();
+  c.check('with the flag on, the dictation seam names the engine it found, or says none is exposed',
     typeof seam.available === 'boolean' && seam.reason.length > 40
       && (seam.available ? /browser's own speech engine/.test(seam.reason) : /no speech recognition engine/.test(seam.reason)),
     JSON.stringify(seam).slice(0, 120));
 
   const g = boot();
+  g.CONFIG.featureFlags.voiceInput = true;
   g.state.view = 'login'; g.state.role = 'resident'; g.state.authMode = 'register';
   g.render();
   g.openSignupGuide();
@@ -6714,6 +6919,7 @@ suite('signup-guide', async () => {
     /aria-pressed="false"/.test(first) && /Dictate instead/.test(first),
     first.slice(first.indexOf('guideDictate'), first.indexOf('guideDictate') + 120).replace(/\s+/g, ' '));
   const listening = boot();
+  listening.CONFIG.featureFlags.voiceInput = true;
   listening.state.view = 'login'; listening.state.role = 'resident'; listening.state.authMode = 'register';
   listening.render();
   listening.openSignupGuide();
@@ -6723,6 +6929,17 @@ suite('signup-guide', async () => {
       && listening._document.getElementById('reg-name').value === ''
       && listening.state.signupGuideListening !== true,
     'note: ' + String(listening.state.signupGuideNote).slice(0, 70));
+  /* The flag-off press is the case the brief asks a flag to prove: the affordance is unreachable,
+     it says why, and it writes nothing. A hidden button would pass the same test by accident, so
+     the reason is read as well as the empty field. */
+  const offPress = boot();
+  offPress.state.view = 'login'; offPress.state.role = 'resident'; offPress.state.authMode = 'register';
+  offPress.render(); offPress.openSignupGuide(); offPress.guideDictate(0);
+  c.check('with the flag off, pressing dictate names the flag and writes nothing',
+    /voiceInput/i.test(String(offPress.state.signupGuideNote))
+      && offPress._document.getElementById('reg-name').value === ''
+      && offPress.state.signupGuideListening !== true,
+    'note: ' + String(offPress.state.signupGuideNote).slice(0, 80));
   const loginMode = (() => { const b = boot(); b.state.view = 'login'; b.state.role = 'resident'; b.state.authMode = 'login'; return b.loginHTML(); })();
   const registerMode = (() => { const b = boot(); b.state.view = 'login'; b.state.role = 'resident'; b.state.authMode = 'register'; return b.loginHTML(); })();
   c.check('the guide is offered where an account is being created, and not where one is being used',
@@ -6819,10 +7036,19 @@ suite('wallet', async () => {
       && tier.privileges.length === 0 && /No privilege is attached/.test(tier.note)
       && tier.jobs === app.BOOKINGS.filter(b => b.providerId === app.CURRENT_PROVIDER_ID && b.status === 'completed').length,
     JSON.stringify({ tier: tier.tier, jobs: tier.jobs, earned: tier.earnedCentavos }));
+  /* The flag is off, so the seam names the flag. Switched on, it must STILL decline — a lending
+     answer belongs to a licensed lender, and a feature flag is not a credit decision. Both halves
+     are asserted so that turning the flag on cannot quietly become an approval. */
   const funding = app.fundingEligibilitySeam();
-  c.check('funding eligibility declines to answer rather than inventing a decision',
-    funding.evaluated === false && funding.eligible === null && /not evaluated here/i.test(funding.reason),
+  c.check('funding referral is off by default and says so',
+    funding.available === false && /lendingReferral/.test(funding.reason),
     JSON.stringify(funding).slice(0, 110));
+  const funded = boot();
+  funded.CONFIG.featureFlags.lendingReferral = true;
+  const fundingOn = funded.fundingEligibilitySeam();
+  c.check('and even with the flag on, funding eligibility declines to answer rather than inventing a decision',
+    fundingOn.evaluated === false && fundingOn.eligible === null && /not evaluated here/i.test(fundingOn.reason),
+    JSON.stringify(fundingOn).slice(0, 110));
 
   const sheet = (() => { const s = boot(); s.state.view = 'app'; s.state.role = 'provider'; return String(s.walletSheet()); })();
   c.check('the sheet states that it stores no money, and names the hold and the minimum',

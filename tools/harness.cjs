@@ -16,6 +16,8 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'CREDENTIALS', 'LISTINGS'
   'pendingProviderRequests', 'bookingById', 'providerOf', 'customerOf', 'listingsOf',
   'listingById', 'agoText', 'clockText', 'dayName', 'timeMinutes', 'byWhen', 'serviceMeta', 'peso', 'pesoShort', 'pesoCompact', 'rateLabel',
   'toCentavos', 'toPesos', 'computeBreakdown', 'breakdownForBooking', 'postEvent', 'settlementLines', 'settlementToProvider', 'freezePricing', 'commissionRateFor', 'CONFIG_DEFAULTS', 'CONFIG_AUDIT',
+  'gatewayFeeFor', 'assertGatewayNotAbsorbed', 'payGatewayFee', 'featureEnabled', 'assertWithinFeeCap', 'ratePercent',
+  'GATEWAY_METHOD_NAMES',
   'accountBalance', 'ledgerBalance', 'ledgerFor', 'ACCOUNTS', 'LEDGER_EVENTS',
   'PAYMENTS', 'PAYOUTS', 'PAYMENT_LABELS', 'paymentsFor', 'recordPayment', 'Gateway',
   'earningsCard', 'jobActionBar', 'realRequestCard', 'listingsPanel', 'threadsFor', 'adminDashboard',

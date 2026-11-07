@@ -10675,3 +10675,122 @@ owner's own two documents contradict each other**, C8 the money-held wording, C9
 encryption" means, C10 Fruit Harvest & Buy, **C11 "hatian", which is not guessed at**, and C12 the team
 name. All twelve are in the roadmap's ledger with an open decision column, and seven open questions are
 listed under it.
+
+## 171. Slice S1: the fee the plan decided became the fee the code carries, and the family that proved it wrong three times
+
+Branch `feat/startup-backend`. This is the first slice of
+`SUKINNECT_BACKEND_AND_FEATURES_FIX_PROMPT.md` — Stage A, Tier 1.1, business-rule alignment. It moves
+four decisions out of the roadmap and into the kernel: the commission, its cap, the processor's fee,
+and the flags that keep unpermissioned revenue off the screen.
+
+**The brief's rows, re-verified before anything was changed.** B2 **CONFIRMED** — the default was
+`0.10`, the admin console printed "Commission earned at 10%", and no cap was enforced anywhere. B3
+**CONFIRMED** — the money model carried `fixedFeeCentavos` and `taxRate` and no pass-through of any
+kind. B9 **CONFIRMED** — no feature flags, no subscription or promotion accounts, no partner revenue.
+B15 **CONFIRMED in part** — the README and the receipt already labelled the gateway a simulation; the
+fee wording now also says what the real arrangement must be. Code pointers as of this slice:
+`CONFIG_DEFAULTS` at `Sukinnect-next.html:2953`, `gatewayFeeFor` and `computeBreakdown` at `:3180`,
+`settlementLines` at `:3423`, `refundableCentavos` at `:4207`, `configPanel` at `:5417`.
+
+**What was built.**
+
+- `commissionRateDefault: 0.012` with `commissionRateCap: 0.013`, enforced at three points rather than
+  one: `assertWithinFeeCap` at every read (`commissionRateFor`, a quoted rate, the produce rate),
+  inside `setConfig` on the way in so no other caller can slip past the input, and in the admin form
+  itself so the refusal names the field. The ceiling is data, so the form's `max` attribute, its
+  message and its comparison all read `CONFIG`. 1.0% — the plan's stated alternative — is one
+  `setConfig` call away, which is what the brief asked for.
+- A **gateway fee the payer funds**. `CONFIG.gatewayFees` prices gcash, maya, qrph and card with a
+  dated source string, and keeps `cash` and `direct` as `null` because no processor is in the path.
+  The fee is added to `customerTotalCentavos` and excluded from `platformRevenueCentavos`; it settles
+  into a new `gateway_fee_payable` account and leaves it the same day through `payGatewayFee`, which
+  posts its own `gateway.fee_paid` event rather than folding the fee into a payout line, because a fee
+  inside a payout reads as part of what the provider was paid. A refund excludes it in both the cap and
+  the lines, and the denominator excludes it too — the account was already paid away, and debiting it
+  a second time is what made the platform fund the processor (the check that caught that is
+  `no account went negative under the console`, and it was red before the fix, not after).
+- `assertGatewayNotAbsorbed(breakdown)` throws at the seam, before any ledger line exists, on either
+  half of absorption: the payer's total missing the fee, or the platform's revenue containing it.
+- `CONFIG.featureFlags` — `subscriptions`, `promotedListings`, `partnerRevenue`, `lendingReferral`,
+  `voiceInput`, all `false` — read by the kernel through `featureEnabled(flag)` rather than by each
+  screen, so a surface added tomorrow asks by default. The dictation and funding seams answer the flag
+  before they answer the browser.
+- The admin fee console now lists every priced method with its rate, its fixed part, its dated source,
+  and which routes this build cannot take money through. Read-only, because the platform does not set
+  what it pays; the plan requires a signed merchant quote, and the screen says none is on file.
+
+**Two defects this slice created, both found before the commit.**
+
+Moving the rate off whole percent moved a rounding onto two surfaces that had never needed a decimal.
+The receipt printed `${Math.round(p.commissionRate * 100)}%`, which is **"1%"** beside a commission
+computed at 1.2% — on every receipt the app can paint. The audit line's own formatter, `fmtCfg`, had
+the same expression, so the change log wrote `commissionRateDefault 1% → 1%` for the move from 1.2% to
+1.0%: two different business decisions recorded as one identical edit, in the log §29 exists to keep.
+Both now print through `ratePercent()`, which the file already had for exactly this arithmetic — its
+own comment names the rounding on the admin console line, and the two sites nobody re-read after the
+number stopped being whole were the receipt and the log. A check asserts both halves of the receipt
+case (the exact string present, the rounded-away form absent) behind a population control requiring at
+least one frozen rate with a decimal, because on a seed of whole-percent rates the second half could
+never fail and would be decoration.
+
+**One defect that was already there and the same pass surfaced.** The config form's refusal toast read
+`Check commission cannot exceed 1.3% — a rate cannot be negative.` for a rate that was too *high*: one
+tail sentence served three different refusals, so the reason a person received contradicted the thing
+they had typed, and the category rows were identified as `cfgcat-plumbing`. Each refusal now states
+its own reason and names the trade in words. Two checks read the toast the app actually raised.
+
+**The mutation family.** `node tools/falsify-business-rules.cjs` — its first run caught 9 of 13 and
+printed three `MISSED` readings that were about the family, not the application; all three were
+re-pointed, and four more breaks were added for the wording checks. Read the run's own line for the
+totals. What the three misses taught:
+
+1. *the default rate goes back to ten percent* crashed the suite. `CONFIG_DEFAULTS` is not validated at
+   definition, so a 10% default throws at the first read — `suite crashed: the commission rate for the
+   default rate is 10%, above the 1.3% cap`. A guard condemning a mutant is not a check observing it,
+   so the break now moves the default to **1.3%**: legal, under the ceiling, and still not 1.2%, which
+   makes `₱800 at the pilot fee takes ₱9.60` the thing that goes red.
+2. *the ceiling stops being read from configuration* named the wrong label. Neutering the cap inside
+   `assertWithinFeeCap` condemns the **setConfig** guard, because the form has its own comparison
+   against `CONFIG.commissionRateCap` and refuses first. The break now raises the stored cap to 50%, so
+   the form's rule is what fails — and that is also the proof the cap is one number, not two copies.
+3. *a per-category override stored without passing the cap* printed **exit 0**: bypassing the cap on
+   the read path is an **equivalent mutant** under this build, because `setConfig` already refuses an
+   illegal override so none ever reaches the getter. It was not deleted to make the count look smaller;
+   it was re-pointed at what the label actually promises — that the refusal *names the category* —
+   which a message of `'an override'` breaks immediately.
+
+**A test that passed on a screen it never opened.** The two refusal checks navigated with
+`state.adminScreen = 'money'`. No render branch answers that word: the console's Money tab is
+`state.adminScreen === 'finance'`, and an unknown value falls through to `adminDashboard()`. The
+checks still went green, because the harness hands out a fake element for *any* id asked for — so the
+test typed into a field the painted screen had never drawn. This is the trap `AGENTS.md` has written
+down four times for the camera ("a setup script that moves the model without moving the field
+photographs a state nobody can reach"), arriving inside a test rather than a walk. Both checks now
+name the destination the render branch answers, and refuse before typing unless
+`id="cfg-commissionRateDefault"` / `id="cfgcat-cleaning"` is in the painted markup — a precondition,
+so the check cannot be satisfied by a conjured stub again.
+
+**Figures, as commands.** `node tools/verify.cjs` prints the total (766 at the close of this slice,
+up from 743 before it; twenty-three of them new here).
+`node tools/falsify-business-rules.cjs` prints its own applied / caught / not-applied line — the pass
+that landed read 21 of 21 caught, 0 not applied, 0 gate failures. `node tools/measure.cjs` reports
+14,245 lines, 115 tokens with the same three declared-and-unreached as before, and `node
+tools/shot.cjs --measure` read every failure tally zero over the full walk, the only nonzero line
+being the OpenStreetMap tile requests the build has always made. `node tools/sweep-text-scale.cjs` is
+the ten-corner proof. The README's worked example was rewritten to ₱9.60 with the 1.0% alternative and
+the signed-quote condition still stated, so the developer documentation says what the code does without
+presenting any figure as settled business policy. The roadmap's §3 rows for the transaction fee and the
+gateway fee moved to built with code pointers and test names; C1 stays open in the ledger because 1.0%
+versus 1.2% is the owner's to choose, not because the code still says 10%.
+
+**One deviation from the brief, stated rather than smoothed.** The brief asks that "a flag off means
+the screen and the posting path are unreachable, and a test proves it". Two flags have both halves
+proved now: `voiceInput` (the dictation seam answers the flag before the browser, and the step says so)
+and `lendingReferral` (the funding seam declines in both flag states). The other three have nothing to
+reach yet — `subscriptions`, `promotedListings` and `partnerRevenue` have no record, no price and no
+ledger account, which is slice S7's work. What is proved today is that no account and no event in the
+books mentions any of them, which is the strongest honest claim available until the models exist.
+
+**Left open, and whose.** The gateway rates are published-page rates with no signed merchant quote on
+file; the plan requires one, and the source string says so on the screen beside the number.
+

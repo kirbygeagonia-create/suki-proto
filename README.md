@@ -310,26 +310,34 @@ Every amount is an **integer count of centavos**, and the unit is in the field n
 (`basePriceCentavos`, `amountCentavos`). A percentage computed on a float peso eventually
 prints a cent nobody charged.
 
-For a job with a ₱800 base at the pilot's 10 %:
+For a job with a ₱800 base at the pilot's **1.2 %**, paid in cash:
 
 | | |
 |---|---|
 | Customer pays | ₱800.00 |
-| Provider keeps | ₱720.00 |
-| Sukinnect earns | ₱80.00 |
+| Provider keeps | ₱790.40 |
+| Sukinnect earns | ₱9.60 |
 | Parts/materials (if any) | charged at cost, **not commissioned**, reimbursed to the provider |
 
-**Superseded, 6 November 2026.** The 10 % above is what this build's configuration still defaults to
-(`commissionRateDefault = 0.10`), and it is the pitch deck's figure. The authoritative business
-document — `Sukinnect_Master_Plan_Revised_27Oct2026.docx` §6.2 — sets the transaction fee at
-**1.2 % with a hard cap of 1.3 %** (1.0 % as the stated alternative), which makes the same ₱800 job
-earn **₱9.60**, not ₱80. The plan also forbids Sukinnect absorbing gateway fees in the pilot: at
-1.2 % with an absorbed QR Ph / Maya / GCash fee the platform loses ₱2.41 / ₱6.44 / ₱10.38 per ₱800
-booking. The change to the code, the cap enforcement and the gateway-fee line are an open owner
-decision (conflict C1/C2 in
-[`SUKINNECT_STARTUP_ROADMAP.md`](SUKINNECT_STARTUP_ROADMAP.md)) and are not made here, because this is
-the developer documentation and not the business document. No figure in this repository is presented
-as the settled rate.
+**Aligned with the 27 October plan, 7 November 2026.** The configuration now defaults to
+`commissionRateDefault = 0.012` with `commissionRateCap = 0.013`, and the cap is enforced on the way
+*in* — `setConfig` refuses a default rate or a per-category override above it, names which one, and
+writes no audit row for a refusal. The pitch deck's 10 % is no longer what the code does; it remains
+the history of the decision, recorded as conflict C1 in
+[`SUKINNECT_STARTUP_ROADMAP.md`](SUKINNECT_STARTUP_ROADMAP.md). **1.0 % is the plan's stated
+alternative and is one configuration change away**, so no figure here is presented as settled
+business policy — the owner decides, the code carries the decision as data.
+
+The same plan forbids Sukinnect absorbing gateway fees during the pilot: at 1.2 %, an absorbed
+QR Ph / Maya / GCash fee loses ₱2.41 / ₱6.44 / ₱10.38 on an ₱800 booking. The build now models that
+as a **pass-through**: for an online payment method the processing fee is its own disclosed line,
+funded by the payer *on top of* the service money, posted to the ledger as `gateway_fee_payable` and
+paid away to the processor the day the job settles. It is never inside `platformRevenueCentavos`,
+and a refund returns the service money without it. Cash and direct carry no fee because no processor
+is in the path. The rates are configuration with a **dated source string** ("PayMongo published
+standard pricing, checked 2026-10-27, ex-VAT; no signed quote on file") rather than an agreement:
+the plan asks for a signed merchant quote, and until one exists these are published figures a
+reviewer should treat as unvalidated.
 
 - The fee is deducted **from the provider's share**, so the price on the card is the price
   the customer pays. Nothing appears at the till that was not on the card.
