@@ -209,6 +209,7 @@ node tools/shot.cjs --list          # what the named screens are
 node tools/shot.cjs --only=resident-home,provider-detail
 node tools/shot.cjs --measure       # also print the audit tally below
 node tools/shot.cjs --reduced-motion
+node tools/shot.cjs --offline         # emulate a device with no network: only map tiles may fail
 node tools/shot.cjs --desktop       # the phone frame inside the desktop shell
 node tools/shot.cjs --probe=@file   # any expression, evaluated after the page settles
 ```
@@ -221,7 +222,12 @@ its worst stop), controls still covered by the bottom nav after the screen is sc
 end, clipped or ellipsised copy, type sizes off the declared scale, horizontal overflow, a map
 tile escaping its own frame, and any control inside an open modal that something else is
 sitting on top of. Vendored Leaflet chrome is counted separately, because resizing it means
-fighting vendor CSS.
+fighting vendor CSS. `--offline` asks Chrome to emulate a device with no network at all, which is
+the only way to test §1.7's promise from the right side: with it, the map panes are read for what
+they paint when a tile never arrives (`tools/probe-offline-map.js`), and every other asset must
+still render. Note that under that flag the line `requests that left the device for a network`
+counts requests *issued*, not requests that arrived — Chrome reports the send even when nothing
+can come back, so a large number there is the emulation working, not a leak.
 
 These tools exist because instruments saturate. After a few rounds every check reported zero and
 the next four defects — a dashboard that contradicted itself, an ETA shown for a provider who

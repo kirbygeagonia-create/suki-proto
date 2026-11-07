@@ -10149,126 +10149,126 @@ handsets. The built APK copy still disagrees (`audit-build-bytes` findings 1) be
 the acceptance step. None of this has been looked at on a handset, and no screen-reader output was
 heard.
 
-## 163. The follow-up cuts: the entry sheet, the tracker's words, and two chart attempts withdrawn
-
-Four things happened after §162 was written, and two of them are worth more than the fixes.
-
-**The entry screen overflowed its own sheet by 6px** once the fields went to 52px, and the height was
-not the cause. `.auth-forgot` carries `margin-left:-6px; margin-right:-6px` — a widening that only
-made sense while `.auth-sheet` had 20px of inner padding. Removing the card's padding turned that
-widening into an overflow past the clipping box, and the camera's `controls no tap can reach` tally
-named it at the anchor corner. The margins go; the 44px floor stays. The three legal documents were
-also painted as `.auth-switch` chips — each a 44px pill, so the row wrapped to three lines — and
-became text links at the same floor. Two lessons in one defect: **a rule that removes a container's
-padding has to audit the children that were compensating for it**, and **reusing a component's class
-for a different idea inherits that component's mass.**
-
-**The tracker now names its step.** Six marks on the active-booking card said a job was somewhere on
-a path without saying where. One line, built from the same `STAGES` array the marks are drawn from and
-the same `label()` the app already uses, says the step and the count. Six labels across a 320px card
-would be the collision this file has been asked to avoid five times over, so the naming is a line
-rather than a rail.
-
-**Two chart fixes were made, measured, and taken back.** The axis label that hangs 3px outside its
-plot at default width and 200% text was answered first by anchoring the last *drawn* label to the
-right — which cleared the escape and laid "Sep 14" and "Oct 26" 34x43px on top of each other, because
-a right-anchored edge label points back into its neighbour. The second attempt clamped the label's
-position instead and changed neither tally. Two identical-or-worse readings are two falsified
-hypotheses, so both are reverted and the escape stands as a finding. `git diff` over the whole branch
-shows no line of chart code changed by this pass, which is what makes it pre-existing rather than
-mine, and the earlier session that measured the same band reached the same conclusion in the comment
-that is now back where it was.
-
-**The monogram swap is withdrawn, and the reason is the interesting part.** Two splices of
-`photoFor`/`photoAvatar` left the suite unable to boot — the second failed with
-`CUSTOMERS is not defined` across all 23 checks in the suite — and the gate caught both, so the file
-was restored from the copy taken before the edit and the cartoon faces stay. I did not establish
-*which* line of the inserted block read `CUSTOMERS` before its declaration, and I am not going to
-write a mechanism I did not verify. What is established is the shape of the failure: a bulk text
-replacement moved a helper across a `const` boundary, nothing about the rendered screens would have
-shown it, and only the suite noticed. That is why this change belongs with the harness, which boots
-the page and can see a reference order, and not with another string splice.
+## 163. The follow-up cuts: the entry sheet, the tracker's words, and two chart attempts withdrawn
 
-## 164. Slice 5, and three instruments that had been quietly pinned to spellings this pass rewrote
-
-**The admin console stopped being an HTML list (P6).** Each "Needs attention" row led with a coloured
-numeral in a `min-width:60px` gutter — the bare number, the gap, the missing icon the brief names. The
-numeral becomes a severity glyph in a tonal container (warning, brand, error, success, neutral — the
-semantic inks already measured for contrast, so no colour is invented) and the count moves into a chip
-beside the words it counts. The rows are still `.job-row`s with a chevron, which an earlier pass had
-already earned.
-
-**The bookings pill said "ongoing".** Removing `text-transform:uppercase` from the status pill was
-right, and one of four call sites had been letting the transform do the capitalising of a raw state
-code. A lowercase word is not clipped, collides with nothing, is on the scale and clears contrast:
-only reading the markup found it. Every chip now prints `label(b.status)`.
-
-**Provider detail toward §5**: a 64px identity monogram, the name at title-lg, the chat action on the
-named tonal tier instead of a hand-typed inline style, and the sticky action bar carrying the one soft
-shadow §3.1 allows it. §5 asks for chat and contact as *two equal* tonal buttons; making them literally
-equal is the defect §70 and `.btn.tertiary` exist to prevent — two byte-identical quiet buttons read as
-equally the next thing to do — so the call keeps its demotion and the deviation is listed rather than
-resolved by a silent edit. The monogram's ink had to follow its container: moving the plate from brand
-blue to the pale primary container left white initials on it at 1.45:1, measured at four screens the
-moment the plate changed.
-
-**Three instruments were stale, not the app.** `falsify-bar-titles` died in its own pre-flight over two
-needles pinned to spellings this pass rewrote (the root heading gained `font-weight:700`; the on-bar
-control moved off translucent white onto the tonal pair), and its sixth break named a check that no
-longer exists — deleting a root-tab variant is *equivalent* now that every bar is light, so the break
-is repointed at the hazard the new rule actually forbids and reads 7 of 7. The gate's queue-number
-reader assumed the count sat before the words; it prefers the trailing chip now, because the leading
-pattern would match the `20` inside `ic('file-text',20)`. And `falsify-visual-contract` printed its
-verdict behind its own name, which the aggregate cannot parse, so the row read "nothing was proven" —
-it prints the conventional summary line as well now. All three are the same rule arriving again: **an
-instrument's assumption about how code is shaped is part of what the code has to respect.**
-
-**Two findings closed by reading rather than by changing.** D7 was reported as an empty dashed box in
-the brief's sandbox; this build already degrades to a pin glyph, the barangay, an honestly-labelled
-sample distance and the service radius through `mapFallback()`, and the walk's network tally shows only
-`*.tile.openstreetmap.org` leaving the device. P7's icon complaint is resolved by the family swap: the
-admin's Help Desk draws `scale`, which `ICON_MEANING` documents as "cases being read for evidence" —
-adjudication, not the external-link arrow the brief saw. Neither was re-drawn, because both were
-already right and the honest move was to say so.
-
-**What the mutation suite still refuses, and why that is correct.** `falsify-build-bytes` aborts on its
-own baseline: the audit reports the built APK disagreeing with the source, which is the accepted state
-until the owner rebuilds it after acceptance. The family is right to refuse — the invariant it guards
-is genuinely unmet — and the fix is a rebuild, not a relaxed needle.
+Four things happened after §162 was written, and two of them are worth more than the fixes.
 
-## 165. Slice 5b: the monograms land on the third attempt, two lists stop being cards, and a tier gains its missing member
-
-**A3, done.** The cartoon faces are out of the UI. The first two attempts at this change died the same
-way and neither death was in the app: the splice located the end of `photoAvatar()` by searching for
-the next `}` on its own line, which lives *inside* the following function's template, so it cut
-`serviceAvatar` in half and the suite crashed. The third attempt takes its boundary from the next
-function's **declaration** — a string that exists exactly once — and asserts uniqueness before
-writing. The first version also read `CUSTOMERS`, which is declared 36 lines further down than the
-helper, and the temporal dead zone punished it; the resolver now reads only the object the caller
-holds, the profile the app greets from, and `PROVIDERS`, all of which are above it. A record with no
-name paints the person glyph rather than an invented initial or a question mark, because the disc must
-not claim an identity the record does not hold. `serviceAvatar`'s photo-first branch goes with it: a
-helper that returns a face whenever `PRO_PHOTOS` has an id would undo the change on exactly the rows
-§4.4 is about.
-
-**P1, two lists.** The provider's waiting requests and the conversation list were bordered, filled,
-rounded blocks sitting inside another block — the card-in-card that reads as a web dashboard. Each is
-now a row of the list component with a hairline between siblings, and the request list stops adding
-9px of margin per item, which was the other half of why six of them looked like six cards. The data
-attributes, handlers and aria labels are unchanged: this is a container decision, not a behaviour one.
-
-**A tier that could not say what the rule said.** §5 asks for the destructive action as a text button
-at the bottom. The button system had primary, secondary, tertiary and destructive-fill and **no
-destructive member of the demotion tier**, so both hubs hand-typed the same inline recipe — surface
-fill, alert border, error ink — which is a per-screen one-off and the same visual weight as the
-primary action above it. `.btn.text-danger` is the missing vocabulary: one class, the same 44px floor,
-the pairing already measured at 5.5:1. This is the same shape as the §70 lesson this file already
-records — *when a stated rule cannot be expressed, look for the missing vocabulary before looking for
-the missing check* — arriving one tier over.
-
-**Measured after:** 101 screens with every failure tally zero (tap floor, contrast, clipping,
-sub-floor type, content under the nav, unreachable controls, horizontal overflow, no console errors),
-741 gate checks, and the eight-corner sweep running against this state.
+**The entry screen overflowed its own sheet by 6px** once the fields went to 52px, and the height was
+not the cause. `.auth-forgot` carries `margin-left:-6px; margin-right:-6px` — a widening that only
+made sense while `.auth-sheet` had 20px of inner padding. Removing the card's padding turned that
+widening into an overflow past the clipping box, and the camera's `controls no tap can reach` tally
+named it at the anchor corner. The margins go; the 44px floor stays. The three legal documents were
+also painted as `.auth-switch` chips — each a 44px pill, so the row wrapped to three lines — and
+became text links at the same floor. Two lessons in one defect: **a rule that removes a container's
+padding has to audit the children that were compensating for it**, and **reusing a component's class
+for a different idea inherits that component's mass.**
+
+**The tracker now names its step.** Six marks on the active-booking card said a job was somewhere on
+a path without saying where. One line, built from the same `STAGES` array the marks are drawn from and
+the same `label()` the app already uses, says the step and the count. Six labels across a 320px card
+would be the collision this file has been asked to avoid five times over, so the naming is a line
+rather than a rail.
+
+**Two chart fixes were made, measured, and taken back.** The axis label that hangs 3px outside its
+plot at default width and 200% text was answered first by anchoring the last *drawn* label to the
+right — which cleared the escape and laid "Sep 14" and "Oct 26" 34x43px on top of each other, because
+a right-anchored edge label points back into its neighbour. The second attempt clamped the label's
+position instead and changed neither tally. Two identical-or-worse readings are two falsified
+hypotheses, so both are reverted and the escape stands as a finding. `git diff` over the whole branch
+shows no line of chart code changed by this pass, which is what makes it pre-existing rather than
+mine, and the earlier session that measured the same band reached the same conclusion in the comment
+that is now back where it was.
+
+**The monogram swap is withdrawn, and the reason is the interesting part.** Two splices of
+`photoFor`/`photoAvatar` left the suite unable to boot — the second failed with
+`CUSTOMERS is not defined` across all 23 checks in the suite — and the gate caught both, so the file
+was restored from the copy taken before the edit and the cartoon faces stay. I did not establish
+*which* line of the inserted block read `CUSTOMERS` before its declaration, and I am not going to
+write a mechanism I did not verify. What is established is the shape of the failure: a bulk text
+replacement moved a helper across a `const` boundary, nothing about the rendered screens would have
+shown it, and only the suite noticed. That is why this change belongs with the harness, which boots
+the page and can see a reference order, and not with another string splice.
+
+## 164. Slice 5, and three instruments that had been quietly pinned to spellings this pass rewrote
+
+**The admin console stopped being an HTML list (P6).** Each "Needs attention" row led with a coloured
+numeral in a `min-width:60px` gutter — the bare number, the gap, the missing icon the brief names. The
+numeral becomes a severity glyph in a tonal container (warning, brand, error, success, neutral — the
+semantic inks already measured for contrast, so no colour is invented) and the count moves into a chip
+beside the words it counts. The rows are still `.job-row`s with a chevron, which an earlier pass had
+already earned.
+
+**The bookings pill said "ongoing".** Removing `text-transform:uppercase` from the status pill was
+right, and one of four call sites had been letting the transform do the capitalising of a raw state
+code. A lowercase word is not clipped, collides with nothing, is on the scale and clears contrast:
+only reading the markup found it. Every chip now prints `label(b.status)`.
+
+**Provider detail toward §5**: a 64px identity monogram, the name at title-lg, the chat action on the
+named tonal tier instead of a hand-typed inline style, and the sticky action bar carrying the one soft
+shadow §3.1 allows it. §5 asks for chat and contact as *two equal* tonal buttons; making them literally
+equal is the defect §70 and `.btn.tertiary` exist to prevent — two byte-identical quiet buttons read as
+equally the next thing to do — so the call keeps its demotion and the deviation is listed rather than
+resolved by a silent edit. The monogram's ink had to follow its container: moving the plate from brand
+blue to the pale primary container left white initials on it at 1.45:1, measured at four screens the
+moment the plate changed.
+
+**Three instruments were stale, not the app.** `falsify-bar-titles` died in its own pre-flight over two
+needles pinned to spellings this pass rewrote (the root heading gained `font-weight:700`; the on-bar
+control moved off translucent white onto the tonal pair), and its sixth break named a check that no
+longer exists — deleting a root-tab variant is *equivalent* now that every bar is light, so the break
+is repointed at the hazard the new rule actually forbids and reads 7 of 7. The gate's queue-number
+reader assumed the count sat before the words; it prefers the trailing chip now, because the leading
+pattern would match the `20` inside `ic('file-text',20)`. And `falsify-visual-contract` printed its
+verdict behind its own name, which the aggregate cannot parse, so the row read "nothing was proven" —
+it prints the conventional summary line as well now. All three are the same rule arriving again: **an
+instrument's assumption about how code is shaped is part of what the code has to respect.**
+
+**Two findings closed by reading rather than by changing.** D7 was reported as an empty dashed box in
+the brief's sandbox; this build already degrades to a pin glyph, the barangay, an honestly-labelled
+sample distance and the service radius through `mapFallback()`, and the walk's network tally shows only
+`*.tile.openstreetmap.org` leaving the device. P7's icon complaint is resolved by the family swap: the
+admin's Help Desk draws `scale`, which `ICON_MEANING` documents as "cases being read for evidence" —
+adjudication, not the external-link arrow the brief saw. Neither was re-drawn, because both were
+already right and the honest move was to say so.
+
+**What the mutation suite still refuses, and why that is correct.** `falsify-build-bytes` aborts on its
+own baseline: the audit reports the built APK disagreeing with the source, which is the accepted state
+until the owner rebuilds it after acceptance. The family is right to refuse — the invariant it guards
+is genuinely unmet — and the fix is a rebuild, not a relaxed needle.
+
+## 165. Slice 5b: the monograms land on the third attempt, two lists stop being cards, and a tier gains its missing member
+
+**A3, done.** The cartoon faces are out of the UI. The first two attempts at this change died the same
+way and neither death was in the app: the splice located the end of `photoAvatar()` by searching for
+the next `}` on its own line, which lives *inside* the following function's template, so it cut
+`serviceAvatar` in half and the suite crashed. The third attempt takes its boundary from the next
+function's **declaration** — a string that exists exactly once — and asserts uniqueness before
+writing. The first version also read `CUSTOMERS`, which is declared 36 lines further down than the
+helper, and the temporal dead zone punished it; the resolver now reads only the object the caller
+holds, the profile the app greets from, and `PROVIDERS`, all of which are above it. A record with no
+name paints the person glyph rather than an invented initial or a question mark, because the disc must
+not claim an identity the record does not hold. `serviceAvatar`'s photo-first branch goes with it: a
+helper that returns a face whenever `PRO_PHOTOS` has an id would undo the change on exactly the rows
+§4.4 is about.
+
+**P1, two lists.** The provider's waiting requests and the conversation list were bordered, filled,
+rounded blocks sitting inside another block — the card-in-card that reads as a web dashboard. Each is
+now a row of the list component with a hairline between siblings, and the request list stops adding
+9px of margin per item, which was the other half of why six of them looked like six cards. The data
+attributes, handlers and aria labels are unchanged: this is a container decision, not a behaviour one.
+
+**A tier that could not say what the rule said.** §5 asks for the destructive action as a text button
+at the bottom. The button system had primary, secondary, tertiary and destructive-fill and **no
+destructive member of the demotion tier**, so both hubs hand-typed the same inline recipe — surface
+fill, alert border, error ink — which is a per-screen one-off and the same visual weight as the
+primary action above it. `.btn.text-danger` is the missing vocabulary: one class, the same 44px floor,
+the pairing already measured at 5.5:1. This is the same shape as the §70 lesson this file already
+records — *when a stated rule cannot be expressed, look for the missing vocabulary before looking for
+the missing check* — arriving one tier over.
+
+**Measured after:** 101 screens with every failure tally zero (tap floor, contrast, clipping,
+sub-floor type, content under the nav, unreachable controls, horizontal overflow, no console errors),
+741 gate checks, and the eight-corner sweep running against this state.
 
 
 ## 166. The job path became one component, and the pass found the screen had four buttons for two decisions
@@ -10345,3 +10345,266 @@ The first two condemn the same painting from two doors, which is recorded rather
 walk gained a row that scrolls to it — a picture of the wrong card is not a measurement).
 `node tools/falsify-one-action.cjs` 3 of 3. `node tools/falsify-painted-contracts.cjs` 6 of 6,
 0 not applied, page and probes restored.
+
+## 167. The offline claim became a run, and the family that proves it found its own wrong expectation
+
+**What the brief asked.** §1.7 allows exactly one remote dependency — OpenStreetMap tiles — and §81
+forbids a remote dependency for anything essential. §8 lists "offline check" among the verification
+runs. D7 in the findings ledger was the open half: the brief's sandbox saw an empty dashed box where
+the map should be.
+
+**What the evidence was before.** A tally counting the requests that DID leave the device, plus a
+reading of `mapFallback()`. That is the same claim from the wrong side: it proves what the app asks
+for, not what the app does when the ask fails.
+
+**What landed.**
+- `shot.cjs --offline` asks Chrome to emulate a device with no network (`Network.enable`, then
+  `Network.emulateNetworkConditions({ offline: true, … })`), the same mechanism `--dark` and
+  `--reduced-motion` already used.
+- `tools/probe-offline-map.js` waits for the give-up and reads what was painted in the map's place.
+  On `provider-detail` with the network gone it answers `fallbackPainted: true`,
+  `fallbackWords: "Brgy. Poblacion · about 0.8 km away (sample figure, not measured from you) They
+  travel up to 5 km from there."`, `tilesRequested: 0`, `blankTiles: 0`. A screen that mounts no map
+  abstains with `mapsOnScreen: 0` rather than reporting a pass, because "no map here" is a legitimate
+  answer and scoring it as a clean run would be the instrument inventing a defect out of its own
+  population.
+- The full walk re-run with `--offline` reports every failure tally 0. The one line that stays
+  nonzero is `requests that left the device for a network: 1330` — and under `--offline` that tally
+  means *requests attempted*, because CDP reports the send even when nothing can arrive. Stated
+  rather than quietly re-interpreted: the tally is a counter of asks, not of arrivals.
+
+**The family's own wrong expectation.** `falsify-painted-contracts` grew two breaks for the map
+probe. I wrote the second as `expect: 'abstain'`, reasoning that blinding the fallback lookup would
+make the probe report no map. It printed `MISSED (still saw a map: 1)` — the mount list and the
+fallback lookup are two different reads, so blinding one leaves the other intact, and the correct
+consequence is a FINDING ("a map was mounted and no fallback was painted"), which is the stronger
+property. Re-pointed and re-run: **8 of 8 breaks caught, 0 not applied**, page and probes restored.
+This is the same rule the repository has written down before — an `expect:` string is a claim about
+output and has to be copied from a real run, not written from the intent behind it.
+
+**Two patcher defects in the scripts that got here**, both caught by an anchor count before they
+could reach a commit, and both worth recording because they are the same shape:
+- a `sub()` helper that closes over the ORIGINAL text instead of the running result applies only its
+  LAST edit and leaves the file half-changed — `shot.cjs` gained the `if (OFFLINE)` block without the
+  `const OFFLINE` that defines it, and died on the first call with `OFFLINE is not defined`;
+- a needle written from memory of what a line said matched nothing twice (`'CAUGHT  ' + b.name + ' →`
+  versus the file's two spaces before the arrow). The second failure is the cheaper one to avoid:
+  print the count, then read the line.
+
+**Numbers, from the runs that printed them.** `node tools/falsify-painted-contracts.cjs` 8 of 8.
+`node tools/verify.cjs` 742. `node tools/shot.cjs --measure --offline` — every failure tally 0.
+
+## 168. The audit caught the ledger over-claiming A3, and the fix led to a pre-warm nobody needed
+
+**What the ledger said, and what was true.** §4.5's row read "A3 fixed — monograms replace the cartoon
+faces across the UI". Two admin screens were still painting an avatar PNG: the provider-management
+profile (`VERIF_PHOTOS[provider.id]`) and the verification review
+(`VERIF_PHOTOS[app.id] || 'avatars/avatar-10.png'`). The second is the worse one, and it is a class
+this file has closed five times over: an applicant with no row in the table was drawn as **`maria`**.
+The identity-substitution defect at `providerOf()`, at the record lookups, at the id-carrying entries,
+at the register form — arriving through an image path. No instrument can see it: a wrong face is not
+clipped, collides with nothing, is on the type scale and clears contrast.
+
+**How it was found.** Not by a run. By the completion audit's own instruction to re-check the rows the
+pass had already closed: the check counted `avatars/` occurrences in the page, got 21, and went to look
+at them instead of accepting the ledger.
+
+**What was fixed, and what the fix exposed.** Both sites now call `photoAvatar`, the one function that
+decides between a monogram and a real upload, so §4.5's image slot is intact and the fallback that
+borrowed a named applicant is gone. Removing the paint sites then made a second thing visible:
+`warmAvatars()` is an IIFE that preloads all 22 avatar PNGs on boot. Its stated reason — an `<img>`
+inserted by a re-render flashes an empty disc on `file://`, and that flicker made taps feel like page
+reloads — describes a defect class that left the build when the monograms landed. So the app was
+paying a decode cost on a low-spec device for nothing, and, more to the point for §4.5, the PNGs could
+not honestly be called *unreferenced* while every one of them was still being requested at startup.
+The warm-up is deleted; `PRO_PHOTOS`, `VERIF_PHOTOS`, `SELF_PHOTOS` and `photoFor()` stay, because
+that is the upload slot, and `SELF_PHOTOS` is still read by `photoFor`.
+
+**§3.4's two chrome asks, applied rather than substituted.** `FSM` → `Jobs` on the nav item, the
+screen header, and the one button that said "Open FSM dispatch" — the tab value `'fsm'`,
+`providerFSM()` and every handler untouched, because §1.3 protects the navigation and history logic,
+not the word. And the admin Help Desk nav glyph became `support_agent` (Material Symbols, same family
+and same commit as the other 47), with `scale` left on the case objects themselves where it reads
+"cases being read for evidence". The pass had substituted `scale` for the nav item and argued it;
+§1.11 licenses apply-and-disclose only when an AGENTS.md rule blocks the brief, and none does here, so
+the brief's option applies and the reasoning is recorded instead of the substitution.
+
+**Numbers, from the runs that printed them.** `node tools/verify.cjs`, `node tools/measure.cjs`
+(glyph census), `node tools/shot.cjs --measure` over the changed screens, and
+`node tools/falsify-painted-contracts.cjs` after it gained the painted-holes break — all printed in
+the chain log this section was written from.
+
+## 169. The width nobody had swept, the walk row that had never painted, and a licence record one glyph short
+
+**The brief's grid found what the repository's corners could not.** §8 asks for 320, 360, 390 and 430
+CSS px at text scale 1.0 and 1.35, in app mode and in the desktop frame. The sweep in
+`tools/sweep-text-scale.cjs` had eight corners, every one of them produced by a device that had been
+photographed or measured — 320, the default 390, and the vivo's 450 — and none of them was 360. Running
+the brief's own grid rather than the repo's habit found three defects on the first pass, all the same
+one: the booking sheet's payment rail left **2px of "Cash on Arrival" past its own scroller**, on
+`booking-sheet`, `fruit-sheet` and `fruit-harvest-sheet`, at the **default** text size. That is the
+shape every corner in the old set was blind to: the eight pair narrow panels with large text because
+that is where clipping was found, and a clip produced by an ordinary width at ordinary type is not a
+narrow-times-large case at all. §5 names it as a failure outright — "never half-cut chips" — and 2px is
+not a scroll a thumb will ever finish, so `.req-rail` now wraps when the panel cannot hold the row:
+`flex-wrap:wrap`, with the comment naming the width that found it. A rail that fits still paints one
+row, so nothing moves at 390.
+
+**The corners stay, because the width is a class of phone, not an accident.** `360 CSS px @ 100%` and
+`@ 135%` are in `DEFAULT_CASES` now (ten corners; the run prints its own list, and the sentence in
+AGENTS.md §68 that used to be the count says so instead of carrying one), and the guard on the defect is
+the measurement that found it: the camera's `controls no tap can reach` tally, which reported the three
+clips and now reads 0 at that width. No new gate check was written for the wrap, because a check that
+re-reads the declaration would assert the *spelling* while the tally asserts the *pixels*, and the
+pixels are what the brief asks about.
+
+**And the same run surfaced a row of the walk that has never painted anything.** Every corner printed
+`no console errors across **101** screens` while `node tools/shot.cjs --list` counts **102**, and the
+line explaining it was one of the quieter formats in this repository:
+
+```
+  SKIP provider-job-path — Cannot read properties of undefined (reading 'id')
+```
+
+The row asks for a job already on the path — `bookingsForProvider().find(b => b.status === 'ongoing').id`
+— and `bookingsForProvider()` reads `CURRENT_PROVIDER_ID`. Nine rows of the walk call
+`applyProviderIdentity('p7')` for the fruit pilot and none of them restores it, so by the time the walk reaches `provider-job-path`
+it is asking the **fruit harvester** for the plumber's ongoing job. Run alone the row paints
+(`shot provider-job-path shows "Booking details"`), which is precisely why it hid: a one-row run starts
+from a clean store and the default identity, and the pass that added it was checked with one row. So the
+stepper — the component §166 built and §10's report pairs a frame of — has never been measured by
+anything, and every failure tally in ten corners stayed 0 because the screen it would have applied to
+was not in the run.
+
+Two fixes, in that order of importance:
+
+- The walk's per-row preamble now restores the signed-in provider before each row's own navigation,
+  beside the `clearModals()`, `isChatOpen` and Back-debt resets that were already there. A row that
+  wants another account sets it in its own entry — the fruit rows do — and a row that names a screen
+  gets the account that screen's name claims. This is the fourth form of the trap this file has
+  written four times: *a walk that moves the model without moving the field photographs a state nobody
+  can reach*; here the model moved eleven rows earlier and the field never came back.
+- A skipped row is now a **failing tally**. `tools/shot.cjs` prints
+  `camera rows that never painted a screen`, and because `sweep-text-scale.cjs` treats any count it does
+  not recognise as must-be-zero, a row that dies is a red corner rather than a smaller screen count.
+  Before this, the instrument's own failure could only be found by comparing two numbers in two
+  different tools. The tally is guarded in turn: the gate check
+  `a camera row that never paints is counted by the run, not only printed` pins that the `SKIP` branch
+  and the `skipped.push` are one statement, and `node tools/falsify-camera-surfaces.cjs` gained a fourth
+  break that severs them and requires that check to fail. Gate 742 → 743.
+
+**A stale frame satisfied the pairing check the same walk should have produced.** The report stage
+copies 24 named screens out of `.shots/` and prints `missing from the walk: none` — a sentence that was
+false, because `existsSync` does not ask *when*. `provider-job-path.png` was stamped 04:58 while every
+other frame carried 05:18: it came from a one-row run, not the walk. So the report's stepper frame was
+real and the claim attached to it was not, which is the same defect as a tally reading 0 over a sensor
+that never fired. The refresher is `.scratch/refresh-after-2.cjs` now: it deletes the 24 frames before
+the walk, requires each to reappear with an mtime after the run started, reads the walk's own `SKIP`
+lines, compares the screens it painted against `--list`, and exits 1 on any of the four.
+
+**Two hand-kept records went stale in the same direction, and both were readers rather than counts.**
+`assets/ICON-LICENSES.md` shipped **47 rows against the 48 glyphs `measure.cjs` counts**, because the
+generator's pattern required `{o:` and the entry added for the Help Desk was written `{o: ` — one space,
+and the one glyph whose provenance the record exists to state was the glyph missing from it. The row
+count is now compared against the `ms: "` declarations inside the block, so the guard is
+"every glyph drawn has a row", not "at least forty rows parsed". README's command list lost its
+`--offline` line for a reason this file has written down before: a patcher's `sub()` helper closed over
+the original `src` instead of the running value, so its second substitution silently discarded its
+first — the prose landed, the command did not, and the script's own report (`command listed: false`) was
+the only honest line in it.
+
+**A ratchet nobody runs went red, and the number is this pass's own work.**
+`node tools/audit-design-consistency.cjs` reports `inline_styles 1119 [RISEN from 1001]` and
+`literal_radii 20 [RISEN from 17]`. The ceilings were blessed in §147 and the audit is wired into
+neither the gate nor the sweep, so the count has been climbing for a dozen passes while nothing
+looked. Diffing the working tree against `git show HEAD:Sukinnect-next.html` shows the last two
+commits *shrank* it by 2, which is the reading that matters: the growth is spread across the whole
+visual pass and dominated by one missing component — 274 markup blocks type their own
+`font-size:var(--t-caption)` fine print instead of taking a class. Converting them is a change with
+pixel consequences (those 274 do not share a line-height or a margin), so it is recorded as owed
+rather than done in the same breath as a measurement pass. The ceiling is deliberately left where it
+is: `--bless` would turn the finding into silence, and §9 criterion 7 does not name this audit among
+the gates that must pass, so a red row here is a debt register rather than a blocked build.
+
+**A corner that had been clean for a month went red by itself, and the cause was the calendar.** The
+ten-corner sweep reported `chart labels painted outside their own chart box: 1` at default width with
+the text at 200%: `provider-dash "Oct 26" (chart-cat) hangs 3px sideways of a 332px box`. Nothing in
+the chart had been edited. The eight-week series is built from relative seed dates, so which Monday a
+50-day-old job lands in is a date — §72 wrote that sentence down for the *peak*, and it turns out to
+apply to which label is last as well. The last drawn label sat at 79.06% of a 220px plot with an 85px
+word centred on it, and the anchor band that decides centred-versus-edge-anchored is `cxPct > 80`, so
+it missed by 0.94 percentage points and hung 2.5px past the box.
+
+The band's own comment had already named the correct rule and declined it: *"Anchoring each kind by
+its own last … would be correct. It is not done here because the thinning above already moves the
+last drawn label to 55% of the box at 200% text, so no corner measures a defect this rule would fix."*
+The precondition it asked for — a corner that measures one — arrived, so the rule is written: the
+plot's measured width and the label's measured reach decide the anchor, each kind with its own reach
+(a bar's number is narrower than a date), and the band is kept verbatim on the path with no layout to
+measure, which is the Node harness. `probe-cat-hang.js` reads `findings: 0` where it read 1,
+`node tools/falsify-chart-collide.cjs` is 4 of 4 with `escape=0` at every corner it tests, and the
+sweep was re-run whole. The harness path is not decoration: the render checks read these classes out
+of markup, so a rule that only exists when a box exists had to keep the old answer where there is no
+box.
+
+**The fix then made a second defect, and the family that caught it was the one that went quiet.** With
+the last label right-anchored, "Oct 26" moved *left* by half its own width and landed 34x43px on top of
+"Sep 14" — §72's lesson from the other side: a legibility fix that creates a collision is not a fix. The
+first guard written for it dropped any label that reached into its neighbour, and when the family was
+re-run, `the x-axis stops thinning` printed **collide=0, MISSED**: the safety net was now catching the
+overlaps the stride rule exists to prevent, so a rule that was still needed had stopped being
+observable. That is the same hazard as an orphaned needle, arrived at by adding code rather than by
+renaming it. The guard is scoped to the case it was written for — only a right-anchored word reaches
+backwards, because right-anchoring is what this pass introduced — and centred and left neighbours stay
+the thinning budget's business. Re-run: **4 of 4**, and the thinning break now reports `collide=15`,
+which is the number that says the stride rule is still the thing holding those fifteen apart. Two
+guards over one hazard are only safe when each still has a failure only it can see.
+
+**Numbers, from the runs that printed them.** 
+**Numbers, from the runs that printed them, on the bytes `1dd45485a85479d9cd6875c00752348c`.**
+
+- `node tools/verify.cjs` → **all 743 checks passed** (742 → 743: the skipped-row check).
+- `node tools/shot.cjs --measure` → **102 screens**, every failure tally 0,
+  `camera rows that never painted a screen: 0`, no console errors.
+- `node tools/sweep-text-scale.cjs` → **10 of 10 phone corners measured clean**, 26 tallies each.
+  The first pass of this build read 9 of 10: `default @ 200%` reported one chart label 3px sideways of
+  its box, and the fix for that produced a collision the family then caught by going quiet.
+- `.scratch/brief-matrix.cjs` (the brief's own grid) → **11 of 11 corners fully clean**: 320/360/390/430
+  × 1.0/1.35 in app mode, the desktop frame, and the visual contract at 390×844 and 360×740
+  (`answers 1, findings 0, refusals 0`).
+- `.scratch/probe-cat-hang.js` → `findings: 0` where it read `findings: 1`, `hangRight: 2.5`.
+- `node tools/falsify-chart-collide.cjs` → **4 of 4 breaks caught, 0 not applied, 2 observed**
+  (equivalent mutations reported as measurements, never as green rows); the x-axis-thinning break now
+  reads `collide=15`, which is the evidence that the stride rule is still what holds those fifteen apart.
+- `node tools/falsify-camera-surfaces.cjs` → **4 of 4 mutants caught, 0 not applied; file restored** —
+  the fourth one is the new break that severs the `SKIP` branch from the tally.
+- `node tools/falsify-all.cjs` → **70 families, 414 mutants applied, 412 caught, 0 not applied, 3
+  families needing attention**, exit 1. The page came back `1dd45485…` and `git status` after the pass
+  showed only the documents, so every family restored what it mutated. The three rows are read, not
+  smoothed over:
+  - `build-bytes` — `ABORT — the audit does not answer clean on the unmutated tree`. That is the
+    owner's standing decision to leave the public/staged build stale, so the family refuses rather
+    than mutating an audit whose baseline is red. An accepted state and a tripwire, not a task.
+  - `focus-trap` — `MISSED the lookup goes back to class names, which the verification overlay does
+    not have (Tab still stayed inside the layer, so this is not what holds it)`. The hazard is
+    over-determined: the hit-test (five probe points) is what keeps a control reachable, and the
+    class-name lookup is a second rule that the same outcome does not depend on. Recorded as an
+    equivalence, kept in the family, and the reason is printed beside it.
+  - `nav-fit` — `MISSED the fit measures the item's box again, so it stops while the label is still
+    clipped (still 0 everywhere, so neither sensor reads this rule)`. This is §144's finding from the
+    bench side: the item-box-versus-label-box confusion was only observable on the OPPO at its own
+    `font_scale 1.35`, where the two boxes differ by the platform's padding. On the bench
+    `navFontScale()` is 1, so the mutant and the correct code paint the same pixels and no sensor can
+    tell them apart. The break stays, the reading is stated, and the leg that could actually observe
+    it is the handset leg `DEVICE-PASS.md` still owes.
+- `node tools/audit-build-bytes.cjs` → source and `dist/` agree after the rebuild; the staged Android
+  asset and the APK copy **differ by design** until the owner rebuilds the shell (§1.10).
+- `node tools/falsify-painted-contracts.cjs` → **9 of 9 breaks caught, 0 not applied**, page and all
+  five probe files restored byte-for-byte.
+- `node tools/measure.cjs` → 13,981 lines, one `:root`, 115 tokens with 3 unreached (the exception set,
+  pinned as a set), 29 hex strings outside `:root`, 48 glyphs drawn / 43 reachable, 102 screens.
+- `.scratch/refresh-after-2.cjs` → 24 frames deleted before the walk, **24 copied after, 0 skipped,
+  102 painted against 102 in the table, none older than the run that claims them, none byte-identical
+  to its before-frame**, one row without a pair because `provider-job-path` is a new screen.
+- `node tools/audit-design-consistency.cjs` → `inline_styles 1119 [RISEN from 1001]`,
+  `literal_radii 20 [RISEN from 17]`; the ceilings were left un-blessed on purpose.

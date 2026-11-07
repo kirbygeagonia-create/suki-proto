@@ -1268,14 +1268,18 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 13,737 lines, ONE :root block, 2,314 var() usages, 100 tokens declared with 99
-                    of them reached — the one exception is `--info`, kept declared because §31 names it
-                    and §34 forbids spending it on a brand chip, and pinned as the sole exception by a
-                    gate check (see the token paragraph below). Twenty-eight hex-shaped strings sit outside :root, and the
+Sukinnect-next.html— 13,981 lines, ONE :root block, 2,381 var() usages, 115 tokens declared with 112
+                    of them reached — the three exceptions are `--info`, kept declared because §31 names it
+                    and §34 forbids spending it on a brand chip, plus `--accent-brand` and
+                    `--surface-brand-soft`, which §31A's ruling 1 names as the cyan rule and the field
+                    behind the sign-in card while the surfaces that painted them went flat. The gate pins
+                    the SET rather than the count: the unreached set must equal `TOKEN_EXCEPTIONS`, and
+                    every exception must still be declared (see the token paragraph below). Twenty-nine
+                    hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
                     (§45 — the seventh is Fruit Harvest & Buy); one is the <meta
-                    name="theme-color"> value, which cannot take a var(). The remaining nine are
+                    name="theme-color"> value, which cannot take a var(). The remaining fourteen are
                     printed line by line, because a comment quoting a measured brand value and a
                     hard-coded colour in markup are the same string to any scanner — and one of
                     them (`#9021`) is a booking id, not a colour at all. Fifteen `#fff` values that
@@ -1289,23 +1293,29 @@ Sukinnect-next.html— 13,737 lines, ONE :root block, 2,314 var() usages, 100 to
                     heading count, all of them moved by the nav-label work — which is why the
                     figures above were re-run rather than re-read. They moved a fourth time the
                     next day (§76's eleven lines of day helpers) and a fifth the same evening
-                    (§77's dialog labelling), a sixth time with §78's register branch, a seventh for §79's nav-box correction, an eighth for §81's analytics row, a ninth for §82's Insights rewrite, a tenth for §83's single clock reading and an eleventh for §85's declared scheme and dashboard header, a twelfth for §89’s seven lines of nav-floor comment and conversion — and each time the fix was to run the tool, not to re-read the sentence. The next
+                    (§77's dialog labelling), a sixth time with §78's register branch, a seventh for §79's nav-box correction, an eighth for §81's analytics row, a ninth for §82's Insights rewrite, a tenth for §83's single clock reading and an eleventh for §85's declared scheme and dashboard header, a twelfth for §89’s seven lines of nav-floor comment and conversion, and a thirteenth across the mobile-app visual pass — 244 lines, 15 tokens and a heading count that changed meaning when the chrome pass moved every bar title into one component — and each time the fix was to run the tool, not to re-read the sentence. The next
                     reader should cite the tool rather than trust it.
                     Everything that was a real violation is now a token: #fff became
                     --surface and --on-brand, the modal dim became --scrim, and the phone
                     mockup's bezel and signal bars became --device-bezel and
-                    --device-signal. Type is fully on the scale: of the 124 `font-size`
-                    declarations in the stylesheet, 122 take a var(), none is a literal px,
+                    --device-signal. Type is fully on the scale: of the 131 `font-size`
+                    declarations in the stylesheet, 129 take a var(), none is a literal px,
                     and the two that are neither are the `h1, h2` reset set to `inherit` — which is
                     what lets an <h1> sit in a flex bar as the div it replaced — and the `:root`
                     line §68 explains at length, `min(1em, 20px)`, which a phone ignores and the
-                    sweep exists to absorb. The 461 `font-size` declarations inside
+                    sweep exists to absorb. The 457 `font-size` declarations inside
                     markup's inline styles all take a var() too, except one: the throwaway span
                     `navFontScale()` measures the phone's text inflation with, which has to be a
                     literal 100px or it is measuring nothing. Every screen in the app now opens with
-                    an <h1> and every sheet with an <h2> — 24 and 6, the sixth being the weighing
-                    sheet — because an app of seventy-odd screens with no headings has no outline for
-                    a screen reader to navigate. This sentence was false when it was first written, and
+                    an <h1> and every sheet with an <h2> — the tool counts 6 and 14 **source literals**,
+                    which is not the painted figure and has not been since the chrome pass moved every
+                    bar title into `screenHeader()`: the headings are painted from one component, so the
+                    literals went down while the screens they render stayed the same. The painted claim
+                    is the one the gate holds (`no app screen paints no <h1>`), and the literal count is
+                    the one `node tools/measure.cjs` can print without a browser — and the rule is there
+                    because an app of a hundred screens with no headings has no outline for a screen
+                    reader to navigate.
+                    This sentence was false when it was first written, and
                     stayed false for two screens (the resident's booking detail hand-rolled a bare
                     <div> where the provider's used the shared header, and the chat room titled
                     itself with a name in a div): the screens pass in tools/verify.cjs now fails
@@ -5184,8 +5194,15 @@ probes that measure nothing. `falsify-probe-population` belongs to both lists: i
 the runner. `falsify-preflight` belongs to neither: it drives `falsify-all.cjs` itself, and is the only
 family whose target is the test machinery's own hygiene.
 
-Measure it with `node tools/sweep-text-scale.cjs` — eight phone corners, the camera each time: 320px
-@ 200% text, default width @ 200%, 450px @ 135% (a vivo panel at the OPPO's setting), **320x638 @
+Measure it with `node tools/sweep-text-scale.cjs` — ten phone corners, the camera each time, and the
+run prints its own list so this sentence is never the count: 320px
+@ 200% text, default width @ 200%, 450px @ 135% (a vivo panel at the OPPO's setting), **360 CSS px at
+100% and at 135%** (the width the mobile-app brief named and no handset in this repository reports —
+it is the density-3.0 phone, 1080 physical px over 3.0, so it had never been produced by a photograph
+and had therefore never been swept. It earned its two corners on the first run: the booking sheet's
+payment rail left 2px of "Cash on Arrival" past its own scroller on all three sheets, at the
+*default* text size, which is exactly the shape a corner set that pairs narrow with large cannot see),
+**320x638 @
 135%** (the OPPO CPH2179 as measured on the device — added on 2026-10-18 from a photograph of that
 handset whose nav labels read `Booki…` and `Mess…`, and corrected the next day from the device itself:
 `Override density: 360` on a 720px panel is a **density**, so the layout width is 720 ÷ 2.25 = **320
@@ -5193,7 +5210,7 @@ CSS px**, `innerHeight` 638 with the system bars taken off. The case was labelle
 is what happens when a corner is named after a device without asking the device), 320x480 @ 200%
 (a short handset or split-screen), 320x300 @ 100% (what a keyboard leaves on a small phone, since
 nothing here emulates a keyboard), **450x889 @ 200%** (the vivo's own panel at the device's largest text —
-handset walk 7 produced it, and the seven corners before it paired narrow panels with large text because that
+handset walk 7 produced it, and the corners before it paired narrow panels with large text because that
 is where clipping was found), and the 100% anchor — which fails if any tally is nonzero and
 treats a tally it does not recognise as must-be-zero, so a sensor added tomorrow cannot be silently
 informational. Single corners are still runnable:

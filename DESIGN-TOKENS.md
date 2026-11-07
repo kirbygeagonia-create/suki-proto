@@ -121,6 +121,7 @@ an inversion cannot. In Flutter: `elevations` inside a `Scaffold`, then a route,
 | category tile | `.tile`, `.tile.lg` | a `Container` with the pair from §2 |
 | filled / tonal / outlined / text button | `.btn`, `.btn.secondary`, `.btn.tertiary`, `.btn.danger`, `.btn.onbar` | `FilledButton`, `.tonal`, `OutlinedButton`, `TextButton` |
 | chip / choice chip / filter chip | `.chip`, `button.chip`, `[aria-pressed]` | `ChoiceChip`, `FilterChip` |
+| choice rail (payment, saved address) | `.req-rail` of `.pick[aria-pressed]`; wraps to a second row when the panel cannot hold the whole row, so a chip is never half-cut | `Wrap(spacing: 8, runSpacing: 8)` |
 | segmented control | `.auth-switch`, `.seg-btn` | `SegmentedButton` |
 | text field | `.form-input`, `.form-label` | `TextFormField` |
 | bottom sheet | `.sheet-layer`, `.sheet` | `showModalBottomSheet` |

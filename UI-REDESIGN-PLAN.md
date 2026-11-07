@@ -149,3 +149,40 @@ prominent primary action per state, the concierge's prompt chips, P9's long subt
 overhang at 200% text (pre-existing, two fixes measured and reverted), the APK rebuild, and every
 handset leg. The pass is not complete and does not claim to be.
 
+
+## Ledger, final (after the job path, the one-action repair and the three new probes)
+
+| Item | Now | What the instruments say |
+|---|---|---|
+| §5 Booking detail / tracking | **done** | `stepPath()` paints a labelled vertical stepper on the resident's tracking screen and the provider's job screen; the current step carries `stateHint()` and each walked step carries the stamp the record wrote. `probe-step-words-agree.js` reads 12 cards and 21 surfaces over 102 screens and finds no screen naming one job two ways. |
+| §5 Provider dashboard / job | **done, and it found a defect** | The job screen painted four buttons for two decisions — "Accept request"/"Decline" in the request card and "Accept this request"/"Decline this request" in the action bar. `jobActionBar(b, { answerAbove })` keeps the path and drops the duplicate moves; the surviving button reads its words from `JOB_VERBS`. Proven by `node tools/falsify-one-action.cjs` (3 of 3). |
+| §5 AI Concierge | **done** | The prompt chips come from `CONCIERGE_PROMPTS` and take their look from `button.chip`; the simulated-flow note is still the quiet inline card. Clicking a chip in a real browser fills the field with all 84 characters — the proof the escaping change cost nothing. |
+| §5 All sheets / modals / forms | **done on the two sites this pass touched** | "No page-specific one-offs" was checked by removing the concierge rail's four inline properties and the provider status cell's hand-typed `text-transform`. The remaining one-offs are the ones the components already cover. |
+| P9 long copy in tight rows | **done** | The provider dashboard's "2 more scheduled jobs" row split its run-on caption: date and hour on line one, the job's own words on line two. |
+| §8 five new probes | **done** | `probe-zero-style`, `probe-visual-contract` (both falsified by `falsify-visual-contract`, 5 of 5), plus `probe-action-duplication`, `probe-step-words-agree`, `probe-flat-palette` — all three falsified by `falsify-painted-contracts` (6 breaks: 3 plants, 3 refusals). |
+| D7 offline placeholder | **done, and now a run rather than a reading** | `mapFallback()` was already there; `shot.cjs --offline` tells Chrome the device has no network, so the claim is measured on the screens that ask for tiles. |
+
+**What is still not done, stated as not done.** The APK copy of the page is stale until the owner rebuilds it (§1.10); the `FSM` → `Jobs` label is an owner decision; the cartoon PNGs and `avatars/` sit on disk unreferenced awaiting approval to delete; the handset legs, the spoken screen-reader wording, and the one-minute task timing need a phone and a thumb.
+
+
+## Ledger addendum (the last four passes: A3 finished, the chrome words, the width nobody had swept)
+
+| Item | Now | What the instruments say |
+|---|---|---|
+| A3 cartoon avatars | **finished, after the audit re-opened a closed row** | Two admin paint sites were still requesting a PNG, and the verification review's fallback drew an applicant with no row as `maria`. Both call `photoAvatar` now, and `warmAvatars()` is deleted — it decoded all 22 files on boot for a flicker class that left the build with the monograms, and it is why the PNGs could not honestly be called unreferenced. `node tools/measure.cjs`: paint sites 0, `new Image()` for avatars 0, paths still named 18 (the three upload tables). |
+| §3.4 chrome words | **applied, not substituted** | `FSM` → `Jobs` on the nav item, the screen header and the one button; `support_agent` on the admin Help Desk, with `scale` left on the case objects. The tab value, `providerFSM()` and every handler are untouched, so §1.3 is intact — the word changed, the navigation logic did not. |
+| Icon provenance record | **48 rows for 48 glyphs** | `assets/ICON-LICENSES.md` shipped 47 rows because the generator's pattern required `{o:` and the new entry is written `{o: `. The count is now compared with the `ms: "` declarations inside the block, so the guard is "every glyph drawn has a row". |
+| §8 width grid | **11 of 11 corners clean, and the grid found what the sweep could not** | 360 CSS px had never been run: the payment rail left 2px of "Cash on Arrival" past its scroller on three booking sheets at the *default* text size. `.req-rail` wraps now; the two 360 corners are in `DEFAULT_CASES`, which is ten corners and the run prints its own list. |
+| The walk's own coverage | **102 screens, and a skipped row now fails a corner** | `provider-job-path` had skipped at every corner since the row was added: nine fruit rows sign in as p7 and `CURRENT_PROVIDER_ID` is a module binding, so the row asked the fruit harvester for the plumber's ongoing job. The per-row preamble restores the identity, and `camera rows that never painted a screen` is a tally the sweep fails on. |
+| §8 five probes | **six, and the family is at 9 breaks** | `probe-painted-holes.js` reads the painted page for `undefined`/`NaN`/`[object Object]` rather than grepping the source; `node tools/falsify-painted-contracts.cjs` → 9 of 9, 0 not applied. |
+
+| Chart axis anchoring | **the rule the comment declined, written when its own precondition arrived** | `default @ 200%` reported one label hanging 3px sideways of its chart box on the provider dashboard — not an edit, a date: the relative seed moved which week label is drawn last, and it landed at 79.06% of the plot against an `> 80` anchor band. The anchor is measured now (plot width against label reach, per kind), with the band kept for the harness path that has no box. The first version of the fix then put `Oct 26` 34x43px on top of `Sep 14`, and the guard written for *that* swallowed the thinning rule's proof until it was scoped to the one anchor direction that reaches backwards. `falsify-chart-collide` 4 of 4, the thinning break at `collide=15`. |
+| Design census | **two ratchets are red, and they are this pass's** | `node tools/audit-design-consistency.cjs`: `inline_styles 1119 [RISEN from 1001]`, `literal_radii 20 [RISEN from 17]`. The audit is in no gate and no sweep, so the climb was invisible for a dozen passes; the last two commits moved it by −2. The bulk is one missing component — 274 fine-print blocks that type `font-size:var(--t-caption)` themselves instead of taking a class. |
+
+**What is still not done, stated as not done.** The fine-print component that would take the 274
+inline `font-size:var(--t-caption)` blocks out of the census (and with them the ratchet that is red);
+the APK copy of the page is stale until the owner
+rebuilds it (§1.10); the cartoon PNGs and `avatars/` sit on disk unreferenced awaiting approval to
+delete; the handset legs, the spoken screen-reader wording, and the one-minute task timing need a
+phone and a thumb; and the wallet contradiction (conflict C4) is the owner's to rule on, not this
+pass's to resolve.
