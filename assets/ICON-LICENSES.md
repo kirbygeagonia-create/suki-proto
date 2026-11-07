@@ -62,6 +62,7 @@ files in the official repository, so nothing is fetched at runtime.
 | `inbox` | `inbox` | outlined + filled |
 | `leaf` | `nutrition` | outlined (filled falls back to outlined) |
 | `weight` | `fitness_center` | outlined + filled |
+| `support` | `support_agent` | outlined + filled |
 | `route` | `route` | outlined + filled |
 | `wrench` | `build` | outlined + filled |
 | `plumbing` | `plumbing` | outlined + filled |
@@ -74,7 +75,7 @@ files in the official repository, so nothing is fetched at runtime.
 | `grid` | `apps` | outlined + filled |
 | `help` | `help` | outlined + filled |
 
-47 names are drawn. The seven trades draw their own glyph (`plumbing`,
+48 names are drawn. The seven trades draw their own glyph (`plumbing`,
 `electrical`, `cleaning`, `tutoring`, `appliance`, `delivery`, `fruit`), the home grid's eighth
 tile draws `apps`, and the admin's Help Desk draws a support glyph rather than an external-link
 arrow.

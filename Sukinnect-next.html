@@ -2226,18 +2226,14 @@ function serviceMeta(serviceId){
            pilot:!!svc.pilot, behaviour:categoryBehaviour(svc.id) };
 }
 
-// One pre-rendered soft-3D image per trade, for the category tiles. These are real
-// files in assets/category-art/, not vector scenes: the corrective brief is that the
-// hand-drawn SVGs read as flat symbols next to a dimensional marketplace app, and a
-// second pass of refining the same shapes would have produced the same picture. Each
-// render carries its own tinted plate, so the tile paints nothing behind it.
-//
-// Static by rule and by nature — a PNG cannot move, and no transform is applied to it
-// or its wrapper. Provenance, dimensions, byte cost, and the reason the CC0 3dicons
-// collection was researched and then not used are in assets/category-art/ASSET-LICENSES.md.
   /* The seven AI-generated category PNGs are retired: each trade draws its own glyph
      from the one icon family, and the licence record is assets/ICON-LICENSES.md. The PNG files stay
-     on disk, unreferenced, pending the owner's approval to delete (brief §4.5 and §4.6). */
+     on disk, unreferenced, pending the owner's approval to delete (brief §4.5 and §4.6).
+     The paragraph that used to sit above this one described the PNGs as current — "one pre-rendered
+     soft-3D image per trade … the tile paints nothing behind it" — and disagreed with the note below
+     it about what the tile actually draws, which is the §46 class: two adjacent comments arguing
+     about one surface. The artwork never moves, for a glyph exactly as for a PNG, and the camera
+     counts moving category nodes on every screen rather than trusting either comment. */
 
 // Accepts a provider object or a provider id.
 function serviceByProvider(providerOrId){
@@ -2401,18 +2397,11 @@ function reviewTimeline(appId){
 
 const SELF_PHOTOS = { resident:'avatars/avatar-03.png', admin:'avatars/ADMIN.png', self:'avatars/PLUMBER.png' };
 
-// Warm the image cache for every avatar up front. On file:// URLs an <img>
-// inserted by a re-render paints an empty disc for a frame, and that flicker
-// is what made taps feel like a page reload. Decoding them once here fixes it.
-(function warmAvatars(){
-  const list = [GENERIC_AVATAR]
-    .concat(Object.keys(PRO_PHOTOS).map(function(k){ return PRO_PHOTOS[k]; }))
-    .concat(Object.keys(VERIF_PHOTOS).map(function(k){ return VERIF_PHOTOS[k]; }))
-    .concat(Object.keys(SELF_PHOTOS).map(function(k){ return SELF_PHOTOS[k]; }));
-  ['ADMIN','PLUMBER','PROFILE','Cleaning','Electrician'].forEach(function(n){ list.push('avatars/' + n + '.png'); });
-  for(let n = 1; n <= 17; n++){ list.push('avatars/avatar-' + (n < 10 ? '0' + n : n) + '.png'); }
-  list.forEach(function(src){ const img = new Image(); img.src = src; });
-})();
+/* The avatar pre-warm that used to sit here decoded every cartoon PNG on boot so an <img> added
+   by a re-render would not flash an empty disc. No screen inserts an avatar <img> on a re-render
+   now, so the warm-up was paying that cost for a defect that no longer exists — and it was the
+   reason the PNGs could not honestly be called unreferenced. §4.5's slot is photoFor(), which
+   still reads PRO_PHOTOS / VERIF_PHOTOS / SELF_PHOTOS when a real upload exists. */
 function photoFor(providerOrId){
   if (SELF_PHOTOS[providerOrId]) return SELF_PHOTOS[providerOrId];
   const id = (providerOrId && typeof providerOrId === 'object') ? providerOrId.id : providerOrId;
@@ -6007,6 +5996,7 @@ const ICONS = {
   inbox: {o: `<path d="M200,840Q167,840 143.5,816.5Q120,793 120,760L120,200Q120,167 143.5,143.5Q167,120 200,120L760,120Q793,120 816.5,143.5Q840,167 840,200L840,760Q840,793 816.5,816.5Q793,840 760,840L200,840ZM200,760L760,760Q760,760 760,760Q760,760 760,760L760,640L640,640Q610,678 568.5,699Q527,720 480,720Q433,720 391.5,699Q350,678 320,640L200,640L200,760Q200,760 200,760Q200,760 200,760ZM480,640Q518,640 549,618Q580,596 592,560L760,560L760,200Q760,200 760,200Q760,200 760,200L200,200Q200,200 200,200Q200,200 200,200L200,560L368,560Q380,596 411,618Q442,640 480,640ZM200,760Q200,760 200,760Q200,760 200,760L200,760L320,760Q350,760 391.5,760Q433,760 480,760Q527,760 568.5,760Q610,760 640,760L760,760L760,760Q760,760 760,760Q760,760 760,760L200,760Z" fill="currentColor"/>`, f: `<path d="M200,840Q167,840 143.5,816.5Q120,793 120,760L120,200Q120,167 143.5,143.5Q167,120 200,120L760,120Q793,120 816.5,143.5Q840,167 840,200L840,760Q840,793 816.5,816.5Q793,840 760,840L200,840ZM480,640Q518,640 549,618Q580,596 592,560L760,560L760,200Q760,200 760,200Q760,200 760,200L200,200Q200,200 200,200Q200,200 200,200L200,560L368,560Q380,596 411,618Q442,640 480,640Z" fill="currentColor"/>`, vb: "0 0 960 960", ms: "inbox"},
   leaf: {o: `<path d="M480,840Q363,840 281.5,758.5Q200,677 200,560Q200,466 255.5,391.5Q311,317 401,291Q381,286 362,276.5Q343,267 328,252Q295,219 285.5,173.5Q276,128 281,81Q328,76 373.5,85.5Q419,95 452,128Q475,151 485.5,180Q496,209 499,241Q512,210 530.5,182.5Q549,155 572,132Q583,121 600,121Q617,121 628,132Q639,143 639,160Q639,177 628,188Q606,210 589,236.5Q572,263 564,293Q652,321 706,394.5Q760,468 760,560Q760,677 678.5,758.5Q597,840 480,840ZM480,760Q563,760 621.5,701.5Q680,643 680,560Q680,477 621.5,418.5Q563,360 480,360Q397,360 338.5,418.5Q280,477 280,560Q280,643 338.5,701.5Q397,760 480,760ZM480,560Q480,560 480,560Q480,560 480,560Q480,560 480,560Q480,560 480,560Q480,560 480,560Q480,560 480,560Q480,560 480,560Q480,560 480,560Z" fill="currentColor"/>`, f: `<path d="M480,840Q363,840 281.5,758.5Q200,677 200,560Q200,466 255.5,391.5Q311,317 401,291Q381,286 362,276.5Q343,267 328,252Q295,219 285.5,173.5Q276,128 281,81Q328,76 373.5,85.5Q419,95 452,128Q475,151 485.5,180Q496,209 499,241Q512,210 530.5,182.5Q549,155 572,132Q583,121 600,121Q617,121 628,132Q639,143 639,160Q639,177 628,188Q606,210 589,236.5Q572,263 564,293Q652,321 706,394.5Q760,468 760,560Q760,677 678.5,758.5Q597,840 480,840ZM480,760Q563,760 621.5,701.5Q680,643 680,560Q680,477 621.5,418.5Q563,360 480,360Q397,360 338.5,418.5Q280,477 280,560Q280,643 338.5,701.5Q397,760 480,760ZM480,560Q480,560 480,560Q480,560 480,560Q480,560 480,560Q480,560 480,560Q480,560 480,560Q480,560 480,560Q480,560 480,560Q480,560 480,560Z" fill="currentColor"/>`, vb: "0 0 960 960", ms: "nutrition"},
   weight: {o: `<path d="M536,876L480,820L622,678L282,338L140,480L84,424L140,366L84,310L168,226L112,168L168,112L226,168L310,84L366,140L424,84L480,140L338,282L678,622L820,480L876,536L820,594L876,650L792,734L848,792L792,848L734,792L650,876L594,820L536,876Z" fill="currentColor"/>`, f: `<path d="M536,876L480,820L622,678L282,338L140,480L84,424L140,366L84,310L168,226L112,168L168,112L226,168L310,84L366,140L424,84L480,140L338,282L678,622L820,480L876,536L820,594L876,650L792,734L848,792L792,848L734,792L650,876L594,820L536,876Z" fill="currentColor"/>`, vb: "0 0 960 960", ms: "fitness_center"},
+  support: {o: `<path d="M440,840L440,760L760,760Q760,760 760,760Q760,760 760,760L760,476Q760,359 678.5,277.5Q597,196 480,196Q363,196 281.5,277.5Q200,359 200,476L200,720L160,720Q127,720 103.5,696.5Q80,673 80,640L80,560Q80,539 90.5,520.5Q101,502 120,491L123,438Q131,370 162.5,312Q194,254 241.5,211Q289,168 350.5,144Q412,120 480,120Q548,120 609,144Q670,168 718,210.5Q766,253 797,311Q828,369 837,437L840,489Q859,498 869.5,516Q880,534 880,554L880,646Q880,666 869.5,684Q859,702 840,711L840,760Q840,793 816.5,816.5Q793,840 760,840L440,840ZM360,560Q343,560 331.5,548.5Q320,537 320,520Q320,503 331.5,491.5Q343,480 360,480Q377,480 388.5,491.5Q400,503 400,520Q400,537 388.5,548.5Q377,560 360,560ZM600,560Q583,560 571.5,548.5Q560,537 560,520Q560,503 571.5,491.5Q583,480 600,480Q617,480 628.5,491.5Q640,503 640,520Q640,537 628.5,548.5Q617,560 600,560ZM241,498Q234,392 305,316Q376,240 482,240Q571,240 638.5,296.5Q706,353 720,441Q629,440 552.5,392Q476,344 435,262Q419,342 367.5,404.5Q316,467 241,498Z"/>`, f: `<path d="M440,840L440,760L760,760Q760,760 760,760Q760,760 760,760L760,476Q760,359 678.5,277.5Q597,196 480,196Q363,196 281.5,277.5Q200,359 200,476L200,720L160,720Q127,720 103.5,696.5Q80,673 80,640L80,560Q80,539 90.5,520.5Q101,502 120,491L123,438Q131,370 162.5,312Q194,254 241.5,211Q289,168 350.5,144Q412,120 480,120Q548,120 609,144Q670,168 718,210.5Q766,253 797,311Q828,369 837,437L840,489Q859,498 869.5,516Q880,534 880,554L880,646Q880,666 869.5,684Q859,702 840,711L840,760Q840,793 816.5,816.5Q793,840 760,840L440,840ZM360,560Q343,560 331.5,548.5Q320,537 320,520Q320,503 331.5,491.5Q343,480 360,480Q377,480 388.5,491.5Q400,503 400,520Q400,537 388.5,548.5Q377,560 360,560ZM600,560Q583,560 571.5,548.5Q560,537 560,520Q560,503 571.5,491.5Q583,480 600,480Q617,480 628.5,491.5Q640,503 640,520Q640,537 628.5,548.5Q617,560 600,560ZM241,498Q234,392 305,316Q376,240 482,240Q571,240 638.5,296.5Q706,353 720,441Q629,440 552.5,392Q476,344 435,262Q419,342 367.5,404.5Q316,467 241,498Z"/>`, vb: "0 0 960 960", ms: "support_agent" },
   route: {o: `<path d="M360,840Q294,840 247,793Q200,746 200,680L200,353Q165,340 142.5,309.5Q120,279 120,240Q120,190 155,155Q190,120 240,120Q290,120 325,155Q360,190 360,240Q360,279 337.5,309.5Q315,340 280,353L280,680Q280,713 303.5,736.5Q327,760 360,760Q393,760 416.5,736.5Q440,713 440,680L440,280Q440,214 487,167Q534,120 600,120Q666,120 713,167Q760,214 760,280L760,607Q795,620 817.5,650.5Q840,681 840,720Q840,770 805,805Q770,840 720,840Q670,840 635,805Q600,770 600,720Q600,681 622.5,650Q645,619 680,607L680,280Q680,247 656.5,223.5Q633,200 600,200Q567,200 543.5,223.5Q520,247 520,280L520,680Q520,746 473,793Q426,840 360,840ZM240,280Q257,280 268.5,268.5Q280,257 280,240Q280,223 268.5,211.5Q257,200 240,200Q223,200 211.5,211.5Q200,223 200,240Q200,257 211.5,268.5Q223,280 240,280ZM720,760Q737,760 748.5,748.5Q760,737 760,720Q760,703 748.5,691.5Q737,680 720,680Q703,680 691.5,691.5Q680,703 680,720Q680,737 691.5,748.5Q703,760 720,760ZM240,240Q240,240 240,240Q240,240 240,240Q240,240 240,240Q240,240 240,240Q240,240 240,240Q240,240 240,240Q240,240 240,240Q240,240 240,240ZM720,720Q720,720 720,720Q720,720 720,720Q720,720 720,720Q720,720 720,720Q720,720 720,720Q720,720 720,720Q720,720 720,720Q720,720 720,720Z" fill="currentColor"/>`, f: `<path d="M360,840Q294,840 247,793Q200,746 200,680L200,353Q165,340 142.5,309.5Q120,279 120,240Q120,190 155,155Q190,120 240,120Q290,120 325,155Q360,190 360,240Q360,279 337.5,309.5Q315,340 280,353L280,680Q280,713 303.5,736.5Q327,760 360,760Q393,760 416.5,736.5Q440,713 440,680L440,280Q440,214 487,167Q534,120 600,120Q666,120 713,167Q760,214 760,280L760,607Q795,620 817.5,650.5Q840,681 840,720Q840,770 805,805Q770,840 720,840Q670,840 635,805Q600,770 600,720Q600,681 622.5,650Q645,619 680,607L680,280Q680,247 656.5,223.5Q633,200 600,200Q567,200 543.5,223.5Q520,247 520,280L520,680Q520,746 473,793Q426,840 360,840Z" fill="currentColor"/>`, vb: "0 0 960 960", ms: "route"},
   wrench: {o: `<path d="M686,828L444,584Q424,592 403.5,596Q383,600 360,600Q260,600 190,530Q120,460 120,360Q120,324 130,291.5Q140,259 158,230L304,376L376,304L230,158Q259,140 291.5,130Q324,120 360,120Q460,120 530,190Q600,260 600,360Q600,383 596,403.5Q592,424 584,444L828,686Q840,698 840,715Q840,732 828,744L744,828Q732,840 715,840Q698,840 686,828ZM715,743L742,716L486,460Q504,440 512,413.5Q520,387 520,360Q520,300 481.5,255.5Q443,211 386,202L460,276Q472,288 472,304Q472,320 460,332L332,460Q320,472 304,472Q288,472 276,460L202,386Q211,443 255.5,481.5Q300,520 360,520Q386,520 412,512Q438,504 459,487L715,743ZM472,472L472,472Q472,472 472,472Q472,472 472,472Q472,472 472,472Q472,472 472,472L472,472Q472,472 472,472Q472,472 472,472L472,472Q472,472 472,472Q472,472 472,472L472,472Q472,472 472,472Q472,472 472,472Q472,472 472,472Q472,472 472,472L472,472L472,472Z" fill="currentColor"/>`, f: `<path d="M686,828L444,584Q424,592 403.5,596Q383,600 360,600Q260,600 190,530Q120,460 120,360Q120,324 130,291.5Q140,259 158,230L304,376L376,304L230,158Q259,140 291.5,130Q324,120 360,120Q460,120 530,190Q600,260 600,360Q600,383 596,403.5Q592,424 584,444L828,686Q840,698 840,715Q840,732 828,744L744,828Q732,840 715,840Q698,840 686,828Z" fill="currentColor"/>`, vb: "0 0 960 960", ms: "build"},
   plumbing: {o: `<path d="M771,367L630,226L545,310L460,226L573,112Q585,100 600,94.5Q615,89 630,89Q646,89 660.5,94.5Q675,100 686,112L771,197Q789,214 797.5,236.5Q806,259 806,282Q806,305 797.5,327Q789,349 771,367ZM220,551Q202,533 202,508.5Q202,484 220,466L318,367L403,452L304,551Q287,569 262.5,569Q238,569 220,551ZM177,848Q166,836 160,821.5Q154,807 154,791Q154,775 159.5,760.5Q165,746 177,734L460,452L333,324Q315,307 315,282.5Q315,258 333,240Q350,222 375,222Q400,222 418,240L545,367L602,310L714,424Q726,436 726,452Q726,468 714,480Q702,492 686,492Q670,492 658,480L290,848Q278,860 263.5,865.5Q249,871 234,871Q219,871 204,865Q189,859 177,848Z" fill="currentColor"/>`, f: `<path d="M771,367L630,226L545,310L460,226L573,112Q585,100 600,94.5Q615,89 630,89Q646,89 660.5,94.5Q675,100 686,112L771,197Q789,214 797.5,236.5Q806,259 806,282Q806,305 797.5,327Q789,349 771,367ZM220,551Q202,533 202,508.5Q202,484 220,466L318,367L403,452L304,551Q287,569 262.5,569Q238,569 220,551ZM177,848Q166,836 160,821.5Q154,807 154,791Q154,775 159.5,760.5Q165,746 177,734L460,452L333,324Q315,307 315,282.5Q315,258 333,240Q350,222 375,222Q400,222 418,240L545,367L602,310L714,424Q726,436 726,452Q726,468 714,480Q702,492 686,492Q670,492 658,480L290,848Q278,860 263.5,865.5Q249,871 234,871Q219,871 204,865Q189,859 177,848Z" fill="currentColor"/>`, vb: "0 0 960 960", ms: "plumbing"},
@@ -6234,7 +6224,7 @@ function bookingListEmpty(filter, role){
   return role === 'provider'
     ? emptyState('inbox', 'No requests yet',
         'Customer requests land here the moment they are sent. Nothing has reached this account in the sample marketplace yet.',
-        { id:'bookings-open-fsm-btn', label:'Open FSM dispatch' })
+        { id:'bookings-open-fsm-btn', label:'Open Jobs dispatch' })
     : emptyState('inbox', 'No bookings yet',
         'Services you request appear here with their status, payment record and receipt.',
         { id:'bookings-find-btn', label:'Find a service' });
@@ -9298,7 +9288,8 @@ const ICON_MEANING = {
   route: 'the job pipeline: who is on the way and what happens next',
   shield: 'a trust promise: verification, warranty, and the platform authority at sign-in',
   'badge-check': 'providers whose verification was checked by a person',
-  scale: 'cases being read for evidence - the help desk',
+  scale: 'cases being read for evidence - the dispute a person is answering',
+  support: 'the desk that helps you - the admin Help Desk destination',
   wrench: 'the trade a provider works in',
   'alert-triangle': 'something the device has to tell you about, never a destination',
   lock: 'a session lock on this device, and not security in general',
@@ -9961,7 +9952,7 @@ function navHTML(){
   } else if(state.role==='provider'){
     return `<div class="bottomnav">
       ${navItem('dashboard','chart','Dash')}
-      ${navItem('fsm','route','FSM')}
+      ${navItem('fsm','route','Jobs')}
       ${navItem('bookings','calendar','Bookings', pendingProviderRequests().length)}
       ${navItem('messages','chat','Messages')}
       ${navItem('profile','user','Profile')}
@@ -9970,7 +9961,7 @@ function navHTML(){
   return `<div class="bottomnav">
     ${navItem('admin_dashboard','chart','Dashboard')}
     ${navItem('admin_verifications','badge-check','Providers')}
-    ${navItem('admin_disputes','scale','Help Desk')}
+    ${navItem('admin_disputes','support','Help Desk')}
     ${navItem('profile','user','Account')}
   </div>`;
 }
@@ -12207,7 +12198,7 @@ function adminVerifications(){
     <div style="font-size:var(--t-body); font-weight:800; margin-bottom:8px;">Pending verifications</div>
     ${pendingDetails.map((provider, index) => `
       <div class="card" style="padding:var(--s-3); margin-bottom:10px">
-        <div class="row" style="align-items:flex-start;"><div style="display:flex; gap:10px; align-items:center;"><img class="img-avatar" src="${VERIF_PHOTOS[provider.id]}" alt="${provider.name}" style="width:38px; height:38px;"><div><b class="card-title">${provider.name}</b><div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${provider.service}</div></div></div><div style="display:flex; gap:5px; align-items:center;"><span style="font-size:var(--t-caption); background:${provider.priorityColor}; color:${provider.priorityText}; padding:var(--s-1) var(--s-2); border-radius:var(--r-pill);">${provider.priority}</span><span class="chip" style="font-size:var(--t-caption);">Review</span></div></div>
+        <div class="row" style="align-items:flex-start;"><div style="display:flex; gap:10px; align-items:center;">${photoAvatar(provider, 38)}<div><b class="card-title">${provider.name}</b><div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px;">${provider.service}</div></div></div><div style="display:flex; gap:5px; align-items:center;"><span style="font-size:var(--t-caption); background:${provider.priorityColor}; color:${provider.priorityText}; padding:var(--s-1) var(--s-2); border-radius:var(--r-pill);">${provider.priority}</span><span class="chip" style="font-size:var(--t-caption);">Review</span></div></div>
         <div style="display:flex; gap:12px; font-size:var(--t-caption); color:var(--mist); margin:8px 0;"><span>Submitted ${applicantWaitLabel(provider)}</span><span>${provider.barangay}</span></div>
         <div style="display:flex; justify-content:space-between; align-items:center; font-size:var(--t-caption); margin-bottom:5px;"><span>Documents ${applicationDocsSubmitted(provider.id)} of ${APPLICATION_DOC_KINDS.length}</span><span style="background:${applicantIssue(provider).bg}; color:${applicantIssue(provider).ink}; padding:var(--s-1) var(--s-2); border-radius:var(--r-pill);">${applicantIssue(provider).label}</span></div>
         <div style="height:6px; background:var(--line); border-radius:var(--r-pill); overflow:hidden; margin-bottom:8px;"><div style="width:${Math.round(applicationDocsSubmitted(provider.id) / APPLICATION_DOC_KINDS.length * 100)}%; height:100%; background:${applicationDocsOutstanding(provider.id).length ? 'var(--gold)' : 'var(--deep)'};"></div></div>
@@ -12392,7 +12383,7 @@ function providerVerificationReview(){
   return `
   ${screenHeader('Provider Verification', { back: "state.tab='admin_verifications'; render();", backLabel:'Back to pending providers', sub:'Application ' + esc(app.applicationId) })}
   <div class="pad pad-cta" style="background:var(--cloud);">
-    <div class="card"><div class="row"><div style="display:flex; gap:10px; align-items:center;"><img class="img-avatar" src="${VERIF_PHOTOS[app.id] || 'avatars/avatar-10.png'}" alt="${esc(app.name)}" style="width:42px; height:42px;"><div><b style="font-size:var(--t-input);">${esc(app.name)}</b><div style="font-size:var(--t-caption); color:var(--mist);">${esc(app.service)}</div></div></div><span class="chip ${chipTone}">${esc(reviewStatusLine(review.status))}</span></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; font-size:var(--t-caption);"><div><span style="color:var(--mist);">Barangay</span><br><b>${esc(app.barangay)}</b></div><div><span style="color:var(--mist);">Submitted</span><br><b>${esc(shortDate(app.submittedAt))} · ${esc(applicantWaitLabel(app))}</b></div><div><span style="color:var(--mist);">Priority</span><br><b style="color:var(--gold-600);">${esc(app.priority)}</b></div><div><span style="color:var(--mist);">Contact on file</span><br><b>${esc(app.phone)}</b></div></div></div>
+    <div class="card"><div class="row"><div style="display:flex; gap:10px; align-items:center;">${photoAvatar(app, 42)}<div><b style="font-size:var(--t-input);">${esc(app.name)}</b><div style="font-size:var(--t-caption); color:var(--mist);">${esc(app.service)}</div></div></div><span class="chip ${chipTone}">${esc(reviewStatusLine(review.status))}</span></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; font-size:var(--t-caption);"><div><span style="color:var(--mist);">Barangay</span><br><b>${esc(app.barangay)}</b></div><div><span style="color:var(--mist);">Submitted</span><br><b>${esc(shortDate(app.submittedAt))} · ${esc(applicantWaitLabel(app))}</b></div><div><span style="color:var(--mist);">Priority</span><br><b style="color:var(--gold-600);">${esc(app.priority)}</b></div><div><span style="color:var(--mist);">Contact on file</span><br><b>${esc(app.phone)}</b></div></div></div>
 
     <div class="card"><div class="row"><b class="card-title">Verification progress</b><b>${submitted} of ${docs.length}</b></div><div style="height:9px; background:var(--line); border-radius:var(--r-pill); overflow:hidden; margin:10px 0 12px;"><div style="width:${progress}%; height:100%; background:${complete ? 'var(--verified)' : 'var(--gold)'};"></div></div><div style="display:flex; flex-direction:column; gap:7px; font-size:var(--t-caption);">${docs.map(d => { const s = docState(d); return '<div style="color:' + INK[s] + '; display:flex; align-items:center; gap:6px;">' + ic(s === 'missing' ? 'alert-triangle' : s === 'flagged' ? 'alert-circle' : 'check-circle', 13) + ' ' + esc(d.label) + ' — ' + esc(WORD[s]) + '</div>'; }).join('')}</div><div style="font-size:var(--t-caption); color:var(--mist); margin-top:10px; line-height:1.5;">Counted from the documents on this application. The prototype runs no automated check of its own — a mark below is something an administrator made.</div></div>
 
@@ -13469,7 +13460,7 @@ function providerDashboard(){
 
 function providerFSM(){
   return `
-  ${screenHeader('Field Service Management (FSM)', { back: "state.tab='dashboard';render();", backLabel:'Back to the dashboard' })}
+  ${screenHeader('Jobs', { back: "state.tab='dashboard';render();", backLabel:'Back to the dashboard' })}
   <div class="pad">
     
     ${earningsCard(CURRENT_PROVIDER_ID)}
