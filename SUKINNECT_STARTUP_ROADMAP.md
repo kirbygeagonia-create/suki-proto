@@ -101,14 +101,17 @@ with no name against it is a need nobody is carrying.
 ## 4. New features register
 
 Code status was **re-verified against `Sukinnect-next.html`** on 6 November 2026; the brief's seed
-column said "not found" for eight rows that exist in this build. Corrections are marked.
+column said "not found" for nine rows that exist in this build. Corrections are marked. One of them
+(F3) was mis-corrected by this file's first pass, which grepped for the word "onboarding" and never
+opened the gate suite actually named `signup-guide` — the register's own evidence is the suite, so the
+row now cites it.
 
 | ID | Feature | Source | Code status as measured | Tier | Depends on | Phase |
 |---|---|---|---|---|---|---|
 | F1 | Data-driven recommendations: frequent / popular actions per user and barangay | Notes; MP §3 | **corrected:** not built as recommendations; the signals exist (bookings, searches, repeat providers) and `CONCIERGE_SORTS` ranks by category match. No per-user frequency model. | 1 | F2, event recorder | M3–M4 |
 | F2 | Provider matching engine (skill, distance, availability, area, history) | MP §3 | **not built** — `providerMatches()` filters only; no score, no sort | 1 | records already present | M3 |
-| F3 | Sign-up wizard, typed; voice as enhancement | Notes | **partly corrected:** a stepwise rate wizard exists (`openRateWizard`, `rateWizardGo`, `rateWizardChoose`); no account/onboarding wizard. Voice: **not built**. | 1 typed, 2 voice | F2 | M3 / later |
-| F4 | Onboarding / verification stepper | Notes; MP §3 | **not built** — the steppers in the file are the *booking* path (`stepBar`, `stepPath`) | 1 | F7 | M4 |
+| F3 | Sign-up wizard, typed; voice as enhancement | Notes | **corrected twice: BUILT.** `openSignupGuide` + `SIGNUP_GUIDE_STEPS` ask one question at a time, write each answer into the field the register form itself reads, and create no account of their own; `speechSeam()` reports the engine it found or says none is exposed, and with no engine the dictate control says so and leaves the field alone. Proved by the `signup-guide` suite (8 checks). The first correction here claimed no account wizard existed — it was written from a grep for "onboarding" and never opened the suite named `signup-guide`. | 1 built | none | built |
+| F4 | Onboarding / verification stepper | Notes; MP §3 | **not built** — the steppers in the file are the *booking* path (`stepBar`, `stepPath`) and the two-step sign-up guide; nothing walks a provider through verification stages | 1 | F7 | M4 |
 | F5 | Pricing guidance for a provider who does not know what to charge | Notes; MP §3 | **corrected:** built as `rateBandFor(trade)` — a band computed from this device's records, which **refuses** (`available:false`) when there is no band, plus the wizard that stores the provider's own choice. Web/LLM context: not built. | 1 built, 2 deferred | 3+ local quotes per category | now / later |
 | F6 | Web-informed labour rates and exchange-rate updates via an LLM | Notes | **corrected:** present as **named seams** that return `available:false` with a reason — `exchangeRateSeam()` ("this build makes no network call at all"), and a usual-rate lookup from outside the app. Nothing is fetched, nothing is estimated. | 2 | server, proxy | not scheduled |
 | F7 | Verification: certificates, government ID, OCR, face recognition | Notes; MP §3, §9 | **partly corrected:** statuses, a human review queue, credential records with expiry, and a **labelled OCR seam** (`seam(ocr.reason)`) exist. No ID capture, no OCR, no liveness, and nothing sensitive is stored — which is the plan's rule, not a gap. | 1 now, 2 vendor | licensed vendor, legal review | M3 / post-pilot |
@@ -217,6 +220,7 @@ feature with no test is not implemented, however it is described.
 | Tamper-evident ledger chain (F10) | `chainHash`, `buildLedgerChain`, `verifyLedgerChain` | a gate check that edits a record and requires the chain head to move |
 | Terms and Privacy consent with a scroll gate and a versioned record (F8) | the legal-document sheet, `state.termsAcceptances`, `docScrolled` | `login` suite checks + `falsify-legal-truth` |
 | Pricing band and the rate wizard (F5) | `rateBandFor`, `openRateWizard`, `rateWizardChoose` | the `fruit` suite, which counts the trades that actually have a band |
+| Sign-up guide with dictation behind a named seam (F3) | `openSignupGuide`, `SIGNUP_GUIDE_STEPS`, `speechSeam` | the `signup-guide` suite, 8 checks |
 | Standing tier, computed, no privilege (F13) | the tier ternary over completed jobs | `falsify-wallet`-family coverage |
 | Connections as a derived view (F20) | `connectionsSheet` | the `connections` suite |
 | Wallet as a derived view with refused cash movement (F12, contested) | `walletSheet`, `gatewayCashSeam`, `cashMovementSeam` | the `wallet` suite |
