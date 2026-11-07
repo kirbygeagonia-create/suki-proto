@@ -10794,3 +10794,82 @@ books mentions any of them, which is the strongest honest claim available until 
 **Left open, and whose.** The gateway rates are published-page rates with no signed merchant quote on
 file; the plan requires one, and the source string says so on the screen beside the number.
 
+## 172. The reference schema caught up with the kernel, and the audit that keeps them honest found a bug in itself first
+
+Not a slice of the ordered sequence — this is Stage B's document half, taken early because it is the
+one part of the backend brief that touches neither `Sukinnect-next.html` nor the screens. The
+application was not modified, and the gate still reports what section 171 left it reporting.
+
+**Why it could not wait.** Slice S1 gave the money model a new account, `gateway_fee_payable`, and
+the reference schema is the artefact a backend team copies. A schema that omits it re-invents the
+defect the account exists to prevent: the fee gets folded into a payout line and reads as money the
+provider earned. Meanwhile the brief's own row B11 lists eleven missing table groups — consent,
+verification cases, notifications, portfolio and credential detail, subscriptions, promotions, price
+references, analytics events, moderation actions, the AI-suggestion log and feature flags — and every
+one of them is a surface the plan's trust model or its funding gates are measured from.
+
+**What landed** (`schema/sukinnect.reference.sql`, 19 tables to 34):
+
+- Rule 6, stated once at the top: 1.2% under a hard 1.3% ceiling enforced where a rate is *written*,
+  and the processor's fee funded by the payer — never platform revenue, never absorbed, never
+  returned by a refund. This is the money rule a deployment is most likely to lose.
+- `users.role` carries the plan's five groups (`business` and `moderator` added), with the sentence
+  that until slice S5 puts `can(actor, action)` in the kernel an enum is not a permission. A row a
+  reader mistakes for an enforced boundary is the same defect as a badge typed onto a profile.
+- Fifteen Stage B tables, each naming the slice that would create it, in the shape the prototype's
+  records already taught: `verification_documents.submitted_at IS NULL` *is* outstanding rather than
+  a second status column for the same fact; `documents` is versioned with the text's SHA-256 so a
+  re-consent is provable; `ai_suggestions.method` is an enum that makes `model_ref`, `source_url` and
+  `fetched_at` mandatory when the method is `external_model`; `notifications` carries
+  `route_kind`/`route_id` because a notification that opens nothing is a message about nothing;
+  `credentials` stores no document image and says why in the comment beside the column.
+- `analytics_events` holds ids and codes only. A free-text column in an analytics table is personal
+  data wearing an analytics name.
+
+**The accounts list is generated, not remembered.** The first draft of that block was written by
+hand and got three of ten rows wrong — `escrow_held` as a liability, `customer_deposit` as an asset,
+and an invented `gateway_fee_expense` that nothing posts. The patcher now reads `boot().ACCOUNTS` and
+emits the INSERT from it, and `node tools/audit-schema-parity.cjs` compares the two lists in both
+directions, checks every `REFERENCES` target against the tables the file declares, and checks each
+row's kind and scope against the enum it claims to satisfy. It refuses with `NO CONCLUSION` rather
+than reporting clean when it read no tables, when the file is missing, or when the kernel boots with
+no accounts — the failure mode of a comparison tool is never a wrong verdict, it is a skipped side
+that leaves the remaining rows agreeing.
+
+`node tools/falsify-schema-parity.cjs` — 8 breaks, 8 caught, 0 missed, 0 not applied. Two of them are
+judged in the *opposite* direction from a normal break, and that is the finding worth keeping: the
+guards they remove (`--schema=PATH` honoured, `--quiet` still exiting nonzero) are guards whose
+removal makes the tool answer **clean about a defect**. Asserting "the run must refuse" against such
+a break reports MISSED while the guard is genuinely gone, which is this repository's oldest lesson —
+*a break that prints MISSED is read, not deleted* — arriving the fourth time as a direction error in a
+family written minutes after the rule was quoted. The fixture control runs first (an unmutated audit
+must report the deleted row, with and without `--quiet`), so neither reverse break can be credited
+for a refusal that was never there.
+
+**A hazard I created and the recovery, because it is the documented one.** The full mutant aggregate
+was started against the clean committed tree, and then this work wrote two new files under `tools/`
+while it ran. `falsify-all.cjs` compares `git status` for `tools/` before and after every family and
+**reports rather than restores** — so two rows printed `LEFT AN INSTRUMENT MUTATED` naming my own
+legitimate edits, and every family after the first of them had run against a tool I was rewriting.
+Then stopping the pass left a real mutant stranded: `tools/audit-commit-subjects.cjs` came back with
+`if (!subject) refuse(...)` replaced by `if (false) refuse(...)`, planted by `falsify-commit-subjects`
+and never restored because its process died between the edit and its `finally`. Three commands,
+exactly as AGENTS.md documents them: save the bytes, `git checkout -- tools/audit-commit-subjects.cjs`
+(only after `git diff` proved that file held one hunk and no work of mine), and re-run the gate. The
+aggregate itself is discarded, not quoted: 10 of its 12 rows read clean, including the two families
+that matter for slice S1 (`business-rules` 21 of 21, `blank-query` 2 of 2), and a run whose middle is
+entangled with its own tooling is a run that cannot be partly trusted. **The rule it teaches is not
+"never write tools during a pass" — it is that `tools/` is inside the mutex for exactly the families
+that mutate an instrument, and a session that starts the aggregate should do nothing to `tools/`
+until it prints its last row.**
+
+**One standing state, stated rather than fixed.** `falsify-build-bytes` aborts on this tree: the page
+moved and three built copies (`dist/`, the staged Android asset, the APK bundle) deliberately have
+not, because the brief says to re-sync them only after the owner accepts. The family refuses to run
+its breaks over a baseline that is already red — which is correct behaviour, and the reason the
+aggregate must be re-run with that family excluded, or after the re-sync, and its totals quoted from
+whichever of those runs produced them.
+
+**Figures are commands.** `node tools/audit-schema-parity.cjs`, `node tools/falsify-schema-parity.cjs`
+and `node tools/verify.cjs` each print their own totals; nothing in this section is the authority for
+a number.

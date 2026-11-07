@@ -370,6 +370,16 @@ reviewer should treat as unvalidated.
 built. **It is not loaded by the prototype** — it exists so the centavos, append-only and
 no-wallet rules are written where they cannot be misread.
 
+Two things are true of that file and a reader has to hold both. Its money half is *current*: the
+chart of accounts is generated from the kernel's own `ACCOUNTS` map rather than written beside it,
+`node tools/audit-schema-parity.cjs` compares the two in both directions on every run, and a fee
+account the schema forgot is a finding instead of a backend that quietly absorbs it. Its Stage B half
+is *designed, not built*: the consent, verification, moderation, subscription, promotion, price-reference,
+analytics, AI-suggestion, notification, portfolio and credential tables each name the slice that would
+create them, and none of them exists in the running app. `node tools/falsify-schema-parity.cjs` proves
+the audit can fail — including against the bug the audit's own first draft had, an ignored `--schema=`
+argument that made it report a clean result about the wrong file.
+
 ## Fruit Harvest & Buy — the pilot category
 
 A seventh category, marked **pilot** everywhere it appears, that a reviewer can walk end to
