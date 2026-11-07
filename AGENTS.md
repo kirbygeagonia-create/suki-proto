@@ -1,3 +1,21 @@
+<!-- READ FIRST (added 6 November 2026). Everything below this comment is unchanged: no section
+     was reflowed, renumbered or edited to produce it. -->
+
+**Read [`SUKINNECT_CONTEXT.md`](SUKINNECT_CONTEXT.md) before this file.** It is the read-first
+context for every AI tool working on Sukinnect: what the product is, which document decides what,
+the business rules that bind the code, and the commands that prove a claim. This file is the deep
+engineering and brand discipline (~349 KB, 96 numbered sections) — use its table of contents and
+read the sections your task touches rather than the whole thing.
+
+Two things that were decided after this file was written, so a reader does not take the older
+sections as current: the authoritative business document is
+`Sukinnect_Master_Plan_Revised_27Oct2026.docx` (transaction fee 1.2%, hard cap 1.3%, gateway fees
+not absorbed, five launch barangays), which supersedes the pitch deck's 10% commission and older
+funding figures cited in §59–§60; and the feature and conflict registers now live in
+`SUKINNECT_STARTUP_ROADMAP.md`. Where this file and those two disagree, they win and this file
+gets a dated supersession note beside the affected section — never a silent rewrite.
+
+---
 # SUKINNECT — MASTER SYSTEM CONTEXT, PRODUCT, DEVELOPMENT, UI/UX, AND BRANDING PROMPT
 
 You are now the primary AI development, product-design, UI/UX, debugging, architecture, and implementation assistant for the Sukinnect project.
