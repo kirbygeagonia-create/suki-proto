@@ -10873,3 +10873,87 @@ whichever of those runs produced them.
 **Figures are commands.** `node tools/audit-schema-parity.cjs`, `node tools/falsify-schema-parity.cjs`
 and `node tools/verify.cjs` each print their own totals; nothing in this section is the authority for
 a number.
+
+## 173. Slice S2a: the match score stops being a number somebody typed, and the screen says what ranked it
+
+Branch `feat/startup-backend`. This is Tier 1.2 of the backend brief and the first row of its own
+audit table, B1: **CONFIRMED**. Eight provider records carried `smartMatch:{score, reasons[]}` with
+scores 96, 91, 94, 87, 93, 89, 84 and 78 typed into the seed; the results screen printed
+`${p.smartMatch.score}% Match` under a header reading "Sorted by: Smart Job Match"; and
+`providerMatches()` was a `PROVIDERS.filter(...)` with no score and no sort. Three claims, one defect:
+a user-visible AI result that was not computed, an ordering that was not performed, and reasons that
+named facts no record holds — "Average response time under 20 mins" and "300+ completed local parcel
+trips" are not fields on any provider in this build.
+
+**The finding that explains how it survived.** `grep -rn smartMatch tools/` answered *no files*. Not
+one check, probe or mutation family referenced the surface. The camera walked `resident-results` and
+measured its geometry clean, which is exactly the limit AGENTS.md records for the Insights screen: a
+camera measures boxes, so a screen can pass every tally and still be a decorative statistic. A claim
+nobody checks is the one that survives longest.
+
+**What was built.**
+
+- `scoreProvider(provider, request, context)` in the kernel: pure, returns `{score, signals[],
+  reasons[], scoredOn, weightUsed}`. Eight signals, each from a field the records own — category fit,
+  declared service area (`providerServes`), declared distance band, stated availability band, a
+  smoothed rating, completion rate, cancellation rate, and days since the last job this device
+  recorded as completed.
+- **No signal without a record.** There is no response-time field and no last-activity field on a
+  provider here, so neither is scored and neither is mentioned. That is the honest form of the plan's
+  matching list rather than a ninth invented number, and it is the same rule the Insights rewrite
+  applied when it deleted a capacity bar no record could produce.
+- **The smoothing is the reputation panel's own sentence, used for ordering.** `smoothedRating`
+  shrinks toward `CONFIG.matchRatingPrior` (4.0) with a weight of five ratings, using the same
+  `seedRatings` / `ratingsFromDevice` fields the reputation pass introduced, so the score cannot
+  disagree with the profile page. A 5.0 on one rating no longer outranks a 4.6 on two hundred, and a
+  check asserts that direction with those exact numbers.
+- **A signal the record cannot answer leaves the denominator.** A null sub-score is not a zero
+  sub-score: a provider is not punished for this device having no history of them. The check names
+  the expected weight rather than asking for "less than the total", because a range assertion cannot
+  see a denominator that dropped the wrong thing.
+- `CONFIG.matchWeights` — eight weights summing to 1.0, with a check that the table names exactly the
+  signals `MATCH_SIGNALS` declares, so a ninth signal added tomorrow without a weight fails instead
+  of being silently renormalised. `[OWNER DECISION]` in the comment: these are the platform's choice,
+  not a measurement, and the plan's learned-model alternative needs labelled outcomes the pilot has
+  not collected (S2b's recorder starts collecting them).
+- `providerMatches()` now sorts by the computed score with a name tie-break, so the same records
+  rendered twice cannot shuffle themselves between two taps. `rankedProviders()` returns the rows with
+  their reasons and deliberately re-scores rather than caching: a cache is a second copy of a derived
+  number, and the order is already settled, so re-computing can change nothing but the cost.
+- The screen: "Providers near you" / "Ranked by a **rule-based score** from records on this device";
+  the chip reads `N rule score` rather than `N% Match`, because a percentage reads as a probability
+  and this is a weighted sum of bands; the fold reads "Why this ranking (N)" with N produced by the
+  signals, every sentence escaped, and a disclosure on any row whose score rested on fewer signals
+  than the table declares. The top bar's unfiltered branch now says "8 ranked providers" instead of
+  "8 smart matches".
+
+**Two assertions were re-pointed, not relaxed.** The blank-query family's count-line rule — a blank
+query is not a constraint — reads the words the screen paints, and those words changed. Its needle
+moved from `/smart matches/` to `/ranked providers/` in the check, its prose and its refusal message;
+the property is identical and `falsify-blank-query` still reads 2 of 2. Its two mutants needle
+`function providerMatches(){` plus the query line and `function residentResults(){` plus the same,
+both of which this slice left byte-identical, which is why the family survived the change at all.
+
+**The checks read the painted card, not only the returned object.** Eight kernel assertions would all
+have passed with a typed `96` in the chip and four invented sentences under a summary counting three —
+the defect in its original form. So two more compare the markup: the chip's number against
+`scoreProvider` for the same id, and the fold's painted sentence count, its summary count and its
+sentence text against the reasons that computation produced. The population is read from the
+`data-provider-detail` attribute the app itself paints, so it is the rows that rendered rather than a
+list of ids kept beside them.
+
+**Figures, from the runs that printed them.** `node tools/verify.cjs` — **776 checks passed**, ten of
+them new here (eight on the computation, two on the painted card). `node tools/falsify-matching.cjs` —
+**9 of 9 caught, 0 not applied, 0 gate failures**. `node tools/falsify-blank-query.cjs` — **2 of 2**
+after the re-point, so the rule it guards is still guarded. `node tools/measure.cjs` — 14,366 lines,
+115 tokens with the same three declared-and-unreached as before. `node tools/shot.cjs --measure` —
+**102 screens, 0 skipped, no console errors**, every failure tally zero; the only nonzero line is
+`requests that left the device for a network: 1777`, the OpenStreetMap tiles this build has always
+asked for. `node tools/sweep-text-scale.cjs` — **10 of 10 corners clean at 26 tallies each**, including
+the 320px/200% corner where a long reason sentence would have been the first thing to break.
+
+**Left for the next slice, deliberately.** Popular and frequent suggestions (F1) are not built here:
+they are counts over bookings *and searches*, and the search half has no recorder yet. Building them
+from bookings alone would have produced a rail that claims to know what the neighbourhood books while
+reading one device's sample records. S2b adds the event recorder first, then the suggestions, with the
+provenance split stated on the screen and a cold-start fallback that says what it fell back to.

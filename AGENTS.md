@@ -6076,6 +6076,18 @@ the screen where the result appears:
 None may be shown as fact, as a verified result, or with a precision the method cannot support.
 A user must be able to override it, and what they chose must be recorded. A reason that was not
 computed must not appear; a score that was typed into a seed must not be presented as a match
-the system produced. This is the rule the current Smart Match surface breaks, and it is the first
-row of the backend brief.
+the system produced.
+
+**The last sentence above was true when this section was written and is closed by slice S2a
+(7 November 2026).** It read "This is the rule the current Smart Match surface breaks, and it is the
+first row of the backend brief." It does not break it any more: the eight typed `smartMatch` blocks
+are deleted, `scoreProvider()` computes from eight signals the records own, `providerMatches()` sorts
+by that computation, and every sentence in the fold is produced by a signal that contributed. Two
+things this section still asks for and the surface does not yet do: **the user cannot override the
+ranking**, and **no override is recorded** — the event recorder that would carry one is slice S2b.
+What is proved today is `node tools/falsify-matching.cjs` and ten checks in the `honesty` suite, two of
+which read the painted card rather than the returned object, because a typed `96` in the chip beside a
+computed score satisfies every kernel assertion. The finding that explains how the original defect
+survived: `grep -rn smartMatch tools/` answered no files before this slice, so the surface had never
+been checked — the same limit §76 records for a statistic no record produced.
 

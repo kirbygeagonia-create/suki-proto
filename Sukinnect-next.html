@@ -384,9 +384,9 @@
      The quiet variant keeps the grouping — the border and the surface still say
      "this belongs together" — and drops only the claim on attention. */
   .card-quiet{ box-shadow:none; border-color:var(--border); }
-  /* Progressive disclosure for the Smart Match evidence: the score is the
-     summary, the reasons come on tap (19). Native details/summary keeps it
-     keyboard and screen-reader operable with no JS (72). */
+  /* Progressive disclosure for the ranking evidence: the score is the summary, and the signals that
+     produced it come on tap (19). Native details/summary keeps it keyboard and screen-reader
+     operable with no JS (72). */
   .why-fold{
     background:var(--background); border-radius:var(--r-sm); padding:0 var(--s-3);
     font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5;
@@ -1958,15 +1958,6 @@ const PROVIDERS = [
     rateCentavos:35000,rateUnit:'call-out fee',rating:4.9,jobs:214,trustScore:96,
     badges:['ID Verified','Background Checked','Top Rated'],lat:6.3671,lng:124.9331,
     credentials:['TESDA NC II Plumbing','Barangay Cleared','Master Plumber Apprentice','Police Cleared'],
-    smartMatch:{
-      score:96,
-      reasons:[
-        'Experienced with urgent pipe and kitchen leaks',
-        'Available now (arrives in ~15 mins)',
-        '99% job completion rate (214 jobs)',
-        'Located within 1 km of your barangay'
-      ]
-    },
     reviews:[
       {client:'Elena M.', date:'Sep 2', stars:5, comment:'Mabilis dumating at naayos agad ang tagas sa kusina. Very polite!'},
       {client:'Danilo G.', date:'Aug 28', stars:5, comment:'Professional and transparent with replacement part costs.'}
@@ -1977,14 +1968,6 @@ const PROVIDERS = [
     rateCentavos:40000,rateUnit:'call-out fee',rating:4.8,jobs:156,trustScore:92,
     badges:['ID Verified','TESDA Certified'],lat:6.3901,lng:124.9548,
     credentials:['TESDA NC II Electrical Installation','Licensed Electrician','Safety Certified'],
-    smartMatch:{
-      score:91,
-      reasons:[
-        'TESDA NC II certified for high-voltage breaker issues',
-        'Average response time under 20 mins',
-        'High customer satisfaction score'
-      ]
-    },
     reviews:[
       {client:'Roberto T.', date:'Sep 1', stars:5, comment:'Fixed our tripping breakers safely. Very knowledgeable.'}
     ]
@@ -1994,14 +1977,6 @@ const PROVIDERS = [
     rateCentavos:50000,rateUnit:'per visit',rating:5.0,jobs:98,trustScore:98,
     badges:['ID Verified','Background Checked'],lat:6.3665,lng:124.9338,
     credentials:['TESDA Housekeeping NC II','Sanitation Certified','NBI Cleared'],
-    smartMatch:{
-      score:94,
-      reasons:[
-        'Perfect 5.0 rating on home deep sanitation',
-        'Brings own eco-safe cleaning gear',
-        'High repeat customer rebook rate'
-      ]
-    },
     reviews:[
       {client:'Theresa B.', date:'Sep 4', stars:5, comment:'Super clean house! Smells fresh and sanitized.'}
     ]
@@ -2011,13 +1986,6 @@ const PROVIDERS = [
     rateCentavos:30000,rateUnit:'diagnostic fee',rating:4.7,jobs:132,trustScore:89,
     badges:['ID Verified'],lat:6.3452,lng:124.9104,
     credentials:['RAC Servicing NC II (Aircon/Fridge)','Consumer Electronics NC II'],
-    smartMatch:{
-      score:87,
-      reasons:[
-        'Specialized in inverter refrigerator & aircon cooling',
-        'Provides diagnostic quotes before replacement'
-      ]
-    },
     reviews:[
       {client:'Luz V.', date:'Aug 26', stars:5, comment:'Aircon is now blowing cold air again. Fair diagnostic fee.'}
     ]
@@ -2027,13 +1995,6 @@ const PROVIDERS = [
     rateCentavos:25000,rateUnit:'per hour',rating:4.9,jobs:74,trustScore:95,
     badges:['ID Verified','Licensed Teacher'],lat:6.4002,lng:124.9203,
     credentials:['PRC Licensed Professional Teacher','BSEd Major in Mathematics'],
-    smartMatch:{
-      score:93,
-      reasons:[
-        'PRC licensed teacher for primary & junior high math',
-        'In-home and online session support'
-      ]
-    },
     reviews:[
       {client:'Grace N.', date:'Sep 3', stars:5, comment:'My daughter understood geometry quickly under Teacher Kristine.'}
     ]
@@ -2043,13 +2004,6 @@ const PROVIDERS = [
     rateCentavos:6000,rateUnit:'base fare',rating:4.6,jobs:301,trustScore:90,
     badges:['ID Verified'],lat:6.3549,lng:124.9598,
     credentials:['Professional Driver License','NBI Cleared Motorcycle Rider'],
-    smartMatch:{
-      score:89,
-      reasons:[
-        'Motorbike courier on stand-by (< 5 min dispatch)',
-        '300+ completed local parcel trips'
-      ]
-    },
     reviews:[
       {client:'Sarah D.', date:'Sep 5', stars:5, comment:'Bilis mag-deliver at maingat sa fragile items.'}
     ]
@@ -2075,8 +2029,6 @@ const PROVIDERS = [
       buysBy:['per tree','whole lot']
     },
     credentials:['Barangay clearance','Declared 12 years of backyard harvesting'],
-    smartMatch:{ score:84, reasons:['Harvests mango and coconut','Serves Buayan and nearby barangays',
-      'Brings a pole pruner and harness','Available from tomorrow morning'] },
     reviews:[
       {client:'Libby T.', date:'Sep 12', stars:5, comment:'Nakuha nilang lahat ng mangga, wala akong nakitang nasirang sanga.'},
       {client:'Rogelio D.', date:'Aug 28', stars:4, comment:'Ayos ang oras, medyo late lang ng 20 minuto.'}
@@ -2099,8 +2051,6 @@ const PROVIDERS = [
       buysBy:['per kilo','whole lot']
     },
     credentials:['Barangay clearance','Market vendor, Dalet public market'],
-    smartMatch:{ score:78, reasons:['Buys mango by the kilo','Serves your barangay',
-      'Offers after seeing the trees','Available this week'] },
     reviews:[
       {client:'Ana D.', date:'Sep 3', stars:5, comment:'Tapat sa timbang at bayad agad.'},
       {client:'Nena C.', date:'Jul 19', stars:4, comment:'Mababa konti offer kaysa ibinata, pero mabilis.'}
@@ -2995,6 +2945,23 @@ const CONFIG_DEFAULTS = {
   /* How close to expiry counts as "expiring soon". A number the platform chose, not a fact
      about any document — the admin can see it is a threshold because the badge says so. */
   credentialWarnDays: 30,
+  /* The ranking's weights, as data. They are the platform's choice, not a measurement: a pilot that
+     finds one signal does not predict completion changes it here, and the change is audited like
+     every other setting. The eight add to 1.0 and a gate check holds that, because a weight table
+     that does not sum is a silent renormalisation nobody chose.
+     [OWNER DECISION] the plan's alternative is a learned model. There is no labelled outcome data to
+     learn from yet, and the event recorder in slice S2b is what starts collecting it. */
+  matchWeights: {
+    categoryFit: 0.28, areaServed: 0.20, distance: 0.12, availability: 0.14,
+    rating: 0.12, completion: 0.08, cancellation: 0.04, recency: 0.02
+  },
+  /* A provider with no ratings is not a provider rated 3.0. This is what an average of zero samples
+     has to fall back to, and the screen names both the prior and the sample size. */
+  matchRatingPrior: 4.0,
+  matchRatingPriorWeight: 5,
+  /* Below this sub-score a signal is a weakness, and the fold under "Why this ranking" lists why to
+     pick somebody rather than why not. */
+  matchReasonFloor: 0.5,
 };
 let CONFIG = Object.assign({}, CONFIG_DEFAULTS);
 const CONFIG_AUDIT = [];
@@ -6496,10 +6463,145 @@ function providerAccepting(p){
   return p.acceptingRequests !== false;
 }
 
+/* ---- the ranking, computed ───────────────────────────────────────────────────
+   Until 7 November 2026 every provider record carried a typed smartMatch score and four
+   hand-written reasons, and this screen said "Sorted by: Smart Job Match" over a function that
+   only filtered. The score was not computed, the ordering was not performed, and several of the
+   sentences named facts no record holds — "Average response time under 20 mins" and "300+
+   completed local parcel trips" are not fields on any provider here. That is the honest-labelling
+   rule broken in the place where it matters most, because a match score is the number a person
+   chooses with. No check in this repository could see it: grep the tools for smartMatch and the
+   answer is no files, which is the same finding as a screen no camera ever opened.
+
+   What is here instead is a rule a reader can check. scoreProvider reads only fields the records
+   own; the sentences under the fold are produced by the signals that actually contributed, so a
+   reason that was not computed does not exist; and the method is named above the list in words a
+   person reads before choosing. A signal with no record behind it is not used and not mentioned:
+   there is no response-time or last-activity field on a provider in this build, so nothing here
+   ranks or claims either. AGENTS.md §18 asks for exactly this — a score that comes with reasons
+   rather than an authority that comes alone. */
+const MATCH_SIGNALS = [
+  ['categoryFit',   'the trade you asked for'],
+  ['areaServed',    'whether they serve your barangay'],
+  ['distance',      'how near they are'],
+  ['availability',  'how soon they can start'],
+  ['rating',        'their rating, held back by how few people gave it'],
+  ['completion',    'the jobs here that reached completion'],
+  ['cancellation',  'the jobs here that were called off'],
+  ['recency',       'when they last finished a job here']
+];
+
+/* Ascending bands whose last limit is always Infinity, so an extreme value lands on the weakest
+   score instead of falling off the end of the table. */
+function signalBand(value, bands) {
+  for (let i = 0; i < bands.length; i++) if (value <= bands[i][0]) return bands[i][1];
+  return bands[bands.length - 1][1];
+}
+
+/* The average shrinks toward the prior in proportion to how little evidence stands behind it. A 5.0
+   built on one rating is not better than a 4.6 built on two hundred, and the reputation panel
+   already says that sentence in words; this is the same claim, used for ordering. Both halves come
+   from the fields the reputation pass introduced, so the score cannot disagree with the profile.
+   Provenance is carried out with the number because the reason has to name it. */
+function smoothedRating(p) {
+  const avg = Number(p.rating);
+  if (!isFinite(avg)) return null;
+  const sample = Math.max(0, Number(p.seedRatings) || 0);
+  const onDevice = Math.max(0, Number(p.ratingsFromDevice) || 0);
+  const prior = Number(CONFIG.matchRatingPrior);
+  const weight = Number(CONFIG.matchRatingPriorWeight);
+  if (!isFinite(prior) || !isFinite(weight)) return null;
+  return { value: ((sample + onDevice) * avg + weight * prior) / (sample + onDevice + weight),
+           sample: sample, onDevice: onDevice, n: sample + onDevice };
+}
+
+/* Whole days since the last job this device recorded as completed. Elapsed rather than calendar on
+   purpose: completedAt is an instant, and the UTC-midnight lesson in this file belongs to date-only
+   values, which this is not. */
+function daysSinceLastCompleted(providerId, now) {
+  const finished = bookingsForProvider(providerId).filter(b => b.status === 'completed' && b.completedAt);
+  if (!finished.length) return null;
+  const latest = finished.reduce((t, b) => Math.max(t, Date.parse(b.completedAt) || 0), 0);
+  if (!latest) return null;
+  return Math.max(0, Math.floor((now - latest) / 86400000));
+}
+
+function rankingRequest() {
+  const f = state.providerFilters || {};
+  return {
+    serviceId: f.serviceId || null,
+    barangay: f.barangay || (state.profileData && state.profileData.barangay) || '',
+    maxWait: f.maxWait || null
+  };
+}
+
+/* One provider, one request, one score. The sub-scores travel with the sentences, because a check
+   that can only see the total cannot tell a ranking that works from a ranking parked on whatever
+   the first band happens to give. */
+function scoreProvider(provider, request, context) {
+  if (!provider) return { score: 0, reasons: [], signals: [], scoredOn: 0 };
+  const req = request || {}, ctx = context || {};
+  const now = ctx.now || Date.now();
+  const barangay = req.barangay || ctx.barangay || '';
+  const weights = CONFIG.matchWeights || {};
+  const floor = typeof CONFIG.matchReasonFloor === 'number' ? CONFIG.matchReasonFloor : 0.5;
+  const plural = n => n === 1 ? '' : 's';
+  const signals = [];
+  /* A null sub-score means the record does not answer this signal, which is not the same fact as
+     answering it badly: the weight then leaves the denominator instead of scoring zero, so a
+     provider is never punished for this device having no history of them. */
+  const use = (key, sub, reason) => {
+    if (sub === null || sub === undefined || !isFinite(sub)) return;
+    const clamped = Math.max(0, Math.min(1, sub));
+    signals.push({ key: key, weight: typeof weights[key] === 'number' ? weights[key] : 0,
+                   sub: clamped, reason: clamped >= floor ? reason : null });
+  };
+
+  if (req.serviceId)
+    use('categoryFit', provider.serviceId === req.serviceId ? 1 : 0,
+        'They list ' + provider.service + ', the trade you asked for.');
+  if (barangay)
+    use('areaServed', providerServes(provider, barangay) ? 1 : 0,
+        'They declare Brgy. ' + barangay + ' inside their service area.');
+  if (isFinite(provider.distanceKm))
+    use('distance', signalBand(provider.distanceKm, [[1, 1], [2, 0.8], [4, 0.55], [6, 0.3], [Infinity, 0.15]]),
+        'About ' + provider.distanceKm + ' km from the area — declared in the record, not measured from you.');
+  if (isFinite(provider.availabilityMin))
+    use('availability', signalBand(provider.availabilityMin, [[15, 1], [30, 0.8], [60, 0.6], [120, 0.4], [Infinity, 0.2]]),
+        'They say they can start in about ' + provider.availabilityMin + ' minutes.');
+  const rated = smoothedRating(provider);
+  if (rated)
+    use('rating', (rated.value - 3) / 2, 'Rated ' + (Math.round(rated.value * 10) / 10).toFixed(1) +
+        ' of 5 across ' + rated.n + ' rating' + plural(rated.n) + ' — ' + rated.sample +
+        ' from the sample record and ' + rated.onDevice + ' recorded on this device, held toward '
+        + Number(CONFIG.matchRatingPrior).toFixed(1) + '.');
+  const closed = closedJobCount(provider.id);
+  if (closed > 0) {
+    const done = completionRate(provider.id);
+    use('completion', done / 100, done + '% of the ' + closed + ' job' + plural(closed) +
+        ' this device recorded for them, once finished or called off, reached completion.');
+    const cancelled = cancellationRate(provider.id);
+    use('cancellation', 1 - cancelled / 100, cancelled === 0
+        ? 'None of the ' + closed + ' job' + plural(closed) + ' this device recorded for them was called off or missed.'
+        : cancelled + '% of the ' + closed + ' job' + plural(closed) + ' this device recorded for them were called off or missed.');
+  }
+  const days = daysSinceLastCompleted(provider.id, now);
+  if (days !== null)
+    use('recency', signalBand(days, [[30, 1], [90, 0.7], [180, 0.4], [Infinity, 0.2]]),
+        'Their last job recorded on this device was ' + days + ' day' + plural(days) + ' ago.');
+
+  const totalWeight = signals.reduce((t, s) => t + s.weight, 0);
+  const score = totalWeight > 0
+    ? Math.round(100 * signals.reduce((t, s) => t + s.weight * s.sub, 0) / totalWeight) : 0;
+  return { score: score, signals: signals,
+           reasons: signals.filter(s => s.reason).map(s => s.reason),
+           scoredOn: signals.length, weightUsed: totalWeight };
+}
+
 function providerMatches(){
   const query = (state.searchQuery || '').trim().toLowerCase();
   const f = state.providerFilters || {};
-  return PROVIDERS.filter(p =>
+  const matched = PROVIDERS.filter(p =>
     (!query || p.name.toLowerCase().includes(query) ||
       p.service.toLowerCase().includes(query) ||
       p.barangay.toLowerCase().includes(query)) &&
@@ -6508,6 +6610,23 @@ function providerMatches(){
     (!f.maxWait || p.availabilityMin <= f.maxWait) &&
     providerAccepting(p)
   );
+  /* The ordering the screen used to claim without performing. Every row that survived the filter is
+     scored by the function above, and the tie-break is the name — so the same records rendered twice
+     cannot shuffle themselves between two taps, which a sort on an equal score would otherwise do. */
+  const req = rankingRequest();
+  const ctx = { now: Date.now(), barangay: req.barangay };
+  const scoreOf = new Map(matched.map(p => [p.id, scoreProvider(p, req, ctx).score]));
+  return matched.sort((a, b) => (scoreOf.get(b.id) - scoreOf.get(a.id)) || a.name.localeCompare(b.name));
+}
+
+/* The rows and the reasons that produced their order. This scores a second time rather than caching,
+   deliberately: a cache is a second copy of a derived number, and this file has been written against
+   that defect since the admin console printed one provider's figures under another's name. The order
+   is already settled by providerMatches(), so re-computing can change nothing but the cost. */
+function rankedProviders() {
+  const req = rankingRequest();
+  const ctx = { now: Date.now(), barangay: req.barangay };
+  return providerMatches().map(p => ({ provider: p, match: scoreProvider(p, req, ctx) }));
 }
 
 function activeFilterCount(){
@@ -10877,10 +10996,11 @@ function residentResults(){
   const query = (state.searchQuery || '').trim().toLowerCase();
   const filtersOn = activeFilterCount();
   const narrowing = !!query || filtersOn > 0;
-  const list = providerMatches();
+  const ranked = rankedProviders();
+  const list = ranked.map(r => r.provider);
 
   return `
-  ${screenHeader('Find Services', { backId:'back-home-btn', backLabel:'Back to home', action: '<div style="font-size:var(--t-caption); opacity:0.85;">' + (state.searching ? 'Matching…' : (narrowing ? list.length + ' of ' + PROVIDERS.length + ' providers' : PROVIDERS.length + ' smart matches')) + '</div>' })}
+  ${screenHeader('Find Services', { backId:'back-home-btn', backLabel:'Back to home', action: '<div style="font-size:var(--t-caption); opacity:0.85;">' + (state.searching ? 'Matching…' : (narrowing ? list.length + ' of ' + PROVIDERS.length + ' providers' : PROVIDERS.length + ' ranked providers')) + '</div>' })}
   <div class="pad">
     <div class="search-container" style="margin-bottom:12px;">
       <div class="search-wrapper">
@@ -10896,8 +11016,8 @@ function residentResults(){
     </div>
 
     <div class="row" style="margin-bottom:10px; font-size:var(--t-body-sm);">
-      <span style="font-weight:700; color:var(--ink);">Smart Matched Providers</span>
-      <span style="color:var(--mist); font-size:var(--t-caption);">Sorted by: <b style="color:var(--ink);">Smart Job Match</b></span>
+      <span style="font-weight:700; color:var(--ink);">Providers near you</span>
+      <span style="color:var(--mist); font-size:var(--t-caption);">Ranked by a <b style="color:var(--ink);">rule-based score</b> from records on this device</span>
     </div>
 
     ${state.searching ? providerSkeletons() : list.length === 0 ? emptyState(
@@ -10907,11 +11027,11 @@ function residentResults(){
         ? 'Nobody in the sample marketplace covers all of the constraints at once. Widen the arrival window, or clear the search and filters.'
         : 'Try a barangay such as Poblacion, a service such as Plumbing, or a shorter part of the name.',
       {id:'clear-search-btn', label:'Clear search & filters'}
-    ) : list.map(p => `
+    ) : ranked.map(({ provider: p, match: m }) => `
       <div class="card" data-provider-detail="${p.id}" style="cursor:pointer;">
         <div class="row" style="margin-bottom:10px;">
           <span style="background:var(--brand-tint-soft); color:var(--brand-primary); font-size:var(--t-caption); font-weight:800; padding:var(--s-1) var(--s-2); border-radius:6px; display:inline-flex; align-items:center; gap:3px;">
-            ${ic("zap",12)} ${p.smartMatch.score}% Match
+            ${ic("zap",12)} ${m.score} rule score
           </span>
           ${(p.badges && p.badges.length) ? `<span class="chip" style="background:var(--success-100); color:var(--success-ink);">${ic("badge-check",12)} Verified</span>` : ''}
         </div>
@@ -10939,9 +11059,10 @@ function residentResults(){
         <!-- Summary first, evidence on demand: the reasons stay one tap away so
              the list can be scanned (19, 8). -->
         <details class="why-fold">
-          <summary>Why this match (${p.smartMatch.reasons.length})</summary>
+          <summary>Why this ranking (${m.reasons.length})</summary>
           <div style="padding-top:7px;">
-            ${p.smartMatch.reasons.map(r => `<div><span style="color:var(--success-ink); display:inline-flex; vertical-align:-2px;">${ic("check",12)}</span> ${r}</div>`).join('')}
+            ${m.reasons.map(r => `<div><span style="color:var(--success-ink); display:inline-flex; vertical-align:-2px;">${ic("check",12)}</span> ${esc(r)}</div>`).join('')}
+            ${m.scoredOn < MATCH_SIGNALS.length ? `<div class="mut">Ranked on ${m.scoredOn} of the ${MATCH_SIGNALS.length} signals this build knows. The rest have no record for this provider on this device, so a thin score is a rule with little to go on, not a prediction of how your job will go.</div>` : ''}
           </div>
         </details>
       </div>

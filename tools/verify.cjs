@@ -4737,12 +4737,12 @@ suite('honesty', async () => {
     const quotedMiss = /No provider matches/.test(missWords);
     /* The count line is the second half of the same question, and it is the screen's OWN decision
        from a second copy of the trimmed query: `narrowing` prints "N of 8 providers" when
-       something is narrowing the list and "8 smart matches" when nothing is. A blank query that
+       something is narrowing the list and "8 ranked providers" when nothing is. A blank query that
        failed to trim would print "8 of 8 providers" over the whole unfiltered list — a screen
        telling the person their space bar applied a constraint. "plumbing" must produce the counted
        form, or this assertion has no way to fail. */
     const blankCounted = /\d+ of \d+ providers/.test(blankWords);
-    const blankUnfiltered = /smart matches/.test(blankWords);
+    const blankUnfiltered = /ranked providers/.test(blankWords);
     const realCounted = /\d+ of \d+ providers/.test(realWords);
     return { ok: none > 0 && spaces === none && !quotedBlank && blankUnfiltered && !blankCounted &&
         real > 0 && real < none && realCounted && quotedMiss,
@@ -4750,11 +4750,152 @@ suite('honesty', async () => {
         : spaces !== none ? 'a query of spaces found ' + spaces + ' providers where none found ' + none
         : quotedBlank ? 'the screen quoted a query nobody typed: No provider matches a blank'
         : blankCounted ? 'a blank query is printed as a constraint on the count line'
-        : !blankUnfiltered ? 'the unfiltered list does not call itself smart matches, so the screen cannot say "nothing is narrowing"'
+        : !blankUnfiltered ? 'the unfiltered list does not call itself ranked providers, so the screen cannot say "nothing is narrowing"'
         : !(real < none) ? 'searching "plumbing" did not narrow the list, so the matcher is not live'
         : !realCounted ? 'a real query does not print its count line, so the blank case cannot be told apart'
         : !quotedMiss ? 'a query matching nothing printed no empty state, so the words cannot be tested'
         : 'a space is being treated as a search term' };
+  })());
+
+  /* ---- the ranking is a computation, not a typed claim ───────────────────────
+     Before this slice nothing in tools/ referenced smartMatch at all: eight typed scores, a header
+     that claimed an ordering the code never performed, and four hand-written reasons per provider
+     naming facts no record holds. A claim nobody checks is the one that survives longest, so each
+     property below is asserted against behaviour — a record moving, a list ordering, a denominator
+     shrinking — with a population floor so an empty scan reads as a refusal. */
+  verdict('no provider record carries a typed match score', (() => {
+    const a = boot();
+    const typed = a.PROVIDERS.filter(p => 'smartMatch' in p);
+    return { ok: a.PROVIDERS.length >= 6 && typed.length === 0,
+      why: typed.length ? 'still typed on ' + typed.map(p => p.id).join(',')
+        : a.PROVIDERS.length < 6 ? 'only ' + a.PROVIDERS.length + ' providers, so the scan proved little'
+        : 'all ' + a.PROVIDERS.length + ' records are free of one' };
+  })());
+
+  verdict('the weight table names every signal and adds to one', (() => {
+    const a = boot();
+    const keys = a.MATCH_SIGNALS.map(s => s[0]);
+    const weights = Object.keys(a.CONFIG.matchWeights);
+    const sum = weights.reduce((t, k) => t + a.CONFIG.matchWeights[k], 0);
+    return { ok: keys.length >= 6 && weights.length === keys.length
+        && keys.every(k => weights.indexOf(k) >= 0) && Math.abs(sum - 1) < 1e-9,
+      why: 'signals ' + keys.join(',') + ' / weights ' + weights.join(',') + ' / sum ' + sum };
+  })());
+
+  verdict('a change to the record moves the score', (() => {
+    const a = boot();
+    const p = a.PROVIDERS.find(x => isFinite(x.availabilityMin) && isFinite(x.distanceKm));
+    if (!p) return { ok: false, why: 'no provider record answers either signal' };
+    const req = { serviceId: p.serviceId, barangay: p.barangay };
+    const near = a.scoreProvider(p, req, {}).score;
+    const slow = a.scoreProvider(Object.assign({}, p, { availabilityMin: p.availabilityMin + 4320 }), req, {}).score;
+    const far = a.scoreProvider(Object.assign({}, p, { distanceKm: 40 }), req, {}).score;
+    return { ok: near > slow && near > far,
+      why: p.id + ' near ' + near + ' / three days slow ' + slow + ' / 40 km away ' + far };
+  })());
+
+  verdict('the order is the score order, and every reason came from a signal', (() => {
+    const a = boot();
+    a.state.providerFilters = {};
+    const rows = a.rankedProviders();
+    const scores = rows.map(r => r.match.score);
+    const descending = scores.every((s, i) => i === 0 || scores[i - 1] >= s);
+    const sameOrder = rows.map(r => r.provider.id).join(',')
+      === a.providerMatches().map(p => p.id).join(',');
+    const reasonsFromSignals = rows.every(r => r.match.reasons.every(reason =>
+      r.match.signals.some(s => s.reason === reason && s.sub >= a.CONFIG.matchReasonFloor)));
+    return { ok: rows.length >= 6 && descending && sameOrder && reasonsFromSignals,
+      why: 'rows ' + rows.length + ' descending ' + descending + ' sameOrder ' + sameOrder
+        + ' reasonsFromSignals ' + reasonsFromSignals };
+  })());
+
+  verdict('a signal with no record leaves the denominator instead of scoring zero', (() => {
+    const a = boot();
+    const bare = a.PROVIDERS.find(p => a.closedJobCount(p.id) === 0);
+    if (!bare) return { ok: false, why: 'every provider has closed jobs on this device, so the branch cannot be reached' };
+    const req = { serviceId: bare.serviceId, barangay: bare.barangay };
+    const m = a.scoreProvider(bare, req, {});
+    const w = a.CONFIG.matchWeights;
+    const expected = Object.keys(w).reduce((t, k) => t + w[k], 0)
+      - w.completion - w.cancellation - w.recency;
+    return { ok: Math.abs(m.weightUsed - expected) < 1e-9 && m.score > 0
+        && m.signals.every(s => ['completion', 'cancellation', 'recency'].indexOf(s.key) < 0),
+      why: bare.id + ' used weight ' + m.weightUsed + ' against ' + expected + ', scored ' + m.score };
+  })());
+
+  verdict('one five-star rating does not outrank two hundred good ones', (() => {
+    const a = boot();
+    const one = a.smoothedRating({ rating: 5, seedRatings: 1, ratingsFromDevice: 0 });
+    const many = a.smoothedRating({ rating: 4.6, seedRatings: 200, ratingsFromDevice: 0 });
+    return { ok: !!one && !!many && many.value > one.value,
+      why: 'one rating ' + (one && one.value) + ' / two hundred ' + (many && many.value) };
+  })());
+
+  verdict('the screen names the method instead of a magic name', (() => {
+    const a = boot();
+    a.state.view = 'app'; a.state.role = 'resident'; a.state.tab = 'results';
+    a.render();
+    const html = a._document.getElementById('screen').innerHTML;
+    const rows = a.rankedProviders();
+    const reasons = rows.reduce((t, r) => t.concat(r.match.reasons), []);
+    /* The three sentences the seed used to type, which no record supports: a response time nobody
+       measures, a job count nobody counted, and an arrival nobody promised. A reason generator that
+       ever produces one of them has gone back to writing prose. */
+    const fabricated = ['Average response time', '300+ completed', 'arrives in ~'];
+    return { ok: rows.length >= 6 && reasons.length >= 8
+        && /rule-based score/.test(html) && /from records on this device/.test(html)
+        && !/Smart Job Match|Smart Matched Providers|% Match/.test(html)
+        && fabricated.every(f => !reasons.some(r => r.indexOf(f) >= 0)),
+      why: 'rows ' + rows.length + ' reasons ' + reasons.length + ' method named '
+        + (/rule-based score/.test(html) && /from records on this device/.test(html)) };
+  })());
+
+  /* The card, read as markup. `cards` splits on the attribute the app itself paints on every
+   provider card, so the population is the rows that actually rendered rather than a list of ids
+   remembered beside it. */
+  verdict('every card prints the score its own record produced', (() => {
+    const a = boot();
+    a.state.view = 'app'; a.state.role = 'resident'; a.state.tab = 'results';
+    a.render();
+    const html = a._document.getElementById('screen').innerHTML;
+    const rows = a.rankedProviders();
+    const cards = html.split('data-provider-detail="').slice(1);
+    if (rows.length < 6 || cards.length !== rows.length)
+      return { ok: false, why: 'rows ' + rows.length + ' painted cards ' + cards.length };
+    return { ok: rows.every(r => {
+      const chunk = cards.find(c => c.indexOf(r.provider.id + '"') === 0);
+      return !!chunk && chunk.indexOf(r.match.score + ' rule score') >= 0;
+    }), why: 'each card chip was compared to scoreProvider for the same id' };
+  })());
+
+  verdict('and every sentence in its fold was one of the signals it was given', (() => {
+    const a = boot();
+    a.state.view = 'app'; a.state.role = 'resident'; a.state.tab = 'results';
+    a.render();
+    const html = a._document.getElementById('screen').innerHTML;
+    const rows = a.rankedProviders();
+    const cards = html.split('data-provider-detail="').slice(1);
+    const REASON_ROW = '<div><span style="color:var(--success-ink); display:inline-flex; vertical-align:-2px;">';
+    if (rows.length < 6 || cards.length !== rows.length)
+      return { ok: false, why: 'rows ' + rows.length + ' painted cards ' + cards.length };
+    return { ok: rows.every(r => {
+      const chunk = cards.find(c => c.indexOf(r.provider.id + '"') === 0);
+      if (!chunk) return false;
+      const painted = chunk.split(REASON_ROW).length - 1;
+      const counted = chunk.indexOf('Why this ranking (' + r.match.reasons.length + ')') >= 0;
+      const allThere = r.match.reasons.every(reason => chunk.indexOf(a.esc(reason)) >= 0);
+      return painted === r.match.reasons.length && counted && allThere;
+    }), why: 'painted sentence count, summary count and sentence text were each compared' };
+  })());
+  verdict('a thin score says how many signals stood behind it', (() => {
+    const a = boot();
+    a.state.view = 'app'; a.state.role = 'resident'; a.state.tab = 'results';
+    a.render();
+    const html = a._document.getElementById('screen').innerHTML;
+    const thin = a.rankedProviders().filter(r => r.match.scoredOn < a.MATCH_SIGNALS.length);
+    return { ok: thin.length >= 1 && thin.every(r => html.indexOf('Ranked on ' + r.match.scoredOn
+        + ' of the ' + a.MATCH_SIGNALS.length + ' signals') >= 0),
+      why: thin.length + ' rows score on fewer than ' + a.MATCH_SIGNALS.length + ' signals' };
   })());
 
   verdict('marking yourself busy changes what a resident is shown', (() => {
