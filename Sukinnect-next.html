@@ -6655,6 +6655,17 @@ function activeFilterCount(){
   return (f.serviceId ? 1 : 0) + (f.barangay ? 1 : 0) + (f.maxWait ? 1 : 0);
 }
 
+function providerVerificationChip(p){
+  const status = p && p.verification && p.verification.status;
+  if (status === 'verified')
+    return `<span class="chip tone-good">${ic('badge-check',12)} Verified</span>`;
+  if (status === 'pending')
+    return `<span class="chip tone-warn">${ic('clock',12)} Verification pending</span>`;
+  if (status === 'suspended')
+    return `<span class="chip tone-alert">${ic('alert-triangle',12)} Suspended</span>`;
+  return `<span class="chip">${ic('shield',12)} Not verified</span>`;
+}
+
 function repaintOnly(){ render(); }
 
 /* A profile module used to render itself into the page beneath the list it was
@@ -11047,7 +11058,7 @@ function residentResults(){
 
     <div class="row" style="margin-bottom:10px; font-size:var(--t-body-sm);">
       <span style="font-weight:700; color:var(--ink);">Providers near you</span>
-      <span style="color:var(--mist); font-size:var(--t-caption);">Ranked by a <b style="color:var(--ink);">rule-based score</b> from records on this device</span>
+      <span style="color:var(--mist); font-size:var(--t-caption);">Rule-based demo match · not AI or live availability</span>
     </div>
 
     ${state.searching ? providerSkeletons() : list.length === 0 ? emptyState(
@@ -11061,9 +11072,9 @@ function residentResults(){
       <div class="card" data-provider-detail="${p.id}" style="cursor:pointer;">
         <div class="row" style="margin-bottom:10px;">
           <span style="background:var(--brand-tint-soft); color:var(--brand-primary); font-size:var(--t-caption); font-weight:800; padding:var(--s-1) var(--s-2); border-radius:6px; display:inline-flex; align-items:center; gap:3px;">
-            ${ic("zap",12)} ${m.score} rule score
+            ${ic("zap",12)} ${m.score} / 100 demo score
           </span>
-          ${(p.badges && p.badges.length) ? `<span class="chip" style="background:var(--success-100); color:var(--success-ink);">${ic("badge-check",12)} Verified</span>` : ''}
+          ${providerVerificationChip(p)}
         </div>
 
         <div class="row" style="align-items:flex-start; margin-bottom:10px;">
@@ -11089,7 +11100,7 @@ function residentResults(){
         <!-- Summary first, evidence on demand: the reasons stay one tap away so
              the list can be scanned (19, 8). -->
         <details class="why-fold">
-          <summary>Why this ranking (${m.reasons.length})</summary>
+          <summary>How this demo score is built (${m.reasons.length})</summary>
           <div style="padding-top:7px;">
             ${m.reasons.map(r => `<div><span style="color:var(--success-ink); display:inline-flex; vertical-align:-2px;">${ic("check",12)}</span> ${esc(r)}</div>`).join('')}
             ${m.scoredOn < MATCH_SIGNALS.length ? `<div class="mut">Ranked on ${m.scoredOn} of the ${MATCH_SIGNALS.length} signals this build knows. The rest have no record for this provider on this device, so a thin score is a rule with little to go on, not a prediction of how your job will go.</div>` : ''}

@@ -30,7 +30,7 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'CREDENTIALS', 'LISTINGS'
   'CURRENT_CUSTOMER_ID', 'CURRENT_PROVIDER_ID', 'CONFIG_DEFAULTS', 'commissionRateFor',
   /* Discovery and the provider's own availability, pulled through so a suite can ask
      whether a filter actually changes what a resident is shown. */
-  'providerMatches', 'providerMatch', 'providerServes', 'providerAccepting', 'coverageLines',
+  'providerMatches', 'scoreProvider', 'rankingRequest', 'providerVerificationChip', 'providerServes', 'providerAccepting', 'coverageLines',
   'setProviderAvailable', 'setProviderBusy', 'reputationSeedOf', 'refreshReputation',
   'adminCounts', 'marketplaceRates', 'opsWorkload', 'intelligenceStats', 'supplyGaps', 'disputeCard', 'statementCard', 'configPanel',
   'DISPUTE_STATES', 'disputeLabel', 'caseIsOpen', 'providerCases', 'resolveCase', 'resolveDispute', 'commitConfig', 'setIntFilter', 'runPayoutNow', 'openDispute',

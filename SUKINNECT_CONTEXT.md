@@ -95,7 +95,8 @@ details and payment details out of source, seed data and localStorage.
 | Smart Match / concierge | Prototype-only / simulated | Smart Match is a rule-based demo score from provider records; concierge is local keyword logic |
 | Provider review and disputes | Prototype-only | Demo records and local UI |
 | Pilot geography and real field evidence | In plan / not validated | Master Plan and roadmap |
-| Consent, assisted onboarding and local quote guidance | In plan | Roadmap F-4, F-7, F-8 |
+| Consent UX | Versioned read-to-end gate and local versioned records for draft legal documents | Prototype only; no server-side consent enforcement or audit trail |
+| Assisted onboarding and local quote guidance | In plan | Roadmap F-7, F-8 |
 | Moderator, subscriptions, promotions, pilot KPI console | Not implemented / in plan | Roadmap feature register |
 | Wallet, direct lending, biometric capture, public blockchain | Not built; not approved | Scope guard and conflict ledger |
 

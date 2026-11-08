@@ -31,6 +31,11 @@ fictional records and opaque test IDs.
 | Verification/credentials | Demo credential and review records; no real document capture | Manual, tiered verification first. If documents are later collected, use a lawful access-controlled vendor/storage flow, narrow reviewer access, explicit retention and deletion, audit all reads. |
 | Analytics | Demo/sample records; no production telemetry | Collect a minimal allow-listed event set; avoid free text and direct identifiers; separate demo and live populations; set retention. |
 | AI/recommendations | Rule-based demo Smart Match score from provider records and simulated keyword concierge | Treat the score as prototype-only, not AI or live availability. For external models, server-side proxy, data minimisation, source/version labels, user override, and no autonomous consequential decisions. |
+| Registration consent | Read-to-end gate for three draft legal documents; local records include role, document, version and time | Store consent evidence server-side with the document version and applicable purpose; define withdrawal, retention and access controls with counsel before production. |
+
+The registration gate and its versioned records are prototype behavior only. The
+documents are drafts, not counsel-reviewed terms, and the local records are not a
+production consent audit trail.
 
 ## Production controls to design before launch
 

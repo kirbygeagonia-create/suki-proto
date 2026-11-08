@@ -77,11 +77,11 @@ requirements, not completed work.
 |---|---|---|
 | Fee model | `CONFIG_DEFAULTS.commissionRateDefault` is 10%; category overrides exist; no 1.3% cap | Pilot fee and payer unresolved. Do not silently set 1.2%, 1.0% or 8–12%. |
 | Gateway fees | `MockGateway`; no separate processor-fee amount in the booking money model | Do not absorb fees. Any real fee must be separately disclosed and assigned to the payer after a signed quote. |
-| Smart Match | `providerMatches()` filters and sorts by a 100-point rule-based score from service fit, declared area coverage, listed arrival window, approximate distance and platform verification status | Implemented as a prototype-only demo heuristic; an expandable explanation shows factors, seed scores/reasons are removed, and the UI disclaims AI/live availability. Verification labels read the recorded status. This is not a validated production ranking or real-time signal. |
+| Smart Match | `providerMatches()` filters and sorts by `scoreProvider()` using service fit, declared area coverage, approximate distance, listed availability, smoothed rating, recorded completion/cancellation and recency when those records exist | Implemented as a prototype-only demo heuristic; an expandable explanation shows available factors, and the UI disclaims AI/live availability. Verification status is displayed separately and is not a ranking factor. This is not a validated production ranking or real-time signal. |
 | Geography | Demo providers use barangays beyond the pilot; one pilot barangay overlaps | Pilot geography is the five locations in §1; keep demo records clearly labelled and do not claim they represent supply. |
 | Roles | Resident, provider and admin are prototype roles selected in a demo flow | Moderator and business/team roles are planned; no real authentication or server-side enforcement exists. |
 | Labels | Local demo, simulated gateway, demo verification and keyword concierge exist | State what is computed, simulated or absent; do not call partner payments or AI live. |
-| Privacy / consent | No production account or consent record | Draft terms are not legal advice; no real identity documents, biometric data or secrets in the prototype. |
+| Privacy / consent | Registration has a read-to-end gate for three versioned draft documents and records the document version, role and time locally; there is no production account or server-side consent record | Draft terms are not legal advice; the local record is not a production audit trail. No real identity documents, biometric data or secrets in the prototype. |
 
 ### Backend prompt audit B1–B15
 
@@ -91,11 +91,11 @@ inspection, not that it has been resolved.
 
 | ID | Finding | Local status |
 |---|---|---|
-| B1 | Smart Match numbers are typed, not computed | Stage A prototype fix implemented in `providerMatch()`; `providerMatches()` now ranks the computed results. Gate: `demo match scores and ordering come from visible provider records`; falsifier: `node tools/falsify-smart-match.cjs`. No live or production ranking exists. |
+| B1 | Smart Match numbers were typed, not computed | Stage A prototype fix uses `scoreProvider()` and `providerMatches()`; verification status is shown separately. Named gate: `demo match scores, reasons and verification labels reflect provider records`; falsifier: `node tools/falsify-smart-match.cjs`. No live or production ranking exists. |
 | B2 | Prototype fee is 10%, no cap | Confirmed in code; whether it is wrong for the pilot is an open owner decision, because the latest plan itself records conflicting recommendations |
 | B3 | No separately modelled gateway-fee line | Confirmed in money configuration / ledger |
 | B4 | Three demo roles, no moderator/business team or real session boundary | Confirmed; authentication is absent |
-| B5 | No Terms/Privacy consent gate or consent record in the app | Confirmed; the reference migration now includes a consent table, but there is no UI or live record store |
+| B5 | No production consent record or server-side enforcement | The registration UI requires reading each current draft version and acceptance where required, then records versions locally; the reference migration includes a proposed consent table, but there is no production store or enforcement |
 | B6 | No resumable account-onboarding / pricing wizard | Confirmed; booking stepper is not signup onboarding |
 | B7 | Review queue exists, but no real document capture/OCR/liveness | Confirmed; keep sensitive capture out of the prototype |
 | B8 | No production CAPTCHA, server rate limit or lockout | Confirmed; requires server-side controls |
@@ -119,7 +119,7 @@ separately so partial UI is not mistaken for a production capability.
 | F-1 | Authentication and server-enforced roles | Master Plan §15.2; secure access | Demo role picker only; no sessions or authorization | P0 / backend | F-2; MVP core | None yet |
 | F-2 | Backend and persistent database; port reference schema | Master Plan §15.2, §14; reliable shared records | No server; localStorage/memory and a MySQL reference schema | P0 / Stage B | Decide stack C14; MVP core | None yet |
 | F-3 | Licensed payment gateway, payout and reconciliation | Master Plan §15.2; real settlement | `MockGateway` only | P0 / Stage B | F-1, F-2, signed merchant agreement | None yet |
-| F-4 | Legal, consent and privacy foundation | Master Plan §15.2, §13.4; informed data use | No consent gate or consent record | P0 / Stage A then production | Counsel, privacy impact assessment, F-1/F-2 | None yet |
+| F-4 | Legal, consent and privacy foundation | Master Plan §15.2, §13.4; informed data use | Prototype registration has a versioned read-to-end gate and local versioned action records for draft terms/policy/privacy notice; production consent storage, enforcement, retention and counsel review remain unimplemented | P0 / Stage A then production | Counsel, privacy impact assessment, F-1/F-2 | Login checks: `registration requires reaching each current document version and accepting the terms`; `the registration record stores the version read or accepted for each document` |
 | F-5 | Manual, tiered provider verification | Master Plan §13.2, §15.2; meaningful trust labels | Demo application/review UI; no production verification evidence | P0 / Stage A state model, Stage B records | F-1, F-2, F-4; human decision | None yet |
 | F-6 | Production disputes and admin audit, evidence storage and SLAs | Master Plan §15.2; fair resolution | Local dispute records and audit concepts; no production evidence store/SLA | P0 / Stage B | F-1, F-2 | None yet |
 | F-7 | Assisted onboarding stepper (typed, human-assisted mode) | Master Plan §15.2; reduce provider setup friction | No signup stepper; booking tracker is unrelated | P1 / Stage A | F-1; M1–M3 | None yet |
@@ -131,7 +131,7 @@ separately so partial UI is not mistaken for a production capability.
 | F-13 | Review integrity and abuse controls | Master Plan §15.2; trust and safety | Prototype reviews; no production bot protection or rate limiting | P1 / Stage B | F-1, server, moderation policy | None yet |
 | F-14 | Pilot KPI dashboard from real records | Master Plan §15.2, §19; evidence-led decisions | Existing admin analytics are prototype/demo records, not production KPIs | P1 / Stage A local events; Stage B production | F-2; defined metrics and live/demo split | None yet |
 | F-15 | Provider-reviewed portfolio/service-description generator | Master Plan §15.2; provider visibility | Not implemented | P2 / Stage B | F-1, F-2, grounded model proxy if used | None yet |
-| F-16 | Transparent Smart Match v1 and “popular in your barangay” | Master Plan §15.2, §14.5; useful local discovery | Stage A portion implemented: sorted rule-based demo score from existing provider records, with factors in each card's explanation and provider status labelled accurately. No popularity aggregation, real-time availability, validated ranking or production data. | P2 / Stage A rules | Real supply/booking records; cold-start explanation | `node tools/verify.cjs` named check; `node tools/falsify-smart-match.cjs` |
+| F-16 | Transparent Smart Match v1 and “popular in your barangay” | Master Plan §15.2, §14.5; useful local discovery | Stage A portion implemented: sorted rule-based demo score from provider records; available factors are explained, verification status is separate, and the UI disclaims AI/live availability. No popularity aggregation, validated ranking or production data. | P2 / Stage A rules | Real supply/booking records; cold-start explanation | Named check `demo match scores, reasons and verification labels reflect provider records`; `node tools/falsify-smart-match.cjs` |
 | F-17 | Concierge grounded in real provider/service records | Master Plan §15.2; discovery assistance | Simulated local keyword rules; no live AI | P2 / Stage B if model needed | F-2, F-16; user override and source labels | None yet |
 | F-18 | Explainable fraud/spam flags routed to a human | Master Plan §15.2; protect users | Not implemented as a usage-driven queue | P2 / Stage A rules only after evidence | Real usage data; F-1/F-2; human appeal | None yet |
 | F-19 | Provider subscriptions and promoted listings | Master Plan §15.2, §11.4; test monetization | No subscription/promotion feature | P2→P3 / flagged-off model at most | Paid-plan validation; M7+; owner decision on model | None yet |
@@ -248,13 +248,13 @@ may want to:
 
 | Implemented item | Code / record | Test proving it |
 |---|---|---|
-| Current browser prototype, centavos and booking/money kernel | `Sukinnect-next.html` | `node tools/verify.cjs` (568 checks in the current run) |
+| Current browser prototype, centavos and booking/money kernel | `Sukinnect-next.html` | `node tools/verify.cjs` (read the current run output; the full suite is not green) |
 | Demo/live distinction and target labelling | `Sukinnect-next.html`, `README.md` | Existing gate suite; no production data validation |
 | Payment adapter seam | `Sukinnect-next.html` `MockGateway` | Existing payment checks in `node tools/verify.cjs`; gateway remains simulated |
-| Record-derived demo Smart Match | `Sukinnect-next.html` `providerMatch()` / `providerMatches()` | `node tools/verify.cjs`; `node tools/falsify-smart-match.cjs` |
+| Record-derived demo Smart Match | `Sukinnect-next.html` `scoreProvider()` / `providerMatches()` | Named `node tools/verify.cjs` check; `node tools/falsify-smart-match.cjs` |
 | Additive Stage B reference records | `schema/migrations/001_startup_records.mysql.sql` | Static review only; MySQL not selected or run against a database |
 | Current source and business decision summary | This roadmap and `SUKINNECT_CONTEXT.md` | Fresh-AI read test; manual traceability |
-| Consent UX, onboarding flow, local price references, moderator authorization, hash-chain implementation, event/KPI screen, subscriptions/promotions, and executable API/mock adapters | None yet | None yet |
+| Production consent store/enforcement, onboarding flow, local price references, moderator authorization, hash-chain implementation, event/KPI screen, subscriptions/promotions, and executable API/mock adapters | None yet | None yet |
 
 Planned features remain “none yet” until code exists and a targeted check can fail on a
 deliberate break. A reference migration is a design artifact, not proof of a backend

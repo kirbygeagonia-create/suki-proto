@@ -711,15 +711,18 @@ If Smart Match is displayed, it should be explainable.
 
 Never make a match score look like an unexplained authoritative decision.
 
-The rebuild shows a 0–100 **demo score** derived from service fit, provider-listed area
-coverage, the listed arrival window, approximate distance and recorded platform status.
-Those five factors and their points are available in the card's explanation. They are
-demo records, not live availability or a validated production ranking; do not describe the score as AI,
-percent confidence, qualification, or a safety guarantee.
+The rebuild shows a 0–100 **demo score** from the provider records: service fit,
+declared area, approximate distance, listed availability, smoothed rating, recorded
+completion and cancellation, and recency when a completed-job record exists. Missing
+history is omitted rather than treated as a bad result. The card explains the available
+signals; verification status is shown separately and is not part of the score. These are
+demo records, not live availability or a validated production ranking; do not describe
+the score as AI, percent confidence, qualification, or a safety guarantee.
 
-Smart Match is prototype logic only. `providerMatch()` and `providerMatches()` calculate
-and sort the demo score; no popularity aggregation, real-time signal or production
-algorithm exists. Keep the score, explanation and sort order tied to the same records.
+Smart Match is prototype logic only. `scoreProvider()` computes the demo score and
+`providerMatches()` filters and sorts the results; no popularity aggregation, real-time
+signal or production algorithm exists. Keep the score, explanation and sort order tied
+to the same records.
 
 ---
 

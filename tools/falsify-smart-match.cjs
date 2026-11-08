@@ -9,50 +9,52 @@ const ROOT = path.join(__dirname, '..');
 const TARGET = path.join(ROOT, 'Sukinnect-next.html');
 const original = fs.readFileSync(TARGET, 'utf8');
 const EOL = original.indexOf('\r\n') >= 0 ? '\r\n' : '\n';
-const CHECK = 'demo match scores and ordering come from visible provider records';
+const CHECK = 'demo match scores, reasons and verification labels reflect provider records';
 
 function runGate() {
   let out = '';
-  let code = 0;
   try {
     out = execFileSync(process.execPath, [path.join(ROOT, 'tools', 'verify.cjs')],
       { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-  } catch (err) { out = (err.stdout || '') + (err.stderr || ''); code = err.status || 1; }
+  } catch (err) { out = (err.stdout || '') + (err.stderr || ''); }
   const line = out.split(/\r?\n/).find(l => l.indexOf(CHECK) >= 0);
-  if (!line) return { seen: false, failed: code !== 0, line: '' };
-  return { seen: true, failed: line.indexOf('FAIL') === 0, line: line.trim().slice(0, 170) };
+  if (!line) return { seen: false, failed: false, line: '' };
+  return { seen: true, failed: /^\s*FAIL\b/.test(line), line: line.trim().slice(0, 170) };
 }
 
 const BREAKS = [
-  { name: 'the score no longer sums its documented factors',
-    from: '    score: servicePoints + areaPoints + arrivalPoints + distancePoints + verificationPoints,',
-    to: '    score: 0,' },
-  { name: 'verification points stop reading the provider verification record',
-    from: "  const verificationStatus = p.verification && p.verification.status || 'not recorded';",
-    to: "  const verificationStatus = 'verified';" },
-  { name: 'the score stops reading provider-listed area coverage',
-    from: '  const servesArea = !!targetArea && providerServes(p, targetArea);',
-    to: '  const servesArea = !!targetArea && p.barangay === targetArea;' },
-  { name: 'search stops finding providers by the areas they declare serving',
-    from: '(p.servesBarangays || []).some(area => area.toLowerCase().includes(query))',
-    to: 'false' },
-  { name: 'providers stop sorting by the computed score',
+  { name: 'the displayed score stops depending on its weighted signals',
     from: [
-      '  ).sort((a, b) => providerMatch(b).score - providerMatch(a).score',
-      '    || a.availabilityMin - b.availabilityMin',
-      '    || a.distanceKm - b.distanceKm',
-      '    || a.id.localeCompare(b.id));'
+      '  const score = totalWeight > 0',
+      '    ? Math.round(100 * signals.reduce((t, s) => t + s.weight * s.sub, 0) / totalWeight) : 0;'
     ].join(EOL),
-    to: '  );' },
-  { name: 'the visible explanations are removed from the computed result',
-    from: '    reasons' + EOL + '  };',
-    to: '    reasons: []' + EOL + '  };' },
-  { name: 'the results page claims an AI/live match instead of a demo heuristic',
+    to: '  const score = 0;' },
+  { name: 'service fit stops reading the provider service record',
+    from: "provider.serviceId === req.serviceId ? 1 : 0",
+    to: '1' },
+  { name: 'area fit stops reading declared service coverage',
+    from: 'providerServes(provider, barangay) ? 1 : 0',
+    to: 'provider.barangay === barangay ? 1 : 0' },
+  { name: 'arrival fit stops reading the listed arrival window',
+    from: 'signalBand(provider.availabilityMin, [[15, 1], [30, 0.8], [60, 0.6], [120, 0.4], [Infinity, 0.2]])',
+    to: '1' },
+  { name: 'barangay filtering ignores declared service coverage',
+    from: '(!f.barangay || providerServes(p, f.barangay))',
+    to: '(!f.barangay || true)' },
+  { name: 'providers stop sorting by their computed score',
+    from: [
+      '  return matched.sort((a, b) => (scoreOf.get(b.id) - scoreOf.get(a.id)) || a.name.localeCompare(b.name));'
+    ].join(EOL),
+    to: '  return matched;' },
+  { name: 'computed reasons are removed from the match result',
+    from: 'reasons: signals.filter(s => s.reason).map(s => s.reason),',
+    to: 'reasons: [],' },
+  { name: 'a suspended provider is labelled verified',
+    from: "  if (status === 'verified')",
+    to: "  if (true)" },
+  { name: 'the result screen claims a live AI match',
     from: 'Rule-based demo match · not AI or live availability',
-    to: 'AI-powered live provider match' },
-  { name: 'the suspended provider is shown as verified',
-    from: "const statusBadge = platformStatus === 'verified'",
-    to: "const statusBadge = true" }
+    to: 'AI-powered live provider match' }
 ];
 
 function replaceOnce(from, to) {
@@ -64,7 +66,7 @@ function replaceOnce(from, to) {
 
 const base = runGate();
 if (!base.seen || base.failed) {
-  console.log('baseline is not green: ' + (base.line || 'named check missing'));
+  console.log('named Smart Match check is unavailable or failing: ' + (base.line || 'named check missing'));
   process.exit(1);
 }
 console.log('baseline: ' + base.line);

@@ -3588,84 +3588,97 @@ suite('honesty', async () => {
         : 'coverage does not drive discovery' };
   })());
 
-  verdict('demo match scores and ordering come from visible provider records', (() => {
+  verdict('demo match scores, reasons and verification labels reflect provider records', (() => {
     const p = app.PROVIDERS.find(x => x.id === 'p1');
-    if (!p) return { ok: false, why: 'the positive-control provider record is missing' };
-    const oldQuery = app.state.searchQuery;
-    const oldFilters = app.state.providerFilters;
+    const suspended = app.PROVIDERS.find(x => x.id === 'p4');
+    if (!p || !suspended) return { ok: false, why: 'positive-control provider records are missing' };
+    const oldQuery = app.state.searchQuery, oldFilters = app.state.providerFilters;
     const oldBarangay = app.state.profileData.barangay;
     const oldRole = app.state.role, oldTab = app.state.tab, oldView = app.state.view;
-    const oldStatus = p.verification.status;
-    const oldArrival = p.availabilityMin;
-    const oldDistance = p.distanceKm;
-    const oldCoverage = p.servesBarangays;
-    app.state.searchQuery = '';
-    app.state.providerFilters = {};
-    app.state.profileData.barangay = 'San Jose';
-    const areaBaseline = app.providerMatch(p).score;
-    p.servesBarangays = oldCoverage.filter(area => area !== 'San Jose');
-    const areaChanged = app.providerMatch(p).score === areaBaseline - 25;
+    const oldService = p.serviceId, oldArrival = p.availabilityMin, oldCoverage = p.servesBarangays;
+    const oldVerificationStatus = p.verification.status;
+    try {
+    const targetArea = (oldCoverage || []).find(area => area !== p.barangay);
+    if (!targetArea) return { ok: false, why: p.name + ' has no declared area beyond home' };
+    const now = Date.now();
+    const request = { serviceId: p.serviceId, barangay: targetArea };
+    const baseline = app.scoreProvider(p, request, { now: now });
+    p.verification.status = 'suspended';
+    const verificationExcluded = app.scoreProvider(p, request, { now: now }).score === baseline.score;
+    p.verification.status = oldVerificationStatus;
+    p.serviceId = '__different_service__';
+    const serviceChangesScore = app.scoreProvider(p, request, { now: now }).score < baseline.score;
+    p.serviceId = oldService;
+    p.servesBarangays = oldCoverage.filter(area => area !== targetArea);
+    const coverageChangesScore = app.scoreProvider(p, request, { now: now }).score < baseline.score;
     p.servesBarangays = oldCoverage;
-    app.state.profileData.barangay = 'Poblacion';
-    const baseline = app.providerMatch(p);
-    p.verification.status = 'pending';
-    const statusChanged = app.providerMatch(p).score === baseline.score - 5;
-    p.verification.status = oldStatus;
     p.availabilityMin = 1440;
-    const arrivalChanged = app.providerMatch(p).score === baseline.score - 15;
+    const arrivalChangesScore = app.scoreProvider(p, request, { now: now }).score < baseline.score;
     p.availabilityMin = oldArrival;
-    const baselineFirst = app.providerMatches()[0] && app.providerMatches()[0].id === p.id;
-    p.verification.status = 'pending';
-    p.availabilityMin = 1440;
-    const rankingMoved = app.providerMatches()[0] && app.providerMatches()[0].id !== p.id;
-    p.verification.status = oldStatus;
-    p.availabilityMin = oldArrival;
-    app.state.providerFilters = { serviceId: p.serviceId };
-    const selectedService = app.providerMatch(p).score === 100;
-    app.state.providerFilters = {};
-    app.state.searchQuery = 'San Jose';
-    const coverageSearch = app.providerMatches().some(x => x.id === p.id);
+
     app.state.searchQuery = '';
-    app.state.tab = 'results'; app.state.role = 'resident'; app.state.view = 'app';
+    app.state.providerFilters = {};
+    app.state.profileData.barangay = 'Poblacion';
+    const matched = app.providerMatches();
+    const rankedRequest = app.rankingRequest();
+    const rankedNow = Date.now();
+    const rankedScores = matched.map(x => app.scoreProvider(x, rankedRequest, { now: rankedNow }).score);
+    const hasScoreVariation = new Set(rankedScores).size > 1;
+    const sortedByScore = matched.every((x, i) => {
+      if (i === 0) return true;
+      const previous = matched[i - 1];
+      const a = app.scoreProvider(previous, rankedRequest, { now: rankedNow }).score;
+      const b = app.scoreProvider(x, rankedRequest, { now: rankedNow }).score;
+      return a > b || (a === b && previous.name.localeCompare(x.name) <= 0);
+    });
+
+    const outsider = app.PROVIDERS.find(x => x !== p && !(x.servesBarangays || []).includes(targetArea));
+    app.state.providerFilters = { barangay: targetArea };
+    const inCoverage = app.providerMatches().some(x => x.id === p.id);
+    const outsideCoverageExcluded = !outsider || !app.providerMatches().some(x => x.id === outsider.id);
+    app.state.providerFilters = {};
+    app.state.profileData.barangay = targetArea;
+    app.state.role = 'resident'; app.state.tab = 'results'; app.state.view = 'app';
     app.render();
     const html = app._document.getElementById('screen').innerHTML;
-    const evidenceVisible = baseline.reasons.every(reason => html.includes(reason));
-    const p4Start = html.indexOf('<div class="card" data-provider-detail="p4"');
-    const p4End = html.indexOf('<div class="card" data-provider-detail="', p4Start + 1);
-    const p4Card = p4Start >= 0 ? html.slice(p4Start, p4End < 0 ? undefined : p4End) : '';
-    const suspendedHonest = p4Card.includes('Platform status: suspended')
-      && !/>[^<]*Verified[^<]*</.test(p4Card);
-    const honestCopy = html.includes('Rule-based demo match')
-      && html.includes('/100 demo match')
-      && html.includes('How this demo score is built')
-      && !html.includes('Smart Matched Providers')
-      && !html.includes('Average response time under 20 mins')
+    const p1Start = html.indexOf('<div class="card" data-provider-detail="p1"');
+    const p1End = html.indexOf('<div class="card" data-provider-detail="', p1Start + 1);
+    const p1Card = p1Start >= 0 ? html.slice(p1Start, p1End < 0 ? undefined : p1End) : '';
+    const displayedScore = app.scoreProvider(p, app.rankingRequest(), { now: Date.now() }).score;
+    const displayedReason = baseline.reasons.find(reason => reason.includes('Brgy. ' + targetArea));
+    const reasonsVisible = !!displayedReason && p1Card.includes(displayedReason)
+      && p1Card.includes('How this demo score is built');
+    const suspendedBadge = app.providerVerificationChip(suspended);
+    const verificationHonest = suspendedBadge.includes('Suspended') && !suspendedBadge.includes('Verified');
+    const honestCopy = html.includes('Rule-based demo match · not AI or live availability')
+      && p1Card.includes(displayedScore + ' / 100 demo score')
+      && !html.includes('AI-powered live provider match')
       && !html.includes('99% job completion rate');
     const noTypedScores = app.PROVIDERS.every(x => !Object.prototype.hasOwnProperty.call(x, 'smartMatch'));
-    app.state.searchQuery = oldQuery;
-    app.state.providerFilters = oldFilters;
-    app.state.profileData.barangay = oldBarangay;
-    app.state.role = oldRole; app.state.tab = oldTab; app.state.view = oldView;
-    p.verification.status = oldStatus;
-    p.availabilityMin = oldArrival;
-    p.distanceKm = oldDistance;
-    p.servesBarangays = oldCoverage;
-    return { ok: baseline.score === 90 && baseline.reasons.length === 5 && statusChanged
-        && arrivalChanged && areaChanged && baselineFirst && rankingMoved && selectedService
-        && coverageSearch && evidenceVisible
-        && suspendedHonest && honestCopy && noTypedScores,
-      why: baseline.score !== 90 ? 'Poblacion plumber score was ' + baseline.score + ', expected 90 from the five declared factors'
-        : !statusChanged ? 'changing the provider verification record did not move its score by the documented five points'
-        : !arrivalChanged ? 'changing the provider arrival-window record did not move its score by the documented fifteen points'
-        : !areaChanged ? 'removing declared coverage did not remove the area points'
-        : !baselineFirst || !rankingMoved ? 'the visible match score does not control provider ordering'
-        : !selectedService ? 'an exact selected service did not receive its documented score'
-        : !coverageSearch ? 'a provider is not searchable in a barangay they declare serving'
-        : !evidenceVisible ? 'the five displayed explanations do not match the score factors'
-        : !suspendedHonest ? 'the suspended provider is shown with a false verified label'
-        : !honestCopy ? 'the results page hides the rule-based/demo status or retains a typed reason'
+    return { ok: baseline.score > 0 && baseline.score <= 100 && baseline.signals.length > 0
+        && serviceChangesScore && coverageChangesScore && arrivalChangesScore
+        && verificationExcluded && hasScoreVariation && sortedByScore && inCoverage && outsideCoverageExcluded
+        && reasonsVisible && verificationHonest && honestCopy && noTypedScores,
+      why: baseline.score <= 0 || baseline.score > 100 ? 'the score is not within its documented 0–100 range'
+        : !serviceChangesScore ? 'changing the requested service did not change its service-fit score'
+        : !coverageChangesScore ? 'removing declared service-area coverage did not lower the score'
+        : !arrivalChangesScore ? 'changing the listed arrival window did not change its score'
+        : !verificationExcluded ? 'verification status improperly changes the match score'
+        : !hasScoreVariation || !sortedByScore ? 'providers are not visibly ordered by their computed scores'
+        : !inCoverage || !outsideCoverageExcluded ? 'the barangay filter does not follow declared service coverage'
+        : !reasonsVisible ? 'the card does not explain the signals used for its score'
+        : !verificationHonest ? 'a suspended provider is labelled Verified'
+        : !honestCopy ? 'the result page does not disclose that this is a demo score'
         : !noTypedScores ? 'a provider seed still carries a hand-authored smartMatch score or reasons'
-        : 'the score factors are not all represented by five explanations' };
+        : 'the score cannot be derived from its provider records' };
+    } finally {
+      app.state.searchQuery = oldQuery;
+      app.state.providerFilters = oldFilters;
+      app.state.profileData.barangay = oldBarangay;
+      app.state.role = oldRole; app.state.tab = oldTab; app.state.view = oldView;
+      p.serviceId = oldService; p.availabilityMin = oldArrival; p.servesBarangays = oldCoverage;
+      p.verification.status = oldVerificationStatus;
+    }
   })());
 
   /* §27: "tapping a notification should open the object responsible for it". Measured in a real

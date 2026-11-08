@@ -8019,3 +8019,27 @@ contained no LFS pointers. `node tools/audit-build-bytes.cjs` refused with `NO
 CONCLUSION` because the local Android asset and debug APK are absent; no Android files
 were created or changed. The MySQL migration was not executed because no client is
 installed. No deployment was triggered.
+
+## 134. Smart Match and consent status correction — 2026-11-07
+
+The follow-up review found the Smart Match check and roadmap were describing an older
+implementation. The app uses `scoreProvider()` and `providerMatches()`: available
+record-backed signals include service fit, declared area, approximate distance, listed
+availability, smoothed rating, completed/cancelled work and recency when those records
+exist. Verification is displayed separately, not scored. The resident results screen
+now calls the score a demo, disclaims AI and live availability, and shows the provider's
+recorded verification state, including suspended status. This remains an unvalidated
+prototype heuristic.
+
+The registration UI also has a versioned read-to-end gate for three draft legal
+documents. It records document, version, role and time locally; this is not a
+production consent store or audit trail. The roadmap, context snapshot, agent guidance
+and privacy proposal now state those limits instead of saying the prototype has no
+consent UI.
+
+Validation on this source: the named Smart Match check passed; `node
+tools/falsify-smart-match.cjs` caught 9 of 9 breaks and restored the app; the targeted
+`resident-results` camera measurement reported zero failures and no console errors.
+`node tools/verify.cjs` still reports 28 failures among 573 checks, so the complete
+suite is not green and this change does not claim otherwise. `git diff --check` passed.
+No deployment was triggered.
