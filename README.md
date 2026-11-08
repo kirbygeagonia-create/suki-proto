@@ -8,6 +8,19 @@ The product spec, brand rules and the prototype-versus-production discipline liv
 **[`AGENTS.md`](AGENTS.md)**. Read it before changing anything. The money model in this
 rebuild is summarised in **[`CHANGES.md`](CHANGES.md)**.
 
+## Startup status
+
+Sukinnect is a pre-revenue startup with a working browser prototype, not a production
+service. The pilot is planned for five Tupi barangays: Poblacion, Polonuling, Cebuano,
+Kablon and Bunao. The current demo records do not represent that pilot geography or
+real users. The current app is `Sukinnect-next.html`; authentication, shared server
+storage and real payment processing are not implemented. See
+[`SUKINNECT_CONTEXT.md`](SUKINNECT_CONTEXT.md) for read-first context and
+[`SUKINNECT_STARTUP_ROADMAP.md`](SUKINNECT_STARTUP_ROADMAP.md) for the sourced feature
+register, open decisions and evidence gates. Targets and forecasts are not traction.
+The backend API, privacy and stack documents are proposals only; the MySQL reference
+migration has not been applied to a database.
+
 ## Clone and run
 
 Large assets (`reicon.js`, the pitch deck) are Git LFS files. Install LFS **before** cloning or
@@ -250,7 +263,8 @@ Every amount is an **integer count of centavos**, and the unit is in the field n
 (`basePriceCentavos`, `amountCentavos`). A percentage computed on a float peso eventually
 prints a cent nobody charged.
 
-For a job with a ₱800 base at the pilot's 10 %:
+For a job with a ₱800 base at the prototype's current 10 % configuration (a demo
+setting, not an approved pilot rate):
 
 | | |
 |---|---|
@@ -273,6 +287,9 @@ For a job with a ₱800 base at the pilot's 10 %:
   refund walks **this booking's own posted lines** back, pro rata — never a rate recomputed
   against today's configuration, which would put commission on parts and materials. A cash
   job can only have its fee forgiven: the platform never held the visit money.
+- **Prototype-only wording:** the above describes the intended transaction model, not a
+  live arrangement. `MockGateway` simulates authorize/capture/refund/void in this browser;
+  no real funds are held, transferred or settled by Sukinnect.
 - **There is no stored-value wallet** and no resident balance. A customer's money is an
   obligation to deliver or refund, never a number they can spend (AGENTS.md §23).
 - Cash-on-arrival is a first-class path: the platform never held that money, so the fee is a
@@ -283,6 +300,11 @@ For a job with a ₱800 base at the pilot's 10 %:
   trail. They apply to bookings made after the change; an accepted job keeps the terms
   frozen when it was accepted. The deck's own position governs: launch monetization is not
   assumed, and take rates are validated per category during the pilot.
+- The November 2026 documents disagree on the pilot commission (the Master Plan's working
+  1.2% / 1.3% ceiling versus a separate 8–12% recommendation). The owner has not selected
+  a rate or fee payer. At 1.2%, an ₱800 booking yields ₱9.60 before costs; that is a
+  scenario, not the current prototype setting or a decided policy. See the roadmap conflict
+  ledger.
 - Payments sit behind a four-verb gateway seam (`authorize · capture · refund · void`).
   Today it is `MockGateway`, with no network call; a partner implementation changes one line.
 
@@ -360,10 +382,13 @@ available here, because they decide how money moves and are still being validate
 
 ## Honest labelling
 
-Demo data is `source:'demo'`, records you create in a session are `source:'live'`. Pilot
-targets (150 providers, 3,000 users, 6,000 bookings) are planning assumptions and are never
-presented as activity. There is no server: an AI concierge that describes, analyses and
-matches is a simulated flow, and the screens say so.
+Demo data is `source:'demo'`, records you create in a session are `source:'live'`. Planning
+figures vary by source: the deck cites 150 providers, 3,000 users and 6,000 bookings; the
+November plan proposes 60–100 verified providers and 3,270 base / 15,200 stretch
+Year-1 booking scenarios. These are targets or assumptions, never activity or traction.
+There is no server: the AI concierge is a simulated flow, and Smart Match uses a transparent
+record-derived demo heuristic. Neither is a real AI result, live availability signal or
+validated production ranking.
 
 ## Assets
 

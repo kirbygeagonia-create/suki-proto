@@ -1,0 +1,10 @@
+---
+alwaysApply: true
+---
+
+Read `SUKINNECT_CONTEXT.md` before acting and consult the relevant `AGENTS.md` sections.
+Keep `Sukinnect-next.html` as the current rebuild; do not touch the earlier
+`Sukinnect.html` for rebuild work. Preserve the single-file, `file://`-safe architecture,
+centavos accounting, honest demo/simulation labels and the no-wallet rule. Treat startup
+targets as assumptions, proposed partners as unconfirmed, and unresolved business
+conflicts as owner decisions. Do not push or expose the ignored local Master Plan.

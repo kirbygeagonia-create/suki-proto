@@ -1646,15 +1646,6 @@ const PROVIDERS = [
     rateCentavos:35000,rateUnit:'call-out fee',rating:4.9,jobs:214,trustScore:96,
     badges:['ID Verified','Background Checked','Top Rated'],lat:6.3671,lng:124.9331,
     credentials:['TESDA NC II Plumbing','Barangay Cleared','Master Plumber Apprentice','Police Cleared'],
-    smartMatch:{
-      score:96,
-      reasons:[
-        'Experienced with urgent pipe and kitchen leaks',
-        'Available now (arrives in ~15 mins)',
-        '99% job completion rate (214 jobs)',
-        'Located within 1 km of your barangay'
-      ]
-    },
     reviews:[
       {client:'Elena M.', date:'Sep 2', stars:5, comment:'Mabilis dumating at naayos agad ang tagas sa kusina. Very polite!'},
       {client:'Danilo G.', date:'Aug 28', stars:5, comment:'Professional and transparent with replacement part costs.'}
@@ -1665,14 +1656,6 @@ const PROVIDERS = [
     rateCentavos:40000,rateUnit:'call-out fee',rating:4.8,jobs:156,trustScore:92,
     badges:['ID Verified','TESDA Certified'],lat:6.3901,lng:124.9548,
     credentials:['TESDA NC II Electrical Installation','Licensed Electrician','Safety Certified'],
-    smartMatch:{
-      score:91,
-      reasons:[
-        'TESDA NC II certified for high-voltage breaker issues',
-        'Average response time under 20 mins',
-        'High customer satisfaction score'
-      ]
-    },
     reviews:[
       {client:'Roberto T.', date:'Sep 1', stars:5, comment:'Fixed our tripping breakers safely. Very knowledgeable.'}
     ]
@@ -1682,14 +1665,6 @@ const PROVIDERS = [
     rateCentavos:50000,rateUnit:'per visit',rating:5.0,jobs:98,trustScore:98,
     badges:['ID Verified','Background Checked'],lat:6.3665,lng:124.9338,
     credentials:['TESDA Housekeeping NC II','Sanitation Certified','NBI Cleared'],
-    smartMatch:{
-      score:94,
-      reasons:[
-        'Perfect 5.0 rating on home deep sanitation',
-        'Brings own eco-safe cleaning gear',
-        'High repeat customer rebook rate'
-      ]
-    },
     reviews:[
       {client:'Theresa B.', date:'Sep 4', stars:5, comment:'Super clean house! Smells fresh and sanitized.'}
     ]
@@ -1699,13 +1674,6 @@ const PROVIDERS = [
     rateCentavos:30000,rateUnit:'diagnostic fee',rating:4.7,jobs:132,trustScore:89,
     badges:['ID Verified'],lat:6.3452,lng:124.9104,
     credentials:['RAC Servicing NC II (Aircon/Fridge)','Consumer Electronics NC II'],
-    smartMatch:{
-      score:87,
-      reasons:[
-        'Specialized in inverter refrigerator & aircon cooling',
-        'Provides diagnostic quotes before replacement'
-      ]
-    },
     reviews:[
       {client:'Luz V.', date:'Aug 26', stars:5, comment:'Aircon is now blowing cold air again. Fair diagnostic fee.'}
     ]
@@ -1715,13 +1683,6 @@ const PROVIDERS = [
     rateCentavos:25000,rateUnit:'per hour',rating:4.9,jobs:74,trustScore:95,
     badges:['ID Verified','Licensed Teacher'],lat:6.4002,lng:124.9203,
     credentials:['PRC Licensed Professional Teacher','BSEd Major in Mathematics'],
-    smartMatch:{
-      score:93,
-      reasons:[
-        'PRC licensed teacher for primary & junior high math',
-        'In-home and online session support'
-      ]
-    },
     reviews:[
       {client:'Grace N.', date:'Sep 3', stars:5, comment:'My daughter understood geometry quickly under Teacher Kristine.'}
     ]
@@ -1731,13 +1692,6 @@ const PROVIDERS = [
     rateCentavos:6000,rateUnit:'base fare',rating:4.6,jobs:301,trustScore:90,
     badges:['ID Verified'],lat:6.3549,lng:124.9598,
     credentials:['Professional Driver License','NBI Cleared Motorcycle Rider'],
-    smartMatch:{
-      score:89,
-      reasons:[
-        'Motorbike courier on stand-by (< 5 min dispatch)',
-        '300+ completed local parcel trips'
-      ]
-    },
     reviews:[
       {client:'Sarah D.', date:'Sep 5', stars:5, comment:'Bilis mag-deliver at maingat sa fragile items.'}
     ]
@@ -1763,8 +1717,6 @@ const PROVIDERS = [
       buysBy:['per tree','whole lot']
     },
     credentials:['Barangay clearance','Declared 12 years of backyard harvesting'],
-    smartMatch:{ score:84, reasons:['Harvests mango and coconut','Serves Buayan and nearby barangays',
-      'Brings a pole pruner and harness','Available from tomorrow morning'] },
     reviews:[
       {client:'Libby T.', date:'Sep 12', stars:5, comment:'Nakuha nilang lahat ng mangga, wala akong nakitang nasirang sanga.'},
       {client:'Rogelio D.', date:'Aug 28', stars:4, comment:'Ayos ang oras, medyo late lang ng 20 minuto.'}
@@ -1787,8 +1739,6 @@ const PROVIDERS = [
       buysBy:['per kilo','whole lot']
     },
     credentials:['Barangay clearance','Market vendor, Dalet public market'],
-    smartMatch:{ score:78, reasons:['Buys mango by the kilo','Serves your barangay',
-      'Offers after seeing the trees','Available this week'] },
     reviews:[
       {client:'Ana D.', date:'Sep 3', stars:5, comment:'Tapat sa timbang at bayad agad.'},
       {client:'Nena C.', date:'Jul 19', stars:4, comment:'Mababa konti offer kaysa ibinata, pero mabilis.'}
@@ -5830,18 +5780,60 @@ function providerAccepting(p){
   return p.acceptingRequests !== false;
 }
 
+function providerMatch(p){
+  const query = (state.searchQuery || '').trim().toLowerCase();
+  const f = state.providerFilters || {};
+  const knownAreas = [...new Set(PROVIDERS.flatMap(x => [x.barangay].concat(x.servesBarangays || [])))];
+  const queriedArea = query && knownAreas.find(area => area.toLowerCase() === query);
+  const targetArea = f.barangay || queriedArea || (!query ? state.profileData.barangay : '');
+  const servesArea = !!targetArea && providerServes(p, targetArea);
+  const serviceTargeted = !!f.serviceId || (!!query && p.service.toLowerCase().includes(query));
+  const servicePoints = serviceTargeted ? 30 : 20;
+  const areaPoints = targetArea ? (servesArea ? 25 : 0) : 15;
+  const arrival = Number.isFinite(p.availabilityMin) ? p.availabilityMin : NaN;
+  const arrivalPoints = Number.isFinite(arrival)
+    ? arrival <= 30 ? 20 : arrival <= 120 ? 15 : arrival <= 720 ? 10 : 5
+    : 0;
+  const distance = Number.isFinite(p.distanceKm) ? p.distanceKm : NaN;
+  const distancePoints = Number.isFinite(distance)
+    ? distance <= 1 ? 15 : distance <= 3 ? 10 : distance <= 5 ? 5 : 0
+    : 0;
+  const verificationStatus = p.verification && p.verification.status || 'not recorded';
+  const verificationPoints = verificationStatus === 'verified' ? 10
+    : verificationStatus === 'pending' ? 5 : 0;
+  const reasons = [
+    'Service fit: ' + servicePoints + '/30' + (serviceTargeted ? ' (matches the selected service/search)' : ' (neutral; no service selected)'),
+    'Area: ' + areaPoints + '/25' + (targetArea
+      ? ' (' + (servesArea ? 'provider-listed coverage includes ' : 'does not list coverage for ') + targetArea + ')'
+      : ' (neutral; no area selected)'),
+    'Arrival window: ' + arrivalPoints + '/20' + (Number.isFinite(arrival)
+      ? ' (record lists about ' + arrival + ' minutes)' : ' (not recorded)'),
+    'Approximate distance: ' + distancePoints + '/15' + (Number.isFinite(distance)
+      ? ' (record lists ' + distance + ' km)' : ' (not recorded)'),
+    'Platform status: ' + verificationPoints + '/10 (' + verificationStatus + ')'
+  ];
+  return {
+    score: servicePoints + areaPoints + arrivalPoints + distancePoints + verificationPoints,
+    reasons
+  };
+}
+
 function providerMatches(){
   const query = (state.searchQuery || '').trim().toLowerCase();
   const f = state.providerFilters || {};
   return PROVIDERS.filter(p =>
     (!query || p.name.toLowerCase().includes(query) ||
       p.service.toLowerCase().includes(query) ||
-      p.barangay.toLowerCase().includes(query)) &&
+      p.barangay.toLowerCase().includes(query) ||
+      (p.servesBarangays || []).some(area => area.toLowerCase().includes(query))) &&
     (!f.serviceId || p.serviceId === f.serviceId) &&
     (!f.barangay || providerServes(p, f.barangay)) &&
     (!f.maxWait || p.availabilityMin <= f.maxWait) &&
     providerAccepting(p)
-  );
+  ).sort((a, b) => providerMatch(b).score - providerMatch(a).score
+    || a.availabilityMin - b.availabilityMin
+    || a.distanceKm - b.distanceKm
+    || a.id.localeCompare(b.id));
 }
 
 function activeFilterCount(){
@@ -8553,7 +8545,7 @@ function residentResults(){
       <button id="back-home-btn" class="back-btn" aria-label="Back to home">${ic("chevron-left",18)}</button>
       <h1 style="font-family:var(--font-display); font-size:var(--t-title); font-weight:600;">Find Services</h1>
     </div>
-    <div style="font-size:var(--t-caption); opacity:0.85;">${state.searching ? 'Matching…' : (narrowing ? list.length + ' of ' + PROVIDERS.length + ' providers' : PROVIDERS.length + ' smart matches')}</div>
+    <div style="font-size:var(--t-caption); opacity:0.85;">${state.searching ? 'Matching…' : (narrowing ? list.length + ' of ' + PROVIDERS.length + ' providers' : PROVIDERS.length + ' demo matches')}</div>
   </div>
   <div class="pad">
     <div class="search-container" style="margin-bottom:12px;">
@@ -8570,8 +8562,8 @@ function residentResults(){
     </div>
 
     <div class="row" style="margin-bottom:10px; font-size:var(--t-body-sm);">
-      <span style="font-weight:700; color:var(--ink);">Smart Matched Providers</span>
-      <span style="color:var(--mist); font-size:var(--t-caption);">Sorted by: <b style="color:var(--ink);">Smart Job Match</b></span>
+      <span style="font-weight:700; color:var(--ink);">Suggested providers</span>
+      <span style="color:var(--mist); font-size:var(--t-caption);">Rule-based demo match · not AI or live availability</span>
     </div>
 
     ${state.searching ? providerSkeletons() : list.length === 0 ? emptyState(
@@ -8581,13 +8573,19 @@ function residentResults(){
         ? 'Nobody in the sample marketplace covers all of the constraints at once. Widen the arrival window, or clear the search and filters.'
         : 'Try a barangay such as Poblacion, a service such as Plumbing, or a shorter part of the name.',
       {id:'clear-search-btn', label:'Clear search & filters'}
-    ) : list.map(p => `
+    ) : list.map(p => {
+      const match = providerMatch(p);
+      const platformStatus = p.verification && p.verification.status || 'not recorded';
+      const statusBadge = platformStatus === 'verified'
+        ? `<span class="chip" style="background:var(--success-100); color:var(--success-ink);">${ic("badge-check",12)} Platform verified</span>`
+        : `<span class="chip">Platform status: ${esc(platformStatus)}</span>`;
+      return `
       <div class="card" data-provider-detail="${p.id}" style="cursor:pointer;">
         <div class="row" style="margin-bottom:10px;">
           <span style="background:var(--brand-tint-soft); color:var(--brand-primary); font-size:var(--t-caption); font-weight:800; padding:4px 9px; border-radius:6px; display:inline-flex; align-items:center; gap:3px;">
-            ${ic("zap",12)} ${p.smartMatch.score}% Match
+            ${ic("zap",12)} ${match.score}/100 demo match
           </span>
-          ${(p.badges && p.badges.length) ? `<span class="chip" style="background:var(--success-100); color:var(--success-ink);">${ic("badge-check",12)} Verified</span>` : ''}
+          ${statusBadge}
         </div>
 
         <div class="row" style="align-items:flex-start; margin-bottom:10px;">
@@ -8596,7 +8594,7 @@ function residentResults(){
             <div style="min-width:0;">
               <div style="font-size:var(--t-body-lg); font-weight:700; color:var(--ink);">${p.name}</div>
               <div style="font-size:var(--t-caption); color:var(--mist); margin-top:2px; display:flex; align-items:center; gap:3px;">
-                ${ic("map-pin",12)} ${p.distanceKm} km · Brgy. ${esc(p.barangay)} · arrives ~${p.availabilityMin} min
+                ${ic("map-pin",12)} ${p.distanceKm} km · Brgy. ${esc(p.barangay)} · listed arrival ~${p.availabilityMin} min
               </div>
               <div style="font-size:var(--t-body); margin-top:5px;">
                 <b>from ${pesoShort(cheapestListing(p))}</b>
@@ -8610,16 +8608,14 @@ function residentResults(){
           </div>
         </div>
 
-        <!-- Summary first, evidence on demand: the reasons stay one tap away so
-             the list can be scanned (19, 8). -->
         <details class="why-fold">
-          <summary>Why this match (${p.smartMatch.reasons.length})</summary>
+          <summary>How this demo score is built</summary>
           <div style="padding-top:7px;">
-            ${p.smartMatch.reasons.map(r => `<div><span style="color:var(--success-ink); display:inline-flex; vertical-align:-2px;">${ic("check",12)}</span> ${r}</div>`).join('')}
+            ${match.reasons.map(r => `<div><span style="color:var(--info); display:inline-flex; vertical-align:-2px;">${ic("check",12)}</span> ${esc(r)}</div>`).join('')}
           </div>
         </details>
       </div>
-    `).join('')}
+    `}).join('')}
   </div>`;
 }
 

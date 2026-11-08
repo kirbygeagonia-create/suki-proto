@@ -7978,3 +7978,44 @@ findings**; narrow window → refuses with its own cause named; empty scan → `
 tools/falsify-commit-subjects.cjs` → **15 of 15 breaks caught, 0 not applied, 0 missed** with all three finding kinds
 holding instances; `node tools/verify.cjs` → **all 567 checks passed**. `Sukinnect.html` still identical to
 `origin/main`; no application bytes moved; nothing here redeploys.
+
+## 132. Startup context and source alignment — 2026-11-07
+
+Added a concise read-first context, a startup roadmap and pointers for Claude Code,
+Cursor and GitHub Copilot. The public-facing summary distinguishes the existing
+browser-only rebuild from startup proposals and preserves unresolved source conflicts.
+The locally supplied November strategy document is ignored because it includes
+non-public financial and investor information. The separate collaboration/features
+Word document was not supplied; its content was not reconstructed. The available
+backend/features prompt and Master Plan provide the traceable basis for the roadmap.
+
+The README now identifies the 10% commission as the prototype's current demo setting,
+not an approved pilot rate, and records the conflicting Master Plan and market-research
+positions without choosing between them. The old 6,000-booking number remains a deck
+target; the 3,270 figure is a separate plan scenario. Neither is traction. Owner
+decisions and absent source documents remain listed in the roadmap. No application,
+schema or asset behavior changed in this documentation slice.
+
+## 133. Record-derived demo matching and Stage B backend design — 2026-11-07
+
+Smart Match no longer reads typed seed scores or reasons. The results are ranked from
+the current provider records using a demo-only rule set, and the explanation lists the
+factors. The screen does not claim AI or live availability, and provider verification
+labels reflect recorded status. The prototype remains local and simulated; this is not
+a production ranking.
+
+Added an additive MySQL reference migration for consent, verification, price references,
+gateway-fee pass-through, disabled feature flags, subscriptions and promotions,
+portfolio, moderation, analytics, suggestion metadata, notifications and audit-chain
+records. The migration is not applied; MySQL is not selected for production, and no
+commission rate, cap or fee payer was chosen. The API, stack and privacy documents are
+proposals, not deployed services or a security/compliance claim.
+
+Validation on the current source: `node tools/verify.cjs` passed all 568 checks;
+`node tools/falsify-smart-match.cjs` caught all 8 breaks and restored the page;
+`node tools/shot.cjs --measure` covered 82 screens with zero failure tallies and no
+console errors. The 60-file `dist/` build resolved all 29 referenced asset paths and
+contained no LFS pointers. `node tools/audit-build-bytes.cjs` refused with `NO
+CONCLUSION` because the local Android asset and debug APK are absent; no Android files
+were created or changed. The MySQL migration was not executed because no client is
+installed. No deployment was triggered.

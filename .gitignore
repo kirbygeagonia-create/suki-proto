@@ -38,3 +38,10 @@ Desktop.ini
 # falsifier is about to install. Same reasoning as .shots* — they are read, never shipped,
 # and a 780 KB duplicate of the app left untracked invites somebody to `git add .` it.
 .scratch*/
+
+# Local startup strategy sources contain non-public financial and investor details.
+# Keep them on the owner's machine; never commit or publish them.
+SUKINNECT_STARTUP_MASTER_PLAN.md
+Sukinnect_Master_Plan_*.docx
+Sukinnect_Market_Research_*.docx
+Potential_Collaborations_and_New_and_Refine_Features.docx

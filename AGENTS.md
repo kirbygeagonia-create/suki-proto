@@ -1,3 +1,12 @@
+# READ FIRST — STARTUP CONTEXT (2026-11-07)
+
+Read [`SUKINNECT_CONTEXT.md`](SUKINNECT_CONTEXT.md) before acting and
+[`SUKINNECT_STARTUP_ROADMAP.md`](SUKINNECT_STARTUP_ROADMAP.md) for the feature and conflict
+register. The local `SUKINNECT_STARTUP_MASTER_PLAN.md` is ignored because it contains
+non-public financial and investor information. It is the latest supplied strategy source;
+the collaboration/features `.docx` was not supplied, so do not claim to have read it.
+Business decisions still marked open in the roadmap require the owner's direction.
+
 # SUKINNECT — MASTER SYSTEM CONTEXT, PRODUCT, DEVELOPMENT, UI/UX, AND BRANDING PROMPT
 
 You are now the primary AI development, product-design, UI/UX, debugging, architecture, and implementation assistant for the Sukinnect project.
@@ -249,6 +258,11 @@ The pitch deck also gives pilot planning targets:
 - 6,000 completed bookings
 
 These are planning assumptions and validation targets, not evidence of existing traction.
+
+**Startup-source note (2026-11-07):** the November 2026 startup plan adds a 3,270
+Year-1 booking scenario and recommends 60–100 verified providers for the five-barangay
+pilot. These conflict with the deck's figures above and are not actual results. Keep
+each source and figure labelled; see `SUKINNECT_STARTUP_ROADMAP.md` §6.
 
 When building prototype dashboards, clearly distinguish:
 - demo data
@@ -693,39 +707,19 @@ Do not treat demo names, addresses, phone numbers, ratings, amounts, or statisti
 
 The current prototype contains a Smart Match concept.
 
-It may show:
-- match percentage
-- relevant reasons
-- specialization
-- availability
-- distance
-- experience
-- completed jobs
-- credentials
-- customer satisfaction
-
 If Smart Match is displayed, it should be explainable.
 
 Never make a match score look like an unexplained authoritative decision.
 
-Prefer:
+The rebuild shows a 0–100 **demo score** derived from service fit, provider-listed area
+coverage, the listed arrival window, approximate distance and recorded platform status.
+Those five factors and their points are available in the card's explanation. They are
+demo records, not live availability or a validated production ranking; do not describe the score as AI,
+percent confidence, qualification, or a safety guarantee.
 
-93% Smart Match
-
-with reasons such as:
-- relevant service specialization
-- nearby location
-- available soon
-- appropriate credentials
-- strong completion history
-
-over simply showing:
-
-93%
-
-The Smart Match feature currently exists in the prototype.
-
-Treat its exact algorithm and scoring as prototype logic unless a formal system specification establishes the real production algorithm.
+Smart Match is prototype logic only. `providerMatch()` and `providerMatches()` calculate
+and sort the demo score; no popularity aggregation, real-time signal or production
+algorithm exists. Keep the score, explanation and sort order tied to the same records.
 
 ---
 
@@ -1839,7 +1833,7 @@ says: one space and three spaces each show all eight providers, exactly as no qu
 "xyzzy" shows none and prints `No provider matches “xyzzy”` with a way out. The gate pins it on both
 halves of the rule: the matcher's count, and the **count line**, which is built from a second copy of
 the trimmed query and reads `8 of 8 providers` only when something narrows the list and
-`8 smart matches` when nothing does. `node tools/falsify-blank-query.cjs` — **2 of 2, 0 not applied**.
+`8 demo matches` when nothing does. `node tools/falsify-blank-query.cjs` — **2 of 2, 0 not applied**.
 The second break was MISSED on the family's first run, when the check only counted providers; the
 check was widened rather than the mutant deleted, because an unobservable mutant is a gap in coverage
 and not a verdict about the code.
@@ -4130,6 +4124,11 @@ Therefore:
 
 Do not hard-code arbitrary final commission rules into the prototype unless explicitly requested.
 
+**Startup-source note (2026-11-07):** the November 2026 strategy documents conflict on the
+pilot rate and fee payer. The current code's 10% setting is not an owner-approved pilot
+policy; the roadmap records the 1.2% / 1.3% proposal and the 8–12% alternative as an open
+decision. Do not silently change the configuration or treat either proposal as settled.
+
 ---
 
 # 60. PLANNING BUDGET CONTEXT
@@ -5213,3 +5212,46 @@ It should feel like ONE application.
 
 It should feel like SUKINNECT.
 
+# 96. STARTUP PLAN AND SOURCE STATUS (2026-11-07)
+
+The current startup source is the locally supplied `SUKINNECT_STARTUP_MASTER_PLAN.md`,
+which is ignored by Git because the public repository must not disclose its financial or
+investor terms. Its non-confidential product context, source conflicts and feature status
+are summarized in `SUKINNECT_CONTEXT.md` and `SUKINNECT_STARTUP_ROADMAP.md`. The separate
+`Potential_Collaborations_and_New_and_Refine_Features.docx` was not supplied; do not
+reconstruct it or attribute details to it. The backend/features prompt supplied by the
+owner is available as an implementation brief, not as evidence that any listed feature
+exists.
+
+For startup claims, distinguish sourced facts, prototype behavior, simulated behavior,
+forecasts, targets and recommendations. The Master Plan is the strategy reference, but
+its own conflict register and this roadmap remain open where sources disagree; no
+recommendation becomes an owner decision by being repeated in code or documentation. The
+existing app remains a browser-only prototype: `Sukinnect-next.html` is the current
+rebuild, `Sukinnect.html` is the earlier shipped prototype, and neither provides a
+production backend, real authentication, real payment processing or real AI.
+
+No public document or app surface may claim that demo records are real users or traction,
+that proposed partners are confirmed, or that a simulated gateway, verification, AI or
+notification is a real service. Any AI-flavoured output must say what it is: rule-based
+and computed from records on this device, simulated, or a suggestion from an external
+model with source and date. It must not be presented as fact or a verified result; users
+must be able to override it and their choice must be recorded.
+
+The current fee policy is unresolved: the Master Plan's 1.2% working rate and 1.3% cap
+conflict with an 8–12% recommendation in the Market Research plan and the existing 10%
+prototype setting. The gateway-fee rule is that fees must not be silently absorbed, but
+actual rates require a signed merchant quote. Keep the existing no-stored-value-wallet
+rule. Do not implement lending, insurance, public-chain anchoring or biometric capture
+without the prerequisites and owner decisions recorded in the roadmap.
+
+The deployment uses a reviewed allow-list; private source documents must remain ignored
+and outside `dist/`. No external partner is confirmed in the sources available for this
+pass. The feature register, conflict ledger, needs and traceability status are in
+`SUKINNECT_STARTUP_ROADMAP.md`; update them only when code and tests support a status
+change.
+
+The Stage B API, security/privacy and stack documents are proposals only. The additive
+MySQL reference migration is not applied to any database, and it does not settle the
+commission rate, cap or fee payer. The Stage A Smart Match demo heuristic is computed
+from current provider records and remains non-production.

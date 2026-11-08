@@ -3544,6 +3544,86 @@ suite('honesty', async () => {
         : 'coverage does not drive discovery' };
   })());
 
+  verdict('demo match scores and ordering come from visible provider records', (() => {
+    const p = app.PROVIDERS.find(x => x.id === 'p1');
+    if (!p) return { ok: false, why: 'the positive-control provider record is missing' };
+    const oldQuery = app.state.searchQuery;
+    const oldFilters = app.state.providerFilters;
+    const oldBarangay = app.state.profileData.barangay;
+    const oldRole = app.state.role, oldTab = app.state.tab, oldView = app.state.view;
+    const oldStatus = p.verification.status;
+    const oldArrival = p.availabilityMin;
+    const oldDistance = p.distanceKm;
+    const oldCoverage = p.servesBarangays;
+    app.state.searchQuery = '';
+    app.state.providerFilters = {};
+    app.state.profileData.barangay = 'San Jose';
+    const areaBaseline = app.providerMatch(p).score;
+    p.servesBarangays = oldCoverage.filter(area => area !== 'San Jose');
+    const areaChanged = app.providerMatch(p).score === areaBaseline - 25;
+    p.servesBarangays = oldCoverage;
+    app.state.profileData.barangay = 'Poblacion';
+    const baseline = app.providerMatch(p);
+    p.verification.status = 'pending';
+    const statusChanged = app.providerMatch(p).score === baseline.score - 5;
+    p.verification.status = oldStatus;
+    p.availabilityMin = 1440;
+    const arrivalChanged = app.providerMatch(p).score === baseline.score - 15;
+    p.availabilityMin = oldArrival;
+    const baselineFirst = app.providerMatches()[0] && app.providerMatches()[0].id === p.id;
+    p.verification.status = 'pending';
+    p.availabilityMin = 1440;
+    const rankingMoved = app.providerMatches()[0] && app.providerMatches()[0].id !== p.id;
+    p.verification.status = oldStatus;
+    p.availabilityMin = oldArrival;
+    app.state.providerFilters = { serviceId: p.serviceId };
+    const selectedService = app.providerMatch(p).score === 100;
+    app.state.providerFilters = {};
+    app.state.searchQuery = 'San Jose';
+    const coverageSearch = app.providerMatches().some(x => x.id === p.id);
+    app.state.searchQuery = '';
+    app.state.tab = 'results'; app.state.role = 'resident'; app.state.view = 'app';
+    app.render();
+    const html = app._document.getElementById('screen').innerHTML;
+    const evidenceVisible = baseline.reasons.every(reason => html.includes(reason));
+    const p4Start = html.indexOf('<div class="card" data-provider-detail="p4"');
+    const p4End = html.indexOf('<div class="card" data-provider-detail="', p4Start + 1);
+    const p4Card = p4Start >= 0 ? html.slice(p4Start, p4End < 0 ? undefined : p4End) : '';
+    const suspendedHonest = p4Card.includes('Platform status: suspended')
+      && !/>[^<]*Verified[^<]*</.test(p4Card);
+    const honestCopy = html.includes('Rule-based demo match')
+      && html.includes('/100 demo match')
+      && html.includes('How this demo score is built')
+      && !html.includes('Smart Matched Providers')
+      && !html.includes('Average response time under 20 mins')
+      && !html.includes('99% job completion rate');
+    const noTypedScores = app.PROVIDERS.every(x => !Object.prototype.hasOwnProperty.call(x, 'smartMatch'));
+    app.state.searchQuery = oldQuery;
+    app.state.providerFilters = oldFilters;
+    app.state.profileData.barangay = oldBarangay;
+    app.state.role = oldRole; app.state.tab = oldTab; app.state.view = oldView;
+    p.verification.status = oldStatus;
+    p.availabilityMin = oldArrival;
+    p.distanceKm = oldDistance;
+    p.servesBarangays = oldCoverage;
+    return { ok: baseline.score === 90 && baseline.reasons.length === 5 && statusChanged
+        && arrivalChanged && areaChanged && baselineFirst && rankingMoved && selectedService
+        && coverageSearch && evidenceVisible
+        && suspendedHonest && honestCopy && noTypedScores,
+      why: baseline.score !== 90 ? 'Poblacion plumber score was ' + baseline.score + ', expected 90 from the five declared factors'
+        : !statusChanged ? 'changing the provider verification record did not move its score by the documented five points'
+        : !arrivalChanged ? 'changing the provider arrival-window record did not move its score by the documented fifteen points'
+        : !areaChanged ? 'removing declared coverage did not remove the area points'
+        : !baselineFirst || !rankingMoved ? 'the visible match score does not control provider ordering'
+        : !selectedService ? 'an exact selected service did not receive its documented score'
+        : !coverageSearch ? 'a provider is not searchable in a barangay they declare serving'
+        : !evidenceVisible ? 'the five displayed explanations do not match the score factors'
+        : !suspendedHonest ? 'the suspended provider is shown with a false verified label'
+        : !honestCopy ? 'the results page hides the rule-based/demo status or retains a typed reason'
+        : !noTypedScores ? 'a provider seed still carries a hand-authored smartMatch score or reasons'
+        : 'the score factors are not all represented by five explanations' };
+  })());
+
   /* §27: "tapping a notification should open the object responsible for it". Measured in a real
      page first — `node tools/shot.cjs --probe=@tools/probe-notification-targets.js` walks every
      screen, finds the one that paints notification rows, calls the same openNotification() the row
@@ -3602,12 +3682,12 @@ suite('honesty', async () => {
     const quotedMiss = /No provider matches/.test(missWords);
     /* The count line is the second half of the same question, and it is the screen's OWN decision
        from a second copy of the trimmed query: `narrowing` prints "N of 8 providers" when
-       something is narrowing the list and "8 smart matches" when nothing is. A blank query that
+       something is narrowing the list and "8 demo matches" when nothing is. A blank query that
        failed to trim would print "8 of 8 providers" over the whole unfiltered list — a screen
        telling the person their space bar applied a constraint. "plumbing" must produce the counted
        form, or this assertion has no way to fail. */
     const blankCounted = /\d+ of \d+ providers/.test(blankWords);
-    const blankUnfiltered = /smart matches/.test(blankWords);
+    const blankUnfiltered = /demo matches/.test(blankWords);
     const realCounted = /\d+ of \d+ providers/.test(realWords);
     return { ok: none > 0 && spaces === none && !quotedBlank && blankUnfiltered && !blankCounted &&
         real > 0 && real < none && realCounted && quotedMiss,
@@ -3615,7 +3695,7 @@ suite('honesty', async () => {
         : spaces !== none ? 'a query of spaces found ' + spaces + ' providers where none found ' + none
         : quotedBlank ? 'the screen quoted a query nobody typed: No provider matches a blank'
         : blankCounted ? 'a blank query is printed as a constraint on the count line'
-        : !blankUnfiltered ? 'the unfiltered list does not call itself smart matches, so the screen cannot say "nothing is narrowing"'
+        : !blankUnfiltered ? 'the unfiltered list does not call itself demo matches, so the screen cannot say "nothing is narrowing"'
         : !(real < none) ? 'searching "plumbing" did not narrow the list, so the matcher is not live'
         : !realCounted ? 'a real query does not print its count line, so the blank case cannot be told apart'
         : !quotedMiss ? 'a query matching nothing printed no empty state, so the words cannot be tested'

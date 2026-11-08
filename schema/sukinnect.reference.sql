@@ -24,6 +24,10 @@
 --   5. There is no stored-value wallet anywhere: no resident balance, no spendable
 --      number, nothing a user withdraws. customer_deposit is an obligation to
 --      deliver or refund, held by a licensed partner.
+--
+-- Apply ordered files in schema/migrations/ after this base schema to add startup
+-- design records. Those migrations are reference-only and are not run by the prototype.
+-- The production SQL dialect is undecided; this file is currently a MySQL reference.
 
 SET NAMES utf8mb4;
 
