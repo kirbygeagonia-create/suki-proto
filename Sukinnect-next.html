@@ -695,15 +695,12 @@
   .stepper .ssub{ font-size:var(--t-caption); color:var(--ink-soft); margin-top:2px; line-height:1.45; }
   .stepper .stext{ min-width:0; }
 
-  /* Sign-in: the soft brand surface, flat, and one card floated in the middle of it.
-     Nothing on the card that is not needed to get in — brand mark, the account
-     you are entering as, two fields, one action. */
+  /* Sign-in: a quiet brand surface with the form held inside one centered card.
+     The card is also the scroller, so the keyboard cannot bury its action. */
   .auth-screen{
     display:flex; height:100%; box-sizing:border-box; overflow:hidden;
     padding:calc(var(--s-5) + var(--sat)) var(--s-4) calc(var(--s-5) + var(--sab));
-    /* The entry screen is the surface itself (P8). A pale plate behind a white card is how a web
-       sign-in form reads; a phone fills the screen with one surface and puts the mark on it. */
-    background:var(--md-sys-color-surface);
+    background:var(--surface-brand-soft);
   }
   /* The browser's default 16px paragraph margins were costing ~80px of dead
      vertical space here, which is what pushed the form past the fold on a 640pt
@@ -714,11 +711,10 @@
      optically centred even when it is too tall to centre (5, 38, 73). */
   .auth-sheet{
     margin:auto; width:100%; max-width:392px; max-height:100%;
-    box-sizing:border-box; padding:0 0 var(--s-6);
-    /* No border, no radius, no shadow: the card was the plate, and the plate was the defect. The
-       element still scrolls, which is what keeps a rising keyboard from burying the action. */
-    background:none; border:none; border-radius:0; box-shadow:none;
-    overflow-y:auto; overscroll-behavior:none; text-align:left;
+    box-sizing:border-box; padding:var(--s-6) var(--s-5);
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--r-lg); box-shadow:var(--shadow-md);
+    overflow-y:auto; overscroll-behavior:none; text-align:center;
     -ms-overflow-style:none; scrollbar-width:none;
   }
   .auth-sheet::-webkit-scrollbar{ display:none; width:0; height:0; }
@@ -789,6 +785,31 @@
   .auth-sheet .input-field:focus-within{ background:var(--surface); }
   .auth-hint{ font-size:var(--t-caption); color:var(--text-muted); line-height:1.5; margin:-2px 0 2px; }
   .auth-hint b{ color:var(--text-secondary); font-weight:800; }
+  .auth-documents{
+    margin:var(--s-4) 0; padding:var(--s-3);
+    border-radius:var(--r-md); background:var(--brand-tint-soft);
+  }
+  .auth-documents h2{
+    margin:0; text-align:left; color:var(--ink); font-size:var(--t-body);
+  }
+  .auth-documents p{
+    margin:4px 0 var(--s-2); text-align:left; color:var(--ink-soft);
+    font-size:var(--t-caption); line-height:1.45;
+  }
+  .auth-documents button{
+    display:flex; width:100%; min-height:var(--tap); align-items:center;
+    justify-content:space-between; gap:var(--s-2); padding:var(--s-2) var(--s-3);
+    border:1px solid var(--border); border-radius:var(--r-sm); background:var(--surface);
+    color:var(--deep); font:inherit; text-align:left; cursor:pointer;
+  }
+  .auth-documents button + button{ margin-top:var(--s-2); }
+  .auth-documents button > span:first-child{ min-width:0; }
+  .auth-documents .doc-version{
+    display:block; margin-top:2px; color:var(--text-muted); font-size:var(--t-caption);
+  }
+  .auth-documents .doc-state{
+    flex:none; color:var(--text-secondary); font-size:var(--t-caption); font-weight:700;
+  }
   .auth-forgot{
     display:block; width:100%; text-align:center; margin:-6px 0 var(--s-5);
     font-size:var(--t-body); color:var(--deep); font-weight:700;
@@ -9695,14 +9716,14 @@ const AUTH_ROLE_ICON = { resident:'home', provider:'wrench', admin:'shield' };
    the platform — the owner's ruling of 2026-10-25 — which is the characterisation that attaches
    those duties, and it is flagged for counsel rather than presented as settled.
    None of this is legal advice and none of it has been reviewed by a Philippine lawyer. */
-const LEGAL_VERSION = 'draft-1';
+const MARKETING_CONSENT_VERSION = '1';
 /* `consent` is how each document is stood behind at sign-up: 'accept' means the reader agrees to it,
    'read' means the reader is told it exists and confirms having read it. A notice is not an agreement —
    RA 10173 lists consent as one lawful basis of six — and the sentence on the card says which is which.
    Every document has to declare one of the two, which the gate asserts: a field that goes missing would
    otherwise be read as 'accept' by the comparison and quietly ask a reader to agree to a notice. */
 const LEGAL_DOCUMENTS = [
-  { id: 'terms', title: 'Terms & Conditions', label: 'Terms & Conditions', consent: 'accept',
+  { id: 'terms', title: 'Terms & Conditions', label: 'Terms & Conditions', version: 'Draft 1', consent: 'accept',
     intro: 'What you and Sukinnect each promise when a job is found, booked and recorded.',
     sections: [
       { h: 'What Sukinnect is', p: [
@@ -9734,7 +9755,7 @@ const LEGAL_DOCUMENTS = [
       { h: 'The limits of this build', p: [
         'Nothing here means a real service was performed, a real payment was taken, or a real document was verified by a real officer. The records you see are the sample records of a demonstration.',
         '[Effective date — NOT DECIDED] · Draft, not reviewed by Philippine counsel.' ] } ] },
-  { id: 'policy', title: 'Sukinnect Policy', label: 'Community & Provider Standards', consent: 'accept',
+  { id: 'policy', title: 'Sukinnect Policy', label: 'Community & Provider Standards', version: 'Draft 1', consent: 'accept',
     intro: 'The house rules for listing, accepting and doing work on Sukinnect.',
     sections: [
       { h: 'Say what you can actually do', p: [
@@ -9758,7 +9779,7 @@ const LEGAL_DOCUMENTS = [
         'There is no automatic suspension and no appeal queue yet — [appeal route — NOT DECIDED].' ] },
       { h: 'This policy is a draft', p: [
         'It describes how this prototype behaves, not how a launched platform is regulated. It is not legal advice and has not been reviewed by Philippine counsel; the standards above must be confirmed with the enforcement process a real operation can actually staff.' ] } ] },
-  { id: 'privacy', title: 'Privacy Notice', label: 'Privacy Notice', consent: 'read',
+  { id: 'privacy', title: 'Privacy Notice', label: 'Privacy Notice', version: 'Draft 1', consent: 'read',
     intro: 'What this prototype holds about you, who can see it, and what you can ask for.',
     sections: [
       { h: 'What is collected, and why it is small', p: [
@@ -9793,7 +9814,7 @@ const LEGAL_DOCUMENTS = [
         'It was written for a prototype. It is not legal advice, and it must be reviewed by qualified Philippine counsel and a privacy professional before any public launch.' ] } ] }
 ];
 function legalDoc(id){ return LEGAL_DOCUMENTS.find(d => d.id === id) || null; }
-/* The documents the acceptance is gated on: every one the sign-in card puts in front of the reader,
+/* The documents the acceptance is gated on: every one the registration card puts in front of the reader,
    derived from the record set rather than listed beside it, so a fourth document is gated the moment it
    exists — the same rule by which `layerKeys()` derives the modal fields from `state`. The owner's
    ruling of 2026-10-27 is that the box stays off until each has been read to its end, and the sentence
@@ -9801,17 +9822,21 @@ function legalDoc(id){ return LEGAL_DOCUMENTS.find(d => d.id === id) || null; }
 function acceptDocIds(){
   return LEGAL_DOCUMENTS.map(d => d.id);
 }
-function docIsRead(id){ return state.docRead[id] === true; }
+function docIsRead(id){
+  const d = legalDoc(id);
+  return !!d && state.docRead[id] === d.version;
+}
 function acceptanceUnlocked(){ return acceptDocIds().every(docIsRead); }
 /* Called from the sheet body's own scroll. Marking read must NOT re-render: the sheet would repaint,
    the body's scrollTop would go back to zero, and the reader would be sent to the top of the text they
    had just finished. So the state changes and the footer line is rewritten in place. */
 function docScrolled(id, el){
-  if (!el || docIsRead(id)) return;
+  const d = legalDoc(id);
+  if (!d || !el || docIsRead(id)) return;
   const short = el.scrollHeight <= el.clientHeight + 4;
   const atEnd = el.scrollTop + el.clientHeight >= el.scrollHeight - 24;
   if (!(short || atEnd)) return;
-  state.docRead[id] = true;
+  state.docRead[id] = d.version;
   const foot = document.getElementById('doc-read-state');
   if (foot) foot.textContent = short
     ? 'This document fits on one screen, so it counts as read. Close it to continue.'
@@ -9844,11 +9869,12 @@ function legalDocSheet(){
       <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close">${ic("x",15)}</button></div>`;
   }
   const accepted = (state.termsAcceptances || []).filter(a => a.doc === d.id);
+  const lastAcceptance = accepted.length ? accepted[accepted.length - 1] : null;
   return `
     <div class="sheet-head">
       <div style="min-width:0;">
         <h2 class="sheet-title">${esc(d.title)}</h2>
-        <div class="sheet-sub">${esc(d.intro)}</div>
+        <div class="sheet-sub">${esc(d.intro)} · ${esc(d.version)}</div>
       </div>
       <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close">${ic("x",15)}</button>
     </div>
@@ -9856,9 +9882,9 @@ function legalDocSheet(){
       <div style="font-size:var(--t-caption); color:var(--warning-ink); background:var(--warning-100); border-radius:var(--r-card); padding:var(--s-3) var(--s-3); line-height:1.5; margin-bottom:10px;">
         ${ic('alert-triangle',12)} <b>Draft — not reviewed by Philippine counsel.</b> Placeholders in square brackets are facts the business has not decided yet; none of them is a claim.
       </div>
-      ${accepted.length ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin-bottom:10px;">${ic('check',12)} ${d.consent === 'read'
-        ? `This device recorded that you read the ${esc(d.label)} ${esc(LEGAL_VERSION)} on ${esc(shortDate(new Date(accepted[accepted.length-1].at)))}.`
-        : `This device recorded your acceptance of the ${esc(d.label)} ${esc(LEGAL_VERSION)} on ${esc(shortDate(new Date(accepted[accepted.length-1].at)))}.`}</div>` : ''}
+      ${lastAcceptance ? `<div style="font-size:var(--t-caption); color:var(--ink-soft); margin-bottom:10px;">${ic('check',12)} ${d.consent === 'read'
+        ? `This device recorded that you read the ${esc(d.label)} ${esc(lastAcceptance.version)} on ${esc(shortDate(new Date(lastAcceptance.at)))}.`
+        : `This device recorded your acceptance of the ${esc(d.label)} ${esc(lastAcceptance.version)} on ${esc(shortDate(new Date(lastAcceptance.at)))}.`}</div>` : ''}
       ${d.sections.map((s, i) => `<div style="margin-bottom:12px;">
         <div style="font-weight:800; font-size:var(--t-body-sm); margin-bottom:4px;">${i+1}. ${esc(s.h)}</div>
         ${s.p.map(par => `<p style="font-size:var(--t-caption); color:var(--ink-soft); line-height:1.55; margin:0 0 6px;">${esc(par)}</p>`).join('')}
@@ -9874,9 +9900,14 @@ function legalDocSheet(){
     </div>`;
 }
 function legalLinks(){
-  return `<div style="display:flex; flex-wrap:wrap; gap:0 var(--s-3); justify-content:flex-start; margin-top:var(--s-2);">
-    ${LEGAL_DOCUMENTS.map(d => `<button type="button" class="auth-link" onclick="openLegalDoc('${d.id}')">${esc(d.label)}</button>`).join('')}
-  </div>`;
+  return `<section class="auth-documents" aria-labelledby="auth-documents-title">
+    <h2 id="auth-documents-title">Review before registering</h2>
+    <p>Open each current version and scroll to its end. Registration stays locked until all three are read.</p>
+    ${LEGAL_DOCUMENTS.map(d => `<button type="button" onclick="openLegalDoc('${esc(d.id)}')">
+      <span>${esc(d.label)}<span class="doc-version">${esc(d.version)}</span></span>
+      <span class="doc-state">${docIsRead(d.id) ? 'Read to end' : 'Read document'}</span>
+    </button>`).join('')}
+  </section>`;
 }
 
 /* ── the sign-up guide: a stepped form with dictation where the platform offers it ─────────────
@@ -10109,12 +10140,13 @@ function loginHTML(){
           </div>
           ${err.brgy ? `<div class="inline-error auth-error" id="err-brgy" role="alert">${ic('alert-triangle',13)} ${err.brgy}</div>` : ''}
         </div>
+        ${legalLinks()}
         <div class="auth-field">
           <label class="row" style="align-items:flex-start; gap:10px; font-size:var(--t-caption); color:var(--ink-soft); line-height:1.5; min-height:var(--tap);">
             <input type="checkbox" id="reg-terms" style="margin-top:3px; width:20px; height:20px; flex-shrink:0;" ${acceptanceUnlocked() ? '' : 'disabled aria-disabled="true"'} ${err.terms ? 'aria-invalid="true" aria-describedby="err-terms"' : ''}>
             <span>I have read and accept ${agreedDocs.map(d => `<b>${esc(d.title)}</b>`).join(' and ')}${readDocs.length ? `, and I have read the ${readDocs.map(d => `<b>${esc(d.title)}</b>`).join(' and ')}` : ''}.
-            ${acceptDocs.map(d => `<button type="button" class="auth-link" onclick="openLegalDoc('${esc(d.id)}')">${docIsRead(d.id) ? 'Re-read' : 'Read'} ${esc(d.title)}</button>`).join(' ')}</span>
-            ${acceptanceUnlocked() ? '' : `<span class="auth-hint" style="display:block; font-size:var(--t-caption); color:var(--mist); margin-top:4px;">${ic('lock',11)} This box stays off until you have opened each document above and scrolled it to the end.</span>`}
+            </span>
+            ${acceptanceUnlocked() ? '' : `<span class="auth-hint" style="display:block; font-size:var(--t-caption); color:var(--mist); margin-top:4px;">${ic('lock',11)} This box stays off until you have opened each version above and scrolled it to the end.</span>`}
           </label>
           ${err.terms ? `<div class="inline-error auth-error" id="err-terms" role="alert">${ic('alert-triangle',13)} ${err.terms}</div>` : ''}
         </div>
@@ -10132,8 +10164,6 @@ function loginHTML(){
 
         ${isRegister ? `<button type="button" class="auth-forgot" id="signup-guide-open" onclick="openSignupGuide()">Guide me through signing up</button>
         <div style="font-size:var(--t-caption); color:var(--mist); margin-top:6px; line-height:1.5;">${esc(spamCheckSeam().reason)}</div>` : ''}
-        ${legalLinks()}
-
         <div class="auth-field" style="margin-bottom:0;">
           <button class="btn" id="login-btn">
             <span>${isRegister ? 'Create account' : 'Log in'}</span> ${ic('arrow-right',16)}
@@ -10308,10 +10338,10 @@ function submitAuth(){
       /* One row per document the gate holds, written from the same list — a record set that names two
          documents while the gate reads three is the drift this file keeps meeting, and it is the
          difference between "you agreed" and "you read" being auditable. */
-      LEGAL_DOCUMENTS.forEach(d => mine.push({ role: state.role, doc: d.id, version: LEGAL_VERSION, at }));
+      LEGAL_DOCUMENTS.forEach(d => mine.push({ role: state.role, doc: d.id, version: d.version, at }));
       const marketing = document.getElementById('reg-marketing');
       if (marketing && marketing.checked) {
-        mine.push({ role: state.role, doc: 'marketing-consent', version: LEGAL_VERSION, at });
+        mine.push({ role: state.role, doc: 'marketing-consent', version: MARKETING_CONSENT_VERSION, at });
       }
       state.termsAcceptances = mine;
       persist();

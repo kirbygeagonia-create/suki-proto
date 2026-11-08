@@ -1819,8 +1819,8 @@ suite('login', async () => {
     && !/id="rt-resident"/.test(adminLog));
   c.check('and the Admin card has no control that cannot be answered',
     !/id="toggle-auth-mode"/.test(adminLog) && !/id="reg-name"/.test(adminReg));
-  c.check('the form sits in one centred card on the brand gradient',
-    /\.auth-screen\{[\s\S]{0,260}?background:var\(--grad-brand-soft\)/.test(css)
+  c.check('the form sits in one centred card on the soft brand surface',
+    /\.auth-screen\{[\s\S]{0,260}?background:var\(--surface-brand-soft\)/.test(css)
     && /\.auth-sheet\{[\s\S]{0,400}?box-shadow:var\(--shadow-md\)/.test(css));
   c.check('the card never outgrows the viewport, so the keyboard has room',
     /\.auth-sheet\{[\s\S]{0,400}?max-height:100%/.test(css)
@@ -1855,6 +1855,50 @@ suite('login', async () => {
     (one.match(/class="btn" id="login-btn"/g) || []).length === 1);
   c.check('register asks for a name and a barangay, login does not',
     /id="reg-name"/.test(reg) && /id="reg-brgy"/.test(reg) && !/id="reg-name"/.test(one));
+  c.check('legal documents are offered on registration, not sign-in',
+    !/class="auth-documents"/.test(one) && /class="auth-documents"/.test(reg));
+  c.check('each registration document shows its own version',
+    (reg.match(/class="doc-version">Draft 1/g) || []).length === 3);
+  c.check('reading completion and recorded consent are tied to each document version',
+    /state\.docRead\[id\] === d\.version/.test(app._source)
+    && /state\.docRead\[id\] = d\.version/.test(app._source)
+    && /version: d\.version/.test(app._source)
+    && /if \(isRegister && !acceptanceUnlocked\(\)\)/.test(app._source));
+  const consent = boot();
+  consent.state.view = 'login';
+  consent.state.role = 'resident';
+  consent.state.authMode = 'register';
+  const formValues = {
+    'login-email': 'resident@example.test',
+    'login-pass': 'demo-pass',
+    'reg-name': 'Test Resident',
+    'reg-brgy': 'Poblacion'
+  };
+  Object.entries(formValues).forEach(([id, value]) => { consent._document.getElementById(id).value = value; });
+  const consentBox = consent._document.getElementById('reg-terms');
+  consentBox.checked = true;
+  consent.submitAuth();
+  const blockedUntilRead = consent.state.view === 'login'
+    && /Open 3 documents/.test(consent.state.authError.terms || '');
+  const docs = consent.LEGAL_DOCUMENTS;
+  docs.forEach(d => consent.docScrolled(d.id, { scrollTop: 600, scrollHeight: 1000, clientHeight: 400 }));
+  const firstVersion = docs[0].version;
+  docs[0].version = 'Updated draft';
+  const revisedDocNeedsRead = !consent.docIsRead(docs[0].id);
+  docs[0].version = firstVersion;
+  consentBox.checked = false;
+  consent.submitAuth();
+  const blockedWithoutAcceptance = consent.state.view === 'login'
+    && /Accept the/.test(consent.state.authError.terms || '');
+  c.check('registration requires reaching each current document version and accepting the terms',
+    blockedUntilRead && consent.acceptanceUnlocked() && revisedDocNeedsRead && blockedWithoutAcceptance);
+  consentBox.checked = true;
+  consent.submitAuth();
+  await sleep(750);
+  const versionedAcceptances = docs.every(d => consent.state.termsAcceptances.some(a =>
+    a.role === 'resident' && a.doc === d.id && a.version === d.version));
+  c.check('the registration record stores the version read or accepted for each document',
+    versionedAcceptances);
   c.check('fields carry real labels, not a placeholder alone', /for="login-email"/.test(one));
   c.check('the password can be shown', /id="toggle-pw-btn"/.test(one));
   c.check('the sample credential still arrives prefilled for the chosen role',

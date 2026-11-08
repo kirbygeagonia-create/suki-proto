@@ -39,7 +39,8 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'CREDENTIALS', 'LISTINGS'
   'adminProviderMeta', 'credentialState', 'credentialsOf', 'worstCredentialState', 'verifiedProviderList', 'expiringProviderCount', 'bookingsForProvider', 'providerSectionBody', 'adminSectionBody', 'openCasesFor', 'credentialSummaryFor', 'closedJobCount', 'networkSummary',
   'adminProviderInsights', 'networkAttentionList', 'networkServiceRows', 'networkHealthRows', 'networkFlagSummary',
   'PENDING_APPLICANTS', 'APPLICATION_DOCS', 'APPLICATION_DOC_KINDS', 'applicationDocs', 'applicationDocsSubmitted', 'applicationDocsOutstanding', 'applicationDocLabel', 'applicantWaitDays', 'applicantWaitLabel', 'applicantIssue', 'pendingApplicantList', 'reviewOf', 'reviewStatusLine', 'reviewTimeline', 'verificationApplication', 'verificationAction', 'openProviderVerification', 'reopenReview', 'docsOutstanding',
-  'loginHTML', 'AUTH_ROLE_LABEL', 'DEMO_LOGIN',
+  'loginHTML', 'AUTH_ROLE_LABEL', 'DEMO_LOGIN', 'LEGAL_DOCUMENTS', 'acceptanceUnlocked',
+  'docIsRead', 'docScrolled',
   /* Added after the audit: the guards, the money readers and the case door were
      unreachable from the suite, which is exactly how a severed entry point could
      render beautifully and still pass every check. */
