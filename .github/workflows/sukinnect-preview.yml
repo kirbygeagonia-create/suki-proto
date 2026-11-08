@@ -1,0 +1,47 @@
+name: Sukinnect review preview
+
+on:
+  push:
+    branches:
+      - kirbygeagonia-create-sukinnect-backend-startup
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: sukinnect-review-preview
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out preview branch
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Build allow-listed site
+        run: |
+          node tools/build-web-dist.cjs
+          cp dist/Sukinnect-next.html dist/index.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy review preview
+        id: deployment
+        uses: actions/deploy-pages@v4

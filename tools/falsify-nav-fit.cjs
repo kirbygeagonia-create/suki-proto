@@ -77,6 +77,15 @@ const BREAKS = [
      tally report a cut; if it reads clean, then the tally is still measuring the wrong box and this
      family cannot see the defect it exists to guard. Found on the OPPO at its own 1.35 text, where the
      loop wrote 11.85px (16px rendered) and clipped two words while both sensors said zero. */
+  /* READ, NOT DELETED — this break prints MISSED, and the reading is about the app, not the tool.
+     It reinstates the old `item.clientWidth` measurement, which is condemned when a label overflows
+     the box that clips it while the arithmetic believes it fits. The mobile-app pass set the nav
+     labels to weight 600 instead of 800 and gave the bar 64px, and at 320 CSS px with the text at 200%
+     nothing is cut any more: the baseline itself answers cut=0, so a break that reintroduces the wrong
+     box has no clipped word left to mis-measure. The guard is still real — it is why the labels are
+     whole — but no corner this seed paints can show it failing. Proving the halves separately would
+     need a corner where only the item box decides, and inventing that corner is the same as not
+     testing. Kept, because deleting it would raise the count and hide the coverage. */
   { name: 'the fit measures the item\u2019s box again, so it stops while the label is still clipped',
     edits: [['const slot = l.clientWidth || item.clientWidth;', 'const slot = item.clientWidth;']] },
   /* The conversion break, which NO camera on this machine can see. `size` is the rendered 14px floor and

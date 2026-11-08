@@ -45,15 +45,17 @@ function runAudit() {
    same-length edits this suite has been bitten by before would be invisible to a byte count. */
 const BREAKS = [
   { name: 'plant the inset shorthand back', file: 'app',
-    from: '    position:fixed; top:0; right:0; bottom:0; left:0; background:var(--scrim); z-index:70;',
-    to: '    position:fixed; inset:0; background:var(--scrim); z-index:70;',
+    /* Re-pointed when the stacking numbers moved onto the named ladder: this needle is about
+       `top/right/bottom/left` versus `inset`, so the z-index text only has to travel with it. */
+    from: '    position:fixed; top:0; right:0; bottom:0; left:0; background:var(--scrim); z-index:var(--z-modal);',
+    to: '    position:fixed; inset:0; background:var(--scrim); z-index:var(--z-modal);',
     want: r => r.code === 1 && /inset shorthand/.test(r.out) && /breaking floor: Chromium 87/.test(r.out) },
   { name: 'plant a :has() selector', file: 'app',
     from: '  :root{', to: '  :root:has(> b){ color:red }\n  :root{',
     want: r => r.code === 1 && /breaking floor: Chromium 105/.test(r.out) && /:has\(\)/.test(r.out) },
   { name: 'delete the vh fallback that makes dvh safe', file: 'app',
-    from: 'padding:32px 12px; min-height:100vh; min-height:100dvh;',
-    to: 'padding:32px 12px; min-height:100dvh;',
+    from: 'padding:var(--s-8) var(--s-3); min-height:100vh; min-height:100dvh;',
+    to: 'padding:var(--s-8) var(--s-3); min-height:100dvh;',
     /* The row has to stop reading `guarded` and start reading `used`. dvh is a benign feature, so the exit code
        stays 0 either way — the only observable is the state word and the disappearance of the fallback count. */
     want: r => /dynamic viewport units \(dvh\/svh\/lvh\)\s+used/.test(r.out)
@@ -63,9 +65,18 @@ const BREAKS = [
     from: '  :root{', to: '  /* compat-exception: color-mix() — a reason long enough to satisfy the length check. */\n  :root{',
     want: r => r.code === 1 && /uses it nowhere/.test(r.out) },
   { name: 'excuse a feature with no reason', file: 'app',
+    /* The whole comment block, to its closing slash-star: the audit reads the reason as the text between
+       the feature name and the end of the comment, so replacing anything less than the block leaves a
+       second half of the reason behind and the break tests nothing. It has to be the block as it stands
+       today — a fourth line went in when the legal sheet joined the focus list, and the anchor silently
+       stopped matching, which is this repository's orphaned-needle class arriving from the direction of
+       a comment growing rather than a rule moving. */
     from: ['  /* compat-exception: :is() / :where() — this selector list styles the keyboard focus ring only.',
     '     Below Chromium 88 the rule is dropped and the user-agent ring still paints, so a Tab user sees a ring that is',
-    '     not the brand one rather than no ring. tools/shot.cjs --focus is what checks that claim. */'].join('\n'),
+    '     not the brand one rather than no ring. tools/shot.cjs --focus is what checks that claim.',
+    '     `.sheet-body` is in the list because Chromium makes a scrollable region keyboard-focusable on its',
+    '     own, and the legal sheet is the tallest content in the app: a Tab user lands on that scroller by',
+    '     design, so the ring that meets them there should be the app\'s, not the user-agent\'s. */'].join('\n'),
     to: '  /* compat-exception: :is() / :where() — too short to be a reason. */',
     want: r => r.code === 1 && /-character reason/.test(r.out) },
   { name: 'blind the feature scan so nothing can match', file: 'tool',
@@ -114,7 +125,28 @@ try {
       + String(r.out).trim().split('\n').pop());
   }
 } finally {
-  fs.writeFileSync(APP, baseApp, 'utf8');
-  fs.writeFileSync(TOOL, baseTool, 'utf8');
+  /* Measured 2026-11-06: this restore threw `UNKNOWN: unknown error, open …audit-compat-floor.cjs`
+     and the family died with its own fixture still in the file, so every family the runner started
+     after it read a blinded audit — and the runner's LEFT AN INSTRUMENT MUTATED row is the only
+     reason that was visible at all. The repository sits under OneDrive, and the sync can hold a file
+     open long enough for writeFileSync to fail on a path that is plainly writable a moment later.
+     So put it back until it takes, and if it still will not, say which file and where the bytes are,
+     because a silent failure here is a corrupted suite. */
+  putBack(APP, baseApp, 'the page');
+  putBack(TOOL, baseTool, 'the audit');
+}
+function putBack(file, bytes, what) {
+  for (let attempt = 1; attempt <= 6; attempt++) {
+    try { fs.writeFileSync(file, bytes, 'utf8'); return true; }
+    catch (err) {
+      const wait = 250 * attempt;
+      try { const s = Date.now(); while (Date.now() - s < wait) {} } catch (e) {}
+      if (attempt === 6) {
+        console.log('NOT RESTORED  ' + what + ' at ' + file + ' — ' + err.message);
+        console.log('  the bytes to put back are in HEAD: git checkout -- ' + file);
+        return false;
+      }
+    }
+  }
 }
 console.log('\n' + caught + ' of ' + applied + ' breaks caught, ' + unmatched + ' not applied; both files restored.');

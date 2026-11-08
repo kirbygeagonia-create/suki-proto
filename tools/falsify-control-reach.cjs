@@ -61,13 +61,20 @@ const BREAKS = [
     edits: [['max-width:350px; max-height:100%; overflow-y:auto;', 'max-width:350px;']] },
   { name: 'the top bar neither wraps nor lets its title give up width',
     only: 'notifications,resident-profile',
-    /* Removing either rule on its own leaves every control reachable — the wrap and the
-       min-width:0 are two independent guards of the same overflow, which is what two surviving
-       mutants looked like before they were read correctly rather than as a broken check. So the
-       break takes both, and reproduces the 196px clip this pass found. A family that tested one
-       guard at a time would have reported a rule that does not exist. */
+    /* Four rules hold one overflow: the bar's wrap, the min-width:0 on the bar's children, the
+       bar-level shorthand that stops a control shrinking, and the title group's own min-width:0.
+       Removing any subset of them leaves every control reachable, which is what three surviving
+       mutants looked like before the break was read correctly rather than as a broken check. So the
+       break takes the whole set, and reproduces the 196px clip this pass found. A family that tested
+       guards one at a time would have reported rules that do not exist. */
     edits: [['  .topbar{ flex-wrap:wrap; }', '  /* no wrap */'],
-            ['  .topbar > div{ min-width:0; }', '  /* no min-width on the bar children */']] },
+            ['  .topbar > div{ min-width:0; }', '  /* no min-width on the bar children */'],
+            /* The bar rule that keeps a top-bar control from wrapping also gives it flex:0 0 auto,
+               whose middle value is shrink:0, and the title group carries a min-width:0 of its own. */
+            ['  .topbar .btn, .topbar .back-btn, .topbar .notif-btn{ white-space:nowrap; flex:0 0 auto; }',
+             '  .topbar .btn, .topbar .back-btn, .topbar .notif-btn{ white-space:nowrap; flex:0 1 auto; }'],
+            ['  .topbar .hb{ display:flex; align-items:center; gap:10px; min-width:0; }',
+             '  .topbar .hb{ display:flex; align-items:center; gap:10px; }']] },
 ];
 
 function readTally(out) {

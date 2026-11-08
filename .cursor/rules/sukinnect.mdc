@@ -1,0 +1,23 @@
+---
+description: Sukinnect read-first context
+globs:
+alwaysApply: true
+---
+
+Read `SUKINNECT_CONTEXT.md` in the repository root before doing anything else in this project.
+It is the read-first file and is not duplicated here on purpose: one place, no drift.
+
+What it will tell you, in short:
+
+- Sukinnect is a hyperlocal service marketplace (FIND → REVIEW → BOOK → RECORD), pre-revenue, with a
+  working single-file prototype and **no production backend**.
+- The app is `Sukinnect-next.html`. Never touch `Sukinnect.html`, `Sukinnect-Android/`, `dist/`,
+  `.git/`, `Python/`, or the `.docx` business sources.
+- Business rules that bind code: transaction fee 1.2% with a 1.3% hard cap (the prototype's 10%
+  default is legacy), gateway fees are never absorbed, no stored-value wallet, licensed partners for
+  payments/lending/insurance, AI recommends and flags but never decides, sensitive data never goes on
+  a public chain.
+- Verify with `node tools/verify.cjs`, `node tools/shot.cjs --measure`, `node tools/measure.cjs`;
+  run `node tools/falsify-all.cjs` only alone on a clean app file, checked before and after.
+- A check that cannot fail is not a check. Never weaken a gate to reach green. Do not push.
+  Where two documents disagree, record the conflict for the owner; do not settle it silently.

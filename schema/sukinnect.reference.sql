@@ -24,13 +24,31 @@
 --   5. There is no stored-value wallet anywhere: no resident balance, no spendable
 --      number, nothing a user withdraws. customer_deposit is an obligation to
 --      deliver or refund, held by a licensed partner.
+--   6. The 7 November 2026 backend brief proposed a 1.2% commission with a 1.3% cap
+--      and a separately disclosed processor fee funded by the payer. The current
+--      roadmap records the pilot rate and payer as unresolved, so these are proposals,
+--      not approved production terms; this reference schema does not implement them.
+--
+-- Apply ordered files in schema/migrations/ after this base schema to add startup
+-- design records. Those migrations are reference-only and are not run by the prototype.
+-- The production SQL dialect is undecided; this file is currently a MySQL reference.
 
 SET NAMES utf8mb4;
 
 -- ──────────────────────────────────────────────────────────── people and places
 CREATE TABLE users (
   id            VARCHAR(24)  NOT NULL,
-  role          ENUM('resident','provider','admin') NOT NULL,
+  /* The three values on the left are what this prototype's kernel enforces today.
+     business and moderator are the plan's five groups, and they are declared here so a
+     backend does not have to invent them later: slice S5 puts the checks in the kernel
+     (can(actor, action)) precisely so that this column and that rule arrive together.
+     A row is not a permission — until S5 lands, an application reading this enum would
+     still have nothing that enforces the boundary. */
+  role          ENUM('resident','provider','business','moderator','admin') NOT NULL,
+  /* A provider may be a person or a registered service business. The plan's group 3 is
+     the second, and it is a flag on the account rather than a fourth role, so one
+     person's profile page does not fork into two destinations. */
+  is_business   TINYINT(1)   NOT NULL DEFAULT 0,
   name          VARCHAR(120) NOT NULL,
   email         VARCHAR(190) NOT NULL UNIQUE,
   phone         VARCHAR(32),
@@ -273,7 +291,13 @@ CREATE TABLE payments (
   booking_id         VARCHAR(24) NOT NULL,
   type               ENUM('authorization','capture','refund','void','collection') NOT NULL,
   status             ENUM('authorized','captured','refunded','partially_refunded','voided','collected','failed') NOT NULL,
-  method             ENUM('gcash','cash') NOT NULL,
+  /* The two the prototype offers a resident today are gcash and cash. The others are
+     declared because CONFIG.gatewayFees already prices them (the plan names them as the
+     pilot's online routes) and a payment row must be able to say which route it took —
+     the fee a payer funded is computed per method, so a row that cannot name its method
+     cannot be reconciled against the gateway fee it carries. */
+  method             ENUM('gcash','maya','qrph','card','cash','direct') NOT NULL,
+  gateway_fee_centavos INT UNSIGNED NOT NULL DEFAULT 0,  -- 0 for cash and direct, always
   amount_centavos    INT UNSIGNED NOT NULL,
   gateway_ref        VARCHAR(64),          -- a partner's own id; MOCK-* before one exists
   note               VARCHAR(190),
@@ -285,13 +309,33 @@ CREATE TABLE payments (
 -- One booking to many payment rows: that is what lets a partial refund and a
 -- re-authorization exist without rewriting history.
 
+/* One row per account the kernel's ACCOUNTS map holds, read out of the kernel rather than
+   written beside it, so the two cannot drift without a tool saying so. gateway_fee_payable
+   is the S1 addition and the reason the list matters: it is the only place money sits that
+   belongs neither to the platform nor to the provider. Fold it into provider_payable and the
+   fee reads as part of what the provider earned; fold it into platform_fee_revenue and the
+   platform has absorbed it, which is the loss the plan's rule exists to prevent. */
 CREATE TABLE accounts (
   key_name  VARCHAR(48) NOT NULL,
   kind      ENUM('asset','liability','revenue','expense') NOT NULL,
-  scope     ENUM('none','booking','provider','customer') NOT NULL DEFAULT 'none',
+  scope     ENUM('none','provider','booking','customer') NOT NULL DEFAULT 'none',
   label     VARCHAR(120) NOT NULL,
   PRIMARY KEY (key_name)
 ) ENGINE=InnoDB;
+
+-- The accounts as the kernel holds them today. A ledger line naming anything else is
+-- refused by both the application and this foreign key.
+INSERT INTO accounts (key_name, kind, scope, label) VALUES
+  ('escrow_held', 'asset', 'none', 'customer money held for one job until it is settled or returned'),
+  ('commission_receivable', 'asset', 'provider', 'fee owed to the platform by a provider who collected on site'),
+  ('customer_deposit', 'liability', 'booking', 'what the payer has sent, scoped to the booking that caused it'),
+  ('provider_payable', 'liability', 'provider', 'what a provider has earned and has not yet been paid'),
+  ('dispute_hold', 'liability', 'booking', 'money frozen while a case is open, released only by a decision'),
+  ('tax_payable', 'liability', 'none', 'VAT collected on the platform fee only'),
+  ('gateway_fee_payable', 'liability', 'booking', 'the processing fee the payer funded, owed to the processor and never to the platform'),
+  ('platform_fee_revenue', 'revenue', 'none', 'commission earned'),
+  ('platform_fixed_fee_revenue', 'revenue', 'none', 'fixed booking or processing fee earned'),
+  ('cancellation_compensation', 'expense', 'provider', 'what a cancelled job owes the provider for arriving');
 
 CREATE TABLE ledger_events (
   id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -395,6 +439,287 @@ CREATE TABLE platform_config_audit (
 ) ENGINE=InnoDB;
 -- Changing a rate changes the money on jobs not yet booked, so the change itself
 -- is a record. History is never rewritten to agree with the new number.
+
+-- ───────────────────────────────────────── the gaps the plan exposes (added 7 Nov 2026)
+-- Everything below is designed, not built. Each block names the slice of the backend
+-- brief that would create it, because a table a reader mistakes for a delivered
+-- feature is the same defect as a screen that prints a number no record produced.
+
+-- S3 — consent. An account is not usable until a person has agreed, and the agreement
+-- has to be provable later: which version, of which document, whose text hashed to
+-- what, at what moment, and how it was read. A new document version forces re-consent
+-- because a record of agreeing to version 1 is not a record of agreeing to version 2.
+CREATE TABLE documents (
+  id            VARCHAR(32)  NOT NULL,          -- terms.customer, privacy.provider, …
+  audience      ENUM('customer','provider') NOT NULL,
+  kind          ENUM('terms','policy','privacy') NOT NULL,
+  version       VARCHAR(24)  NOT NULL,
+  title         VARCHAR(160) NOT NULL,
+  body          MEDIUMTEXT   NOT NULL,
+  body_sha256   CHAR(64)     NOT NULL,          -- of the exact text shown, not of a layout
+  status        ENUM('draft','approved') NOT NULL DEFAULT 'draft',
+                                          -- the plan's own rule: DRAFT until counsel signs it
+  published_at  DATETIME     NULL,
+  PRIMARY KEY (id, version),
+  UNIQUE KEY doc_version_unique (audience, kind, version)
+) ENGINE=InnoDB;
+
+CREATE TABLE consents (
+  id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id       VARCHAR(24)  NOT NULL,
+  document_id   VARCHAR(32)  NOT NULL,
+  document_version VARCHAR(24) NOT NULL,
+  body_sha256   CHAR(64)     NOT NULL,          -- copied at the moment of agreeing, so the
+                                          -- document may be edited afterwards and this row
+                                          -- still says what the person actually read
+  read_way      ENUM('scrolled','short_pane','declared') NOT NULL,
+                                          -- short_pane is the accessibility path: a pane that
+                                          --   fits the screen cannot be scrolled, and that is
+                                          --   not a person who read less
+  ip_hint       VARCHAR(45)  NULL,
+  at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY consent_once (user_id, document_id, document_version),
+  CONSTRAINT consent_user FOREIGN KEY (user_id) REFERENCES users(id),
+  CONSTRAINT consent_doc  FOREIGN KEY (document_id, document_version)
+                          REFERENCES documents(id, version)
+) ENGINE=InnoDB;
+-- Append-only, like the ledger. Withdrawing consent is a new row with a revocation,
+-- never an UPDATE that deletes the evidence that consent once existed.
+
+-- S5 — verification as a state machine rather than a badge. No ID image, no face image
+-- and no ID number lives in this schema: the capture step records that something was
+-- submitted to a licensed verifier and what that verifier decided, because storing the
+-- document itself is the thing the plan forbids and the thing a breach would find.
+CREATE TABLE verification_cases (
+  id             VARCHAR(32) NOT NULL,
+  user_id        VARCHAR(24) NOT NULL,
+  stage          ENUM('account','contact','identity_submitted','credentials_submitted',
+                      'human_review','decision','appeal') NOT NULL,
+  decision       ENUM('pending','approved','rejected','needs_document') NOT NULL DEFAULT 'pending',
+  reason         VARCHAR(400) NULL,            -- the reviewer's own words, required to reject
+  reviewer_id    VARCHAR(24) NULL,
+  opened_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  decided_at     DATETIME NULL,
+  appeal_of      BIGINT UNSIGNED NULL,         -- an appeal names the decision it answers
+  PRIMARY KEY (id),
+  KEY case_user_stage (user_id, stage),
+  CONSTRAINT case_user    FOREIGN KEY (user_id)     REFERENCES users(id),
+  CONSTRAINT case_reviewer FOREIGN KEY (reviewer_id) REFERENCES users(id)
+) ENGINE=InnoDB;
+
+CREATE TABLE verification_documents (
+  id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  case_id       VARCHAR(32) NOT NULL,
+  kind          VARCHAR(48) NOT NULL,           -- identity, nbi_clearance, barangay_clearance, qualification
+  label         VARCHAR(160) NOT NULL,
+  required      TINYINT(1) NOT NULL DEFAULT 1,
+  submitted_at  DATETIME NULL,                  -- NULL *is* outstanding; a second status column
+                                          -- for the same fact is how the prototype ended up with
+                                          -- five document rows shown to every applicant
+  decision      ENUM('pending','accepted','rejected') NULL,
+  verified_at   DATETIME NULL,
+  expires_at    DATE NULL,                      -- NULL means the document does not expire
+  issuer        VARCHAR(160) NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY doc_per_case (case_id, kind),
+  CONSTRAINT vdoc_case FOREIGN KEY (case_id) REFERENCES verification_cases(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- S5 / F16 — the moderator's queue. AI may recommend a flag; a person decides it, and
+-- the decision, the reason and the appeal route are records.
+CREATE TABLE moderation_actions (
+  id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  target_kind   ENUM('provider','booking','review','message','listing') NOT NULL,
+  target_id     VARCHAR(32) NOT NULL,
+  raised_by     ENUM('rule','ai_suggestion','report') NOT NULL,
+  rule_key      VARCHAR(64) NULL,               -- which explainable rule fired, if one did
+  reason        VARCHAR(400) NOT NULL,
+  status        ENUM('open','actioned','dismissed','appealed','resolved_on_appeal') NOT NULL,
+  decided_by    VARCHAR(24) NULL,
+  decided_at    DATETIME NULL,
+  decision_note VARCHAR(400) NULL,
+  at            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY moderation_status (status, at),
+  CONSTRAINT moderation_actor FOREIGN KEY (decided_by) REFERENCES users(id)
+) ENGINE=InnoDB;
+
+-- S7 — the revenue streams the plan's stretch case rests on, priced by an assumption
+-- and not by a market. Prices are configuration with a label, never a column a report
+-- can read as earned: the plan's own gate is that paid plans start at M7.
+CREATE TABLE feature_flags (
+  key_name      VARCHAR(48) NOT NULL,
+  is_enabled    TINYINT(1) NOT NULL DEFAULT 0,
+  enabled_for   ENUM('nobody','allowlist','all') NOT NULL DEFAULT 'nobody',
+  decided_by    VARCHAR(24) NULL,
+  decided_at    DATETIME NULL,
+  reason        VARCHAR(400) NULL,
+  PRIMARY KEY (key_name)
+) ENGINE=InnoDB;
+-- Every paid or regulated capability starts at 0 / 'nobody', which is the same default
+-- the prototype carries in CONFIG.featureFlags. A flag that is not a record is the
+-- defect this table exists to prevent: an interface that hides a button while the
+-- posting path underneath stays open.
+
+CREATE TABLE subscription_plans (
+  id            VARCHAR(32) NOT NULL,
+  label         VARCHAR(120) NOT NULL,
+  price_centavos INT UNSIGNED NOT NULL,
+  period        ENUM('month','year') NOT NULL,
+  benefits_json JSON NOT NULL,                  -- what it changes, written out rather than implied
+  price_status  ENUM('assumed','validated') NOT NULL DEFAULT 'assumed',
+  PRIMARY KEY (id)
+) ENGINE=InnoDB;
+
+CREATE TABLE subscriptions (
+  id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id       VARCHAR(24) NOT NULL,
+  plan_id       VARCHAR(32) NOT NULL,
+  status        ENUM('trialling','active','past_due','cancelled') NOT NULL,
+  started_at    DATETIME NOT NULL,
+  renews_at     DATETIME NULL,
+  cancelled_at  DATETIME NULL,
+  PRIMARY KEY (id),
+  KEY sub_user (user_id, status),
+  CONSTRAINT sub_user FOREIGN KEY (user_id) REFERENCES users(id),
+  CONSTRAINT sub_plan FOREIGN KEY (plan_id) REFERENCES subscription_plans(id)
+) ENGINE=InnoDB;
+
+CREATE TABLE promotions (
+  id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id       VARCHAR(24) NOT NULL,
+  listing_id    VARCHAR(24) NULL,
+  slot          VARCHAR(48) NOT NULL,           -- a named place on a named screen
+  price_centavos INT UNSIGNED NOT NULL,
+  starts_at     DATETIME NOT NULL,
+  ends_at       DATETIME NOT NULL,
+  status        ENUM('booked','running','ended','refunded') NOT NULL,
+  PRIMARY KEY (id),
+  CONSTRAINT promo_user FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB;
+-- A promotion is a slot, never a score. Nothing that writes here may change a
+-- provider's rank in an organic result set; the paid row is labelled as paid on the
+-- screen it appears on, and a check in the application asserts the organic order is
+-- identical with the promotion running and without it.
+
+-- S4 / F5 — the reference quotes a price band is built from. Three independent quotes
+-- per priority category is the plan's floor for showing a band at all, so the quotes
+-- are rows a person entered and can be counted, not an aggregate that arrived from
+-- nowhere.
+CREATE TABLE price_references (
+  id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  category_id   VARCHAR(24) NOT NULL,
+  barangay_id   VARCHAR(24) NOT NULL,
+  unit          ENUM('per_hour','per_visit','per_kg','per_tree','per_job') NOT NULL,
+  amount_centavos INT UNSIGNED NOT NULL,
+  source        VARCHAR(190) NOT NULL,          -- who said it, where, on what date
+  seen_at       DATE NOT NULL,
+  entered_by    VARCHAR(24) NOT NULL,
+  PRIMARY KEY (id),
+  KEY price_band (category_id, barangay_id, unit),
+  CONSTRAINT price_category FOREIGN KEY (category_id) REFERENCES service_categories(id),
+  CONSTRAINT price_barangay FOREIGN KEY (barangay_id) REFERENCES service_areas(id)
+) ENGINE=InnoDB;
+
+-- S2b / B14 — the event instrumentation the funding gates are measured from. Ids and
+-- codes only: a store of free text is a store of personal data wearing an analytics
+-- name, and none of these reports needs it.
+CREATE TABLE analytics_events (
+  id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  at            DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  actor_id      VARCHAR(24) NULL,
+  event         VARCHAR(48) NOT NULL,
+  booking_id    VARCHAR(24) NULL,
+  provider_id   VARCHAR(24) NULL,
+  category_id   VARCHAR(24) NULL,
+  barangay_id   VARCHAR(24) NULL,
+  result_kind   VARCHAR(32) NULL,               -- accepted / edited / ignored / refused
+  detail_json   JSON NULL                       -- constrained by application code, not by a TEXT column
+) ENGINE=InnoDB;
+-- Searches, requests, quotes, acceptances, completions, cancellations, disputes,
+-- recommendations shown and acted on, onboarding steps reached, price suggestions
+-- shown / accepted / edited. A row is a fact about an interaction, never a promise
+-- about a person.
+
+-- The AI-suggestion log is the accountability record the plan asks for: what was
+-- suggested, from which method, on what evidence, and what the person did about it.
+CREATE TABLE ai_suggestions (
+  id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  at            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  actor_id      VARCHAR(24) NULL,
+  surface       VARCHAR(48) NOT NULL,           -- concierge / ranking / price_band / shortlist
+  method        ENUM('rule_based','record_derived','external_model') NOT NULL,
+  model_ref     VARCHAR(120) NULL,              -- required when method = external_model
+  source_url    VARCHAR(400) NULL,              -- ditto; an external claim without a source is refused
+  fetched_at    DATETIME NULL,
+  confidence    DECIMAL(4,3) NULL,
+  payload_json  JSON NOT NULL,                  -- the suggestion as made
+  signals_json  JSON NOT NULL,                  -- the inputs that produced it, by name
+  outcome       ENUM('shown','accepted','edited','ignored','overridden') NOT NULL,
+  overridden_to VARCHAR(400) NULL,
+  PRIMARY KEY (id),
+  KEY ai_surface (surface, at),
+  CONSTRAINT ai_actor FOREIGN KEY (actor_id) REFERENCES users(id)
+) ENGINE=InnoDB;
+-- method is not decoration: a suggestion from an external model must carry
+-- model_ref, source_url and fetched_at, and a deployment should enforce that with the
+-- same refusal the application's seams already make in the prototype.
+
+CREATE TABLE notifications (
+  id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id       VARCHAR(24) NOT NULL,
+  kind          VARCHAR(48) NOT NULL,
+  title         VARCHAR(160) NOT NULL,
+  body          VARCHAR(400) NOT NULL,
+  route_kind    ENUM('booking','provider','case','listing','none') NOT NULL,
+  route_id      VARCHAR(32) NULL,
+  read_at       DATETIME NULL,
+  sent_at       DATETIME NULL,                  -- NULL means it is only in the app
+  at            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY notif_user (user_id, read_at),
+  CONSTRAINT notif_user FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB;
+-- route_kind and route_id are the whole point of the table: the product rule is that
+-- tapping a notification opens the object responsible for it, and a notification with
+-- no route is a message about nothing.
+
+CREATE TABLE provider_portfolio (
+  id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id       VARCHAR(24) NOT NULL,
+  category_id   VARCHAR(24) NULL,
+  title         VARCHAR(160) NOT NULL,
+  description   VARCHAR(600) NULL,
+  asset_ref     VARCHAR(400) NULL,
+  visibility    ENUM('private','reviewers','public') NOT NULL DEFAULT 'public',
+  created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  CONSTRAINT portfolio_user FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB;
+
+CREATE TABLE credentials (
+  id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id       VARCHAR(24) NOT NULL,
+  name          VARCHAR(160) NOT NULL,
+  kind          VARCHAR(48) NOT NULL,           -- tesda_nc2, prc_license, barangay_clearance, …
+  issuer        VARCHAR(160) NULL,
+  credential_ref VARCHAR(64) NULL,              -- the number printed on the document, if it is to be
+                                          -- stored at all: it identifies a person's record to a
+                                          -- stranger who reads this table
+  expires_at    DATE NULL,
+  state         ENUM('valid','expiring','expired','missing') NOT NULL,
+                                          -- derived from expires_at against the configured warning
+                                          -- window; stored so a roster filter does not recompute it
+  checked_by    VARCHAR(24) NULL,
+  checked_at    DATETIME NULL,
+  PRIMARY KEY (id),
+  KEY credential_user (user_id, state),
+  CONSTRAINT credential_user FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB;
+-- No document image. The badge a resident reads states its level and says it does not
+-- guarantee competence or safety, and it is derived from a decided verification case,
+-- never typed onto a profile.
 
 -- ────────────────────────────────────────────────────────────────── report reads
 CREATE OR REPLACE VIEW platform_revenue AS

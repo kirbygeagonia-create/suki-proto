@@ -2193,3 +2193,95 @@ public `/` still serves `3c73bfef` from 2026-10-15 with the same six fixes absen
 that build deliberately stale on 2026-10-24, so the number is a tripwire against unchosen drift; whether a Netlify
 build was queued at that instant is not distinguishable from here and is not claimed either way.
 
+
+## Build `1.2-preview.40` staged and built on the bench, 2026-10-26 — the keyboard leg is installable, and still unmeasured
+
+The shell tree is untracked by the owner's standing decision, so git will never show what happened
+here and this is the only record of it. `Sukinnect-next.html` was copied to
+`app/src/main/assets/Sukinnect.html` and proved identical with `cmp`; `app/build.gradle` went
+`versionCode 41 / 1.2-preview.39` → **`42 / 1.2-preview.40`** so an install can be told apart by
+version string, and `gradlew.bat assembleDebug` produced `Sukinnect-1.2-preview.40-debug.apk` in 51s
+(`BUILD SUCCESSFUL`, 9 tasks executed / 25 up-to-date). Note the invocation: `cmd.exe /c "gradlew.bat …"`
+from Git Bash returned exit 0 having run **nothing** — it opened a cmd banner and left the old APK in
+place. `cmd.exe //c` is the form that works here, and the proof was the four-copy audit, not the exit
+code: `node tools/audit-build-bytes.cjs` went `findings: 2` → **`findings: 0`**, all four reads at
+`a9687553…`, including the page extracted out of the new APK's bundle. With that,
+`node tools/falsify-build-bytes.cjs` — which had been refusing on the deliberately stale copies and
+showing up as the aggregate's one flagged row — runs for real: **4 of 4 breaks caught, 0 not applied,
+0 missed**, and it restored the audit, `dist/` and the staged asset afterward.
+
+**What this does not do.** No handset is on the bus (`adb devices` answers an empty list), so
+`preview.40` is installed nowhere and **the chat-composer-under-the-keyboard question is still
+unanswered** — `visualViewport` appears zero times in the page, and nothing measured on a bench can
+substitute for the IME. When a phone is attached the step is `adb install -r -t
+app/build/outputs/apk/debug/Sukinnect-1.2-preview.41-debug.apk`, then read it back from
+`dumpsys package com.sukinnect.app` rather than from this file, and open a chat room with the composer
+focused. Attach a **fresh** process to DevTools, never a resumed one.
+
+**Superseded the same day by `1.2-preview.41` (`versionCode 43`), 2026-10-26.** The P2 coherence sweep
+(CHANGES §135) moved the page again, so the asset was re-copied with `cmp` proving it, `dist/` was
+rebuilt, and `cmd.exe //c "gradlew.bat assembleDebug"` produced
+`Sukinnect-1.2-preview.41-debug.apk` in 7s. `node tools/audit-build-bytes.cjs` reads **findings: 0**,
+all four copies at `76338e39…`. Nothing was installed: the owed reading is still this leg's, and a
+build that runs on no phone proves only that it builds.
+
+**Superseded again the same day by `1.2-preview.42` (`versionCode 44`), 2026-10-26.** The re-audit of the
+plan's own matrix (CHANGES §136) added the help-desk wording, the role-session documentation and the
+pending-proposal inbox to both booking lists. Asset re-copied with `cmp`, `dist/` rebuilt, build 7s,
+`node tools/audit-build-bytes.cjs` → **findings: 0** with all four copies at `d7725e4a…`. ~~Install `.42`~~
+— superseded immediately below, before any device was attached. Read the version back from `dumpsys package
+com.sukinnect.app` rather than from this file: three builds now carry the same bytes-in-name only if a
+reader trusts a filename, and the version pair is the sole thing that tells them apart on a phone.
+
+**Superseded within the hour by `1.2-preview.43` (`versionCode 45`), 2026-10-26.** The screenshot `.42`
+made possible found two defects on the two brand-new inbox screens — the camera's own row painted nothing,
+and the status chips broke mid-token — and the chip cure moved the break onto the card title beside it, so
+the head rows now wrap (CHANGES §137). Asset re-copied with `cmp`, `dist/` rebuilt,
+`node tools/audit-build-bytes.cjs` → **findings: 0** with all four copies at `2691a76c…`. **Install
+`.43`**, not `.42`, `.41` or `.40`, when a device arrives. Two notes for whoever runs the leg: the first
+two `assembleDebug` attempts died on a wedged daemon (`FileLockContentionHandler … Address already in
+use`) and only `gradlew --stop` cleared it, and the wrapper still reported that failed build as
+`completed, exit code 0` — so read the build log or ask `audit-build-bytes`, never the exit code.
+
+**Superseded within the hour by `1.2-preview.44` (`versionCode 46`), 2026-10-26.** The three rows §138 reported
+open were ruled by the owner and built (CHANGES §139). Nothing about this leg changed — it is still one install and
+one keyboard reading — but the artifact a phone should run is now `.44`, and `node tools/audit-build-bytes.cjs`
+reads **findings: 0** with all four copies at `fd176312…`. **Install `.44`.** The screen worth photographing on the
+handset is the provider profile: its mid-word breaks at 320 CSS px with 135% text were found on the bench
+*emulating* that corner, and a phone is the only place the multiplication is real (§68, §73).
+
+## The browse → review → book walk (G11) — the method, armed and not yet run
+
+§10 of the improvement brief asks whether a person can go from opening the app to sending a request in
+one to three minutes. Nothing in this repository has ever measured that, and no instrument here can
+infer it from the source: the number is about a hand on a screen, not about a file. The method is
+written down now so the measurement is a procedure rather than an impression, and **the result table
+below stays empty until a run happens. A time that was not measured does not go in this file, in
+README, in AGENTS.md, or in a slide.**
+
+The task, fixed, because a different task is a different number:
+
+1. Open the app signed in as the resident (the sign-in is typed on the device, not scripted — the first
+   reading of the clock starts at the Home screen, so sign-in time is reported separately, not folded in).
+2. Find a provider for a kitchen faucet leak: type into the search field, submit, do not use a category tile.
+3. Review: open one provider from the results, read the profile down to the rate line, and return.
+4. Book: open the request sheet, describe the job, pick a day and a time, send.
+5. Confirm: land on the booking's own detail screen.
+
+Rules that make two runs comparable:
+
+- **One named device**, read out of `dumpsys package` / the page's own `innerWidth`, written in the row.
+  A bench run in Chrome is labelled as a bench run, because a desktop engine does not have the phone's
+  keyboard, its text inflation, or its tap latency.
+- **Five runs, median reported**, min and max beside it. The median of one walk is an anecdote.
+- **Elapsed from the Home screen to the booking detail**, plus a tap count and a back count, read from
+  the device where the keys are real. Backsteps are the part of "is this understandable" that a timer
+  hides: a walk can finish in ninety seconds and still have climbed out of a screen four times.
+- **One observer, no agent hand** on the phone. An injected tap is not a thumb (measured twice here: the
+  platform treats a synthetic pointer and a real one differently on the document picker, and Android
+  multiplies text after CSS resolves, which no bench emulates).
+- If the walk cannot be completed as written, that is the finding, and it is written in the row.
+
+| device | build | run | elapsed | taps | backs | where it stopped |
+|---|---|---|---|---|---|---|
+| — | — | 1 of 5 | — | — | — | not run |

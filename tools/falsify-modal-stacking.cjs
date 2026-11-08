@@ -11,21 +11,39 @@ const ROOT = path.join(__dirname, '..');
 const TARGET = path.join(ROOT, 'Sukinnect-next.html');
 const original = fs.readFileSync(TARGET, 'utf8');
 
+const LABEL = 'a modal opened from a sheet sits above the sheet';
+
 /* Single-line needles on purpose: the file is CRLF, so a needle carrying \n never
-   matches and the mutant reports itself as SKIP while looking like a pass. */
+   matches and the mutant reports itself as SKIP while looking like a pass.
+   Re-pointed when the stacking numbers moved onto the named ladder: the two order mutants now edit
+   the RUNG, because that is where the number lives, and the fourth mutant puts a literal back into
+   the one overlay that had no class to inherit — the verification review's own scrim, which used to
+   type 50 in a file declaring .modal-layer at 70. */
 const MUTANTS = [
   { name: 'the modal drops under the sheet again',
-    apply: s => s.replace('top:0; right:0; bottom:0; left:0; background:var(--scrim); z-index:70;',
-                         'top:0; right:0; bottom:0; left:0; background:var(--scrim); z-index:50;') },
+    label: LABEL,
+    apply: s => s.replace('--z-modal:70;', '--z-modal:50;') },
   { name: 'the sheet is raised over the modal',
-    apply: s => s.replace('position:absolute; top:0; right:0; bottom:0; left:0; z-index:60;',
-                         'position:absolute; top:0; right:0; bottom:0; left:0; z-index:80;') },
+    label: LABEL,
+    apply: s => s.replace('--z-sheet:60;', '--z-sheet:80;') },
   { name: 'the modal loses its z-index entirely',
-    apply: s => s.replace('top:0; right:0; bottom:0; left:0; background:var(--scrim); z-index:70;',
-                         'top:0; right:0; bottom:0; left:0; background:var(--scrim);') },
+    label: LABEL,
+    apply: s => s.replace('top:0; right:0; bottom:0; left:0; background:var(--scrim); z-index:var(--z-modal);',
+                          'top:0; right:0; bottom:0; left:0; background:var(--scrim);') },
+  { name: 'an overlay with no class goes back to typing its own number',
+    /* The order between .modal-layer and .sheet-layer is untouched by this one, so the pair check
+       cannot see it — the ladder check can. Naming the wrong label here would have printed MISSED
+       against a gate that had genuinely gone red. */
+    label: 'no layer types its own stacking number, and the ladder is what it types instead',
+    apply: s => s.replace('background:var(--scrim); z-index:var(--z-modal); display:flex;',
+                          'background:var(--scrim); z-index:40; display:flex;') },
+  { name: 'the sheet goes back to typing its own dim',
+    /* The dim is the sibling decision to the rung: both are one idea written per layer. Kept in this
+       family rather than a new one because it is the same two layers disagreeing. */
+    label: 'the dim behind a full-cover layer is the token, not a per-layer alpha',
+    apply: s => s.replace(/background:var\(--scrim\);\r?\n    animation:scrimIn/,
+                          m => m.replace('var(--scrim)', 'rgba(3,0,43,.52)')) },
 ];
-
-const LABEL = 'a modal opened from a sheet sits above the sheet';
 
 function gateOutput() {
   try {
@@ -45,9 +63,10 @@ try {
     applied++;
     fs.writeFileSync(TARGET, mutated);
     const run = gateOutput();
-    const failed = run.code !== 0 && run.out.includes('FAIL  ' + LABEL);
+    const failed = run.code !== 0 && run.out.includes('FAIL  ' + (m.label || LABEL));
     if (failed) { caught++; console.log('CAUGHT  ' + m.name); }
-    else console.log('MISSED  ' + m.name + '  (exit ' + run.code + ')');
+    else console.log('MISSED  ' + m.name + '  (exit ' + run.code + ', named check '
+      + (run.code !== 0 ? 'not the one that failed' : 'passed anyway') + ')');
   }
 } finally {
   fs.writeFileSync(TARGET, original);

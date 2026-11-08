@@ -7978,3 +7978,2984 @@ findings**; narrow window → refuses with its own cause named; empty scan → `
 tools/falsify-commit-subjects.cjs` → **15 of 15 breaks caught, 0 not applied, 0 missed** with all three finding kinds
 holding instances; `node tools/verify.cjs` → **all 567 checks passed**. `Sukinnect.html` still identical to
 `origin/main`; no application bytes moved; nothing here redeploys.
+
+## 132. Phase B landed the two absences and the mislabelling, and the gate found a checker that matched a prefix
+
+Approved 2026-10-25 by the owner as "all P1, legal included, reschedule by propose-and-accept,
+providers as merchants". Four increments landed on `Sukinnect-next.html`; the gate went 567 → 616
+checks, and the screens the camera walks went 82 → 85.
+
+**Reschedule is a record now.** The audit's headline absence: `reschedul` appeared zero times in the
+file, so a household with a conflict after an appointment was agreed had exactly one door — cancel —
+and the booking's own `cancelWarning()` names the fee that costs. `RESCHEDULE_REQUESTS` holds one row
+per proposal (`bookingId`, `raisedBy`, `date`, `time`, `status`, `createdAt`, `decidedAt`, `decidedBy`)
+against a four-state `RESCHEDULE_STATES` vocabulary, seeded **empty** because a sample request would
+record an agreement nobody proposed. Only `upcoming` may move: a request nobody answered has no agreed
+time to change, and once a provider is `en_route` or `arrived` a new hour is a no-show waiting to
+happen. The resident's status card and the provider's job detail both read it, the proposing side
+cannot answer its own request, one proposal at a time per job, and the answering side's Accept is the
+only statement in the file that writes `b.date` and `b.time` — it touches no amount, no status, no
+payment state, which is asserted rather than assumed.
+
+**No schema bump, and the reason is kept.** The approved framing said the feature would move
+`SCHEMA_VERSION` 16 → 17. It does not. A v16 dump simply has no `rescheduleRequests` key, and that
+absence is unambiguous — unlike the v15 dump whose typed-date rows were indistinguishable from real
+instants, which is the precedent that earned a bump. Bumping here would have deleted every tester's
+saved bookings, edited provider profile and audit rows to protect nothing, so `hydrate()` reads the
+missing key as an empty list and the version stays 16 with a comment saying why. Deviating from the
+approved wording is recorded here rather than smoothed over: what was approved was the flow.
+
+**The register now writes a record, so its own sentence had to move.** `this account is not stored`
+was true while registration wrote no bytes. An acceptance nobody can point at afterwards is a claim,
+not a record, so the versioned acceptance is stored — and the order matters: `state.termsAcceptances`
+is written and `persist()` is called **before** the typed name and barangay are applied to the
+profile, so the bytes this action leaves hold a versioned acceptance plus the demo household's own
+profile. The toast says exactly that now, and the login suite asserts both halves in both directions:
+an unticked box refuses with a message naming the box and writes nothing, and an accepted register
+writes the acceptance and not the account. A later edit made deliberately is stored by that edit.
+
+**Three documents, drafted from statutes actually read.** `privacy.gov.ph` answered 403 on both pages
+the brief names, `ecommerce.dti.gov.ph` failed to connect, and the Senate issuance library was
+unreachable, so the text was drafted against full-text reproductions on LawPhil and says so: RA 10173
+§§12–13 and 16 (consent is one of six grounds — the notice names contract, legal obligation,
+legitimate interests and consent separately, which is what the brief asked for instead of the usual
+"we process everything because you clicked yes"), RA 11967 (marketplaces, not pure consumer-to-consumer
+deals; the merchant issues the invoice), RA 8792 and RA 7394 (which reaches services, not only goods).
+Every fact the business has not decided is a bracket marked `NOT DECIDED`, and the gate enforces that
+shape: a bracket without the mark fails, an email address outside a bracket fails, and a sentence
+claiming NPC registration fails while the true denial must be present. Providers are described as
+merchants offering services through the platform — the owner's ruling, and the choice that decides
+whether RA 11967's duties attach at all. All three carry a visible **Draft — not reviewed by
+Philippine counsel** banner, because misrepresenting draft text as approved is the failure the brief
+names. The Terms box is never pre-ticked; the optional consent is a separate row recorded only when
+ticked; sign-in is never held up by a re-acceptance.
+
+**The two labels that promised a mechanism.** "Arrives within" filtered `availabilityMin`, which is
+when a provider can *start* — nothing computes a route — so the group is "Can start within" with a
+line saying nobody is on the way yet. The provider card said "about 0.8 km from you" over a number
+typed into the seed, which is a GPS-flavoured claim about a distance that was never measured, and
+registration now accepts a barangay of the reader's own choosing, so "from you" was doubly unearned:
+the card says *sample figure, not measured from you*. On the FSM screen, "Dynamic Availability
+Optimizer — suggests when to go Available/Busy based on real-time surge predictions" became an honest
+statement of what the switch does (nothing reads it; no routing exists), and "Route & Schedule
+Optimizer — optimized sequence for your 2 active jobs today… travel time minimized by 18 mins" was
+**deleted rather than reworded**: the dashboard already lists today's jobs in the order their own
+times put them, and a second list of the same day is the drift this file keeps calling a defect.
+Two of the eight new wording checks assert those absences, so a re-add shows up as a failure.
+
+**Four instrument lessons from the same pass.**
+
+1. **A substring needle matched a longer word and failed a correct build.** The `no provider is
+   called "Pro"` check tested `codeOnly.indexOf('Service Pro') < 0`, and the legal documents write
+   "Service Professional" legitimately — the prefix matched inside it. The check was wrong, not the
+   prose, and it now uses `\bService Pro\b` on both halves of the rule. A needle that matches a
+   longer word is the same failure as a needle that matches a comment.
+2. **A check that asserts a flag the harness zeroes measures the harness.** Two reschedule checks
+   first read `state.sheet`. In the Node harness, `openSheet()` leaves `state.sheet` null after
+   `render()` — and the **pre-existing booking sheet does the same**, which is how the artifact was
+   recognised rather than filed as a defect. The checks now assert the armed draft and the sheet's
+   own markup, and say in a comment that the camera walks both sheets in a real browser.
+3. **A break that prints MISSED is read, not deleted.** The falsifier's id-substitution break —
+   `rescheduleBooking` answering an unknown id with `BOOKINGS[0]` — survived its own check, because
+   that first booking happened not to be at a movable stage, so "nothing opened, nothing written"
+   stayed true for an unrelated reason. The check was widened: the table's first row is now made
+   reschedulable first, and the lookup itself is asserted to answer `null` for an unknown id and the
+   right record for a real one. This is the fifth time this repository has written that sentence.
+4. **The gate reached a screen the harness could not call.** `providerFSM` was not in the harness
+   export list, so no gate check had ever rendered the FSM screen — the same "a destination no
+   instrument reads" class as the admin Account tab and the audit log. It is exported now, and it was
+   the mutant that found it: the first reschedule card was inserted into `providerFSM`, and
+   `today is not defined` proved the screen had never been run.
+
+**Also found while looking: P1-3 was already resolved.** `isRegister = !isAdmin && state.authMode ===
+'register'` means the admin route never renders a register form, so there is no public
+self-registration as administrator to restrict. Recorded as already-resolved rather than re-implemented.
+
+**A completion audit against §9 of the plan found three promises the first cut had not built.** An
+accepted move now writes **one `STATUS_EVENTS` row**, and `decidedAt` is derived from that same reading
+rather than taken a second time — §83's rule that one act has one moment, asserted as
+`Date.parse(event.at) === r.decidedAt` because a behavioural check cannot pin a race that usually does
+not happen. That row is rendered from its own **note**: a reschedule never changes the status, so
+printing the status label again would be §7's repeated indicator. An optional **reason** travels on the
+record, escaped, and a reason nobody typed is stored as `null` rather than an empty string, so the card
+never prints quotation marks around nothing. And the answering side may **counter**, which marks the
+ask it answers `superseded` and raises a fresh one instead of editing a decision that already happened.
+The counter's refusal path was wrong on its first draft and is the sharper lesson: it restored a
+superseded ask to `pending` on its way out, which re-opened a proposal the other side had already
+answered — an error branch that mutated the very record it was refusing to write. `reschedule` is 34
+checks and `node tools/falsify-reschedule.cjs` is 14 breaks. Two instrument facts came out of proving
+them. The first run reported **12 of 12 caught, 1 not applied**, and the not-applied column is what
+showed the cause: `answerReschedule` and `counterReschedule` refuse the proposer with the identical
+one-line condition, so the break's anchor matched twice — the anchor became two lines (the refusal
+message is what tells the guards apart), and the family now pre-flights every anchor and refuses before
+spending a gate pass on a rotted needle. A second edit then crashed the suite with `appSrc is not
+defined`: that identifier belongs to the honesty suite, and the reschedule checks live in their own
+suite, which is a scope fact the shape of the file does not advertise. The reading is now taken from
+the exported function's own text.
+
+**Not done, stated plainly.** The chat keyboard leg still needs a handset (`visualViewport` appears
+zero times in the file, so the claim about composer behaviour under a keyboard remains unverifiable
+from the bench). P2 coherence work was not approved and was not done.
+
+**Verification, as printed.** Six families carry the new rules and were each re-run on the final
+tree: `falsify-reschedule` **14 of 14 caught, 0 not applied, 0 missed**, `falsify-legal-truth` 8 of 8,
+`falsify-wording-truth` 7 of 7, `falsify-action-above-fold` 2 of 2, `falsify-register-identity` 4 of 4
+after its fourth break was re-pointed at the rule that replaced the one it used to condemn, and
+`falsify-camera-dialog-coverage` 6 of 6 with the three new screens in the table.
+`node tools/verify.cjs` → **all 625 checks passed**, and `node tools/sweep-text-scale.cjs` → **8 of 8
+phone corners measured clean** over the 85 screens `node tools/shot.cjs --list` counts. Before/after
+taken from the painted page rather than from reasoning: the Money screen’s first pressable action
+moved from **2,239px to 246px**, and the FSM screen became **93px shorter** (`scrolls 675px past the
+fold` → `582px`) by losing the fabricated route card and gaining no replacement.
+`node tools/build-web-dist.cjs` republished `dist/`, and `node tools/audit-build-bytes.cjs` reports
+`findings: 2` — the Android staged asset and the built APK, left stale by the owner’s ruling, are the
+two reads that disagree with the source. Not verified and not claimed: the chat keyboard leg needs a
+handset, and `visualViewport` still appears zero times in the page, so no composer-under-keyboard
+statement in this document is measured.
+
+**P1-6 shrank when the metric was corrected, and that is the finding.** Phase A quoted "seven
+screens bury their first large action below the fold", measured by a probe that asked where the first
+`.btn` at least 40px tall sits. Promoted to `tools/probe-density.js` and re-run against the untouched
+build with a selector that counts anything a thumb can press (`button, a[href], [onclick], .btn`), the
+population is **one**: the admin's Money screen, whose only two operations — Run this week's payouts
+and Restore the sample records — sat 2,239px down a 2.5-screen scroll, beneath three cards they
+change. Master Administrator's 13 pressable rows begin at 121px (the thing 2,054px down is the
+lock/logout pair, which belongs at the bottom of an account screen), and Categories' single button is
+a link to fee settings on a screen whose own copy says the catalogue is read-only — promoting that
+would have surfaced a convenience above the content. The action card was hoisted to the top of the
+Money screen, extracted as `thisDeviceCard()` so its position is one line a check can order and a
+falsifier can move (`node tools/falsify-action-above-fold.cjs`).
+
+**The new check failed loudly, which is the only reason the bug was caught.** It first navigated with
+`state.tab = 'dash'` — the word printed on the admin's own button, not the value its render branch
+answers (`admin_dashboard`) — so nothing painted and all three markers read `-1`. Because the check
+requires each marker to exist *before* comparing positions, that showed up as a FAIL rather than a
+passing vacuum. The repository has written this trap down before (a probe that set `tab='dash'` and
+concluded the app could reach a blank screen); it recurs because the button label and the tab value
+live in different places in the file.
+
+## 133. The two plan rules the first cut of the reschedule flow had not built, and a falsifier that correctly refuses to run on a deliberately stale tree
+
+A completion audit of the committed Phase B against §9 of the approved plan — read rule by rule, not
+from the summary — found two promises the implementation had skipped, and one accepted state that
+quietly disables an instrument.
+
+**The plan allowed `requested` as well as `upcoming`; the build allows only `upcoming`, and that is a
+stated deviation rather than an oversight.** A request nobody has answered has no agreed day or hour to
+move, and the two real actions on it already exist: withdraw, and the provider's accept or decline.
+Offering "reschedule" there would put a second word on the same door. Recorded here and in the plan
+because the difference between a deviation and a defect is whether it is written down.
+
+**Two rules that were missing and are now built.** Plan §9 lists `fromAt (the confirmed schedule at
+request time)` among the record's fields and rule 5 says "a stale request (booking meanwhile
+cancelled/completed/**time changed**) is refused with its reason named". Neither existed. A request now
+stores `fromDate`/`fromTime` beside the `date`/`time` it asks for, the answer card reads
+"Sat, Oct 31 at 8:00 AM **→** Mon, Nov 2 at 10:00 AM" so the reader sees both ends of the move, and an
+answer whose booking has moved on is refused: the row becomes `stale`, the refusal names the schedule
+it was written against, and **nothing is written** — including no timeline row, asserted because the
+alternative is a refusal that still mutates the record it is refusing. Four new gate checks, one of them
+a positive control (a *current* request still moves the job) so the guard cannot pass by disabling
+acceptance wholesale. `node tools/falsify-reschedule.cjs` is 17 breaks: drop the stored `fromDate`,
+disable the guard, or leave the retired row answerable, and each one goes red by name.
+
+**`falsify-build-bytes` now refuses to run, and the reason is the owner's ruling, not a defect.** The
+aggregate reports **55 families, 299 mutants applied, 299 caught, 0 not applied — 1 family needs
+attention**, and the flagged row is `build-bytes 0 / 0 — printed no summary — nothing was proven`. Run
+alone it says why: `control unmutated tree: findings=2 differs=true refused=false exit=1` then
+`ABORT — the audit does not answer clean on the unmutated tree; nothing below isolates a cause.` Two
+copies of the page (the staged Android asset and the built APK) are stale **by decision** — the owner
+ruled on 2026-10-25 to leave them, and the handset currently runs `1.2-preview.39`. So a family that
+grades itself against "all four copies identical" cannot demonstrate anything until the shell is
+rebuilt, and it is right to say so rather than to grade breaks against a baseline it does not share.
+The aggregate's exit code 1 is the guard working: a run with an unproven family is not a clean run, and
+reading only the headline "299 caught" would have hidden it.
+§132's counts are that row's state, not this one's: with the four checks and three breaks added here,
+`reschedule` is **38 checks** (counted, not remembered) and the family is **17 breaks**, and the full
+aggregate re-run on the committed tree answers **55 families, 302 mutants applied, 302 caught,
+0 not applied** with the single flagged row still `build-bytes`, refusing on the deliberately stale
+shell copies.
+
+**One accessibility finding came from walking the new surfaces with real `Tab` presses rather than from
+reading the markup.** `node tools/shot.cjs --measure --focus --only=login-register,reschedule-sheet,
+reschedule-answer,legal-terms` reports 39 stops, none without a ring, none walking past a scrim, none
+off the viewport — and **one stop painting the browser's default ring instead of the app's**: the legal
+sheet's own scroll body. Chromium makes a scrollable region keyboard-focusable on its own, and the
+privacy notice is the tallest content in the app, so a Tab user lands on the scroller by design — the
+gap was only that the app's `:where(...)` focus list named the interactive things and not that one. It is
+in the list now, and the tally reads 0.
+
+## 134. The shell was rebuilt to match the page, which un-blocked a falsifier that had been refusing correctly
+
+The owner chose to rebuild the Android shell rather than leave the leg blocked on it. Staging the page
+(`cmp`-proved), bumping `versionCode 41/preview.39` → `42/preview.40`, and `cmd.exe //c gradlew.bat
+assembleDebug` took 51 seconds and moved `node tools/audit-build-bytes.cjs` from `findings: 2` to
+**`findings: 0`** — every copy now agrees at `a9687553…`, including the page extracted from inside the
+new APK. The consequence worth recording is that **the aggregate's one flagged row disappeared with
+it**: `falsify-build-bytes`, which had been printing `0/0 — printed no summary` because it correctly
+refused to grade breaks against a tree it knew was stale, now runs and reports **4 of 4 caught,
+0 not applied, 0 missed**. A refusal and a pass are different answers, and only the second proves the
+guard; the way to tell them apart was already in this repository's own habit — read the flagged row,
+never the headline.
+
+Two things the rebuild did not buy. `cmd.exe /c "gradlew.bat …"` returned **exit 0 having run nothing**
+(OpenJDK banner, old APK still on disk) — the first build attempt was a false success and the four-copy
+audit is what caught it, so `//c` is the form to use under Git Bash. And no handset is attached:
+`adb devices` is empty, so `preview.40` runs on nothing yet and the composer-under-the-IME question
+stays open with `visualViewport` at zero uses in the page. `DEVICE-PASS.md` carries the install-and-read
+step for when a phone is on the bus.
+
+## 135. The P2 coherence sweep: right-aligning numbers was the half-fix, and a green chip turned out to be a claim
+
+The owner approved the whole P2 block on 2026-10-26 ("Implement all of P2 now"), so this section is the
+nine items it named, each with the command that proves it. Nothing here adds a feature; the brief's P2
+sentence is that these are the changes that make the build read as one application.
+
+**The numerals were not mis-aligned, they were mis-scaled.** §13 asks twice whether figures line up, and
+the file answered with five separate `text-align:right` declarations across a 1,600-line stylesheet —
+`.offer-line .ol-v`, `.chart-value`, one typed into a number input's inline style, two on markup blocks —
+and no numeral rule anywhere. Alignment was never the whole defect: **Atkinson Hyperlegible Next paints
+proportional digits**. Measured in Chrome at 32px type, `111111` is **78.16px** wide against `000000` at
+**124.42px**, so a column of amounts leans whichever way its digits happen to fall; under
+`font-variant-numeric: tabular-nums` both strings measure **121.36px**. One rule now carries both halves
+and names the seven selectors whose figures a reader compares, and the gate pins that the page contains
+**exactly one** `text-align:right` and **exactly one** `font-variant-numeric`, so a per-screen override
+cannot come back quietly.
+
+**The property was measured before it was claimed, and the first attempt to confirm the face was blind.**
+AGENTS.md §68 warns what a layout measurement proves on a font that never loaded, so the reading had to
+be of the shipped WOFF2. `document.fonts` iterated **empty** on the live page — a FontFaceSet scan is not
+evidence a face loaded — and `document.fonts.check()` answered `true`, which it also does for a family it
+fell back on. What settled it was a comparison: `"Atkinson Next"` alone renders `111111` at exactly the
+same width as the full stack (78.16px) and differently from Plus Jakarta Sans (90.06px) and `sans-serif`
+(94.91px). **A silent instrument has to be pointed at something that could disagree with it.**
+
+**Three declared tokens were unreached, and one stays that way on purpose.** `measure.cjs` had been
+printing "95 declared, 92 reached" in prose for weeks. `--s-1` and `--s-8` were reached by converting the
+literals they already equalled (`padding:32px 12px` → `var(--s-8) var(--s-3)`, three `gap/padding:4px` →
+`var(--s-1)`) — no pixel moves, and the comment claiming "one 4pt rhythm" becomes a description instead
+of an intention. `--info` is kept unreached: §31 binds INFO to the deck's electric blue, §34 forbids
+dressing a brand surface as a status, and spending the token on a chip to make a count look tidy is
+exactly the trade §34 exists to prevent. The gate now asserts the whole rule rather than the number — the
+unreached set must equal the named exceptions and every exception must still be declared, so **deleting
+`--info` fails the same check as adding a dead token**, with a positive control on the declaration count
+so a scan that matched nothing cannot report cleanliness. One rotted needle surfaced before any run:
+`falsify-compat-floor` needles the old `padding:32px 12px` line to delete the `vh` fallback, so the scale
+edit orphaned that break — found by grepping the families for the strings being changed, which is the
+cheaper order than discovering it as `not applied` inside a 50-minute aggregate.
+
+**A filter has to change what is painted, in both directions.** Each of the four discovery axes has
+already had a shape that looked correct in a screenshot, so the gate narrows from the records themselves
+and compares the whole id set against an expectation it builds rather than reading the number back from
+the app: a filter that keeps a row it should have dropped is a wrong answer, and a filter that drops a row
+it should have kept is a *smaller wrong answer that still reads as a narrowing*. `activeFilterCount()` is
+tied to the same axes, because the Clear button beside that count promises a reset of a state the screen
+is not in. `node tools/falsify-filter-function.cjs` runs four breaks against it — one per axis plus the
+count.
+
+**The shield was doing two jobs.** It was the admin's Dashboard icon while the same glyph carried "Nothing
+under warranty" and "No provider is flagged": a promise about somebody's documents and a wall of figures
+in one shape. Dashboard now takes `chart`, which is what the provider's Dash already meant, and the shield
+stays on the trust surfaces; the sign-in badge keeps it deliberately, where it reads "the platform's own
+console" rather than a destination. The meanings are a constant, `ICON_MEANING`, and the gate reads it:
+every glyph a nav item or a role badge asks for must have a row, so an icon cannot be hired for a new job
+without somebody writing down what it means.
+
+**A count without a door is a decoration.** The Insights strip's "needing attention" figure and the card
+beside it have come from one shared filter since §82 closed the drift — which fixed the disagreement and
+still left a reader with a number and nowhere to ask *which* six. The queue is that filter with a label on
+it: a fifth segment on Providers, filterable by the three things a record can actually assert (a case open,
+a document off, an account not settled), reachable from the Insights card by a button. `attentionQueue(null)`
+is required to answer exactly what `networkAttentionList()` answers, so the day the queue computes its own
+membership is the day the check goes red rather than the day two screens start disagreeing. Reasons are
+sentences and kinds are their keys, produced in the same object and asserted to have the same length per
+provider. Its filtered-to-nothing branch is asserted by the gate and **deliberately not photographed**,
+because every kind on the seed has at least one provider and no tap can reach that wording.
+
+**A chip in this app is a claim, so the reason controls are not chips.** The first cut of the queue made
+its filter row out of `button.chip`, and `.chip` is green — `--verified-100` on `--success-ink` — because
+a chip carries a verification badge. A switched-on filter painted in the colour that means "this person was
+checked" is §34's forbidden trade, and a pressed chip painted no visible difference at all. They are
+`.pick` controls now, which the app already uses for exactly this: 44px, neutral surface, a fill when on,
+and `aria-pressed` for a platform that cannot see either.
+
+**Separate is a reading order, not a widget.** §10 asks that a booking's schedule, timeline, contact,
+price, completion and receipt be distinct things; the temptation is a tab control, the obligation is that
+a reader can tell which fact is which and never has to hunt for what a decision needs. The resident's
+detail names the six groups in the order the screen reads them — decision-first, because a household
+opening this on a job already on the calendar is asking where the plumber is. Two halves: the arrival and
+completion stamps moved out of the figures grid into their own block (they had printed "Arrived: Completed"
+beside a total), and a group whose records do not exist yet is not painted at all rather than painted
+empty, so the gate requires a `requested` job to *not* carry the Completion or Receipt heading.
+`BOOKING_GROUPS` is compared against the gate's own literal list, which stops the constant re-labelling
+itself into agreement.
+
+**Five empty kinds, and a census rather than a sentiment.** All five §10 names are painted, but by
+twenty-two calls that happened to word themselves differently, and the distinction is the point: "No
+bookings yet" and "No provider meets these filters" look identical in a screenshot and are opposite
+sentences to a person. Every literal title is now classified into a kind, every kind needs a
+representative, and the call-site count must equal the classified literals plus the **one** named site
+whose title is built by an expression — so a future empty state with a ternary title fails the census
+instead of drifting silently out of it. A kind losing its only member (the unavailable screen adopting
+"No requests yet") is a break in `node tools/falsify-empty-kinds.cjs`.
+
+**The walk method is written and its table is empty.** §10 asks whether browse → review → book takes one to
+three minutes; nothing in this repository has ever measured that. `DEVICE-PASS.md` now carries the
+procedure — the fixed five-step task, one named device, five runs, median with min and max, tap and back
+counts, a human thumb rather than an injected pointer — and the results row reads `not run`. A bench run
+in Chrome would be labelled a bench run if it were taken, because three separate handset findings already
+proved a desktop reading of a phone-shaped claim is worthless. **A time that was not measured does not go
+in this repository's documentation.**
+
+**The density line in the P2 block produced numbers, not cuts.** `node tools/shot.cjs
+--probe=@tools/probe-density.js --only=provider-dash,admin-dash,admin-intel` on the finished build: the
+provider dashboard's first pressable row sits at **181px** on a 1,598px scroll (1.1 screens of content);
+Marketplace Intelligence's at **128px** on 826px (0.1 screens); the admin console's at **121px** with its
+lock/logout pair 2,054px down, which belongs at the bottom of an account screen and was already ruled so
+when Phase A re-measured that screen. No dashboard got a content cut on the strength of a long scroll:
+the metric indicts an *action* below the fold, and the only screen where that was true — the admin's
+Money console — was fixed in P1-6. A number that indicts nothing is reported as a measurement rather than
+turned into work.
+
+**Verification, as printed.** `node tools/verify.cjs` → **all 638 checks passed**; `node tools/shot.cjs
+--list` → **86 screens** (the walk gained `admin-attention`, the queue's own row); `node
+tools/sweep-text-scale.cjs` → **8 of 8 corners, 25 tallies each, all clear**, including both device
+corners at 200% text; `falsify-figures` **7 of 7**, `falsify-coherence` **6 of 6**,
+`falsify-filter-function` **4 of 4**, `falsify-empty-kinds` **2 of 2**, `falsify-compat-floor` **7 of 7**
+— 0 not applied, 0 missed in each. The queue's numbers were read out of the harness before the camera saw
+it: 6 providers flagged, `cases` 1, `credential` 5, `account` 2, and every provider's sentence count
+equal to its kind count. Those five families are the ones this pass could have orphaned; **the full
+aggregate (`falsify-all`, now 56 families) was not re-run in this pass**, so what this section quotes is
+the check total and five family totals, not a fresh mutant aggregate.
+
+**A comment inside a template literal emptied the page, and three instruments refused instead of
+reporting clean.** The queue's reason controls were first written with backticks around `.pick` and
+`.chip` in the explanation above them — inside the string the function returns, so the page stopped
+parsing there. What followed is the part worth keeping: the gate printed **19 of 19 checks FAILED**, the
+camera printed `page threw: ReferenceError: resetDemoData is not defined`, three falsifiers each printed
+**BROKEN — no gate check named …** rather than grading breaks against a dead page, and
+`falsify-trust` refused on a red baseline. The sweep that had already been launched against those bytes
+reported its first corner as clean while measuring nothing, which is this file's oldest lesson arriving
+as a stack trace instead of a silent zero — and it is why every figure above comes from a re-run after
+the repair rather than from the run that was two corners deep when the breakage landed.
+
+**The shell was staged and rebuilt again, so the four copies agree.** `node tools/build-web-dist.cjs`,
+the asset copied with `cmp` proving it, `versionCode 43 / versionName 1.2-preview.41`, and `cmd.exe //c
+"gradlew.bat assembleDebug"` (7 seconds) took `node tools/audit-build-bytes.cjs` from **findings: 3** to
+**findings: 0** — source, `dist/`, the staged asset and the bundle inside the new APK all at
+`76338e39…`. No handset is on the bus, so `preview.41` runs on nothing and the keyboard leg P1-5 owes is
+still owed. One rotted needle was found before it could report a healthy number: `falsify-compat-floor`
+needles the focus-ring `compat-exception` comment to prove that a too-short reason is a finding, and that
+comment grew a fourth line when the legal sheet joined the focus list, so the break had silently stopped
+matching. The anchor now covers the whole block, and the family reads 7 of 7 with 0 not applied.
+
+**The before/after pair §14's alignment row asked for, and what the pixels actually showed.** The
+pre-P2 page was extracted with `git show 0382c91:Sukinnect-next.html` into a file at the repository root
+— root, not `.scratch/`, because the page's `fonts/fonts.css` resolves relative to itself and a copy in a
+subdirectory photographs a fallback face, which is the one thing this comparison must not do — shot on
+`admin-finance, provider-dash, offer-sheet, booking-detail`, archived, deleted, and the same four screens
+shot again against the committed page. What the pair settles: the Money screen's statement column reads
+**₱1,390.00 / ₱139.00 / ₱0.00 / ₱0.00 / ₱139.00 / ₱1,315.00** with the peso signs and the decimal
+points in one vertical line, which is the tabular rule doing the work alignment alone could not; the
+admin's bottom navigation now carries the bar-chart glyph where the shield used to be, with Providers,
+Help Desk and Account unchanged; and the resident's booking detail reads Schedule → Progress → Contact →
+Price with no Completion and no Receipt heading, because this job has not arrived and is not paid. Two
+things the pair proved about the *before* picture rather than the change: the wrapped "View Profile"
+button on the contact block is pre-existing (it wraps identically in both), and the pre-P2 detail screen
+put the payment-record card directly under the figures grid with nothing naming either — the grouping the
+brief asked for was missing in a way a source grep could not have shown, since every fact was present and
+correct in both pictures.
+
+
+## 136. Re-reading the plan's own 47-row audit found two rows whose fixes had never been executed
+
+Asked whether everything in the Markdown plan is implemented, the honest method was not to re-read §17 —
+which is this repository's own account of what it did — but to re-read all **47** rows of §4's matrix
+against the code. The distribution, now printed by an instrument rather than counted in prose: **AR 20 ·
+CD 8 · PR 11 · PD 5 · CV 2 · NA 1**, with every id present exactly once. All eight CD rows are built; the
+PD rows are all ruled and recorded in §15; the two CV rows are gated on hardware. **Two rows' fixes had
+never been done**, and both were instructions the plan wrote for itself:
+
+- **A14 — *"confirm a `priority` source exists; if not, say 'unranked' rather than invent one."*** The
+  records carry no priority: a case holds `status`, `reason`, `bookingId`, `openedAt`,
+  `amountInClaimCentavos`, `frozenCentavos`, `evidence`, `resolution`. The help desk orders open before
+  closed, which is a record state, and it said nothing about the basis. Now it says
+  *"Open cases first, then closed, each in the order it was raised. Nothing here is ranked by urgency…"*,
+  and a `honesty` check asserts the caption prints above a list, stays off an empty one, and that no
+  priority field ever arrives on the builder while the sentence claims there is none.
+- **P1e — *"document that one session = one role."*** Nothing did. `README.md`'s known-limitations list
+  now states the model and the reason for it: a provider signed in as a resident sees resident screens
+  and none of their own jobs, there is no dual-role identity, and the brief leaves "which bookings may a
+  provider see" open, so the prototype keeps the sessions separate rather than inventing a merge a later
+  authorisation model would have to undo.
+
+**The break that caught the check, again.** The A14 check first asserted that no record in `DISPUTES`
+carries a priority — and `DISPUTES` is seeded **empty on purpose**, because a sample case would be a
+written record of a complaint nobody raised. `some()` over an empty array cannot fail, so the family's new
+break (typing `priority: 'High'` into `openDispute`) printed **MISSED** while the check reported clean.
+That is the same class this file has named several times, arriving the same way: a green family and a
+column nobody read. The assertion now scans the builder's own text, with a positive control that the scan
+found the function at all (1,368 characters, `status: 'open'` present), and the break reads CAUGHT.
+
+**A countability claim in a plan is a claim, so it got an instrument.** §4 says the brief's §13 holds 47
+bullets and the matrix carries 47 rows. Nothing had ever checked that: a row deleted in an edit, an id
+skipped (G9 then G11), or a class cell emptied would have left the sentence standing while the table
+quietly stopped covering the brief. `node tools/audit-matrix-coverage.cjs` prints one line per id, the
+family totals and the class distribution, and **refuses with `NO CONCLUSION`** rather than summarising a
+table it failed to parse — the same shape as every other audit here, because a scan that matched nothing
+and a table that is genuinely complete must not print the same sentence.
+
+**Four present-tense sentences the re-read found stale, corrected rather than left.** §15 item 5 still
+read *"queue work is P2 and was not approved, so it is not built"* two sections after the queue landed;
+§3's walk count read 82 where `--list` prints 86; README said the staged bytes *"went out as
+`1.2-preview.39` and were read on two handsets"* when the staged file is now `preview.41` and has been run
+on nothing; and README still offered `md5sum` on two files as the four-copy check, which is now the
+instrument named `audit-build-bytes`. The lesson is the one `tools/audit-open-items.cjs` exists for and
+this pass re-learned from the other direction: **a sentence that was true when the plan was written
+becomes a false claim about the present the moment the plan is implemented**, and the correction is a
+dated pointer, not a quiet rewrite.
+
+**The third thing the re-read found was not a stale sentence but a missing door.** §9's rule 6 says a
+proposal reaches the resident's list and the provider's request inbox, and each entry opens the booking.
+The records, the guards, both answer screens and every break in the reschedule family were built — and no
+list rendered an ask, so a provider with six accepted jobs had to open each one to find the proposal
+waiting on them. That is the same defect as a stat strip counting six flagged providers with no list
+behind them, and it survived because **every check in the suite asked what happens *inside* the flow and
+none asked how a person gets into it**. Both booking lists now paint a pending-ask card whose rows open
+the booking the ask was raised against, a decided ask appears nowhere, and three new breaks prove it — one
+deleting the card, one dropping the status filter so an answered proposal keeps asking, and one routing
+both lists' rows to the provider screen, which is the foreign-id substitution class arriving through an
+inbox.
+
+**A camera row that depends on a clean slate is a row that only works first.** The two screens written to
+paint those lists (`resident-asks`, `provider-asks`) each call the app's own submit path — deliberately,
+because a setup that pushes a record measures a state nobody can produce. The first row passed; the second
+produced no screenshot at all, and the reason was one of the flow's own rules: the app **refuses a second
+proposal while one is waiting**, so no draft was armed and the next line reached for
+`state.rescheduleDraft.dayIdx` on a null draft. Both rows now ask `pendingReschedule(bookingId)` first and
+reuse whatever is already on the record, which is what lets each of them work in any order and under
+`--only=`. The general form: **a camera row's setup must be idempotent, because the walk's order is not
+part of its contract.**
+
+**A check that could not fail, found by its own breaks refusing to fire — and the cause was the checker.**
+The inbox check was rewritten once already (the first version asserted that the rendered booking *list*
+contained the heading and the opener call, which a booking list satisfies by existing), and the second
+version, reading the card's own markup, *still* passed under all three breaks. Measured rather than
+argued: forcing the check's own `ok` to `false` printed **PASS**. The condition handed to `c.check` was the
+**object** `{ ok, why }` returned by the IIFE, and `makeChecker` coerces its condition with `!!` — an
+object is always truthy, empty or not. `verdict(label, probe)` exists precisely to unwrap that pair; the
+check had been written in `verdict`'s shape but called through `check`, so it could never fail, and the
+gate's own PASS line was the evidence a green column would have trusted. **The harness now throws when a
+check is handed an object**, beside the guard that already refuses a function — the 2026-10-13 lesson
+arriving one shape over, six years of checks later, in code written this session.
+
+Two further things the fix exposed, both real and both now asserted: the behavioural half also depended
+on *which* asks were on the books when the suite reached it — earlier checks leave a genuine pending
+proposal, so the card held two rows and the heading was chosen by the leftover — so each phase now runs
+against an emptied list and restores the device's own records afterwards. And a shape half was added
+beside it, reading the two list functions' bodies to require each calls the card, requiring the filter to
+test `status === 'pending'`, and requiring the opener to be chosen by role rather than hardcoded, with a
+positive control that each function body was found at all. With those three changes the family reads
+**20 of 20 breaks caught, 0 not applied** — including the three that had printed MISSED twice.
+
+**A `git checkout --` destroyed the day's uncommitted page work, and this is the entry that records it.**
+While diagnosing the above, a scratch experiment wrote a mutant into `Sukinnect-next.html` and cleaned up
+after itself with `git checkout -- Sukinnect-next.html`. That restores the last *commit*, so it removed the
+mutant and, with it, the uncommitted work of the session: the help-desk caption, both inbox functions and
+both list insertions. All three were re-applied from this conversation, and the re-application is why the
+family had to be run again from a clean baseline. The repo's own documented recovery — save the bytes,
+`git checkout --`, re-run the gate — is written for a file that is clean except for a killed mutant, and
+that precondition was never checked. **In a tree with uncommitted work, restore from a copy taken inside
+the same script; `checkout` is for committed states only.**
+
+**What is genuinely still not implemented, with the reason for each.** G9's category artwork (P3 — the
+owner ruled no change until real art exists, and the seven tiles are static PNGs with three checks proving
+they never move); A5's wide-screen sidebar (P3, and §36/§91 make the app mobile-first); R8's floating
+concierge button (ruled no: a FAB is the control a keyboard buries, and R10 is unresolved for exactly that
+reason); A2's admin header avatar (ruled leave until the wide-screen question); G11's 1–3 minute number and
+R10's keyboard behaviour (both need a handset; the method is written and its table reads `not run`); and
+the full `falsify-all` aggregate, which this pass again did not re-run — the families it could have
+orphaned were run individually, and the rest of the suite is owed its next pass.
+
+**As printed at the end of this pass.** `node tools/verify.cjs` → **all 641 checks passed** (639 before the
+inbox work, and the count moved once the harness began refusing an object verdict); `node
+tools/shot.cjs --list` → **88 screens** (`resident-asks`, `provider-asks` joined the walk); `node
+tools/sweep-text-scale.cjs` → **8 of 8 corners, 25 tallies each, all clear** with the inbox card and the
+help-desk caption painted; `node tools/falsify-reschedule.cjs` → **20 of 20 breaks caught, 0 not applied**;
+`node tools/falsify-coherence.cjs` → **8 of 8**; `node tools/audit-camera-dialog-coverage.cjs` →
+**findings: 0**; `node tools/audit-matrix-coverage.cjs` → **47/47 ids, findings: 0**. The shell was
+re-staged and rebuilt as `versionCode 44 / 1.2-preview.42`, and `node tools/audit-build-bytes.cjs` reads
+**findings: 0** with all four copies at `d7725e4a…`. Nothing was installed on a device and nothing was
+pushed.
+
+
+## 137. The first screenshot of two new screens found two defects, and the fix for one of them moved the break instead of removing it
+
+§136 put `resident-asks` and `provider-asks` into the camera's walk. That was the point of putting them
+there, and the first picture taken through them paid for the row immediately — twice.
+
+**The row painted nothing.** It signed in as the resident, raised a proposal on the resident's own
+upcoming job, then assigned `state.role='provider'` and expected the provider to be looking at it. The
+provider in this build is p1, Ramil Odiada, and a job belonging to another resident is not on his list —
+so the inbox card had no ask to render, the screen was an ordinary booking list, and all 25 tallies
+reported clean about a screen nobody can reach. The row now picks the booking the signed-in side can
+actually see (`bookingsForProvider().find(b => b.status === 'upcoming')`) and raises the ask on that one.
+This is the same fiction AGENTS.md names for a harness that assigns `state.*` to reach a screen — arrived
+at through the *identity* rather than the navigation, which is why the entry-point review of the row did
+not catch it: every handler it calls is a real one.
+
+**A chip is a word.** The picture that then did paint the card showed the booking rows beside it breaking
+their status pills mid-token — `ACCEPTE / D`, `COMPLETE / D` — uppercased, inside a flex row, with no
+break opportunity of their own. `.chip` took `white-space:nowrap; flex-shrink:0`. Correct in isolation,
+and the next screenshot showed what it had done: the card *head* is a title and a count in one `.row`, so
+with the count unable to give way, the title gave instead — `Waitin / g for / the / residen / t to /
+answer`, six lines for five words, at the **default** panel width, with the 8-corner sweep reading 25
+tallies all clear over the same file. A word alone on a line is not clipped, does not collide, sits on the
+scale and clears contrast; every question the camera asks about boxes answers "fine".
+
+The rule therefore sits on the row, not on either child: `.card-head{ flex-wrap:wrap; gap:4px 10px }`,
+applied to all 22 places the markup paints a title with a count beside it, by a script that prints the
+pair count it found and the number it rewrote so that a silent zero cannot pass as a clean run. Two gate
+checks hold it: every title+chip pair must sit in a wrapping row, behind a floor of ten pairs as the
+positive control (a pattern that stops matching would otherwise report "0 of 0 unwrapped"), and the class
+must still be `flex-wrap` while the chip is still `nowrap` — because the second is the first's failed
+attempt, and a build that keeps the class name and deletes the declaration is the regression arriving
+quietly. `node tools/falsify-coherence.cjs` grew from 8 breaks to 10 to prove exactly those two, and each
+fails a different check: one row loses the class and the pair count speaks; the class loses `flex-wrap`
+and the CSS speaks while all 22 rows still name a rule that no longer exists.
+
+**As printed at the end of this pass.** `node tools/verify.cjs` → **all 643 checks passed** (641 before
+the two head checks); `node tools/falsify-coherence.cjs` → **10 of 10 breaks caught, 0 not applied**;
+`node tools/sweep-text-scale.cjs` → **8 of 8 corners, 25 tallies each, all clear** after the wrap, with
+the inbox card and its count on their own line; `node tools/audit-build-bytes.cjs` → **findings: 0**, all
+four copies at `2691a76c…`. The shell was re-staged and rebuilt as `versionCode 45 / 1.2-preview.43`.
+
+Two things the build nearly cost, recorded because both are environment traps rather than app defects.
+The first two `assembleDebug` attempts died before compiling anything on
+`Could not create service of type FileLockContentionHandler … java.net.BindException: Address already in
+use: bind` — a wedged Gradle daemon holding the loopback port, cleared by `gradlew --stop` and nothing
+else. And the wrapper that reported that failure announced itself **completed, exit code 0**, because the
+command ended in a `tail` and the pipeline's exit is the last program's, not gradle's. The build log said
+`FAILURE` and `audit-build-bytes` said `findings: 1` against an APK still stamped `.42`; the exit code
+said nothing was wrong. **A background run's exit code is not a measurement of the thing it ran** — read
+the log, or ask the audit that inspects the artifact.
+
+## 138. The plan was asked whether it was implemented, and the answer was in the sections nobody re-read
+
+The question was "is everything in the Markdown file properly implemented?" — the file being
+`SUKINNECT_UX_RELIABILITY_MVP_PLAN.md`, whose §4 matrix carries 47 owner concerns. §136 had already re-read that
+matrix and closed three rules that had never been executed. This pass read **every section** instead, and found
+more than the matrix had.
+
+**Four findings, in descending order of how much they hurt.**
+
+**§17 claimed a row was built that never was.** The completion report said "R7 and A9 (built)". R7's grouping
+landed on the resident's booking detail — `BOOKING_GROUPS`, six `section-label` headings, a gate check that a
+`requested` job carries neither a Completion nor a Receipt heading, and a falsifier break that keeps the receipt
+card from losing its heading. **A9 is the provider profile**, and nothing in Phase B laid that screen out
+differently. The over-claim had also propagated into this session's own task list ("Booking-detail grouping
+(R7/A9)", marked completed), and `CHANGES.md` never mentions A9 at all, so there was no third record to contradict
+it. An attempt to settle whether the screen is cluttered by counting headings in the function's body came back
+inconclusive, so the row now reads *not done, and not measured* rather than swapping a false claim for a vague
+one. R7 moved PR → CD with its deviation stated: the prescribed widget was tabs, labels were chosen because a tab
+hides two of the six groups behind a tap, and §10's word is *separate*.
+
+**R6 is not an approved item that got skipped — it is a discrepancy inside the plan.** Its §4 priority cell says
+`P2`; §13's P2 paragraph, which is what "implement all of P2" actually named, lists nine items and R6 is not one
+of them. So the honest disposition is *unscoped*, not *owed*, and building it would have widened the scope the
+owner approved. What the row does find is real and small: the booking detail's Chat and Call controls are
+byte-identical `btn secondary` markup, so §70's "do not make all buttons equally visually strong" is unmet on the
+one screen where the brief asks — and the reason nothing could call it wrong is that the button system has
+PRIMARY, SECONDARY and DESTRUCTIVE and **no tertiary tier at all**.
+
+**A11's AR rested on a claim about the machinery, not about the destination.** §6 asserted that back order is
+satisfied "by construction". True of `stepBack()`, the page→shell depth bridge, `layerKeys()` and `popstate`.
+Not true of the buttons the app paints: exactly **5** admin spokes carry the literal handler
+`state.adminScreen='overview'; render();` — counted, not estimated — and that assignment never consults the
+history the page maintains. From the console the two paths agree; from the admin account's "My Admin Activity"
+card, which switches `state.tab` on the way in, the visible button lands on the console while the phone's Back
+lands on the account tab. **The one Back path the brief names is served by the button the brief does not
+mention**, and no instrument here has ever pressed both and compared the `<h1>` each lands on.
+
+**Six sections spoke in the present tense about a build that had moved.** §1 announced three highest-risk gaps,
+two of which are now features; §5's "where a user gets stuck today" was wrong in four of six clauses, including
+"Needs Attention is a summary, not a work queue" — the most misleading text in the file, because it describes what
+a person cannot do; §7 still listed the token census, tabular numerals and the icon semantic map as proposals;
+§3 carried a stale screen count; §2's "measured, this session" meant a session three days ago. Each got a dated
+correction rather than a rewrite, because these sections are the plan's before-picture and rewriting them destroys
+the only baseline the document has. §12, §15 and §16 were re-read and held up; §2's live claim (`Suki.docx` absent
+from the workspace) was re-checked rather than assumed, and is still true.
+
+**Two instruments came out of this, both aimed at the plan rather than the page.**
+`node tools/audit-matrix-coverage.cjs` already counted the 47 rows; `node tools/audit-report-coverage.cjs` now asks
+which rows §17 **dispositions** — a bullet or a table row, not a prose mention — and refuses on any row that is
+silent and not AR. It also cross-checks §17's class list against §4's table id for id, and censuses the plan's own
+section headings. The last check exists because of a mistake made during this pass: an edit anchored on
+`---\n\n## 6. Navigation / back audit` deleted that heading and left §6's prose filed under §5, every count in the
+document still read correctly, and nothing noticed until the headings were listed by hand.
+`node tools/falsify-report-coverage.cjs` proves four ways this can go quiet, including the two that only look
+right in the opposite direction — blinding the parser's continuation-line rule must make it **refuse a correct
+document**, and demoting a heading must be caught by the census. 4 of 4 breaks caught, 0 not applied, files
+restored byte-for-byte.
+
+**Three citations in prose I wrote this session named things that do not exist:** a
+`falsify-status-duplication` family, a gate check on the role boundary, and §85's declared-state check reading the
+lock dialog's wording. Each was caught by `ls` or `grep` before it shipped, and two rows now say plainly that their
+closure rests on documentation and wording **with no assertion behind it** — which is the true state and a named
+gap, where the invented citation would have been a false confidence. A check that cites a tool that isn't there is
+worse than no citation, because the next reader will run it, get nothing, and conclude the claim was never tested.
+
+**Also fixed in the same reading:** the report-coverage paragraph first quoted "29 of 47 named", then "40 named,
+seven silent" — each made false by the paragraph itself naming the rows it measured. A figure kept in prose inside
+the document the figure counts is §90's drift one level up, so the numbers are gone and the command is the citation.
+
+**As printed at the end of this pass.** `node tools/falsify-all.cjs` → **59 families, 332 mutants applied, 332
+caught, 0 not applied — every rule is still being tested** (the pass enumerated its family list before
+`falsify-report-coverage` existed, so the tree now holds 60 and the next pass will run it). `node tools/verify.cjs`
+→ **all 643 checks passed** · `node tools/shot.cjs --list` → **88 screens** ·
+`node tools/audit-matrix-coverage.cjs` and `node tools/audit-report-coverage.cjs` → **findings: 0**, the class list
+reading **AR 21 · CD 9 · PR 12 · PD 1 · CV 2 · NA 2 = 47** · `node tools/audit-camera-dialog-coverage.cjs` →
+**findings: 0** · `node tools/audit-build-bytes.cjs` → **findings: 0**, four copies at `2691a76c…`, shell at
+`versionCode 45 / 1.2-preview.43` · `git diff --quiet origin/main -- Sukinnect.html` → unchanged.
+
+**What the answer to the question now is.** Of the 47 rows: **44 are built, ruled out, or resolved by an earlier
+pass with an instrument behind them**; **3 are open** — R6 (needs a scope ruling), A11 (needs a priority), A9
+(needs either a pass or a corrected prescription); and **2 cannot be closed on this machine at all** — G11's
+one-to-three-minute number and R10's keyboard-open composer, both gated on a handset by the owner's standing
+ruling. Nothing is pushed, no device was attached, and the deployment is left deliberately stale as ruled.
+
+## 139. Three rows the audit left open were ruled, and one of them was not the defect described
+
+§138 reported R6, A11 and A9 as findings needing a ruling. All three came back as **build it**, with A9 as
+"screenshot it and decide together" — so the screenshots were taken first, and they changed what the work was.
+
+**A9's own photograph found the defect the plan had never named.** At 320 CSS px with the phone's own 135% text,
+the provider profile's sticky action bar painted its primary button as **"Book / Appointme / nt"** — the label
+broken across three lines because the rate column beside it would not give way. Every corner of the sweep read
+clean about it, for the now-familiar reason: a word alone on a line is not clipped, collides with nothing, sits on
+the scale and clears contrast. The fix is the same rule §137 established for card heads, applied to the bar —
+`.book-bar{ flex-wrap:wrap }` — so the button keeps its words and the bar grows a line. **A taller bar is
+information kept; a cut label is information lost.**
+
+**The reorder made that visible, and then made two more.** Moving the ratings row above the fold, per §42, put it
+in the same squeeze the sticky bar had been in: "Custo / mer / Ratin / gs" across four lines, the score pill
+splitting into "4 . 9", and the service badge into "Plumbi / ng". Three more instances of one rule, all found by
+looking at the picture rather than at the diff. Each got the treatment the rule prescribes — `card-head` on the
+rows that hold two things which must stay whole, `flex-shrink:0; white-space:nowrap` on the pill and the badge —
+and the re-shot corner shows every word intact.
+
+**A9 was also a truth problem, not only a layout one.** The credential list the screen replaced painted a green
+check beside all four documents, read from `p.credentials` — a second copy of the names that no record owns. Two
+of the plumber's four documents are within `credentialWarnDays`, so the screen said "all fine" about documents the
+records call expiring. The list now reads `credentialsOf()` through `credentialLine()`, the shared helper the
+admin screens already use, and the summary line is `credentialSummaryFor()`, so the heading and the detail cannot
+disagree by construction. The screenshot reads **"Verification: 2 of 4 expiring"** in the amber tone — the same
+defect class §77 caught on that provider's own profile card, arriving a second time from the resident's side.
+
+**A11 was not the bug described.** The finding as written said the header button and the phone's Back disagree.
+Reading `onRootTab()` showed something worse: an admin spoke keeps `state.tab` on the console's root tab, so
+`onRootTab()` answered "root" while a drill-in was on screen — which meant `syncBackHandles()` claimed **no**
+history entry for it and `stepBack()` returned early with nothing to undo. The phone's Back at an admin spoke did
+not land somewhere else; it had nowhere to go. Pointing the button at `stepBack()` would therefore have done
+nothing at all. The fix is the rule first: an admin spoke is a drill-in, so `onRootTab()` answers false while
+`state.adminScreen` is anything but `overview`. Then the five hard-coded destinations become the page's own back
+step, and the two paths agree because they are the same code.
+
+The check that proves it is behavioural, not textual, and it asserts the case the plan row named: sign in as
+admin, open the account tab, enter the audit log from "My Admin Activity", step back — the account tab is where
+you land. From the console it still lands on the console. Removing the `onRootTab()` rule makes the same check
+report `tab=admin_dashboard screen=audit`, which is the button doing nothing.
+
+**R6 needed a tier, not a style.** The two screens each painted a `btn secondary` chat control beside a
+`btn secondary` `tel:` link to the platform's demo line, byte-identical. The reason nothing in the file could
+call that wrong is that the button system has PRIMARY, SECONDARY and DESTRUCTIVE and **no tertiary tier at all** —
+so the fix adds `.btn.tertiary` to the stylesheet rather than inventing a quieter inline style on two buttons.
+The hit area is untouched: `.btn` already carries `min-height:var(--tap)`, which is the whole point of demoting
+mass instead of reach.
+
+**As printed at the end of this pass.** `node tools/verify.cjs` → **all 649 checks passed** (643 before the six
+added here); `node tools/falsify-coherence.cjs` → **15 of 15 breaks caught, 0 not applied**, the five new ones
+each failing the check it names — including the two that assert a *count* (24 title+chip heads, 2 tertiary call
+links) and the one that asserts a destination; `node tools/shot.cjs --list` → **88 screens**;
+the provider profile re-photographed at 320×638 @135% with every word intact; the eight-corner sweep over these
+bytes → **8 of 8 corners, 25 tallies each, all clear** (`node tools/sweep-text-scale.cjs`); the full mutant
+aggregate is re-run after this section and its figures are quoted from that run, not from here.
+
+## 140. The aggregate over the §139 build, and the one mutant it could not kill
+
+`node tools/falsify-all.cjs` run 2026-10-26 against the build §139 committed, on a clean tree, one
+pass at a time: **60 families, 341 mutants applied, 340 caught, 0 not applied — 1 missed**. The rows
+were summed a second way with `awk` over the log (`.scratch/aggregate-60.log`) rather than trusting
+the runner's arithmetic, and the two agree: rows=60 applied=341 caught=340 not_applied=0 missed=1.
+The tree came back clean, `git status --porcelain` empty, and the page hashes `fd176312…`. The other
+figures, re-printed rather than remembered on the same file: `node tools/verify.cjs` **649 checks**,
+`node tools/shot.cjs --list` **88 screens**, `node tools/sweep-text-scale.cjs` **8 of 8 corners, 25
+tallies each, all clear**, `node tools/falsify-coherence.cjs` **15 of 15**.
+
+**What is deliberately not claimed.** This is the first full aggregate over the §139 page — the pass
+that ran earlier the same day stopped at §138's build, and §139's markup edits (the tertiary button
+tier, the sticky book-bar wrap, the §42 reorder of the provider's detail, the `onRootTab()` admin
+clause) could each have orphaned a needle in another family. `not applied: 0` is the column that
+answers that, and it answers it clean. Not re-run since §139 either: `--measure --focus`, `--measure
+--dark`, and `tools/probe-money-sums.js`. Their figures in §14 of the plan are marked stale and are
+not quoted as current; the argument for re-running them is that the measurement, not the reasoning,
+is the evidence (§76).
+
+**The survivor, read rather than deleted** — the eighth time this repository has met a break that
+printed MISSED and the rule has been "read it" each time. `falsify-report-coverage`, break *every
+listed mention of one open row is taken out of the report*: it removes every §17 disposition naming
+A11 and wants the audit to report A11 as a silently missing row. It got `findings 3, exit 1`. The
+refusal is real, so a row can still not vanish from the report without the audit going red — but the
+break cannot distinguish "the audit noticed A11" from "the audit noticed three unrelated things and
+exited 1 anyway", which is the §62 shape: a guard whose verdict is an exit code rather than a named
+finding stops being evidence of the specific thing it guards. The repair is to the break, not to the
+tool's needle: assert the A11 row by name and pin what the §4↔§17 cross-check counts, then re-run
+the family. Unfinished at the time of writing, and recorded as unfinished.
+
+**A hash quoted in prose went stale inside the hour that quoted it.** This paragraph first said the
+four copies now disagree, because it was written from `3c78fdd…` as recorded in §139 and AGENTS §31.
+`node tools/audit-build-bytes.cjs`, run seconds later, says all four — source, `dist/`, staged asset,
+and the bundle inside `Sukinnect-1.2-preview.44-debug.apk` — hold identical bytes, `findings: 0`.
+The page moved twice today and the build was re-cut and re-verified each time; the hashes are
+`fd176312…` for this build and `bac09020…` for §134's, and both were true when printed. The rule
+AGENTS already writes for every other figure applies to provenance too: **name the command, not the
+value.** What is owed is not a re-stage but a handset — nothing from `.40` onward has been installed
+on a phone, so no layout claim in this build is a device reading.
+
+## 141. The survivor is dead, the two camera legs are live, and the money sensor went quiet
+
+The one mutant §140 could not kill was in my own family, and killing it took a diagnostic rather than an edit.
+`falsify-report-coverage` break 1 strips every mention of plan row A11 and asserts the audit reports it; the
+aggregate said `findings 3, exit 1` against an expectation of `silent: A11`, and re-running the family alone
+reproduced it, so it was not the load artifact `chart-collide` had been. Applying the break by hand and printing
+the audit's whole stdout (`.scratch/diag-break1.js`: mutate, run, restore in a `finally`) answered it in one
+minute: the audit has never printed the word `silent`. It prints `LIST MISMATCH  CD list omits: A11` and
+`A11 is CD in §4 but absent from the §17 CD list`, and the row's class is CD, not the AR my break's sentence
+assumed. The guard was right; the expectation was invented. Repaired the same way, and the family now runs
+**5 breaks, 5 caught, 0 not applied**.
+
+Break 5 is the more useful half, because it exposed a gap in the audit's headline number. `not dispositioned: 0`
+is what §17's completeness claim rests on, and nothing had ever made it move: removing a row's listed mentions
+leaves the id named inside other bullets' prose, and the disposition rule credits any bullet that names it, so the
+tally could not fall. The family gained a section-scoped mutation — strip the id from everything after the `## 17`
+heading, leaving §4's row in place — and the tally does climb, `findings 9`, `not dispositioned` nonzero, naming
+the row. **A guard whose failure path has never been reached is a number nobody has tested**, which is the same
+sentence this file has written about screens, layers and seeds, arriving now in a documentation audit.
+
+The two §14 camera legs that were marked stale are re-measured against the current build (`f149390`, page bytes
+`fd176312…`), both with no failure line and no console errors: `--measure --focus` walked **856 keyboard stops
+across 88 screens**, all four tallies **0** (the pre-§139 figure of 855 is superseded, not re-quoted), and
+`--measure --dark` reports **0** contrast failures over the same 88 screens.
+
+**And the money sensor was reported blind by my own reader, which is the more useful finding.** `--probe=@tools/probe-money-sums.js` looked like `findings: 0` *and* `cardsWithTotals: 0` across 88 screens — the two characters its header says must never mean the same thing — and that reading went into plan §14 and §17 as `NOT PROVEN` before the aggregate was even started. It was the parse: the probe answers `JSON.stringify(…)`, so a single `JSON.parse` yields a **string**, and `r.findings`/`r.cardsWithTotals` are `undefined` on a string. Decoded twice the same log reads **5 screens carrying an aggregating card, 9 cards, 0 findings**, and the calibration that makes that zero mean something was re-run on `fd176312…`: ₱10 planted on the receipt `Total` answers `painted 425 sumOfParts 415 delta 10` on both booking-detail receipts, page restored byte-identical. **Two rules, both about the reader: a probe that returns a JSON string must be decoded twice, and a claim about an instrument's silence has to be confirmed against the instrument's own population line before it is written down** — this session shipped the wrong sentence into three documents in about ninety seconds, and the correction is the commit that follows this one.
+
+## 142. What the plan can and cannot be asked to prove about itself
+
+Two things landed that were not in the original scope of "is everything in the Markdown implemented", because asking the question turned out to require them.
+
+**The aggregate over the repaired tree.** `node tools/falsify-all.cjs`: **345 mutants applied, 345 caught, 0 not applied — every rule is still being tested**, with the flagged rows being none. `falsify-report-coverage` now runs 5        5 (applied / caught): its first break had been written against output wording the audit never produces — it wanted `silent: A11`, the tool prints `LIST MISMATCH  CD list omits: A11` — and its new fifth break is the first thing that has ever made the headline `not dispositioned` count move, which is how it became clear that the number had never been tested.
+
+**A census of the plan's own pointers.** `node tools/audit-row-instruments.cjs` reads §4's 47 rows and accepts only evidence that resolves. It reports **41 traced / 47**, **exactly one built-class row naming no runnable instrument**, and — the finding that survives every attempt to weaken it — **zero** rows whose disposition quotes a gate-check label, against the 646 labels `verify.cjs` actually prints. Three readings of "is it traceable" were tried: same line (14 of 47), same bullet block (15), same change-log section (6 more, but attributed to the wrong families, because a section names `falsify-all` for every row it discusses). The last reading asked the code instead of the prose, and no `tools/*.cjs` or `tools/probe-*.js` names any plan id at all — the ids are documentation-only labels. So implementation and traceability separate here: the rows are largely guarded, and the document cannot be followed to the guards. That is the same defect A13 showed for one row — a sentence asserting a guard the dialog did not have — at the scale of the plan.
+
+Two of §17's stale exception names were corrected in the same edit: `P1e` is asserted by six checks (the exception list under-credited work that is guarded), and `A13`'s lock dialog was the genuine half (the list under-stated a gap that was open). A stale exception list is a defect in both directions, and this is the second time this week a hand-kept exception list in this document has been wrong about a row it was written to be honest about.
+
+**And the corrected scope now under-counts, which is stated rather than hidden.** Excluding any block that names
+more than two ids was the right answer to the sentence-that-credited-21-rows, but it also throws away genuine
+shared evidence: `falsify-figures` really does guard both `G7` and `G8`, and it is cited in the class bullet, so the
+tightened census now lists them as untraced. So **10 of 47 is a floor, not a measurement** — the honest claim is that
+between 10 and 27 rows are traceable, the true figure needs a rule that credits a class-list citation for the ids on
+the same line as the token rather than for the whole bullet, and that rule is not yet written. Nothing in §17's
+wording should be read as saying those rows are unguarded; it says the document does not point at the guard, which is
+still true and is the finding that matters. (Discovered by grepping the 34 untraced ids against the change log: only
+9 of them appear there at all, which is the same absence seen from the other side.)
+
+**The scope rule settled, and the number moved three times on the way.** Blanket-skipping a class bullet read
+10 of 47; crediting any line that carried an id and a tool token read 20; both were wrong. The second reading
+was caught by looking at which lines produced the new credits, and the top offender was the sentence written in
+§142 to be honest about the first — it names `A8` `A10` `A12` `A13` and a tool on one line, so four ids were
+flattered by their own disclaimer. The rule now applies the same test at both levels: an id is credited by a
+class bullet only from a line carrying that id, a resolvable tool token, and **at most two ids**. Under it:
+**15 of 47 rows trace to a runnable name, 29 built-class rows name nothing**, still zero rows quote a
+gate-check label that resolves, `node tools/falsify-row-instruments.cjs` still condemns both hazards (a
+retargeted citation drops 15 to 14; nine unreadable class cells produce `NO CONCLUSION`), and
+`node tools/verify.cjs` answers all 650 checks. The lesson is not the number, it is that a fix to a measurement
+rule has to be audited for *which evidence it added*, because the text written to describe a flaw can become
+the largest instance of it.
+
+**Five rows given real pointers, and the label channel stopped being dead.** §17 now disposes `A13`, `P1e`,
+`R6`, `A9` and `A11` each in its own bullet, quoting the gate-check label that backs it and the family that can
+break it, so the census reads **19 of 47 traced, 25 built-class rows still naming nothing** — and its channel
+split, which had been `tool only: 15, label only: 0, both: 0` for its whole existence, now answers
+`tool only: 14, label only: 1, both: 4`. Two debugging detours are worth keeping because both were mine. The
+first pointers did not register at all: I had guessed the cause was whitespace inside wrapped bold labels and
+normalised it, which was true of the comparison but not the problem — the real cause was that the five bullets
+were *indented sub-bullets*, so they stayed inside their parent block, fell under the class-list rule, and that
+rule asks for the id and the token on one physical line. Dedenting them made each its own disposition and all
+five lit up at once. The second is the general rule: when a pointer you just wrote is not recognised, fix the
+shape of the writing before touching the recogniser, because a tool adjusted until it accepts new evidence will
+eventually accept any evidence. `node tools/falsify-row-instruments.cjs` still condemns both hazards after every
+one of these changes, and `node tools/verify.cjs` stayed at 650 throughout.
+
+**From 10 to 41, and the two readings that had to be refused.** The census now traces **41 of 47 rows**, with
+**one built-class row unpointed (`G6`)** and **15 dispositions quoting a gate-check label that resolves** — the
+label channel that had read zero for the file's entire existence. The path there is worth keeping because every
+wrong reading was more comfortable than the right one: blanket-skipping class bullets read 10; crediting any
+line carrying an id and a token read 20, and the extra came from the disclaimer I had just written; requiring
+the pointer to be its own bullet read 30, then 40; and the peak was **42 traced with zero built-class rows
+unpointed**, which is a perfect score produced by a *negation* — the sentence admitting G6 has no guard cites
+`tools/verify.cjs` to say `Withheld` appears zero times there, and a scanner that only asks "is there a file
+name on this line" cannot tell a guard from a confession. The rule now drops denying lines, and
+`node tools/falsify-row-instruments.cjs` carries the break that plants precisely that sentence and requires the
+row to stay untraced: **three breaks, three caught**, alongside the retargeted-citation and lost-rows breaks.
+Two shape errors of my own are in the same hour, both recorded because both were invisible in the arithmetic:
+indented sub-bullets stay inside their parent block (so twenty-one pointers silently failed until they were
+dedented), and a label wrapped across lines fails a byte-exact comparison (so the whitespace normalisation was
+true and useless while the real cause was indentation). **Fix the shape of the writing before touching the
+recogniser** — a scanner adjusted until it accepts new evidence will end by accepting any evidence, and the 42
+proved it. `node tools/verify.cjs` 650 green; `audit-citations`, `audit-report-coverage`, `audit-matrix-coverage`
+all `findings: 0`.
+
+## 143. G6 was true of the code and unasserted by the gate, so the gate got one
+
+§4 claims the privacy gate is "documented and enforced in code", and it is: `providerBookingDetail()` prints
+`Withheld` for the client phone unless `onJob` covers the state. Nothing asserted it, which is why G6 was the
+single built-class row the census could not point at. It is asserted now — **the provider is given the customer
+phone only for a job they actually have** — and the check requires both halves, because a guard that only looks
+for a leak passes on a screen that hides everything: a `requested` job must not print the number and must show
+the marker, and an accepted job must show the number. `tools/falsify-profile-honesty.cjs` grew two breaks for
+the two ways the sentence can stop being true and runs **15 mutants, 15 caught**; `node tools/verify.cjs`
+answers **651 checks**, and the census reaches **42 of 47 traced with no built-class row unpointed**.
+
+Two of this hour’s failures are about breaks that go quiet rather than breaks that fail. The negation break
+first SKIPped once every row had a pointer, because it was written to plant a denial on an untraced row — a
+break that depends on a defect still existing goes silent when the work succeeds; it now rewrites a row that IS
+traced and requires the count to drop by exactly one. And it anchored on `**G6**` when the bullet reads
+`**G6 — the one AR row…**`, the id inside the bold with an em dash after it; the anchor missed and the family
+said NOT PROVEN instead of pretending. Both times the honest signal was the refusal, which is the only reason
+they were noticed.
+
+## 145. The full pass found two defects in the instruments, not in the application
+
+`node tools/falsify-all.cjs` over the tree that grew `audit-row-instruments.cjs`, the A13 check and the G6
+check: **62 families, 349 mutants applied, 348 caught, 0 not applied, 1 missed — 2 families need attention**,
+rows summed independently (rows=62 applied=349 caught=348 not_applied=0 missed=1). Neither flagged row was a
+bug in the app, and neither would have been found any other way:
+
+1. **`report-coverage` break 2 printed MISSED: an audit that goes silent when its input disappears.** Deleting
+   every `- **AR — 21…**` class bullet produced `findings: 0, exit 0` — the cross-check loops
+   `if (claimed[cls] && …)`, so with no `claimed` entries it compared nothing and agreed with everything. A
+   guard that passes on a strictly worse document is the failure mode this file names most often, and here it
+   survived the audit's own first four breaks. It now requires every class §4 actually uses to have a list, and
+   reports one problem per absent class plus one summary line, so the count climbs with the damage: findings
+   0 on the committed plan, **5 of 5** breaks caught. My first fix for this compared an annotated class string
+   (`**AR (decided and built 2026-10-26…)**`) against a bare key and manufactured a false finding on a correct
+   document — the annotation trap, for the second time in two hours.
+2. **`row-instruments` printed no parsable summary.** `falsify-all` reported it as
+   `<<< printed no summary — nothing was proven`, which is the runner behaving exactly as designed: an
+   unparseable family is unproven, never zero. The family now prints
+   `mutants applied 3, caught 3, not applied 0` in the shape the runner owns.
+
+The standing lesson is the runner's, not mine: `not applied: 0` and a headline total are not the reading — the
+flagged rows are, and a pass that reports two problems in the test suite has told you more than a pass that
+reports none.
+
+## 146. The aggregate over the tree that grew two instruments and one check
+
+`node tools/falsify-all.cjs` run against the committed build: **352 mutants applied, 352 caught, 0 not applied — every rule is still being tested** across **62 printed family rows**, summed a second way with the parser in this script rather than trusted from the runner’s own arithmetic (applied 352, caught 352, not applied 0, missed 0). Flagged rows: none. The family count moved from 61 because `tools/audit-row-instruments.cjs` and `tools/falsify-row-instruments.cjs` joined the tree, and the gate count from 650 to 651 because of the A13 lock-dialog check and the G6 privacy check. This is the pass that answers the standing question about my own edits: four files that every family re-runs (`tools/verify.cjs`, `tools/harness.cjs`, and the two doc-reading audits) were changed after the previous clean run, and only a full pass can say whether a needle was orphaned. `not applied: 0` and `missed: 0` are the columns that answer it, not the headline total.
+
+Also re-measured on the same build by this script’s own runs: the traceability census at **42 of 47 rows traced, 0 built-class rows unpointed, 15 dispositions quoting a gate-check label that resolves**, and `node tools/audit-build-bytes.cjs` at **findings: 0** — the four copies of the page still identical, because no page byte changed since `fd176312`; the edits this hour were to tools and documents.
+
+## 147. The owner rejected the design, and the reason was measurable rather than a matter of taste
+
+"The Design is so worse, its not a real system in a mobile application design, every screens are not
+consistent." Read as a claim to test rather than a complaint to absorb, it turned out to be countable:
+**1,039 inline `style=` attributes**, **~13 distinct literal `border-radius` values plus 155 inline ones**
+against 5 radius tokens used 41 times, **four parallel chip vocabularies** (`.chip`'s own default was GREEN,
+so an untoned label read as success; `.chip.tone-*`; `.badge-gold`/`.badge-alert`; `.status-<state>` plus a
+`.status-pill` with its own geometry), **two section-heading systems** (`.section-label` in 22 places versus
+hand-sized `<h3 style=…>` on the admin console), **two card-title sizes** (`.card-title` at 16px/800 versus
+an inline `--t-body-lg` 17px/700 on the resident's own active-booking card), **`.stat` declaring its radius
+twice** (12px at line 1132, 14px at 1410), and **two ways to build a header** (`screenHeader()` called 14
+times against 20 hand-written `<div class="topbar">`). None of that is taste: it is the definition of "not a
+system", and the count of definitions per idea is the metric that moves.
+
+Four decisions were put to the owner and all four went the conservative way: converge the system and keep the
+look; plain section label with no accent bar; one card title at ~17px bold; short labels with the honesty
+lines kept. Three steps followed. `.card-title` is now the single 17px/700 title and the admin's `<h3>`
+headings carry `.section-label`; the chip base is neutral and every tone is written once with the legacy
+selectors aliased into it, so "warning" cannot mean two ambers; `.stat` keeps one radius from the token scale
+and `.status-pill` keeps only its uppercase, taking its geometry from the chip. The resident header's
+"· Tap to open profile" and five admin queue sentences became labels, which is also what stopped the bell
+button falling onto a second row: `.topbar` wraps so a long title is never cut, and the block that forced the
+wrap was an instruction, not a fact.
+
+Three things this step did NOT fix, named so the next one is not a surprise: the admin queue's count column
+reuses `.jr-time`, a job-row's time slot, as a number badge; the "What this console does not manage" card
+still carries the accent-bar heading, so a third heading construct survives; and the stat tiles still place
+the figure top-right over a label that wraps to two lines, which is why the two tiles are different heights.
+
+**Two corrections to §147, both mine.** The count "20 hand-written topbars" overstates by one: the page holds
+20 `topbar` divs and one of them is the output template inside `screenHeader()` itself, so 19 screens write
+the bar by hand against 13 calls to the component. And the accent-bar removal in §147's follow-up was
+incomplete: two `border-left` bars remain (one 4px navy, one 3px brand cyan) and the admin card heading "What
+this console does not manage" still shows a bar in `.shots/design-d/admin-dash.png` after the global
+`h3::before` was deleted — so that heading's bar comes from a source not yet identified, and it is named as
+open rather than written off as fixed.
+
+## 148. A screen name is now sized by the bar it sits in, and the walk that measured it was lying
+
+The owner's complaint — "it is not a real system, every screen is inconsistent" — has a counted form: a
+system is one definition per idea. The bar is the most repeated idea in the app, every one of the 88
+screens the camera paints has one, and it turned out to have two sizes.
+
+    node tools/shot.cjs --probe=@tools/probe-bar-titles.js
+    BEFORE  BARS seen=83 | sizes drill:16×38 drill:20×40 root:16×5 | titleEqualsSub=16 | inlineStyled=3
+    AFTER   BARS seen=83 | sizes drill:20×48 root:24×35          | titleEqualsSub=0  | inlineStyled=0
+
+The cause was one selector. `.topbar .title` carried the font family, size and weight, and `h1` is reset
+to `font-size:inherit` so a heading can sit in a flex bar as the div it replaced. So a bar that wrote
+`class="title"` got 20px/600, and a bar that wrote a plain `<h1>` — nineteen of them hand-write their
+own heading — got the body size, 16px/400. On 16 screens the screen name was the *same size as its own
+`.sub` line underneath it*, which is why those headers read as a block of text rather than a title with
+a caption. One bar proved the mechanism by typing a complete copy of the rule into its own inline style.
+
+Nothing saw this because it is not a violation of any rule that exists: 16px is on the type scale, clears
+§68's 14px floor, has fine contrast, is not clipped and does not collide. It is the §76 class arriving
+from the side of geometry — a screen can satisfy every sensor and still be wrong about what it *is*. So
+the fix is positional: `.topbar h1` carries the size, `.screen[data-root="1"] .topbar h1` carries the
+root step, and a heading inside a bar cannot decline it. The root step now reaches 35 bars instead of 5.
+
+Two gate checks in `suite('hygiene')` pin the shape, each with a positive control so a blinded CSS scan
+cannot make "no class-keyed rule" true: `positional >= 1 && rootStep >= 1 && classKeyed === 0`, and
+`selfSized === 0 && headings >= 10`. `node tools/falsify-bar-titles.cjs` proves them — 4 breaks, 4
+caught, 0 not applied — and the fourth break is not about the application.
+
+**The walk was photographing a state nobody can reach.** After the fix the same probe still reported
+`data-root=0` on six genuine root tabs — the resident's Profile, the provider's Dash and FSM and
+Bookings, the admin's Dashboard and Account — while the Node harness, which reaches those destinations
+by assigning `state.tab`, answered `data-root=1` for all thirteen. Two instruments disagreeing about the
+same element is a defect in one of them. The state field printed beside the reading named it:
+`isChatOpen` was true on all of them. The bottom navigation's handler is `clearModals()`, then
+`state.isChatOpen = false`, then the tab, then `render()`; the camera's per-screen setup ran the first and
+the last but not the middle one, because `clearModals()` must not clear that flag — opening a room IS a
+destination change, and clearing it there closes the room the instant it opens. So every screen after the
+chat-room row was painted with a chat still flagged open, `onRootTab()` answered false, and the root-tab
+header treatment was replaced by the drill-in one. The app's own comment at that line had predicted the
+symptom word for word; what nobody had checked was whether the *camera* committed the defect it warned
+about. Driving it the way a thumb does — tap the painted thread row, then the painted Profile item —
+reads `isChatOpen=false data-root=1 title=24px "Resident Profile"`. The camera runs the nav's line now,
+and the family's fourth break removes it and requires the root count to fall, so the repair is asserted
+rather than remembered.
+
+Two metrics joined `node tools/audit-design-consistency.cjs`: `bar_title_class_rules` and
+`bar_titles_self_sized`, both blessed at 0, and `inline_styles` fell 1035 → 1026. `Sukinnect.html` is
+untouched — `git diff --quiet origin/main -- Sukinnect.html`.
+
+Open in this section, not closed: 19 bars still hand-write their markup instead of calling
+`screenHeader()` (`topbar_divs_handwritten` = 19 against 13 calls), six of them hand-type their own left
+group instead of `.hb`, five copy the same translucent action style inline and a sixth uses a different
+one, and `.jr-time` is still reused as the admin's count badge.
+
+## 149. The bar stops being written nineteen ways, a headline figure stops inheriting a column's alignment, and an accent bar turns out to be a pseudo-element
+
+§148 fixed the screen name. This section is everything that followed from the same question — *how many
+ways does this app say one thing?* — across six commits, with the count of ways going down each time.
+
+**A control that sits in the brand bar** (`d65332e`). Five top-bar actions typed the identical
+translucent style into their markup and a sixth typed a different one, a filled navy pill on the
+resident's hub, so the same "leave the app" action looked like two things depending on which screen
+painted it. `.btn.onbar` is the name. Six bars also hand-typed their title group as flex pixels (three
+at `gap:8px`, three at `10px`) instead of the `.hb` class that already owns that geometry. The patcher
+refuses a group string unless every occurrence sits within three lines after a top bar opens, because
+that flex pattern is common markup elsewhere in the file.
+
+**A rule that carries two ideas makes both of them mandatory** (`1a810d0`). The shared numeral rule
+aligned *and* tabulated every figure in the app. Right for a money column; wrong for `.stat .num`, a
+headline number in a tile that has nothing to line up with — inheriting `text-align:right` is what
+pushed the admin's roster figures into the far corner of their own tiles with a void between the figure
+and the label under it. Two rules now, and the gate asserts the relation between them: anything
+right-aligned must also be tabulated, because a column of proportional digits does not line up however
+it is aligned. `falsify-figures` grew by exactly that break, the subset one the split makes possible.
+`.jr-time` was holding three ideas in one slot — a booking time, the word "Open", and a bare count —
+and the counts were the only ones carrying an inline colour, which made the hue the sole carrier of a
+state the words beside them already state (§34, §72). `.jr-time`, `.jr-state`, `.jr-count`: one
+geometry, three names, colour gone.
+
+**Then the sweep, run against that state, came back 0 of 8 corners** with seven contrast findings, all
+of them the resident hub's "Log Out" at 1:1 on `rgb(255,255,255)`. A root tab's bar is white — the app
+decides that beside the rule that makes it — and the on-bar pill paints white text on translucent
+white. **This one was mine, and the story is worth keeping straight.** The button had been a filled
+navy pill, which reads on a white bar; `d65332e` folded it into `.btn.onbar`, whose translucent white
+background and white text are written for the brand gradient. Nothing caught it at the time because the
+walk was still painting that screen as a dark drill-in — the bug §148's camera repair removed. So the
+sequence is: §148 made the walk paint what a thumb sees, `1a810d0`'s sweep then saw the text this pass
+had made invisible, and the same run that proved the population proved the regression. A latent defect
+and a self-inflicted one look identical from inside the source; only the pixels tell them apart.
+`.screen[data-root="1"] .btn.onbar` inverts it the way the `.notif-btn` rule beside it already does,
+and a gate check pins that every bar control painting on-brand text has a root-tab variant. Its
+population is the known bar classes, because the camera remains the net for a new one — and the check
+was too wide on its first run, flagging `.chat-head` and the message bubbles, which bring their own
+dark surface and need no variant.
+
+**The card-title bar was a pseudo-element** (`378ffc4`). The owner ruled "plain bold label, no bar";
+this pass went looking for the third bar with a grep for `border-left`, found one inline use, deleted
+it, and the bar stayed on screen. It was never a border: `.card > b:first-child::before` painted a 3px
+gradient strip in front of **63 card titles**, under a comment praising the consistency, with
+`position:relative` and a 9px pad existing only to place it. Two earlier passes had each reported this
+class closed. Same shape, same screenshot: the shared settings row drew a text `›` as its affordance
+while 20 other places draw the icon arrow, and a trade and its barangay were joined by a middle dot in
+87 places and by a hyphen in four.
+
+**Nineteen bars become one** (`10b`, `10c`). Every screen's top bar is now emitted by
+`screenHeader()`; `topbar_divs_handwritten` went 19 → 0 and `screenheader_calls` 13 → 32. The
+component gained `avatar` and `nav` for the three identity bars, and those three went last so the
+options were never dead code. What made this safe was not care but a guard: the multiset of every
+`id`, `onclick`, `aria-label`, `data-nav` and `photoAvatar` name in the file must be unchanged, and it
+had to be rewritten once already — the component *parameterises* those names, so a guard that only
+knew the attribute spelling reported two ids lost on a correct refactor. The lifted notification button
+is extracted from the original bar rather than retyped, because a hand-copy of an inline SVG is a new
+claim about pixels.
+
+**Three instrument lessons, all the same lesson.** Two gate checks failed on the conversion, and both
+were positive controls that had encoded an assumption about *where* a heading is written: one required
+ten `<h1>` in the markup (it saw eight, then five, as bars converged), and one required the admin's
+provider-management back button to exist in its hand-written attribute form. Neither fact was about the
+app. The first now counts the component's call sites and says plainly that the painted population
+belongs to the camera; the second accepts either spelling. And the family that proves these checks
+crashed on a dangling constant its own re-point left behind, while the background wrapper reported
+`exit 0` because the command ended in an `echo` — the log said what happened, the exit code did not.
+
+**The last off-scale spacing goes onto the scale** (`aba1ea3`): `literal_paddings` 111 → 15 and
+`distinct_paddings` 41 → 7. The 15 that remain are the deliberate exceptions, because "snap to the scale"
+hides four decisions: round to the nearest step with ties away from zero; leave 2px and 3px alone, which
+are hairlines rather than spacing; leave a value *above* the scale top alone and report it — 78px of
+breathing room is not a mis-typed 80px, and clamping it to 32 would be a redesign wearing a rounding rule;
+and carry `0` and `calc(…)` through as values, which is what makes `padding:0 11px` convertible at all. The
+patcher refused its own first three drafts, which is the only reason they were fixable: it matched
+`padding:var(--s-4)` inside a *comment* explaining the scale; a `[ ?]` separator made the single-value form
+`padding:14px` fail to match at all, so the map silently did nothing to the commonest case; and
+`calc\([^)]*\)` stopped at the inner close paren of `calc(18px + var(--sat))`, truncating the match and
+then reporting the numbers inside it as leftovers.
+
+**A break can go stale by being superseded, and it prints `0 not applied` while it does.**
+`falsify-flex-crush` reported 4 of 5 — the quietest shape of a stale break, since "not applied" is the
+column everyone reads. Its notification-button break removed the narrow `flex-shrink:0` and the bar's
+wrap, which is what proved the guard when it was written. A later rule that keeps top-bar controls from
+wrapping also gives them `flex:0 0 auto`, whose middle value *is* the same `shrink:0`. Two declarations of
+one idea — the thing this session keeps converging — and a break that removes only one of them proves
+nothing while still looking applied. It removes all three now and reports 3 crushed circles where it used
+to read 0, which is the first time that break has measured the rule it names.
+
+Measured at the end: gate 651 → 655; `node tools/falsify-bar-titles.cjs` 7 breaks, 7 caught, 0 not
+applied, 0 missed; `node tools/falsify-figures.cjs` 8 of 8; `node tools/falsify-flex-crush.cjs` 5 of 5;
+`node tools/falsify-profile-honesty.cjs` 15 of 15; `node tools/audit-design-consistency.cjs` with
+`inline_styles` 1035 → 1003, `topbar_divs_handwritten` 0, `bar_title_class_rules` 0,
+`bar_titles_self_sized` 0, `bar_left_groups_handwritten` 0, `bar_action_styles_inline` 0,
+`literal_paddings` 15, `distinct_paddings` 7, and no metric risen; `node tools/shot.cjs
+--probe=@tools/probe-bar-titles.js` over 83 painted bars reading
+`drill:20×48 root:24×35 drift=0 titleEqualsSub=0 classless=0 inlineStyled=0 rootVsFlag=0`; and
+`node tools/sweep-text-scale.cjs` 8 of 8 corners clean, 25 tallies each, run separately against
+`cd2cfec`, `378ffc4`, `bfa13c5` and `aba1ea3`. `Sukinnect.html` untouched throughout.
+
+**One name for one chip colour, and a helper that lost its last caller.** Six chips reached their tone
+through the legacy `.badge-gold` / `.badge-alert` names, two standalone rules re-declared token pairs
+the tone block already owned, `.badge-verified` was a selector with no rule and no markup, and three
+places pasted `statusColors()`'s `{bg,fg}` into a `style` attribute — one of them a span that hand-rolled
+seven decisions (background, foreground, size, weight, padding, radius, case) that `.chip.status-*` and
+`.status-pill` already make together. All of it now goes through the class, `chip_tone_rules` 10 → 5, and
+`statusColors` is deleted rather than kept as a second source a future screen could reach for. The name
+stays in the comment so a reader grepping for it finds the sentence that says why it went, which is why
+the patcher's guard counts *calls* and not mentions — a bare substring count would be a needle reading
+prose as code.
+
+**One of the owner's four rulings rested on a premise this section contradicts, and was re-asked.** The
+card `:hover` lift was approved for removal on the stated ground that a phone has no hover and a stuck
+hover is a WebView artifact — but a `@media (hover:none)` block at the end of the stylesheet already
+neutralises exactly that, with `transform:none !important` and the shadow reset, so the lift only ever
+paints in the desktop preview. Given the corrected premise the owner chose to keep it unchanged, which is
+the answer this section records rather than an edit. A wrong *reason* for an approval is not permission to
+spend it.
+
+## 150. A suite figure is only worth what the tree was when it printed, and one killed child inflated that cost by fourteen rows
+
+The design convergence (§148, §149) ended with a full mutant aggregate run against the final page, and
+the first attempt produced a number that was wrong in a way no single row revealed.
+
+**The pass that was not a measurement.** 63 families, 289 applied, 288 caught, 0 not applied — and
+**fifteen** rows flagged, fourteen of them as `printed no summary — nothing was proven`. The tree check
+the runner has always carried at its start and its end is what explained it: the working file was dirty.
+One family (`action-above-fold`) had died between writing its mutant and reaching its `finally`, leaving
+the Money screen's action card swapped back below the statement figures. Every family after it that
+demands a green baseline then exited early. One death, fourteen false alarms, and a headline tally that
+described a file nobody has.
+
+**The repair is per family, not per pass.** `node tools/falsify-all.cjs` now asks git after *every*
+family whether the target moved: a dirty answer names the family that caused it, copies the mutated
+bytes to `.scratch/strand-*.html` for reading, and restores from the commit rather than from a snapshot
+that may itself already be the mutant. Proven with a throwaway fixture that strands the target on
+purpose and is deleted in the same command — the row reads `LEFT THE TARGET MUTATED — restored from the
+commit`, the tree is clean after the pass, and the guard has now actually fired once, which is the only
+difference between a guard and a decoration. The notes filter also widened to keep `Error:`/`at …`
+lines: a family that dies on an uncaught exception prints a stack and none of the verdict prefixes, so
+the one piece of evidence about what happened was being discarded on the way to reporting "no summary".
+
+**The clean pass.** 63 families, **354 mutants applied, 353 caught, 2 not applied, 2 families flagged**,
+tree clean afterwards — and the two flags plus the two `not applied` were each a real finding rather than
+a cascade:
+
+- `control-reach`'s top-bar break removed two guards and the geometry held, because **four** rules hold
+  that one overflow: the bar's `flex-wrap`, the `min-width:0` on the bar's children, the bar-level
+  `flex:0 0 auto` that keeps a top-bar label from wrapping (whose middle value is `shrink:0`), and the
+  title group `.hb`'s own `min-width:0`. Identical in kind to the `flex-crush` break §149 records, and it
+  printed MISSED with `0 not applied`, which is the column nobody reads. It removes all four now and
+  reports `3 of 3 breaks caught, 0 not applied`.
+- `tap-and-summary` reported `1 not applied`: its second break planted a duplicated-width style
+  attribute on the one hand-written back button the admin review bar used, and §149's header
+  convergence moved that button inside `screenHeader()`. Re-pointed at the component, which is the
+  better place for it — the defect can now only be written where every bar's back button is made.
+  Re-run: `mutants applied 4, caught 4, not applied 0`.
+- `escaping` reported the *other* `not applied`, and nothing marked its row. Its sixth mutant took the
+  resident greeting's own interpolation, and §149 moved that greeting into `screenHeader()` too, so the
+  needle matched 0 times — while the family printed `5 of 5 caught` and the aggregate printed `1 not
+  applied` in a column with no marker beside it. **The quietest coverage loss in the suite was invisible
+  by construction**, because the trouble predicate asked only about survivors. Two repairs, both in the
+  runner: a row now prints `NEEDLE MISSED — n needle(s) no longer match the target`, and `skipped` is
+  derived from the `SKIP`/`NOT APPLIED` lines the families already print rather than from their
+  arithmetic, because **nine of the fifty-three families that print an `N of M caught` summary never fold
+  their own skip counter into the line** (measured by grepping each summary for a `not applied` clause on
+  2026-10-26), so their `not applied` is derived as applied minus caught, which is 0 for a loop that
+  `continue`s on a stranded needle without incrementing anything — the coverage shrinks and the row still
+  reads clean. The larger of the two numbers wins, so a family that counts its own skips is unchanged,
+  and the marker has been seen to fire: this family now carries a break that plants a stranded needle in
+  one family's source and requires the row to print NEEDLE MISSED, echo the SKIP line, exit non-zero and
+  invent no survivor. That break printed MISSED on its first mounting, and the runner was right: it sat
+  after the two dirty-tree breaks, whose whole assertion is that the target stays dirty, so the nested
+  pass refused with TARGET NOT CLEAN and the four booleans read as a missing marker. It is third now,
+  refuses to run unless `gitClean()` says the target is clean, and prints the nested pass's own rows when
+  it misses — because a break mounted after another break's hazard setup measures that setup.
+- The re-pointed `escaping` mutant then taught a smaller lesson on the way to passing. Its first version
+  took `screenHeader(esc(…)` as the needle and dropped `esc(` while keeping the paren that closed it;
+  the file stopped parsing, the suite answered `suite crashed: Missing } in template expression`, and
+  the family correctly printed PARTIAL rather than CAUGHT. **A mutant that does not compile tests
+  nothing**, and `PARTIAL` is now in the runner's note filter so the aggregate carries that word instead
+  of inferring a survivor from a count.
+- `build-bytes` refused to run, correctly: three of the four copies of the page (`dist/`, the staged
+  Android asset, the `preview.44` APK bundle) sit at `fd176312…` while the source is at `213c823b…`.
+  A family that proves an audit can detect a divergence cannot plant one on a tree that already has
+  it. This is the **accepted standing state** the owner ruled for the public build — re-stated here so
+  the row is read as a tripwire rather than as a broken suite — and its refusal prints `ABORT`-prefixed,
+  which is the word the aggregate now keeps, so the row carries the reason instead of a blank.
+
+**What it cost to know this.** Two full passes at ~90 minutes each, and the first one's headline number
+was carried in the runner's own summary line as if it were a verdict - `288 caught, 0 not applied`
+printed directly above `BROKEN the tree is not clean after the pass`, which is the right order for a
+careful reader and the wrong order for anyone skimming the last line. The lesson is the same one this
+repository keeps writing down in a new costume: a count is only as good as the state it was taken in, a
+runner that reports "unproven" is reporting about itself, and a guard that has never fired is not yet a
+guard.
+
+## 151. Which layer is on top was eleven numbers, and three of them described one idea
+
+The design complaint was answered by counting definitions per idea (§147–§150): a screen name, a top bar, a
+status colour, a spacing step, a figure a reader compares. The next census asked the same question of a
+property that had never been through the token set at all: **eleven literal `z-index:` values answering nine
+distinct numbers.** Three sticky action footers — the resident's book bar, the provider detail's action row,
+the admin review's answer bar — were one idea carrying **10, 20 and 25**, and the verification review painted
+its own overlay at **50** in a file declaring `.modal-layer` at 70, because that layer has no class to inherit
+from. Which §72's focus walk already knew about that overlay, and had to learn again here.
+
+**The fix is a ladder, and it moves nothing.** `--z-sticky:20 < --z-nav:30 < --z-sheet:60 < --z-modal:70 <
+--z-map-veil:1100 < --z-toast:9999`, declared beside `--scrim`, which shares their purpose. Every element
+keeps its exact position on the ladder; the three footers collapse onto the rung below the navigation, which
+is what all three always were. Nothing else in the file sat between 10 and 20, and nothing outside the app's
+own layers competes with them, so no stacking pixel moved — a claim the eight-corner sweep then had to measure
+rather than a claim reasoned about.
+
+**The gate asserts relations, not numbers.** `the layer ladder declares every rung and keeps their order`
+reads each rung out of `:root` and requires them strictly ascending: a change of values that preserves the
+order passes, an inversion cannot. `a modal opened from a sheet sits above the sheet` already existed and had
+to be taught to resolve `var(--z-modal)` — its helper returned `null` for both rules on the first run and the
+check failed **on a build that was correct**, which is the orphaned-needle class arriving as a false alarm
+rather than as coverage loss. `no layer types its own stacking number, and the ladder is what it types
+instead` strips comments before counting, because a sentence quoting an old number is the same string to any
+scanner as a rule typing a new one — §31's lesson about a hex in a comment, met again by a stacking value —
+and carries a positive control of six `var()` uses so a dead pattern cannot read as cleanliness. Gate 655 →
+658.
+
+**The same census caught the dim, and the file had been claiming otherwise for weeks.** `--scrim` is
+commented as the one dim written by every layer, but `.sheet-scrim` typed `rgba(3,0,43,.52)` beside the
+dialog's `.48`. The first version of the check flagged `.seg-count` too — an 18px count pill on a 3% wash,
+which is a tint and not a dim — so the rule is scoped by geometry now: a rule with four zero offsets that
+paints a navy `rgba` is a dim, and it must take the token. The sheet takes it. Five checks became three and
+the difference is the false positive the broad rule produced.
+
+**Two families travelled with the change, and the one that grew taught the shape.** `falsify-compat-floor`
+needles the modal layer's full declaration to plant `inset:0`, so its needle moved to the token: 7 of 7.
+`falsify-modal-stacking` went from 3 breaks to 5: two invert the rungs, one deletes the modal's stacking, one
+puts a literal back into the classless overlay, and one gives the sheet its own alpha again. The last two
+name a *different* check than the first three — the pair between `.modal-layer` and `.sheet-layer` is
+untouched by them — so each mutant now carries its own expected label. Before that, the family compared every
+mutant against one label and reported a working guard as MISSED. **A family with one label for several rules
+will condemn whichever rule it did not think of.**
+
+**Adding the metric exposed that blessing had never finished its job.** `literal_z_index` is a new row in
+`node tools/audit-design-consistency.cjs`, ceiling 0. Writing it surfaced that the audit's one **floor**
+metric read its floor from a hardcoded number while `--bless` wrote the measured count into the baseline:
+after the header convergence blessed 32, the rule still enforced 13, so the file advertised one ceiling and
+the code applied another, and nineteen of the shared-header calls could go missing while it printed
+`floor held`. Floors now come from the baseline when the baseline carries one. The same blessing locked the
+§148–§150 gains that had never been recorded as ceilings: hand-written bars 19 → **0**, literal paddings
+111 → **14**, distinct paddings 41 → **7**, chip colour rules 10 → **5**, competing stat-tile ideas 3 →
+**2**, inline styles 1014 → **1001**, `screenHeader()` calls held at a floor of **32** instead of 13.
+
+**Then the suite's own instruments were found holding two fixtures, and they had been poisoning the readings.**
+`falsify-compat-floor` proves an audit can be blinded by editing `audit-compat-floor.cjs` — and one of its
+runs died between the edit and its `finally`, leaving `const hits = [];` in the audit and
+`compat-exception: … — too short to be a reason.` in the application. The audit then answered
+`0 of 17 patterns matched` for every caller, so the gate went red and three families
+(`camera-surfaces`, `dialog-focus`, and the stacking pair) each reported their own needles as stale. **Two of
+those were nearly "repaired" into new bugs on the strength of a reading that was really about a dead scan in
+another file.** The app and audit lines are restored, `falsify-compat-floor` reads 7 of 7 again, and the
+runner gained the check that should have existed: it compares `git status` for `tools/` before and after every
+family, prints `LEFT AN INSTRUMENT MUTATED` naming the file, and **reports rather than restores** — a tool
+file is where a session's live work legitimately lives, and `git checkout -- tools/` would delete it. The pass
+also refuses now when the list-building rule and the counting rule disagree about how many families exist,
+instead of running a subset and printing a healthy total.
+
+**Readings as printed.** `node tools/verify.cjs` → all **658** checks · `node tools/falsify-preflight.cjs`
+**7 of 7** against the committed tree — its three new breaks are the instrument-strand report (a plant the
+pass names, then the same plant with the detector blinded, which must go silent), the selection-vs-counting
+refusal, and the stranded-needle marker from §150 · `falsify-modal-stacking` **5 of 5**, `falsify-compat-floor`
+**7 of 7**, `falsify-camera-surfaces` **3 of 3**, `falsify-layer-modality` **7 of 7**, `falsify-escaping`
+**6 of 6**, each 0 not applied · `node tools/audit-compat-floor.cjs` → findings: 0, raw floor Chromium 108,
+breaking floor none · `node tools/audit-design-consistency.cjs` → no metric has grown since the baseline.
+
+The selection break was wrong **twice before it was right**, and both ways were the family's own, not the
+runner's. It first narrowed the *selector*, which emptied `families`, so the older `NO MATCH` guard answered
+first and the new refusal never ran — an expectation written from the intent rather than from what the child
+actually printed. It then anchored on an expression that occurs **twice** in the file, because the `NO MATCH`
+message recomputes the same count inline. Anchor on the whole declaration, and read the nested pass's own
+rows rather than its exit code. The preflight could only run after §151 was committed, because its first
+break aborts on a dirty target — the same guard, working on its author.
+
+**And the sweep was contaminated before it was believed.** The first eight-corner run was killed because
+two gate-only families were re-run *while it was walking* — `falsify-escaping` and
+`falsify-camera-dialog-coverage` each rewrite `Sukinnect-next.html` and restore it, and the camera loads
+that file again for every corner, so a corner can be painted from bytes that exist for one second. The
+suite's mutex has always been the application file; this is the first time it was violated by the person
+holding the mutex, and the tell was two families failing in the aggregate that both pass alone. The run
+was restarted clean, and nothing was edited until it printed: **8 of 8 corners, 25 tallies each, all clear**,
+exit 0 — which is also the reading §151's closing paragraph promised would land after the commit.
+
+## 152. The palette goes flat, the face becomes Poppins, and the new face turns out to have no tabular figures
+
+The owner's new brief ended with two sentences that reverse this repository's own authoritative text:
+*"Make the Whole App design in a simple font and style, the poppins font, also make the Whole App color
+palette not in gradient anymore."* AGENTS.md §31–33 prescribe a gradient brand system measured from the
+pitch deck, §68 pins the UI face to Atkinson Hyperlegible Next and the plan rejected Poppins for not being
+a local asset. A ruling from the owner overrides its own document, so the documents were amended in place
+rather than quietly contradicted — but four of the brief's items also collide with §23, §56, §63 and §88,
+and those are recorded as rulings and seams in the plan's new §13A rather than built or dropped in silence.
+
+**Flat, everywhere, and it was not one grep.** Nine `linear-gradient` declarations, eight `--grad-*`
+tokens and two `radial-gradient` washes became four solid surfaces — `--surface-brand` (#0352AE on the
+bars, buttons and splash), `--surface-brand-deep` (#061364 on a selected chip), `--surface-brand-soft`
+(#F1F5FF behind the sign-in card) and `--accent-brand` (#05BCC4 for the active rule and the current step).
+The token swap was verified against `git show HEAD:` bytes before it was applied, and it still left three
+gradient paints behind, because they are not brand *fills* at all: a cyan aura behind the top bar, a cyan
+glow behind the splash mark, and the shimmer band that sweeps a skeleton. The two auras were deleted; the
+shimmer kept its travel and lost only its blend, so §47's loading feedback is intact. The names went with
+the values — a token called `--grad-*` holding a solid colour is a second lie on top of the first — and
+`the palette is flat: no linear or radial fill remains, and the one ring that uses a gradient says why`
+now strips comments before counting, because a dozen sentences still name the gradient they describe
+having been removed, and to a scanner a quoted number and a painted one are the same string. The one
+surviving gradient function is the workload ring, declared in the page beside it: a ring drawn with hard
+colour stops is a segmented circle, not a blend.
+
+**Poppins loaded, and the money columns broke silently.** Eight faces (four weights × latin + latin-ext)
+were downloaded, validated structurally rather than by a size guess — `wOF2` signature, the header's own
+declared length equal to the bytes on disk, a plausible table count — with the shipped Atkinson face run
+through the same validator first so a guard that rejects good files is caught before it deletes them. (Its
+predecessor did exactly that: an 8 KB floor refused seven valid faces, because Google serves each subset
+split small.) With the faces in place the gate stayed green and the page painted — so `probe-face-and-figures.js`
+asked the two questions a gate cannot: does the requested family *actually paint* (width-compared against
+the stand-in families, because `document.fonts` iterated empty on this page once), and do the digits still
+line up. **Poppins has no tabular figures.** `font-variant-numeric:tabular-nums` is a no-op in it:
+"111111" measured 61.45px against "000000" at 120.58px *with the property applied*, where Atkinson
+equalises both at 121.36px. A `1` is half the width of a `0`. The rule this repository built to stop a
+receipt's ₱ column leaning would have become decorative, and every screen still looked fine. The answer
+keeps both rulings: `--font-ui` is Poppins for the words, and `--font-figures` carries the digits in the
+face that has the feature, applied in the one shared rule that already owns `tabular-nums`. Gate 658 → 660.
+
+**The face change then produced one real layout defect, and it took two wrong fixes to see it.** The
+eight-corner sweep came back **6 of 8**: at 320 CSS px with the text at 200%, `"Your share of "` and
+`"₱400"` overlapped inside the provider dashboard's Weekly-earnings card. The first fix — a line of
+padding above the chart container — did nothing, which is the signal this file has written down twice
+before: *a fix that makes the number smaller without moving it means the model is wrong*. Measured, it was.
+The card paints **no value labels at all** at that corner (`chartColumns` drops them when the headroom
+reserve is refused, exactly as designed), so the `₱400` in the report was never a bar's number — it is the
+**top axis tick**, centred on the plot's own top edge by `translate(-100%,-50%)`, straddling the boundary
+between the plot and the sub-line above it; the sub wraps to four line boxes at that setting and the
+tick's lower half grazes the last by 2px. The fix is the container's own line of separation, sized in
+type units because a reserve that does not grow with the text is the §68 bug wearing a new costume, and
+the corner now reads 0. The comment that had been written from the wrong model was rewritten to the
+measured one rather than left in place — a false mechanism in a comment is how the next reader re-breaks it.
+
+**Four rulings the documents now carry, with their reasons.** §31–33 are marked superseded (the measured
+hexes still decide every colour; the gradient *mechanism* is gone). §68 is amended for the face, including
+the tabular finding so nobody "fixes" the digits back into Poppins. §23's no-wallet rule is recorded as
+*explicitly requested and overturned for the UX, not for the money* — wallet screens over the ledger
+records the kernel already owns, every one stating that no value is stored. And plan R8's ruling that the
+concierge stays an embedded entry is reversed by the brief's Home-chatbot line. The brief's remaining
+items are dispositioned in the plan's new **§13A** table, which separates what is buildable from the
+records (rate bands from the platform's own per-trade, per-barangay rates; frequent actions counted from
+this device's bookings; document expiry and reviewer records that already exist) from what is a labelled
+procedure with a named seam (OCR, face match, reCAPTCHA, a hosted LLM, exchange and labour-rate lookups,
+blockchain settlement) and from what is a decision that is not this repository's to make (regulated
+lending, and the fact that a blockchain does not encrypt).
+
+## 153. The acceptance now has to be read, and the sentence that names it is derived from the records
+
+The owner's Phase D brief ends its consent rule with a condition rather than a label: "there should be a
+terms and conditions and privacy Policy, and the both will not enable the acceptance if did not scroll
+down to the bottom of these two." A checkbox that is merely pre-unticked asks a person to confirm they
+read something they may not have opened; a checkbox that cannot be ticked until each document has been
+scrolled to its end makes the confirmation a fact about an interaction.
+
+What is built (`Sukinnect-next.html`):
+
+- `state.docRead` holds one flag per document, and `acceptDocIds()` returns **every** id in
+  `LEGAL_DOCUMENTS` — derived from the record set rather than listed beside it, the same rule by which
+  `layerKeys()` derives the modal fields from `state`, so a fourth document is gated the moment it
+  exists.
+- `docScrolled(id, el)` marks read when `scrollTop + clientHeight` reaches `scrollHeight - 24`, **or**
+  when the pane cannot scroll at all. It rewrites the footer line in place and does not re-render: a
+  sheet that repainted would send the reader back to the top of the text they had just finished, which
+  turns the gate into a loop.
+- `noteUnscrollableDocs()` runs from `renderSheet()`, because a document shorter than its pane has no
+  bottom to reach, and a control that can never unlock is a lockout rather than a gate. Measured at
+  mount from real geometry, not assumed from the length of the prose.
+- The register card's box carries `disabled aria-disabled="true"` and a lock line naming what would turn
+  it on, and `submitAuth` refuses **before** the tick test when the gate is shut — because `disabled` is
+  a picture and a script can still tick a painted box, so the rule has to live in the handler too. The
+  two refusals are separate branches with separate messages: the unread one counts the documents still
+  shut, the unticked one names the box, and a single message for both would let a mutant that deletes the
+  scroll gate pass as a tick check.
+
+**The third document, and the distinction the brief's wording forced.** The build holds Terms &
+Conditions, Sukinnect Policy and a Privacy Notice. The owner named "a terms and conditions and privacy
+Policy", so the gate covers all three — and each document now declares `consent: 'accept' | 'read'`,
+because a notice is not an agreement: RA 10173 lists consent as one lawful basis of six, and the notice
+is what makes the other five visible. The sentence on the card says which is which ("I have read and
+accept the Terms & Conditions and Sukinnect Policy, and I have read the Privacy Notice"), the refusal
+message and the acceptance record are both generated from the same list, and the record writes one row
+per gated document. A check fails if any document stops declaring a kind, because a missing field reads
+as `'accept'` to the comparison and would quietly ask a reader to agree to a notice.
+
+**A fix that created a defect the suite cannot see.** The first version put the read-state line beside
+the Close button inside the shared `.sheet-foot`, which is a flex row. A row gives its shortfall to
+whichever item has the larger content basis — the sentence — so the button was left one character wide,
+and `body{ overflow-wrap:anywhere }`, the guard this file added for unbreakable tokens, happily broke
+"Close" into five lines. The screenshot of `legal-terms-read` showed it; all 25 tallies read 0, because a
+word alone on a line is not clipped, does not collide, is on the scale and clears contrast. The foot is a
+column now, and a gate check pins the shape for the same reason §82's split-figure check exists.
+
+Instruments:
+- 11 new gate checks (660 → 671): the gate's population has a floor, because a scan over an empty set
+  reports "all read" forever; the consent row opens exactly the documents the gate reads; an unread card
+  paints the box off; **half-way geometry unlocks nothing** (the check that keeps the gate from being
+  "opened the document"); the unscrollable case counts as read through the mount function itself; the
+  unread refusal and the tick refusal are told apart by their own wording; the record covers every gated
+  document; the foot stacks; the kinds are declared.
+- The four pre-existing `login`-suite register runs now reach the read state through `docScrolled()` with
+  the measurements a finger produces — the harness mounts no sheet (`renderSheet()` paints into
+  `#sheet-root`, outside the fragment it assembles), so the element is handed to the app's own function
+  rather than the state being written. `noteUnscrollableDocs()` is exercised the same way, with the fake
+  pane returned for **one** selector: replacing `querySelector` outright made every other lookup in the
+  page answer a document body, and the next `render()` died in `syncBackHandles()` on a `.sheet` with no
+  `setAttribute` — an instrument defect wearing the costume of an app crash.
+- Two camera rows, `legal-terms-read` and `register-read`, reached by setting `scrollTop` and
+  **dispatching the `scroll` event**, because the inline `onscroll` handler is the thing under test and
+  only an event reaches it. `register-read` opens each document, scrolls it and closes it, so the unlocked
+  card is painted by the rule rather than by a state assignment.
+- `node tools/falsify-scroll-gate.cjs` — 8 breaks, one per promise, each aimed at a named check.
+
+Two instrument lessons from the family itself, both about the author's own tooling. (1) A needle that
+carries `${` cannot be written as a template literal in the falsifier: Node interpolated it, the file
+threw `ReferenceError: acceptanceUnlocked is not defined` at load, and no mutant ever ran — the same trap
+this file records for a regex built inside a template literal, arriving one shape over. (2) The wrapper
+that launched it ended in `echo "exit=$?"`, so the background task reported **exit code 0** for a run that
+died on its first line. A command whose last statement is an `echo` reports the `echo`'s status: read the
+log, never the exit code. The tree was confirmed untouched by counting each needle in the target before
+re-running, which is the cheaper order than discovering a stranded mutant afterwards.
+
+## 154. The concierge door moved to the bottom-right of Home, and the module card was deleted rather than restyled
+
+The Phase D brief asks for one change on the first screen: "The AI in the Home page will be changed in
+design, instead of module there will be a chatbot at the bottom right." The build had a `.concierge-row`
+card sitting between the category grid and the "Book again" rail — a row that named itself
+"Describe or snap the problem" and was one of eleven things competing for the same scroll.
+
+What is built (`Sukinnect-next.html`):
+
+- `conciergeFab()` paints one `.fab-dock > .concierge-fab` at the foot of `residentHome()`, and
+  `openConcierge()` is the named handler on an inline `onclick`. The old row, its four CSS rules, and its
+  two appearances in the `:focus-visible` and `:active` selector lists are **deleted**, not left behind:
+  a gate check fails if the string `concierge-row` survives anywhere in the file, because a class with no
+  markup and a markup with no class are both ways for the next reader to be told the module still exists.
+- The dock is `position:sticky; bottom:var(--s-4)` **inside the screen's own scroller**. That is the whole
+  reason it needs no measurement: the bottom navigation is outside that scroll container, so the dock
+  clears it at every text scale without a pixel value derived from the nav's height — which is §73's trap
+  for anything that writes its own geometry, and the reason a `bottom:calc(56px + …)` version would have
+  been wrong on a phone at 135% type.
+- The dock takes no taps (`pointer-events:none`) and the button does (`pointer-events:auto`), because the
+  dock is a full-width strip and a strip that swallows taps eats the card under it.
+- A new rung, `--z-fab:40`, sits between `--z-nav:30` and `--z-sheet:60`, and the ladder check's ordered
+  rung list gained it — so the rung cannot be re-ordered into covering a sheet by accident.
+- The control is labelled in words, "Ask the concierge", with the glyph beside it, not an icon-only
+  circle. §72's rule that a name must not live only in a shape is the reason, and the check reads the
+  `aria-label` and the visible text separately.
+
+**Why the handler is a named function on an attribute rather than a closure assigned at mount.** The
+camera's `clickPainted` reaches a control by its painted `onclick` attribute; a door assigned in a mount
+step is invisible to it, so the walk would have had to keep assigning `state.tab='concierge'` — which is
+the form of this repository's oldest instrument defect, a screen reached by moving the model rather than
+by the thing a thumb does. `tools/shot.cjs` gained `concierge-from-fab`, which renders Home and clicks the
+control; if the handler goes away the shot fails by name.
+
+Instruments: 5 new gate checks (671 → 676) — one control and no module, named in words, the door opens the
+concierge behind a positive control that the tab was `home` before the click, the dock's three shape rules,
+and the ladder rung. `node tools/falsify-home-fab.cjs` — 6 breaks, one per promise, including the two that
+a screenshot would not show: a second door painted beside the first, and a stacking number typed instead of
+asked for. `node tools/falsify-scroll-gate.cjs` was re-run in the same chain because both families mutate
+this file, and the eight-corner sweep re-ran over the final bytes: `node tools/shot.cjs --list` is the
+walk's count, and a number carried here would be wrong the next time a screen is added.
+
+## 155. Two steppers, and the two capabilities this build does not have are named on screen
+
+The Phase D brief asks for verification "with the use of Enhance And Improve Stepper method, with
+procedural model" — certificates, valid government IDs, OCR on the IDs, facial recognition, the identity
+extracted from them — and for the AI to "become a Wizard guide" at sign-up "A Voice Command, Manual
+Typing". Two of those capabilities do not exist in a single-file prototype with no backend, and the
+ruling for Phase D was to build the procedure and name the seam rather than skip the step or fake its
+result. Both screens now do that, and each says so where the reader is standing.
+
+**Verification (`openVerificationWizard`, four steps).** Reached from the provider's own credentials
+section. Step 1 asks which government ID and attaches a picture or PDF; step 2 the qualification
+document; step 3 the face check; step 4 a review of what the device holds. The two seams:
+
+- `readIdDocumentSeam(fileName)` returns `{ available: false, fields: null, reason: … }` and the ID step
+  prints that reason. No name, date or number is shown, because a form that printed a name it "read" off
+  a photograph would be inventing that name — the same class as a tile carrying a count no record
+  produced.
+- `matchFaceSeam()` returns `{ available: false, score: null, … }`, and the review step states
+  `Face check: not performed by this build`. There is no stored reference image to compare against, so
+  any score would be a number with nothing behind it.
+
+An attachment yields its **name only** — `verificationAttach` reads `el.files[0].name` and nothing else,
+the rule the concierge already follows — so the draft holds no bytes for an OCR step to read even if one
+were wired. The final control is `saveVerificationDraft()`, which persists the draft and toasts *"Nothing
+was sent to a reviewer, because this build has no reviewer on it."* It is not called *Submit*: a button
+that announces a submission no record backs is the defect this file has closed a dozen times from the
+other direction.
+
+**Sign-up guide (`openSignupGuide`, two steps).** The brief's "wizard guide … voice command, manual
+typing". Two steps because two is what the register form asks beyond an email and a password — name and
+barangay, the same two answers §78 found were being collected and thrown away. A third step would have
+had to invent a field the form does not have, and a guide that fills a field nobody reads is the mirror
+of a form whose answers are dropped.
+
+- Every answer is written through `authInput(field, el)` on the real `reg-name` / `reg-brgy` element, so
+  the guide cannot hold an answer the register path never sees, and it creates no account of its own:
+  after three guide writes the view is still `login` and `termsAcceptances` is still empty.
+- `speechSeam()` reports the engine it found (`SpeechRecognition` / `webkitSpeechRecognition`) or says
+  none is exposed. With none, pressing *Dictate* leaves the field alone, sets the note to the seam's own
+  sentence, and stays a live control — hiding the button where the platform lacks the API would leave a
+  reviewer unable to tell "not on this browser" from "never built".
+- The sheet never calls itself a model, and the check asserts that: no `AI-powered` / `powered by AI` /
+  `our AI` string appears on it.
+
+Instruments: 17 new gate checks (689 → 706) across two new suites, `verification` and `signup-guide`,
+each with the opposite case pinned — the ID step prints the seam *and* no invented identifier; the
+review step states the face check was not performed; the guide's answers land in the fields the form
+reads; the guide is offered where an account is created and not where one is used. Four camera rows now
+paint the sheets (`verification-docs`, `verification-review`, `signup-guide-step2`, plus the two rate-
+wizard steps), all clean at every corner.
+
+Two of the first-run failures were the checks, not the application, and both are the same shape: one
+asserted that the *next* question's words must be absent, which is false of a correct step rail by
+design — the rail names every step — so the discriminator became "one card title, and it is this step's";
+the other expected the guide to write into a field the form does not have, which is how the third step
+went away. The rate-wizard defect found in a screenshot in §154 is pinned by a check of its own now: a
+provider opening the wizard sees a band for their own trade, not a claim that none exists.
+
+## 156. The wallet is a view over the books, and a stylesheet rule turns out to have been deleting headings on every sheet
+
+The brief asks for a digital wallet whose cash in and out runs through GCash or another cashless
+method, with loyalty privileges and loan eligibility on top. The deck forbids a stored-value wallet,
+and the owner's ruling was to build the experience and keep real money out of it. So the screen is a
+view: every figure on it is `providerBalances()` read back from the double-entry books, the same
+numbers the payout card and the admin settlement view already print, and the two controls that would
+move money are `gatewayCashSeam()` and `cashMovementSeam()`, which answer with the reason nothing was
+moved and write no ledger event. `loyaltyTier()` computes a label out of finished jobs and settled
+money and carries `privileges: []`, because honouring a privilege needs a thing to honour it with, and
+`fundingEligibilitySeam()` declines to answer at all — eligibility would need verified income,
+outstanding obligations and a lender, and any figure this build produced for them would be invented.
+
+The blockchain half is the property rather than the distributed part. `buildLedgerChain()` folds each
+event into the hash of the one before it with a 32-bit FNV-1a, and `verifyLedgerChain()` recomputes
+from the events instead of trusting a stored head, so an edited amount moves the head. The hash is not
+cryptography and the screen says so beside it: no network, no consensus, and records on this device are
+plain text — which is the honest answer to "encryption to be applied", and the reason the note names
+the gap rather than the feature.
+
+**The balance check was a tautology before it was worth anything.** The staged version compared
+`walletSnapshot()` with `providerBalances()` — and `walletSnapshot` calls `providerBalances` on the
+line above, so the assertion could not fail whatever the wallet printed. It now re-adds the figures in
+the check itself out of `BOOKINGS`, and requires that releasing one held job moves the wallet by
+exactly that job's share, up on `available` and down on `pending`. `node tools/falsify-wallet.cjs`
+proves it: a wallet that types `250000` is caught, a dropped hold is caught, and a doubled share is
+caught.
+
+**Three defects came from the screenshot, and all three were invisible to every tally in the camera
+because `display:none` text is not clipped, does not collide, is on the scale and clears contrast.**
+`.sheet-body .card > b:first-child{ display:none }` was written for the profile sheets, whose single
+card repeats the sheet header's words, and reached every card of every sheet — the wallet's four
+section titles painted as nothing at all. It is now `.sheet-body > .card:first-child > b:first-child`,
+which leaves the profile sheets exactly as they were (measured: `provider-credentials` still hides its
+one title) and returns the others. The comment beside the rule says its reason holds only for the card
+the header duplicates, and the probe found that the reason is only partly true even there: that sheet's
+head says "Credentials" while the silenced title says "Verification". Recorded rather than "fixed",
+because revealing it changes screens nobody has approved a change to. Second: the balance figure
+carried `class="stat"`, which is itself a card, so it drew a box inside a box. Third: the entry caption
+promised "the newest eight" over one row, read "1 ledger event touch this account", and named jobs by
+record id.
+
+A fourth finding is about the instrument, and it is the stranded-mutant class arriving in a file nobody
+was watching. The killed aggregate from the previous session had left `falsify-bar-titles` break 4 in
+the tree — `tools/shot.cjs` carrying `/* walk does not clear the chat flag */` where the
+`state.isChatOpen = false` line belongs. The app file was clean, so the preflight guard on the target
+file could not see it: the hazard was in the camera, not the page. Read `git status` across the whole
+tree after an interrupted run, not only against the mutation target.
+
+Gate 706 → 723. `provider-wallet` clean at every tally, no console errors.
+
+## 157. The last four lines of the brief become two seams and one derived list, and a privacy check learns it cannot tell which way round it was inverted
+
+Four lines of the brief had no artifact yet: an exchange-rate feed read from outside the application, a
+reCAPTCHA at sign-up, connections per customer and provider, and organisations or NGOs. The first two
+and the last are procedures with a named seam; the third is the one a prototype can build for real.
+
+`exchangeRateSeam()` answers no rate: every amount here is pesos, a foreign figure needs a feed from
+outside Sukinnect, and this page makes no network call. It is painted in the pricing wizard, and the
+first placement was inside the band branch — which is the wrong place for exactly the reason the
+feature exists: a device whose roster has no rate for the trade renders the other branch and went
+quiet precisely where the wizard has nothing to offer. It now sits outside the ternary, and the check
+asserts both halves: that the sentence renders, and that the source interpolates `${feed}` after
+`${body}` rather than inside a branch. `spamCheckSeam()` names all three things a CAPTCHA needs that do
+not exist here — a provider, a secret key, and a server to verify the token with — and is painted on
+the register card only, with the sign-in card asserted free of the claim so the gating is what is
+tested rather than the wording.
+
+**Connections are grouped out of BOOKINGS and nothing else**, because a booking is the only record that
+creates one. No contact book, no follow, no suggested people: §55 makes reputation transaction-based
+and §26 makes messaging a coordination tool. The resident's half names every provider they have
+requested; the provider's half withholds a household until a job is accepted, the same gate the booking
+detail applies to an address and a phone, and a withheld row carries no link out so the list cannot be
+used to open a stranger. `organizationSeam()` lists nothing: an NGO as a party needs a legal-entity
+record, a verification path different from a person holding an ID, and somewhere to disburse to, and
+this build has one account kind.
+
+**The privacy check passed with the rule inverted, which is the coverage gap the falsifier exists to
+find.** `falsify-connections` break 2 flips `if (PROVIDER_VISIBLE_STATES.includes(b.status))` and the
+whole gate stayed green with exit 0. The assertion had been aggregate — some rows hidden, some named —
+and groups are keyed on the household, so both halves stay true in either direction. It now derives
+which households must be hidden (their only booking is a request) and which must be named (one is
+accepted) from the records, and asserts every row in each set: a check that cannot tell which of its
+two conditions fired is half a check. Two further breaks printed NOT APPLIED for needles carrying a
+newline into a CRLF file, which is the family's own header warning arriving a third time.
+
+Two more screenshot findings, both the same class as §156: the connection count sat in a `card-title`
+on the first card of a sheet body, which is the one slot the sheet rule silences, so the headline
+figure painted as nothing; and the withheld sentence repeated on all eight rows under a head that
+already states the rule once. Both are asserted now — the head says it, no row repeats it, the count is
+in the line that paints.
+
+Gate 723 → 739. `node tools/falsify-wallet.cjs` 13 of 13, `node tools/falsify-connections.cjs` 7 of 7,
+both restored byte-for-byte; `tools/audit-handler-reachability.cjs` resolves every handler;
+`resident-connections` and `provider-connections` clean at every tally with no console errors.
+
+## 158. The sweep found four admin dialogs that are not told to the platform as modal, and the exit code that hid it was mine
+
+The eight-corner sweep over the bytes after §156 and §157 read **0 of 8 corners clean**, at every
+corner the same two lines: `layers that opened without dialog semantics or the caret inside them: 4`
+and `text painted on top of other text in the same card: 1`. Identical counts at 320px, 450px, 200%
+and 100% text say the cause is state, not geometry. The detail names them: `admin-security-modal`,
+`admin-password-modal`, `admin-twofa-modal` and `admin-sessions-modal`, each reported as
+`.sheet-layer "Security & Sign-in" is missing modal` — a `role="dialog"` with a name but no
+`aria-modal`, so the platform is not told the box replaces the page behind it.
+
+These are not new screens. They are the admin security dialogs §97 added to the walk when the coverage
+audit found that the gate had proved them painted and the camera had never opened one, which means the
+tally has been reading them since and no full sweep has run since then either. **A covered screen is
+not a swept screen.**
+
+Two candidate causes, and the fix is deliberately not shipped until one is measured. Either the sheet
+under those modals is genuinely visible and reachable — in which case `labelTopLayer(topLayerEl())` is
+too narrow, because it labels only the layer it computes as top and the app computes that from state
+while the camera computes it from painted `z-index`, and the two disagree wherever a modal is painted
+*inside* a sheet's own subtree. Or the sheet below is inert, in which case the tally is asking a
+question about a subtree the platform has been told to ignore, and the tally is the thing that is
+wrong. The second reading is not a getout: `setInertOutside` walks up from the layer marking each
+ancestor's siblings, so a modal nested inside the sheet it covers would leave the sheet's own root
+unmarked and still painted. Ask which by dumping the accessibility tree on one of those four screens
+and checking whether the sheet's nodes appear in it — §"A11y tree is a third surface" — before
+touching either file. The `layer-modality` and `modal-stacking` families exist because a confident
+guess in this subsystem made things worse twice.
+
+The instrument lesson from the same minute is mine and it is the one this file has written down
+before: the background run reported **exit code 0** next to a log reading "0 of 8 clean", because the
+command I launched was `node tools/sweep-text-scale.cjs > log 2>&1; echo; tail` — the pipeline's last
+process was `tail`. `tools/sweep-text-scale.cjs` itself exits `bad ? 1 : 0` and was correct. Read the
+log, never the wrapper's exit code.
+
+§158's two candidate causes were both wrong, and measuring replaced them. The probe in
+`.scratch/probe-layer-inert.js` answers what the platform is told about every painted layer: on
+`admin-security-modal` there is exactly **one** layer — the sheet — carrying `aria-modal="false"`, and
+no modal anywhere in the document. `aria-modal="false"` is only ever written by
+`sheetPanel.setAttribute('aria-modal', modalAboveSheet() ? 'false' : 'true')`, and `modalAboveSheet()`
+is `layerKeys().some(k => !!state[k])` — a question about **state**, not about paint. So:
+
+1. The admin's Security & Sign-in **sheet** paints four buttons that call `adminAccountAction('pin' |
+   'password' | 'twofa' | 'sessions')`. Those set `state.adminAccountModal`. The modal markup lives in
+   the admin **account screen**, which is not mounted while the sheet is the surface. The tap sets a
+   flag, renders, and shows **nothing** — a dead control, the class §"EVERY PROFILE ACTION REACHES A
+   SCREEN" exists to catch, on four buttons at once.
+2. Because the flag is set, `modalAboveSheet()` answers true, the sheet is told it is not modal, and
+   the app declares a dialog that does not exist. The tally read the label and reported the symptom.
+3. §97's coverage claim is half false for these four rows. Each row does click a real painted button,
+   which is why it looked like a walked dialog — but it photographs the sheet, never the dialog its
+   name promises. **A row that clicks the right control on the wrong surface is an unmeasured
+   destination wearing a measured name.**
+
+The fix has two halves and neither is shipped yet, because both touch the subsystem whose two previous
+hasty repairs produced the `modal-stacking` and `layer-modality` families. (a) `modalAboveSheet()` has
+to ask whether a modal layer is mounted, not whether a field is set — otherwise the app can always
+claim a modality it is not painting. (b) Either the four sheet buttons route to the screen that owns
+the dialog, or the dialog renders from the sheet; and the four rows then have to **refuse** unless a
+modal layer is actually painted, so a future regression fails by naming the button rather than
+photographing a sheet. The eight-corner sweep will read 0 of 8 clean until (a) and (b) land, and that
+is the honest state of this build rather than a number to smooth over.
+
+**The obvious fix was tried, and it is wrong in the other direction, so it went back out.** Making
+`modalAboveSheet()` ask the DOM (`document.querySelector('.modal-layer[data-layer="modal"]')`) clears
+the four admin screens and the gate's `layer-modality` needles disagree — but the real reason to
+revert is not a broken check. The rule that put the predicate on state exists because **the app raises
+a modal three ways and the third has no class at all**: the verification review's inline fixed overlay.
+A class-based paint check answers "no modal above" while that overlay is on top, so the sheet would
+keep claiming modality it does not have — the same false statement, mirrored. The honest predicate has
+to enumerate all three mechanisms, which is a larger change than a green sweep justifies, and it needs
+its own falsifier before it can be trusted. `tools/shot.cjs` keeps the unused
+`requirePaintedDialog` helper with a comment saying why it is not wired in: the four buttons are still
+dead, and a guard that reddens the walk with no shipped fix behind it blocks a build instead of
+guarding one.
+
+**Third probe, and it settles the mechanism while catching a fourth instrument error of mine.**
+`.scratch/probe-modal-mount.js` asks where the dialog's own heading actually is. `body.innerHTML` says
+it is present — and that answer is worthless, because this is a single-file app: the page's entire
+source sits in a `<script>` element inside `<body>`, so *every string the app ever contains* is "in the
+document". Asked of the painted containers instead, the heading is in none of them, no `.modal-layer`
+is mounted, and `#screen` holds 799 characters. **A scan over `body.innerHTML` is a scan over the
+source code, not over the page** — the same "a check that matches prose passes on the wrong evidence"
+class, arriving from the DOM side.
+
+So the confirmed statement is narrow and holds: from the admin Security sheet, the four
+`adminAccountAction` buttons set a modal field, `render()` repaints the layers (which is why the sheet
+gets `aria-modal="false"`), and **no dialog mounts anywhere**. The fix site is therefore not the
+predicate at all: it is that the dialog must be mounted by the surface that raises it — the admin
+account screen's modal expression has to move to a layer the sheet path also renders, or those four
+buttons have to route to the screen that owns it. `modalAboveSheet()` then answers true *and* tells the
+truth, the tally clears without touching the predicate, and the four `admin-*-modal` rows can be
+wired to `requirePaintedDialog` — which is already in `tools/shot.cjs`, waiting for a fix to guard.
+
+**§158's diagnosis was wrong about the app, and right about the camera — and the correction matters more
+than the original claim.** The probe asked which surface the admin is on: `APP_SHELL` is **true**, and
+`#screen` holds the *admin-web-only refusal page* ("The admin console is a desktop surface…"). The
+ruling of 2026-10-27 that moved admin to the web replaced `adminTabHTML()` with `adminWebOnly()`, so the
+account hub that owns those four dialogs no longer exists inside the shell — and the four
+`admin-*-modal` rows, added by §97 while admin still lived in the app, were calling
+`openProfileSection('admin','security',…)` directly and forcing a sheet over a refusal page. **No thumb
+can reach that state.** There was never a dead control: the buttons work on the web surface, where the
+owner put them. What was broken was the walk, and the tally's `aria-modal="false"` was the symptom of
+measuring a fiction — the fourth form of the trap this file names, after the missing row, the setup that
+moves the model but not the field, and the probe that types into a detached node: **a row can be
+reachable only by the harness, and then a clean number about it is a clean number about nothing.**
+
+The fix is in `tools/shot.cjs`, not in the page: the nine admin profile rows now set
+`state.appShell=false` before opening a section, and the four dialog rows call
+`requirePaintedDialog` — the helper §158 left unused — so a row named after a dialog fails the walk by
+naming the dialog if it ever stops mounting. Measured after the change, the four shots are titled by
+their own dialogs ("Change security PIN", "Change password", "Two-factor authentication", "Sign out this
+device?") and every failure tally reads 0, with no console errors. The predicate question §158 left open
+is moot for these screens: `modalAboveSheet()` answered true *and* a dialog was mounted, on the surface
+where a person can actually tap the button.
+
+What remains genuinely open is narrower than §158 claimed and still worth doing: the app raises a modal
+three ways, and `topLayerEl()` resolves the third (the verification review's inline fixed overlay) only
+because `modalAboveSheet()` reads state. A predicate that asked the paint by class would have missed it.
+That is a design note about the layer machinery, not a defect report.
+
+**The sweep then read 8 of 8 corners clean, anchor included** — `node tools/sweep-text-scale.cjs` on the
+bytes at `aac05ca`, logged in `.scratch/sweep-2.log`. Before that commit it was 0 of 8, with the same
+two lines at every corner. That contrast is the whole argument for the diagnosis above: a geometry
+failure that does not vary with width or text size is not geometry, and a defect that disappears when
+the *walk* is corrected was never in the page.
+
+**The eight-corner run over the fixed bytes, quoted rather than paraphrased.**
+Printed by `node tools/sweep-text-scale.cjs` against the bytes after the camera fix, and the first run
+that painted the 22 admin screens as themselves. Last fourteen lines of that log, verbatim:
+
+
+    ### 320x480 @ 200% text — short handset / split-screen at largest text (480px tall)
+      25 tallies, all clear
+
+
+    ### 320x300 @ 100% text — a keyboard open on a short phone (300px of viewport left)
+      25 tallies, all clear
+
+
+    ### 450x889 @ 200% text — vivo 1906 panel at the device's own largest text (450x889 @ 200%)
+      25 tallies, all clear
+
+
+    ### defaultxdefault @ 100% text — default width, default text — the anchor a clean run must also produce
+      25 tallies, all clear
+
+    8 of 8 phone corners measured clean.
+
+
+## 159. A ruling moved the admin console to the web, and twenty-two screens of the sweep quietly became a refusal page
+
+The full mutant aggregate ran for the first time since 2026-10-25 — 68 families, every one of them
+rewriting and restoring `Sukinnect-next.html` — and it flagged three families with five surviving
+mutants: `chart-collide` 5 applied / 2 caught, `focus-trap` 3 / 2, `nav-fit` 5 / 4. Each missed break
+reported the same thing: the sensor it exists to dirty read **0**.
+
+The cause was found by reading, not by running, and it was not the two guesses made before it.
+
+**Not the load.** Twelve other camera-driven families passed in the same pass — `bar-titles` 7/7,
+`blank-query` 2/2, `camera-dialog-coverage` 6/6, `camera-surfaces` 3/3, `compat-floor` 7/7,
+`control-reach` 3/3, `dialog-focus` 5/5, `double-tap` 2/2, `flex-crush` 5/5, `long-input` 2/2,
+`notification-routes` 2/2, `photo-name` 2/2. Chrome was healthy. Before reaching for "the machine was
+busy", count the siblings that use the same mechanism.
+
+**Not the typography swap.** `chart-collide` and `nav-fit` both budget by measured text width, so the
+Poppins change was the natural suspect — until the breaks' own screen lists were read: `chart-collide`
+has five breaks, the two that **caught** name `provider-dash` and the three that **missed** name
+`admin-dash` (lines 101, 114, 118). `focus-trap` drives `admin-review-document/request/approve`. A
+one-to-one mapping between "admin screen" and "missed mutant" is not a font metric.
+
+**The cause.** `render()` line 8983: `screen.innerHTML = state.appShell ? adminWebOnly() : adminTabHTML();`.
+The owner's ruling of 2026-10-27 moved the operations console to the web, so inside the app shell every
+admin screen is replaced by a page that says where it went. Correct as product. The camera's default
+surface is the shell. So every admin row in the walk has been photographing a refusal page — and a
+refusal page is a *very* clean-looking screen: no charts to collide, no overlay to escape, no nav labels
+to clip, tap targets comfortably large, contrast fine.
+
+**The size of it, counted rather than estimated: 31 of the walk's 100 rows are admin rows, and only nine
+set `state.appShell=false`.** Twenty-two admin surfaces — the dashboard, audit log, finance, trust and
+safety, marketplace intelligence, categories, the verifier list, the attention queue, every review
+screen, the verified roster, help desk, provider management, insights, the decided tab, the empty
+verifier state and produce intelligence — have been unmeasured since the ruling landed. **The
+"8 of 8 corners clean over 100 screens" figure committed at `c38add6` is therefore vacuous for roughly a
+fifth of the walk**, and so is every tap-floor, contrast and clipping number quoted for those screens.
+That figure was reported as a success in this session's own commit message.
+
+The fix is derived, not listed. `aac05ca` had already patched nine rows by matching one setup string —
+which is exactly how the other twenty-two kept lying — so the rule now sits in the single place every row
+passes through and asks the state the row actually set: if the role is admin and the shell is on, stand on
+the web surface. A row that names `state.appShell` itself wins, because that precedence is what keeps the
+second half honest.
+
+**And the second half is a finding of its own: the refusal page had zero coverage.** `grep -c adminWebOnly
+tools/shot.cjs` answered 0 — no row, so no tap floor, no contrast, no heading measurement on the only
+admin screen a phone user can actually reach. Applying the derived rule alone would have preserved that
+silence forever, because clearing the shell for every admin row means nothing ever paints the refusal
+again. So the same change adds `admin-shell-refusal`, which asks for the shell deliberately. The general
+rule: when a ruling removes a surface, sweep the instruments that measured it — and when a fix would make
+a screen unmeasurable, measure the screen the fix replaces.
+
+What is still unknown after this, stated plainly: the 22 admin screens have never been swept as themselves.
+The next eight-corner run over the fixed bytes is the first that will say anything about them, and it may
+find real defects. A clean number over a placeholder is not a clean number.
+
+**Two things this bounds, found while trying to size the damage.** Measured rather than assumed: the Node
+harness boots with `state.appShell === false`, so the **gate never had this blind spot** — its admin
+assertions run against the real console HTML, and the vacuity is confined to the camera. That is the
+difference between "a fifth of the suite is lying" and "a fifth of one instrument is", and it is why the
+first question after finding a void should be what else touches the same path. The other half is less
+comforting: `adminTabHTML` is **not in the harness export list**, so no gate check can render the admin
+console's tab markup at all. The console's coverage is therefore function-level checks on its data plus
+whatever the fixed sweep finally measures — not, and never has been, a check that the console paints.
+Exporting it is the obvious next move, and it is a small one.
+
+**The re-run of the four flagged families, and what it did and did not clear.** Read from the log, not
+inferred from the fix landing: `chart-collide` went 2 of 5 caught to **4 of 5**, and the first of those
+two new catches prints `worst escape 0px, on admin-dash at --width=320 --font-scale=2` — a line that
+could not have existed while admin-dash was a refusal page, because there was no chart on it to break.
+So the derived surface rule works: the admin screens are painted again and the sensors on them answer.
+
+The remaining survivor is a different class, and it is recorded rather than repointed under pressure:
+
+    MISSED  the headroom refusal no longer drops the numbers, so the tallest one leaves the chart
+            (findings present, but the worst escape is 0px and this break has to prove 3px)
+
+It applied (`0 not applied`), the mutation produced findings, and the *specific* evidence the break
+asserts — a value label hanging at least 3px above its own chart box at 320x638 @ 150% text — is now 0px.
+The break's own comment records that the refusal at that corner was a **shortfall** of about nine units,
+so the premise is a margin, and margins move: this build has since changed the face the figures are
+measured in (`--font-figures` carries digits in Atkinson while the words are Poppins), and the reserve is
+computed from the type. The honest reading is that the guard is no longer *reached* at that corner, which
+is a question about the application's arithmetic at 1.5 — not about whether the drop-the-numbers rule
+still protects the escape, and not answerable by editing the break. **Open**, to be settled by measuring
+whether `chartColumns` still refuses the reserve at 320x638 @ 150%, on a build where no mutant pass owns
+the file. Deleting the break would retire the only proof the vertical half of the guard exists; forcing
+the number down to 0 would make the break pass on the absence of its own evidence.
+
+Two plan rows landed with this. §13A's new-trades row reads **DECLINED BY THE OWNER, 2026-10-27** —
+put to the owner and answered "leave the catalogue as-is", so it is a ruling and not an unbuilt task, and
+the paragraph beneath the table now separates the three items that cannot be built here from the one that
+was declined. And §14's acceptance table no longer carries "(567 today)": the gate's count is printed by
+`node tools/verify.cjs`, and this document has been wrong every time it carried one.
+
+**`focus-trap` cleared one of its two survivors and not the other, and the second is a fact about the
+sensor rather than about the fix.** It went 2 of 3, the same headline as before, but a different break
+holds it: `CAUGHT one layer root loses the convention, so topLayerEl() finds nothing (24 stops behind the
+scrim)` is new.
+
+**Corrected the same day, because the sentence that followed this one was a false cause.** It read "24
+focus stops were previously invisible because the review screens were a refusal page" — but that break's
+population is `booking-sheet,offer-sheet`, resident screens the admin ruling never touched, so the catch
+cannot be credited to the admin-surface fix. The mechanism behind it is stated in `falsify-focus-trap` and
+was not re-derived here, and the honest position is that this run does not explain it. What the run DID
+establish is worse and is worth the correction: **the class-lookup break has no population at all.**
+Measured with `node .scratch/run-break3.js`, all three of its screens skip under the keyboard pass —
+
+    SKIP admin-review-request — nothing on the screen is the request-update button
+    SKIP admin-review-document — nothing on the screen is the open-document button
+    SKIP admin-review-approve — nothing on the screen is the approve button
+    keyboard stops walked: 0 across 0 screens
+
+— while the same three rows are painted without complaint by `--measure` alone (that walk answers 101
+screens, 0 skips). So the keyboard pass silently covers none of the verification review, the family's
+baseline on those rows passes because it reads 0, and its MISSED verdict was measuring an empty room. This
+is the fourth form of the trap this section has named repeatedly: not a screen missing from the table, not
+a model moved without its field, not a detached node — a mode flag that changes which rows the walk
+accepts, so a family can quote a clean number for a surface only one mode reaches.
+The survivor is now the class-lookup break:
+
+    MISSED  the lookup goes back to class names, which the verification overlay does not have
+            (Tab still stayed inside the layer, so this is not what holds it)
+
+The premise is true, and it was checked against the markup rather than assumed: `verificationReview()`
+paints `<div data-layer="modal" style="position:fixed; …z-index:var(--z-modal)">` (line 12183) — the
+marker, no `.modal-layer` class. So a class-based `topLayerEl()` does miss it. What the run says is that
+missing it does not let the caret out. Two readings remain open, and they need different repairs:
+
+1. the break is **equivalent** here, because on that screen nothing else is focusable in the position the
+   walk reaches — the layer's own controls are the only stops, so the guarantee holds by absence rather
+   than by inerting; or
+2. something else does the work — the walk starts inside the layer and the tab order leaves through the
+   browser rather than through the page, which the tally cannot see as an escape.
+
+Either way the honest consequence is the same and is not that the rule is unneeded: **the class-name
+version of the lookup is still wrong for a different screen** — one where the review overlay sits over a
+sheet, or over a page with buttons in it — and a break that cannot fire on the current population is a
+gap in coverage, not a verdict about the code. Settled by one measurement once the mutex is free: run
+`node tools/falsify-focus-trap.cjs` with the break applied and the walk pointed at a screen where the
+classless overlay is raised above something focusable, then read the whole output rather than the count.
+What is not acceptable is lowering the tally's expectation or deleting the break, which would certify the
+rule on the absence of the evidence that named it.
+
+**`nav-fit` reported the third break of the same shape, and three in one re-run is a finding about the
+suite rather than three findings about the app.**
+
+    MISSED  the fit measures the item's box again, so it stops while the label is still clipped
+            (still 0 everywhere, so neither sensor reads this rule)
+
+That break used to report `cut=10` — it is the one that condemned measuring `.navitem.clientWidth`
+(including the item's 4px horizontal padding) instead of the label's own box, the defect an OPPO
+CPH2179 found on the device while four sessions of sweeps read 0. Reinstating the item box now changes
+nothing at any corner the family drives. Read the three survivors together and the common cause is the
+**population, not the rule**: a break fires only where the measurement it corrupts is *decisive* — the
+headroom break needs a corner where the reserve is actually refused by a margin, the focus break needs a
+classless layer raised over something focusable, the nav break needs a label within 8px of its slot. Each
+of those is a property of the seed and the corner set, and both have moved since the breaks were written:
+Poppins and `--font-figures` moved every measured text width, the admin ruling changed what is painted and
+then what is measured, and the nav work moved the floor conversion from `round` to `ceil`.
+
+So the repair is one act applied to three families, and it is measurement, not editing: for each break,
+find or construct the corner where the rule is decisive, prove the break fires there, and state in the
+family's own comment which corner carries the evidence and why. Deleting a break that reads 0 would retire
+three guards at the moment the app is least able to say whether they still work — and AGENTS already
+records that a break printing MISSED is read, not deleted, five times over. `split-figures` is the control
+case in the same run: it prints **1 of 1 caught** plus one deliberate `QUIET` observation (dropping only
+`white-space:nowrap` while `flex-shrink:0` holds breaks nothing at this corner), which is what an honest
+"this half cannot be isolated here" looks like when it is written down rather than counted.
+
+**#71 is closed by measurement, and it turned out to be two defects rather than one weak check.** The
+gate's weight assertion counted `new Set(uiWeights).size === 4`, which cannot see a deleted face: Poppins
+declares every weight in two subsets (measured on disk — 24 blocks: Poppins 8, Plus Jakarta 8, Atkinson 4,
+Fraunces 4; semibold latin and semibold latin-ext), so withdrawing one leaves four distinct weights and
+the check prints PASS beside an unclaimed WOFF2. The replacement asserts the **relation** between the
+weights — every weight of the UI family must be declared the same number of times — because a fixed count
+is what rotted: Atkinson carries one file per weight and Poppins two, so a number would have failed a
+correct change of subset convention, while a relation passes an added subset and condemns a removed face.
+Proved in memory against a mutant that lives only in a string, so no tracked file was touched while the
+sweep was reading them: `node .scratch/prove-71.js` prints the shipped file at 2/2/2/2 green and the same
+file with exactly one semibold block withdrawn at 1/2/2/2 red, while the old predicate reads green on
+**both**. Gate 739 → 740, committed at `a8e61b6`.
+
+**The second defect: that family's own break had been aiming at the wrong family for a whole pass.**
+`falsify-typography` mutant 4 renames the last **Atkinson** face and names the weight check — but since
+the Poppins swap that check filters on the *UI* family, so the mutation cannot move the number it was
+written to move. That is the survivor the chain just printed (`6 applied, 5 caught`), and it is not a
+behaviour question at all: it is the stale-needle class arriving through a *semantic* change rather than a
+text change, so the needle still matched and the mutant still applied. Re-pointed, two breaks, one per
+guard: withdraw **one** semibold block (old check green, new check red) and withdraw **both** (old check
+red, because the family is then a three-weight family). Recorded here because the family's Edit missed on
+whitespace and the re-point is owed — a check that was just proven in memory is not yet proven in the
+suite, and the difference matters the next time someone edits fonts.css.
+
+**The family re-point was written and then taken back out, deliberately.** The gate check landed and
+is proven in memory (`a8e61b6`), but the two new mutants could not be proven inside this window: the
+filter I wrote to withdraw a Poppins block matched zero blocks, and the cause was escaping, not the
+premise — a quoted heredoc ate one of the two backslashes, so the JS string held the literal letter s
+instead of the whitespace class, and the regex became
+`font-weights*600`. The premise is sound once that layer is removed, and the counts say so: 24 blocks match, 8 carry
+`font-family: 'Poppins'`, 7 carry a 600 weight, so the intersection the break needs is exactly 2. The
+repair is to use `b.indexOf('font-weight: ' + weight + ';')` and no regex at all, then run the family
+once with no other pass alive (it writes fonts.css, which the sweep reads). Reverted rather than
+committed untested: a break that returns the file unchanged prints SKIP and retires a guard while
+looking like a clean run — the failure this document has recorded five times.
+
+**Why the eight-corner figures below come from a second run.** The chain that re-ran the four flagged
+families ended with the sweep appended to the same command and **piped** rather than redirected. The
+harness then reported the task completed at exit code 0, its output file was empty, and the log stopped at
+the stage marker — while the screenshots in `.shots/` carried timestamps sixteen minutes later, proving the
+sweep had really run and really painted every corner. Nothing about the run was recoverable. So the rule
+this repository has written down twice gets a third instance and a sharper form: **a run whose output
+cannot be read is a run that did not happen**, and neither `completed` nor exit 0 is evidence about a stage
+whose stdout went nowhere. It was re-run into `.scratch/sweep-159.log`, and the numbers below are that run.
+
+The lander written for it also refuses to count processes. Measured here in one instant: `ps -W` filtered on
+`node.exe` answered 1 and `tasklist` filtered the same way answered 2, and the filtered form
+(`tasklist //FI "IMAGENAME eq node.exe"`) dies outright when spawned from this shell. A guard that is wrong
+in both directions is worse than no guard, because it reads as a measurement. The three conditions it does
+judge are the run's own eight corner headers, its final verdict line, and `git status` on the file a live
+mutant pass would own — which is the thing a process count was standing in for.
+
+## 160. A break that could not fire, a tally that turned out to be right, and two claims I retracted
+
+Four things came out of the pass that followed §159, and the honest summary is that two of my three
+diagnoses were wrong before a measurement replaced them.
+
+**The chart headroom break is equivalent, and the tally was never blind.** `falsify-chart-collide` break 5
+printed `MISSED … worst escape is 0px`, and the first explanation offered was that the reader could not
+parse a decimal: the tally writes `hangs 2.7px` and the pattern asked for `hangs \d+px`, so nothing matched
+and the number fell to zero. That was true and it was not the cause. Fixing it exposed a second bug in the
+same line — the reduce stripped non-digits and parsed an integer, so a loosened pattern would read 2.7px as
+**27**. A reader that silently over-reads is worse than one that refuses, because it can pass a break on
+the wrong magnitude. The pair is `matchAll(/hangs ([\d.]+)px/)` with `parseFloat`, at `d2b0231`.
+
+Then the mutation was applied by hand and the walk's lines printed whole, which is what this file has been
+told to do instead of reasoning: at admin-dash, 320x638 at 150 percent text, the shipped page paints **0**
+value labels; forcing **both** halves of the drop guard open paints **2**, and the one that rises sits
+17.5px above the PLOT but **0px above its own `.chart-cols` box, overlapping no text**. The chart owns that
+headroom — it is what the reserve is for — so the escape tally had been measuring the right box all along
+and the mutation is harmless at this corner. The break is equivalent, not blocked by a blind sensor.
+
+The family now distinguishes the two kinds of result instead of choosing between green and red: both
+mutations still run and print `OBSERVED` with their tally counts and worst escape, and they stay out of
+`applied` and `caught`, because a mutant that cannot fire anywhere is not coverage and a surviving mutant
+belongs in the aggregate's red column — §82's rule for the redundant half of the same guard, applied here
+at `9400bbe`. The summary line grew its clause after the existing prefix, and the prefix was tested against
+`falsify-all`'s own regex before committing: a family whose summary the runner cannot parse is reported as
+unproven, which would have turned a clean run into a phantom finding.
+
+**The keyboard pass never walks the verification review, so one break has been judging an empty room.**
+`falsify-focus-trap` break 3 swaps `topLayerEl()` back to the class names and asserts that Tab then lands
+behind the scrim. It reads MISSED, and the reason is upstream of both the app and the assertion: run with
+the family's own invocation, all three of its screens skip — `SKIP admin-review-approve — nothing on the
+screen is the approve button` and its two siblings — and the pass answers
+`keyboard stops walked: 0 across 0 screens`. A baseline that requires the tally to read 0 passes on that,
+so the family has been quoting a clean number for a surface it never entered. Stated with its confound,
+because the comparison that seemed to prove it was mode-specific was not a fair one: the no-skip figure
+(101 screens, 0 skips) came from a full `--measure` walk, while the skips came from a `--only=` subset. Two
+runs separate them and they are named in #77 in order — the subset without `--focus`, then the full walk
+with it — and break 3 is not to be re-pointed until one of them answers, because re-pointing onto a second
+empty population repeats the defect rather than fixing it.
+
+**Two of my own claims were wrong and are corrected in place rather than edited away.** The first: §159
+said focus-trap's new `24 stops behind the scrim` was previously invisible because the review screens were
+a refusal page — that break's population is `booking-sheet` and `offer-sheet`, resident screens the admin
+ruling never touched, so the fix cannot own the catch, and the corrected text says the run does not explain
+it. The second: a probe read 0 value labels because it asked for `.chart-value`, which appears once in a
+template while the painted class is `.chart-val`; it then fell through to a computed line height and
+printed a reserve of 60.5 units "against a cap of 50.2", which I quoted as a measurement. It was a fallback
+wearing one. The numbers in this section come from the corrected selector, and the general rule is the one
+§31 has been writing for pages: print the population the probe saw, and when it saw none, refuse.
+
+**One of these was bought with a rewrite of history, and only after asking.** The commit that landed §159
+reused `c38add6`'s subject — the very commit whose vacuous figure the section retires — because the
+subject checker was piped through `tail` and the shell therefore saw tail's exit 0 and committed over a
+refusal the checker had genuinely printed. `audit-commit-subjects` went to one unrecorded finding and exit
+1. Repairing it meant amending, the owner approved it, and `87d7fc5` carries a subject derived from its own
+diff with the audit back at 7 recorded, 0 findings, exit 0. The rule it leaves behind is narrower than
+"read the exit code": a checker's verdict is its exit status, and a pipeline has more than one of those.
+
+**The build copies agree again on this machine.** `node tools/build-web-dist.cjs` rebuilt `dist/` (69 files,
+11,383 KB, all 29 referenced paths resolving, no LFS pointers standing in for bytes), and the staged
+Android asset was refreshed from the source — after its previous bytes were copied to
+`.scratch/Sukinnect-asset-backup-fd176312.html` and verified identical, because `Sukinnect-Android/` is
+untracked by the owner's standing decision and `git checkout` is not an undo there.
+`node tools/audit-build-bytes.cjs` now reads source, `dist/` and the asset all at `ed87a258…` with
+`findings: 1`: the built `preview.44` APK still carries `fd176312…`. That one difference is not a repo task
+— it needs a gradle build and a handset, and the installed build's own reading is the only proof of it.
+
+**The aggregate after all of this.** Quote the run rather than this sentence: `node tools/falsify-all.cjs`,
+whose rows are in `.scratch/agg-69.log`, with the per-family figures read from the log and the totals
+summed independently of the line the runner itself prints.
+
+**The aggregate that ran after all of it, and the one row it already stale.** `node tools/falsify-all.cjs`
+answered **67 families, 395 mutants applied, 393 caught, 1 not applied, 2 missed, 4 families flagged**, and
+the rows were summed a second way with `awk` over the log rather than trusting the runner's own arithmetic
+(`rows=67 applied=395 caught=393 not_applied=1 missed=2`), with `ls tools/falsify-*.cjs` minus the runner
+also answering 67 — so no family was missing from the pass. The four flagged rows and what each one means:
+
+| row | reading | disposition |
+|---|---|---|
+| `build-bytes` 0/0/0/0 | printed no summary — nothing was proven | the four-copy comparison refuses while the built APK differs; it is a refusal, not a pass, and it clears with the install in #72 |
+| `focus-trap` 3/2 + 1 missed | the class-lookup break has no population | #77 — the three verification-review rows skip when that family invokes them, so the tally it must dirty reads 0 over 0 screens |
+| `nav-fit` 5/4 + 1 missed | the item-box break changes no outcome at any corner it drives | #75 — needs a corner where the label is within the item's own padding of its slot |
+| `trust` 5/5 + 1 not applied | NEEDLE MISSED — the `bookingsForProvider` break matched 2 and refused to apply | repaired after this pass, at `ebf2533`: scoped to the function's own body, now 6 applied / 6 caught / 0 not applied |
+
+So the figure above is stale by exactly one row, and the honest instruction to the next reader is the one
+this file has been writing for pages: quote a pass, say which pass, and let the number be `node
+tools/falsify-all.cjs` rather than a sentence carried forward.
+
+## 161. The three visual-redesign documents left the root for Old/ — the archive pass the owner asked for
+
+**What moved.** `SUKINNECT_GRAB_INSPIRED_VISUAL_REDESIGN_PROMPT.md`, `SUKINNECT_VISUAL_REDESIGN_PLAN.md`
+and `SUKINNECT_CORRECTIVE_VISUAL_REDESIGN_IMPLEMENTATION_PROMPT.md` were moved with `git mv` into
+`Old/2026-10-10_visual-redesign-prompts/`. `sha256sum` was run on each before and after the move and
+the values are identical, and `git diff -M --stat` reports 100% similarity for all three renames —
+the files are byte-for-byte what they were, and their history follows them.
+
+**Why these three and nothing else.** The brief's status is settled in its own record: the corrective
+opens by superseding the older prompt and plan wherever they conflict on assets, fonts, visualization
+libraries or implementation; the plan's P2 was overtaken by the corrective's asset replacement and its
+typography work by the owner's 2026-10-27 ruling (§152); the corrective's asset and chart work is
+implemented and still verified by today's gates. No tool, page, netlify path or build allowlist reads
+any of them: `grep -rn` over `tools/`, both HTML files and `netlify.toml` for the three names answers
+nothing outside this change-log's history. The plan's per-phase verdicts, and the evidence each one
+still carries, are written out in the folder's README requirement checklist.
+
+**What stayed, deliberately.** `Sukinnect.html` and `reicon.js` stay at the root: `build-web-dist.cjs`
+lists both in its SERVE allowlist and refuses a build when a listed path is missing, and the owner's
+decision on 2026-11-05 was to keep them while `Sukinnect.html` remains the shipped file. The tag
+`legacy-sukinnect-v1` was created now anyway, at `950eab7` — the last commit that changed the shipped
+file — so the exact prototype bytes stay findable without the move. `SUKINNECT_UX_RELIABILITY_MVP_PLAN.md`
+stays too: seven tools read it by path (`audit-citations`, `audit-matrix-coverage`,
+`audit-report-coverage`, `audit-row-instruments`, and their `falsify-*` counterparts).
+`avatars/avatar-{13,14,16,17}.png` (7,135 / 5,861 / 7,039 / 8,321 bytes, added 2026-09-29) are
+referenced by neither page; they are listed as deletion candidates in the index, awaiting approval,
+not deleted.
+
+**The records.** `Old/INDEX.md` is the master table (archived, still-live, deleted-from-tree-but-
+restorable, deletion candidates, and the list-only scan of the repo's parent, Downloads, Desktop and
+Documents). The folder README carries per-file hashes and the requirement checklists, including the
+two files history deleted — `SUKINNECT_MASTER_IMPLEMENTATION_PROMPT.md` and
+`SUKINNECT_UIUX_REDESIGN_PROMPT.md`, both last held by `108bdb4~1`, and the never-authored `lottie/`
+of `fab842b` — each with its restore command and a rule that they are not restored without asking.
+
+**Verifier over the move.** `node tools/verify.cjs` → all 740 checks passed. `node
+tools/build-web-dist.cjs` → `dist/ — 69 files, 11383 KB`, all 29 referenced paths resolve, no LFS
+pointers, and its own unpublished list names `Old` explicitly; `find dist -type d -name Old` and a
+`*redesign*`/`Old/` file search answer zero. `node tools/audit-build-bytes.cjs` → source, `dist/` and
+the staged Android asset all agree at `ed87a258…` with findings 1 (the built `preview.44` APK still
+carries `fd176312…` — handset work for #72, untouched here). `node tools/audit-open-items.cjs` still
+runs and answers 43 deferral claims, no refusal. The re-run of the old_PATH greps after the move finds
+mentions of the three files only in `CHANGES.md` history and in the new `Old/` records — the one live
+mention, README's "three prompt documents stay at the root", is updated by this section's README edit.
+
+**Nothing outside the repository was moved or deleted.** The outside scan (list-only, in the index)
+found one confirmed duplicate: `Downloads/SUKINNECT_CORRECTIVE_VISUAL_REDESIGN_IMPLEMENTATION_PROMPT (1).md`
+hashes identical (`ef548dd2…`) to the archived copy; everything else there — pitch-deck v2, master-plan
+DOCX files, the concept-note lineage, the UX *PROMPT* sibling of the live plan, `Sukinnect-Release/`
+with its zip — is listed for the owner's decision, untouched.
+
+## 162. The mobile-app visual pass: one icon family, one chrome system, discovery first, and the AI category art retired
+
+Brief: `Downloads/SUKINNECT_MOBILE_APP_UI_REDESIGN_PROMPT.md`, implemented on branch
+`feat/mobile-app-visual-pass` in slices, one commit each. Before it began the tree was dirty with
+exactly the two mutations `falsify-bar-titles` and `falsify-figures` write — bytes archived to
+`.scratch/debris-2026-11-05/`, both files restored, the gate re-run before any number was quoted.
+That is the documented recovery for a cancelled mutant pass, not a repair of someone's work.
+
+**What landed.** Material Symbols (Apache-2.0, official repository, commit `10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7`,
+retrieved 2026-11-05) replaces the inline reicon-derived set: 47 glyphs, outlined and filled, drawn
+in their own 960-unit box through an unchanged `ic(name,size)`. Each trade now draws its own glyph
+instead of an abstract shape, and gains a `short` tile label. `SERVICE_ART`, `CAT_ART_PX` and
+`catArt()` are gone and the seven AI PNGs are unreferenced — left on disk in the repository and moved
+out of the staged Android bundle, because deleting them is the owner's call. Page and hairline went
+neutral (`#F6F7FB` / `#E6E8EF`): "everything is tinted lavender" was true of both, and the brand tint
+is now reserved for selection. The digits moved to Plus Jakarta Sans after measurement — Atkinson is
+tabular but paints a slashed zero, Jakarta is tabular and slashless, Poppins carries no tabular
+feature at all (184.33px for `111111` against 361.73px for `000000`) — while the words stay Poppins by
+the ruling of 2026-10-27. The top bar is one light surface on every screen, 56px, with a bare
+chevron; a pushed screen has one bottom bar rather than two stacked; the service grid moved under the
+search field and became four columns with an eighth "All services" tile, so its bottom edge lands at
+471px against a navigation top of 757px at 390x844. Status text is sentence case.
+`assets/ICON-LICENSES.md` and `DESIGN-TOKENS.md` are generated from what the page ships, and README's
+Assets table matches it.
+
+**Gates updated, not weakened.** The 48-entry icon ceiling became a population rule — every glyph is
+reached by a call site or named as a deliberate addition — after the audit learned two more ways a
+name arrives (`navItem(id,icon,label)` and `AUTH_ROLE_ICON`), which is how deleting `route` and
+`wrench` blanked the FSM glyph and the provider role chip. The four category-raster checks became the
+drawn-glyph contract, with comments stripped first, because a sentence explaining the retirement
+names the same path as a rule that would still use it. The figures check asserts a relation instead
+of pinning the literal "Atkinson Next", and the brand-bar-ink check now asks the stronger question
+the new chrome implies: no control in a bar paints on-brand ink at all.
+
+**What the instruments could not see, and what they caught.** The baseline walk was already all-zero
+across 25 tallies while every §2.2 finding was real — those sensors measure geometry and contrast,
+not proportion or language. Making the bar light then produced 75 contrast failures, then 12, then 0:
+white ink left behind by four controls written for the brand plate, invisible to the gate because the
+gate calls handlers and contrast is paint. `tools/probe-visual-contract.js` adds the five tallies the
+brief asked for; `tools/falsify-visual-contract.cjs` proves all five can fail (5 of 5 caught, 0
+missed, 0 not applied). Its own first run reported one break as SKIP over a needle written with \n
+against a CRLF file — the family's assumption, not a stale rule — so needles are normalised to the
+target's separator now.
+
+**Reverted, and why.** The tonal pill behind the active navigation icon was attempted twice and
+painted as a detached blob with no glyph inside it: the element the CSS names is not the wrapper the
+icon sits in. An identical-or-worse reading after a change is a falsified hypothesis, so it is out,
+and the active state keeps position, weight, colour and the accent rule. A real indicator needs
+`navItem()` itself to own a positioned wrapper.
+
+**Not done, stated plainly.** The brief's Slices 4 and 5 are partial: the login/splash redesign, the
+sheet pattern, the labelled booking stepper (P10), monogram avatars (A3), the admin console's numeral
+column (P6) and the provider/admin screens still carry the old proportions. The 12px `label` role was
+not adopted, because AGENTS.md §68's 14px floor is an owner accessibility ruling measured on two
+handsets. The built APK copy still disagrees (`audit-build-bytes` findings 1) because rebuilding it is
+the acceptance step. None of this has been looked at on a handset, and no screen-reader output was
+heard.
+
+## 163. The follow-up cuts: the entry sheet, the tracker's words, and two chart attempts withdrawn
+
+Four things happened after §162 was written, and two of them are worth more than the fixes.
+
+**The entry screen overflowed its own sheet by 6px** once the fields went to 52px, and the height was
+not the cause. `.auth-forgot` carries `margin-left:-6px; margin-right:-6px` — a widening that only
+made sense while `.auth-sheet` had 20px of inner padding. Removing the card's padding turned that
+widening into an overflow past the clipping box, and the camera's `controls no tap can reach` tally
+named it at the anchor corner. The margins go; the 44px floor stays. The three legal documents were
+also painted as `.auth-switch` chips — each a 44px pill, so the row wrapped to three lines — and
+became text links at the same floor. Two lessons in one defect: **a rule that removes a container's
+padding has to audit the children that were compensating for it**, and **reusing a component's class
+for a different idea inherits that component's mass.**
+
+**The tracker now names its step.** Six marks on the active-booking card said a job was somewhere on
+a path without saying where. One line, built from the same `STAGES` array the marks are drawn from and
+the same `label()` the app already uses, says the step and the count. Six labels across a 320px card
+would be the collision this file has been asked to avoid five times over, so the naming is a line
+rather than a rail.
+
+**Two chart fixes were made, measured, and taken back.** The axis label that hangs 3px outside its
+plot at default width and 200% text was answered first by anchoring the last *drawn* label to the
+right — which cleared the escape and laid "Sep 14" and "Oct 26" 34x43px on top of each other, because
+a right-anchored edge label points back into its neighbour. The second attempt clamped the label's
+position instead and changed neither tally. Two identical-or-worse readings are two falsified
+hypotheses, so both are reverted and the escape stands as a finding. `git diff` over the whole branch
+shows no line of chart code changed by this pass, which is what makes it pre-existing rather than
+mine, and the earlier session that measured the same band reached the same conclusion in the comment
+that is now back where it was.
+
+**The monogram swap is withdrawn, and the reason is the interesting part.** Two splices of
+`photoFor`/`photoAvatar` left the suite unable to boot — the second failed with
+`CUSTOMERS is not defined` across all 23 checks in the suite — and the gate caught both, so the file
+was restored from the copy taken before the edit and the cartoon faces stay. I did not establish
+*which* line of the inserted block read `CUSTOMERS` before its declaration, and I am not going to
+write a mechanism I did not verify. What is established is the shape of the failure: a bulk text
+replacement moved a helper across a `const` boundary, nothing about the rendered screens would have
+shown it, and only the suite noticed. That is why this change belongs with the harness, which boots
+the page and can see a reference order, and not with another string splice.
+
+## 164. Slice 5, and three instruments that had been quietly pinned to spellings this pass rewrote
+
+**The admin console stopped being an HTML list (P6).** Each "Needs attention" row led with a coloured
+numeral in a `min-width:60px` gutter — the bare number, the gap, the missing icon the brief names. The
+numeral becomes a severity glyph in a tonal container (warning, brand, error, success, neutral — the
+semantic inks already measured for contrast, so no colour is invented) and the count moves into a chip
+beside the words it counts. The rows are still `.job-row`s with a chevron, which an earlier pass had
+already earned.
+
+**The bookings pill said "ongoing".** Removing `text-transform:uppercase` from the status pill was
+right, and one of four call sites had been letting the transform do the capitalising of a raw state
+code. A lowercase word is not clipped, collides with nothing, is on the scale and clears contrast:
+only reading the markup found it. Every chip now prints `label(b.status)`.
+
+**Provider detail toward §5**: a 64px identity monogram, the name at title-lg, the chat action on the
+named tonal tier instead of a hand-typed inline style, and the sticky action bar carrying the one soft
+shadow §3.1 allows it. §5 asks for chat and contact as *two equal* tonal buttons; making them literally
+equal is the defect §70 and `.btn.tertiary` exist to prevent — two byte-identical quiet buttons read as
+equally the next thing to do — so the call keeps its demotion and the deviation is listed rather than
+resolved by a silent edit. The monogram's ink had to follow its container: moving the plate from brand
+blue to the pale primary container left white initials on it at 1.45:1, measured at four screens the
+moment the plate changed.
+
+**Three instruments were stale, not the app.** `falsify-bar-titles` died in its own pre-flight over two
+needles pinned to spellings this pass rewrote (the root heading gained `font-weight:700`; the on-bar
+control moved off translucent white onto the tonal pair), and its sixth break named a check that no
+longer exists — deleting a root-tab variant is *equivalent* now that every bar is light, so the break
+is repointed at the hazard the new rule actually forbids and reads 7 of 7. The gate's queue-number
+reader assumed the count sat before the words; it prefers the trailing chip now, because the leading
+pattern would match the `20` inside `ic('file-text',20)`. And `falsify-visual-contract` printed its
+verdict behind its own name, which the aggregate cannot parse, so the row read "nothing was proven" —
+it prints the conventional summary line as well now. All three are the same rule arriving again: **an
+instrument's assumption about how code is shaped is part of what the code has to respect.**
+
+**Two findings closed by reading rather than by changing.** D7 was reported as an empty dashed box in
+the brief's sandbox; this build already degrades to a pin glyph, the barangay, an honestly-labelled
+sample distance and the service radius through `mapFallback()`, and the walk's network tally shows only
+`*.tile.openstreetmap.org` leaving the device. P7's icon complaint is resolved by the family swap: the
+admin's Help Desk draws `scale`, which `ICON_MEANING` documents as "cases being read for evidence" —
+adjudication, not the external-link arrow the brief saw. Neither was re-drawn, because both were
+already right and the honest move was to say so.
+
+**What the mutation suite still refuses, and why that is correct.** `falsify-build-bytes` aborts on its
+own baseline: the audit reports the built APK disagreeing with the source, which is the accepted state
+until the owner rebuilds it after acceptance. The family is right to refuse — the invariant it guards
+is genuinely unmet — and the fix is a rebuild, not a relaxed needle.
+
+## 165. Slice 5b: the monograms land on the third attempt, two lists stop being cards, and a tier gains its missing member
+
+**A3, done.** The cartoon faces are out of the UI. The first two attempts at this change died the same
+way and neither death was in the app: the splice located the end of `photoAvatar()` by searching for
+the next `}` on its own line, which lives *inside* the following function's template, so it cut
+`serviceAvatar` in half and the suite crashed. The third attempt takes its boundary from the next
+function's **declaration** — a string that exists exactly once — and asserts uniqueness before
+writing. The first version also read `CUSTOMERS`, which is declared 36 lines further down than the
+helper, and the temporal dead zone punished it; the resolver now reads only the object the caller
+holds, the profile the app greets from, and `PROVIDERS`, all of which are above it. A record with no
+name paints the person glyph rather than an invented initial or a question mark, because the disc must
+not claim an identity the record does not hold. `serviceAvatar`'s photo-first branch goes with it: a
+helper that returns a face whenever `PRO_PHOTOS` has an id would undo the change on exactly the rows
+§4.4 is about.
+
+**P1, two lists.** The provider's waiting requests and the conversation list were bordered, filled,
+rounded blocks sitting inside another block — the card-in-card that reads as a web dashboard. Each is
+now a row of the list component with a hairline between siblings, and the request list stops adding
+9px of margin per item, which was the other half of why six of them looked like six cards. The data
+attributes, handlers and aria labels are unchanged: this is a container decision, not a behaviour one.
+
+**A tier that could not say what the rule said.** §5 asks for the destructive action as a text button
+at the bottom. The button system had primary, secondary, tertiary and destructive-fill and **no
+destructive member of the demotion tier**, so both hubs hand-typed the same inline recipe — surface
+fill, alert border, error ink — which is a per-screen one-off and the same visual weight as the
+primary action above it. `.btn.text-danger` is the missing vocabulary: one class, the same 44px floor,
+the pairing already measured at 5.5:1. This is the same shape as the §70 lesson this file already
+records — *when a stated rule cannot be expressed, look for the missing vocabulary before looking for
+the missing check* — arriving one tier over.
+
+**Measured after:** 101 screens with every failure tally zero (tap floor, contrast, clipping,
+sub-floor type, content under the nav, unreachable controls, horizontal overflow, no console errors),
+741 gate checks, and the eight-corner sweep running against this state.
+
+
+## 166. The job path became one component, and the pass found the screen had four buttons for two decisions
+
+**What the brief asked.** §5's row for "Provider Dashboard / Job / Jobs" wants "the 6-step job flow
+as a stepper with a single prominent primary action per state", and its row for booking detail/tracking
+wants a "labeled vertical or horizontal stepper … the current step highlighted". §5's last row wants
+"no page-specific one-offs" anywhere.
+
+**What was there.** The stepper existed once, inside `residentHome()`, with its own array of six state
+codes AND its own object of six step words. That second list is the defect: it called the state the
+machine names `Accepted` a step called `Scheduled`, so the Home card and the tracking card told one
+visit two different stories in two vocabularies. The provider's job screen had no path at all.
+
+**What landed.**
+
+- `JOB_STAGES`, `stageIndexOf()`, `stepBar()` and `stepPath()` are top level, beside `label()`,
+  `stateHint()` and `nextStepFor()` — the three functions that already owned the state vocabulary.
+  The step word is `label(code)`. `STAGE_WORDS` is deleted, not corrected, because a second list of
+  names for one vocabulary is the class of defect, not an instance of it.
+- `stepPath()` is a labelled vertical stepper: every step named, the current one carrying the
+  machine's own hint, and each step already walked carrying the stamp the record wrote for it
+  (`STEP_STAMPS`, with `createdAt` for the request) — and nothing at all where no record wrote one.
+  A stepper may not invent the minute something happened.
+- `timelineRows(b, { skipPath: true })` is the same function with one new option. The tracking card
+  used to print the six path words as event rows; now the path is the stepper's business and the
+  event list prints only what the path cannot hold — a reschedule, a case, a walk-away. When the job
+  has LEFT the path (cancelled, unanswered, no one home) the stepper paints nothing and the whole
+  history stays, because there the event list is the only account there is.
+- The provider's job screen: `jobActionBar(b, { answerAbove })`. Reading the painted button list —
+  not a tally — found four buttons for two decisions: the request card offered "Accept request" and
+  "Decline", and the action bar below offered the same acts again as "Accept this request" and
+  "Decline this request". The bar now keeps the path and the notes and drops the moves when the
+  answer is above, and the surviving button takes its words from `JOB_VERBS` — one name for one act.
+- The client on that screen is a monogram, and its status cell prints `label()` instead of
+  `text-transform:capitalize` over `label()`.
+- The concierge's two example prompts are a `CONCIERGE_PROMPTS` table drawn through `button.chip`,
+  which already decides their padding, border, background and colour. They were carrying all four
+  inline, so a third prompt would have been a third copy of a component.
+- P9: the provider dashboard's "2 more scheduled jobs" row packed date, hour and the job's own words
+  into one caption. The date and hour keep line one; the summary gets line two.
+
+**Two gate checks had to be re-pointed, and neither was relaxed.** `no control in the app bar paints
+on-brand ink` kept a hand-kept list of four exempt class names; the stepper's filled disc was a
+fifth honest case and the chat tag had already left the list on its own. It measures now: a rule may
+carry white ink exactly when the same declaration block brings its own dark surface, with a floor of
+three such rules so a scan matching nothing cannot pass. `the accept button says accept, not
+accepted` asserted that the string `>Accepted<` appeared nowhere on the screen, which the path is
+entitled to do; it is scoped to `<button>` now and additionally REQUIRES the step word to be present,
+so a build with no stepper at all fails it rather than passing it.
+
+**Instruments added.** `tools/probe-action-duplication.js`, `tools/probe-step-words-agree.js`,
+`tools/probe-flat-palette.js` (the pass's third, fourth and fifth probes), each with its own
+invention-of-findings history written in its header: the action probe scored booking LISTS against
+one booking's moves (16 phantom defects) and then condemned "Open document" for appearing once per
+document in a list; the step-word probe compared every chip on a screen to the first booking it
+found (2 phantom defects) and then read `state.selectedBookingId` as the screen's subject, which is a
+global that survives navigation and reported "screens about one job: 101" — every screen in the app,
+including the login page. The rules that survived are asserted at the unit the real case lived in: a
+card, and the screen that paints the path.
+
+`tools/falsify-painted-contracts.cjs` runs six breaks over five screens: three plants and three
+refusals, where a refusal is the probe losing its own subject and answering `NO CONCLUSION` instead
+of zero. It taught two more lessons: a gradient planted BEFORE a `background` shorthand paints
+nothing, so that break was equivalent rather than caught; and a probe that filters its surfaces by
+the words it already expects is blind to the novel word it exists to catch.
+
+`tools/falsify-one-action.cjs` proves the new gate check three ways — the bar ignoring the flag, the
+caller forgetting to set it, and one primary left standing while two buttons carry the same words.
+The first two condemn the same painting from two doors, which is recorded rather than smoothed over.
+
+**Numbers, from the runs that printed them.** `node tools/verify.cjs` 741 → 742.
+`node tools/shot.cjs --list` 101 → 102 screens (the provider's job path sits below the fold, so the
+walk gained a row that scrolls to it — a picture of the wrong card is not a measurement).
+`node tools/falsify-one-action.cjs` 3 of 3. `node tools/falsify-painted-contracts.cjs` 6 of 6,
+0 not applied, page and probes restored.
+
+## 167. The offline claim became a run, and the family that proves it found its own wrong expectation
+
+**What the brief asked.** §1.7 allows exactly one remote dependency — OpenStreetMap tiles — and §81
+forbids a remote dependency for anything essential. §8 lists "offline check" among the verification
+runs. D7 in the findings ledger was the open half: the brief's sandbox saw an empty dashed box where
+the map should be.
+
+**What the evidence was before.** A tally counting the requests that DID leave the device, plus a
+reading of `mapFallback()`. That is the same claim from the wrong side: it proves what the app asks
+for, not what the app does when the ask fails.
+
+**What landed.**
+- `shot.cjs --offline` asks Chrome to emulate a device with no network (`Network.enable`, then
+  `Network.emulateNetworkConditions({ offline: true, … })`), the same mechanism `--dark` and
+  `--reduced-motion` already used.
+- `tools/probe-offline-map.js` waits for the give-up and reads what was painted in the map's place.
+  On `provider-detail` with the network gone it answers `fallbackPainted: true`,
+  `fallbackWords: "Brgy. Poblacion · about 0.8 km away (sample figure, not measured from you) They
+  travel up to 5 km from there."`, `tilesRequested: 0`, `blankTiles: 0`. A screen that mounts no map
+  abstains with `mapsOnScreen: 0` rather than reporting a pass, because "no map here" is a legitimate
+  answer and scoring it as a clean run would be the instrument inventing a defect out of its own
+  population.
+- The full walk re-run with `--offline` reports every failure tally 0. The one line that stays
+  nonzero is `requests that left the device for a network: 1330` — and under `--offline` that tally
+  means *requests attempted*, because CDP reports the send even when nothing can arrive. Stated
+  rather than quietly re-interpreted: the tally is a counter of asks, not of arrivals.
+
+**The family's own wrong expectation.** `falsify-painted-contracts` grew two breaks for the map
+probe. I wrote the second as `expect: 'abstain'`, reasoning that blinding the fallback lookup would
+make the probe report no map. It printed `MISSED (still saw a map: 1)` — the mount list and the
+fallback lookup are two different reads, so blinding one leaves the other intact, and the correct
+consequence is a FINDING ("a map was mounted and no fallback was painted"), which is the stronger
+property. Re-pointed and re-run: **8 of 8 breaks caught, 0 not applied**, page and probes restored.
+This is the same rule the repository has written down before — an `expect:` string is a claim about
+output and has to be copied from a real run, not written from the intent behind it.
+
+**Two patcher defects in the scripts that got here**, both caught by an anchor count before they
+could reach a commit, and both worth recording because they are the same shape:
+- a `sub()` helper that closes over the ORIGINAL text instead of the running result applies only its
+  LAST edit and leaves the file half-changed — `shot.cjs` gained the `if (OFFLINE)` block without the
+  `const OFFLINE` that defines it, and died on the first call with `OFFLINE is not defined`;
+- a needle written from memory of what a line said matched nothing twice (`'CAUGHT  ' + b.name + ' →`
+  versus the file's two spaces before the arrow). The second failure is the cheaper one to avoid:
+  print the count, then read the line.
+
+**Numbers, from the runs that printed them.** `node tools/falsify-painted-contracts.cjs` 8 of 8.
+`node tools/verify.cjs` 742. `node tools/shot.cjs --measure --offline` — every failure tally 0.
+
+## 168. The audit caught the ledger over-claiming A3, and the fix led to a pre-warm nobody needed
+
+**What the ledger said, and what was true.** §4.5's row read "A3 fixed — monograms replace the cartoon
+faces across the UI". Two admin screens were still painting an avatar PNG: the provider-management
+profile (`VERIF_PHOTOS[provider.id]`) and the verification review
+(`VERIF_PHOTOS[app.id] || 'avatars/avatar-10.png'`). The second is the worse one, and it is a class
+this file has closed five times over: an applicant with no row in the table was drawn as **`maria`**.
+The identity-substitution defect at `providerOf()`, at the record lookups, at the id-carrying entries,
+at the register form — arriving through an image path. No instrument can see it: a wrong face is not
+clipped, collides with nothing, is on the type scale and clears contrast.
+
+**How it was found.** Not by a run. By the completion audit's own instruction to re-check the rows the
+pass had already closed: the check counted `avatars/` occurrences in the page, got 21, and went to look
+at them instead of accepting the ledger.
+
+**What was fixed, and what the fix exposed.** Both sites now call `photoAvatar`, the one function that
+decides between a monogram and a real upload, so §4.5's image slot is intact and the fallback that
+borrowed a named applicant is gone. Removing the paint sites then made a second thing visible:
+`warmAvatars()` is an IIFE that preloads all 22 avatar PNGs on boot. Its stated reason — an `<img>`
+inserted by a re-render flashes an empty disc on `file://`, and that flicker made taps feel like page
+reloads — describes a defect class that left the build when the monograms landed. So the app was
+paying a decode cost on a low-spec device for nothing, and, more to the point for §4.5, the PNGs could
+not honestly be called *unreferenced* while every one of them was still being requested at startup.
+The warm-up is deleted; `PRO_PHOTOS`, `VERIF_PHOTOS`, `SELF_PHOTOS` and `photoFor()` stay, because
+that is the upload slot, and `SELF_PHOTOS` is still read by `photoFor`.
+
+**§3.4's two chrome asks, applied rather than substituted.** `FSM` → `Jobs` on the nav item, the
+screen header, and the one button that said "Open FSM dispatch" — the tab value `'fsm'`,
+`providerFSM()` and every handler untouched, because §1.3 protects the navigation and history logic,
+not the word. And the admin Help Desk nav glyph became `support_agent` (Material Symbols, same family
+and same commit as the other 47), with `scale` left on the case objects themselves where it reads
+"cases being read for evidence". The pass had substituted `scale` for the nav item and argued it;
+§1.11 licenses apply-and-disclose only when an AGENTS.md rule blocks the brief, and none does here, so
+the brief's option applies and the reasoning is recorded instead of the substitution.
+
+**Numbers, from the runs that printed them.** `node tools/verify.cjs`, `node tools/measure.cjs`
+(glyph census), `node tools/shot.cjs --measure` over the changed screens, and
+`node tools/falsify-painted-contracts.cjs` after it gained the painted-holes break — all printed in
+the chain log this section was written from.
+
+## 169. The width nobody had swept, the walk row that had never painted, and a licence record one glyph short
+
+**The brief's grid found what the repository's corners could not.** §8 asks for 320, 360, 390 and 430
+CSS px at text scale 1.0 and 1.35, in app mode and in the desktop frame. The sweep in
+`tools/sweep-text-scale.cjs` had eight corners, every one of them produced by a device that had been
+photographed or measured — 320, the default 390, and the vivo's 450 — and none of them was 360. Running
+the brief's own grid rather than the repo's habit found three defects on the first pass, all the same
+one: the booking sheet's payment rail left **2px of "Cash on Arrival" past its own scroller**, on
+`booking-sheet`, `fruit-sheet` and `fruit-harvest-sheet`, at the **default** text size. That is the
+shape every corner in the old set was blind to: the eight pair narrow panels with large text because
+that is where clipping was found, and a clip produced by an ordinary width at ordinary type is not a
+narrow-times-large case at all. §5 names it as a failure outright — "never half-cut chips" — and 2px is
+not a scroll a thumb will ever finish, so `.req-rail` now wraps when the panel cannot hold the row:
+`flex-wrap:wrap`, with the comment naming the width that found it. A rail that fits still paints one
+row, so nothing moves at 390.
+
+**The corners stay, because the width is a class of phone, not an accident.** `360 CSS px @ 100%` and
+`@ 135%` are in `DEFAULT_CASES` now (ten corners; the run prints its own list, and the sentence in
+AGENTS.md §68 that used to be the count says so instead of carrying one), and the guard on the defect is
+the measurement that found it: the camera's `controls no tap can reach` tally, which reported the three
+clips and now reads 0 at that width. No new gate check was written for the wrap, because a check that
+re-reads the declaration would assert the *spelling* while the tally asserts the *pixels*, and the
+pixels are what the brief asks about.
+
+**And the same run surfaced a row of the walk that has never painted anything.** Every corner printed
+`no console errors across **101** screens` while `node tools/shot.cjs --list` counts **102**, and the
+line explaining it was one of the quieter formats in this repository:
+
+```
+  SKIP provider-job-path — Cannot read properties of undefined (reading 'id')
+```
+
+The row asks for a job already on the path — `bookingsForProvider().find(b => b.status === 'ongoing').id`
+— and `bookingsForProvider()` reads `CURRENT_PROVIDER_ID`. Nine rows of the walk call
+`applyProviderIdentity('p7')` for the fruit pilot and none of them restores it, so by the time the walk reaches `provider-job-path`
+it is asking the **fruit harvester** for the plumber's ongoing job. Run alone the row paints
+(`shot provider-job-path shows "Booking details"`), which is precisely why it hid: a one-row run starts
+from a clean store and the default identity, and the pass that added it was checked with one row. So the
+stepper — the component §166 built and §10's report pairs a frame of — has never been measured by
+anything, and every failure tally in ten corners stayed 0 because the screen it would have applied to
+was not in the run.
+
+Two fixes, in that order of importance:
+
+- The walk's per-row preamble now restores the signed-in provider before each row's own navigation,
+  beside the `clearModals()`, `isChatOpen` and Back-debt resets that were already there. A row that
+  wants another account sets it in its own entry — the fruit rows do — and a row that names a screen
+  gets the account that screen's name claims. This is the fourth form of the trap this file has
+  written four times: *a walk that moves the model without moving the field photographs a state nobody
+  can reach*; here the model moved eleven rows earlier and the field never came back.
+- A skipped row is now a **failing tally**. `tools/shot.cjs` prints
+  `camera rows that never painted a screen`, and because `sweep-text-scale.cjs` treats any count it does
+  not recognise as must-be-zero, a row that dies is a red corner rather than a smaller screen count.
+  Before this, the instrument's own failure could only be found by comparing two numbers in two
+  different tools. The tally is guarded in turn: the gate check
+  `a camera row that never paints is counted by the run, not only printed` pins that the `SKIP` branch
+  and the `skipped.push` are one statement, and `node tools/falsify-camera-surfaces.cjs` gained a fourth
+  break that severs them and requires that check to fail. Gate 742 → 743.
+
+**A stale frame satisfied the pairing check the same walk should have produced.** The report stage
+copies 24 named screens out of `.shots/` and prints `missing from the walk: none` — a sentence that was
+false, because `existsSync` does not ask *when*. `provider-job-path.png` was stamped 04:58 while every
+other frame carried 05:18: it came from a one-row run, not the walk. So the report's stepper frame was
+real and the claim attached to it was not, which is the same defect as a tally reading 0 over a sensor
+that never fired. The refresher is `.scratch/refresh-after-2.cjs` now: it deletes the 24 frames before
+the walk, requires each to reappear with an mtime after the run started, reads the walk's own `SKIP`
+lines, compares the screens it painted against `--list`, and exits 1 on any of the four.
+
+**Two hand-kept records went stale in the same direction, and both were readers rather than counts.**
+`assets/ICON-LICENSES.md` shipped **47 rows against the 48 glyphs `measure.cjs` counts**, because the
+generator's pattern required `{o:` and the entry added for the Help Desk was written `{o: ` — one space,
+and the one glyph whose provenance the record exists to state was the glyph missing from it. The row
+count is now compared against the `ms: "` declarations inside the block, so the guard is
+"every glyph drawn has a row", not "at least forty rows parsed". README's command list lost its
+`--offline` line for a reason this file has written down before: a patcher's `sub()` helper closed over
+the original `src` instead of the running value, so its second substitution silently discarded its
+first — the prose landed, the command did not, and the script's own report (`command listed: false`) was
+the only honest line in it.
+
+**A ratchet nobody runs went red, and the number is this pass's own work.**
+`node tools/audit-design-consistency.cjs` reports `inline_styles 1119 [RISEN from 1001]` and
+`literal_radii 20 [RISEN from 17]`. The ceilings were blessed in §147 and the audit is wired into
+neither the gate nor the sweep, so the count has been climbing for a dozen passes while nothing
+looked. Diffing the working tree against `git show HEAD:Sukinnect-next.html` shows the last two
+commits *shrank* it by 2, which is the reading that matters: the growth is spread across the whole
+visual pass and dominated by one missing component — 274 markup blocks type their own
+`font-size:var(--t-caption)` fine print instead of taking a class. Converting them is a change with
+pixel consequences (those 274 do not share a line-height or a margin), so it is recorded as owed
+rather than done in the same breath as a measurement pass. The ceiling is deliberately left where it
+is: `--bless` would turn the finding into silence, and §9 criterion 7 does not name this audit among
+the gates that must pass, so a red row here is a debt register rather than a blocked build.
+
+**A corner that had been clean for a month went red by itself, and the cause was the calendar.** The
+ten-corner sweep reported `chart labels painted outside their own chart box: 1` at default width with
+the text at 200%: `provider-dash "Oct 26" (chart-cat) hangs 3px sideways of a 332px box`. Nothing in
+the chart had been edited. The eight-week series is built from relative seed dates, so which Monday a
+50-day-old job lands in is a date — §72 wrote that sentence down for the *peak*, and it turns out to
+apply to which label is last as well. The last drawn label sat at 79.06% of a 220px plot with an 85px
+word centred on it, and the anchor band that decides centred-versus-edge-anchored is `cxPct > 80`, so
+it missed by 0.94 percentage points and hung 2.5px past the box.
+
+The band's own comment had already named the correct rule and declined it: *"Anchoring each kind by
+its own last … would be correct. It is not done here because the thinning above already moves the
+last drawn label to 55% of the box at 200% text, so no corner measures a defect this rule would fix."*
+The precondition it asked for — a corner that measures one — arrived, so the rule is written: the
+plot's measured width and the label's measured reach decide the anchor, each kind with its own reach
+(a bar's number is narrower than a date), and the band is kept verbatim on the path with no layout to
+measure, which is the Node harness. `probe-cat-hang.js` reads `findings: 0` where it read 1,
+`node tools/falsify-chart-collide.cjs` is 4 of 4 with `escape=0` at every corner it tests, and the
+sweep was re-run whole. The harness path is not decoration: the render checks read these classes out
+of markup, so a rule that only exists when a box exists had to keep the old answer where there is no
+box.
+
+**The fix then made a second defect, and the family that caught it was the one that went quiet.** With
+the last label right-anchored, "Oct 26" moved *left* by half its own width and landed 34x43px on top of
+"Sep 14" — §72's lesson from the other side: a legibility fix that creates a collision is not a fix. The
+first guard written for it dropped any label that reached into its neighbour, and when the family was
+re-run, `the x-axis stops thinning` printed **collide=0, MISSED**: the safety net was now catching the
+overlaps the stride rule exists to prevent, so a rule that was still needed had stopped being
+observable. That is the same hazard as an orphaned needle, arrived at by adding code rather than by
+renaming it. The guard is scoped to the case it was written for — only a right-anchored word reaches
+backwards, because right-anchoring is what this pass introduced — and centred and left neighbours stay
+the thinning budget's business. Re-run: **4 of 4**, and the thinning break now reports `collide=15`,
+which is the number that says the stride rule is still the thing holding those fifteen apart. Two
+guards over one hazard are only safe when each still has a failure only it can see.
+
+**Numbers, from the runs that printed them, on the bytes `1dd45485a85479d9cd6875c00752348c`.**
+
+- `node tools/verify.cjs` → **all 743 checks passed** (742 → 743: the skipped-row check).
+- `node tools/shot.cjs --measure` → **102 screens**, every failure tally 0,
+  `camera rows that never painted a screen: 0`, no console errors.
+- `node tools/sweep-text-scale.cjs` → **10 of 10 phone corners measured clean**, 26 tallies each.
+  The first pass of this build read 9 of 10: `default @ 200%` reported one chart label 3px sideways of
+  its box, and the fix for that produced a collision the family then caught by going quiet.
+- `.scratch/brief-matrix.cjs` (the brief's own grid) → **11 of 11 corners fully clean**: 320/360/390/430
+  × 1.0/1.35 in app mode, the desktop frame, and the visual contract at 390×844 and 360×740
+  (`answers 1, findings 0, refusals 0`).
+- `.scratch/probe-cat-hang.js` → `findings: 0` where it read `findings: 1`, `hangRight: 2.5`.
+- `node tools/falsify-chart-collide.cjs` → **4 of 4 breaks caught, 0 not applied, 2 observed**
+  (equivalent mutations reported as measurements, never as green rows); the x-axis-thinning break now
+  reads `collide=15`, which is the evidence that the stride rule is still what holds those fifteen apart.
+- `node tools/falsify-camera-surfaces.cjs` → **4 of 4 mutants caught, 0 not applied; file restored** —
+  the fourth one is the new break that severs the `SKIP` branch from the tally.
+- `node tools/falsify-all.cjs` → **70 families, 414 mutants applied, 412 caught, 0 not applied, 3
+  families needing attention**, exit 1. The page came back `1dd45485…` and `git status` after the pass
+  showed only the documents, so every family restored what it mutated. The three rows are read, not
+  smoothed over:
+  - `build-bytes` — `ABORT — the audit does not answer clean on the unmutated tree`. That is the
+    owner's standing decision to leave the public/staged build stale, so the family refuses rather
+    than mutating an audit whose baseline is red. An accepted state and a tripwire, not a task.
+  - `focus-trap` — `MISSED the lookup goes back to class names, which the verification overlay does
+    not have (Tab still stayed inside the layer, so this is not what holds it)`. The hazard is
+    over-determined: the hit-test (five probe points) is what keeps a control reachable, and the
+    class-name lookup is a second rule that the same outcome does not depend on. Recorded as an
+    equivalence, kept in the family, and the reason is printed beside it.
+  - `nav-fit` — `MISSED the fit measures the item's box again, so it stops while the label is still
+    clipped (still 0 everywhere, so neither sensor reads this rule)`. This is §144's finding from the
+    bench side: the item-box-versus-label-box confusion was only observable on the OPPO at its own
+    `font_scale 1.35`, where the two boxes differ by the platform's padding. On the bench
+    `navFontScale()` is 1, so the mutant and the correct code paint the same pixels and no sensor can
+    tell them apart. The break stays, the reading is stated, and the leg that could actually observe
+    it is the handset leg `DEVICE-PASS.md` still owes.
+- `node tools/audit-build-bytes.cjs` → source and `dist/` agree after the rebuild; the staged Android
+  asset and the APK copy **differ by design** until the owner rebuilds the shell (§1.10).
+- `node tools/falsify-painted-contracts.cjs` → **9 of 9 breaks caught, 0 not applied**, page and all
+  five probe files restored byte-for-byte.
+- `node tools/measure.cjs` → 13,981 lines, one `:root`, 115 tokens with 3 unreached (the exception set,
+  pinned as a set), 29 hex strings outside `:root`, 48 glyphs drawn / 43 reachable, 102 screens.
+- `.scratch/refresh-after-2.cjs` → 24 frames deleted before the walk, **24 copied after, 0 skipped,
+  102 painted against 102 in the table, none older than the run that claims them, none byte-identical
+  to its before-frame**, one row without a pair because `provider-job-path` is a new screen.
+- `node tools/audit-design-consistency.cjs` → `inline_styles 1119 [RISEN from 1001]`,
+  `literal_radii 20 [RISEN from 17]`; the ceilings were left un-blessed on purpose.
+
+
+## 170. The repository stops describing a prototype, and the two Word documents stop being committable
+
+**What this pass was.** A documentation pass under
+`C:\Users\ADMIN\Downloads\SUKINNECT_STARTUP_DOCS_AND_AI_CONTEXT_PROMPT.md`, run **before** the backend
+and features prompt because that one builds against the register this one produces. No code, no tool,
+no asset was changed: `git diff --stat` for this pass names documents and `.gitignore` only, and
+`node tools/verify.cjs` answers the same 743 checks before and after.
+
+**What was added.**
+
+- `Sukinnect_Master_Plan_Revised_27Oct2026.docx` copied from Downloads into the project root, proven
+  the same file by sha256 (`fa96a580…` both sides). The collaboration notes needed no copy — the root's
+  file is byte-identical to the original (`4f64abcc…`), which is the check that turned a filename
+  difference into a proven match.
+- `docs/readable/` — readable markdown copies of both, generated with `python-docx` 1.2.0 because
+  pandoc is not installed here. Fidelity measured, not asserted: **31 tables, 242 table rows and 41
+  headings, all three matching the `.docx`**, no table padded (so no merged cell was flattened), and
+  five figures spot-checked by counting `<w:t>` text nodes: ₱2,080,000 6/6, 1.2% 18/18, 3,270 6/6,
+  ₱252,154 7/7, 20,604 3/3.
+- `SUKINNECT_CONTEXT.md` (157 lines) — the read-first file, written to answer the brief's ten
+  fresh-AI questions from itself alone, and deliberately free of the confidential numbers.
+- `SUKINNECT_STARTUP_ROADMAP.md` (228 lines) — goals as conditions, the needs register with every owner
+  cell blank, refined features, F1–F21, the scope guard, C1–C12, proposed edits to the Master Plan, and
+  traceability that says **none yet** wherever no test proves the claim.
+- `CLAUDE.md`, `.cursor/rules/sukinnect.mdc`, `.github/copilot-instructions.md`, and a READ FIRST block
+  prepended to `AGENTS.md`. Formats checked against each tool's own documentation, not against memory:
+  Cursor's legacy `.cursorrules` is **not** supported, so it was not created.
+- `AGENTS.md` §96 (precedence, the fee decision, claims discipline, and the honest-labelling rule for
+  AI output), plus dated supersession notes immediately under §6, §59 and §60. No older sentence was
+  edited or deleted and nothing was renumbered — the notes sit between a heading and its first
+  paragraph, so every line keeps its number. §95 is still at its own line and the heading count is 99.
+- `README.md`: a Startup status section near the top; the honest-labelling line corrected from the
+  deck's 6,000 bookings to the plan's 3,270 base / 15,200 stretch, labelled as targets; and the
+  ₱800-at-10% worked example kept (it is what the code still does) with a note that the plan's 1.2%
+  makes the same job earn ₱9.60 and that the change is an open owner decision.
+
+**What stopped being committable.** `gh repo view --json visibility` answers **PUBLIC**, and three
+business `.docx` were tracked on this branch. None reached `origin/main`, so nothing was published and
+no history needed repairing. They are removed from the index with `git rm --cached` — the files stay on
+disk, unread, for every local AI — and `*.docx` plus `docs/readable/` are ignored with the reason
+written beside the rule. The consequence is stated rather than hidden: a fresh clone has no readable
+copies, which is exactly why the safe facts live in a committed file.
+
+**Two corrections worth keeping.** The brief's feature-register seed said "not found" for eight rows
+that exist in this build — the pricing band and wizard (F5), the consent gate with its scroll rule and
+versioned record (F8), the hash-chained ledger (F10), the wallet as a derived view (F12), the standing
+tier (F13), connections (F20), and the named refusals for exchange rates, bot checks, funding
+eligibility and organisations (F6, F9, F14, F21). And the Smart Match row was verified rather than
+copied: the seed scores are 96/91/94/87/93/89/84/78 typed per provider, the results screen prints
+`${p.smartMatch.score}% Match` under a header that says "Sorted by: Smart Job Match", and
+`providerMatches()` is a `PROVIDERS.filter(...)` with no score and no sort. The screen claims an
+ordering the code does not perform. It is recorded as the honest current state with its code pointers
+and left for the backend prompt, because relabelling it here would be a documentation change pretending
+to be a fix.
+
+**Missing source, recorded.** `Sukinnect_2_08M_Profitability_ROI_Monthly_Model.xlsx`, which the Master
+Plan cites as the basis for every figure in §4.3 and §6–§8, is not on this laptop (searched Downloads,
+Desktop and Documents). Nothing was recomputed to fill the gap.
+
+**Decisions this pass surfaced and did not make.** C1 the fee, C2 the gateway line, C3 the targets,
+C4 the seed geography, C5 the missing roles, C6 the other revenue streams, **C7 the wallet — the
+owner's own two documents contradict each other**, C8 the money-held wording, C9 what "blockchain for
+encryption" means, C10 Fruit Harvest & Buy, **C11 "hatian", which is not guessed at**, and C12 the team
+name. All twelve are in the roadmap's ledger with an open decision column, and seven open questions are
+listed under it.
+
+## 171. Slice S1: the fee the plan decided became the fee the code carries, and the family that proved it wrong three times
+
+Branch `feat/startup-backend`. This is the first slice of
+`SUKINNECT_BACKEND_AND_FEATURES_FIX_PROMPT.md` — Stage A, Tier 1.1, business-rule alignment. It moves
+four decisions out of the roadmap and into the kernel: the commission, its cap, the processor's fee,
+and the flags that keep unpermissioned revenue off the screen.
+
+**The brief's rows, re-verified before anything was changed.** B2 **CONFIRMED** — the default was
+`0.10`, the admin console printed "Commission earned at 10%", and no cap was enforced anywhere. B3
+**CONFIRMED** — the money model carried `fixedFeeCentavos` and `taxRate` and no pass-through of any
+kind. B9 **CONFIRMED** — no feature flags, no subscription or promotion accounts, no partner revenue.
+B15 **CONFIRMED in part** — the README and the receipt already labelled the gateway a simulation; the
+fee wording now also says what the real arrangement must be. Code pointers as of this slice:
+`CONFIG_DEFAULTS` at `Sukinnect-next.html:2953`, `gatewayFeeFor` and `computeBreakdown` at `:3180`,
+`settlementLines` at `:3423`, `refundableCentavos` at `:4207`, `configPanel` at `:5417`.
+
+**What was built.**
+
+- `commissionRateDefault: 0.012` with `commissionRateCap: 0.013`, enforced at three points rather than
+  one: `assertWithinFeeCap` at every read (`commissionRateFor`, a quoted rate, the produce rate),
+  inside `setConfig` on the way in so no other caller can slip past the input, and in the admin form
+  itself so the refusal names the field. The ceiling is data, so the form's `max` attribute, its
+  message and its comparison all read `CONFIG`. 1.0% — the plan's stated alternative — is one
+  `setConfig` call away, which is what the brief asked for.
+- A **gateway fee the payer funds**. `CONFIG.gatewayFees` prices gcash, maya, qrph and card with a
+  dated source string, and keeps `cash` and `direct` as `null` because no processor is in the path.
+  The fee is added to `customerTotalCentavos` and excluded from `platformRevenueCentavos`; it settles
+  into a new `gateway_fee_payable` account and leaves it the same day through `payGatewayFee`, which
+  posts its own `gateway.fee_paid` event rather than folding the fee into a payout line, because a fee
+  inside a payout reads as part of what the provider was paid. A refund excludes it in both the cap and
+  the lines, and the denominator excludes it too — the account was already paid away, and debiting it
+  a second time is what made the platform fund the processor (the check that caught that is
+  `no account went negative under the console`, and it was red before the fix, not after).
+- `assertGatewayNotAbsorbed(breakdown)` throws at the seam, before any ledger line exists, on either
+  half of absorption: the payer's total missing the fee, or the platform's revenue containing it.
+- `CONFIG.featureFlags` — `subscriptions`, `promotedListings`, `partnerRevenue`, `lendingReferral`,
+  `voiceInput`, all `false` — read by the kernel through `featureEnabled(flag)` rather than by each
+  screen, so a surface added tomorrow asks by default. The dictation and funding seams answer the flag
+  before they answer the browser.
+- The admin fee console now lists every priced method with its rate, its fixed part, its dated source,
+  and which routes this build cannot take money through. Read-only, because the platform does not set
+  what it pays; the plan requires a signed merchant quote, and the screen says none is on file.
+
+**Two defects this slice created, both found before the commit.**
+
+Moving the rate off whole percent moved a rounding onto two surfaces that had never needed a decimal.
+The receipt printed `${Math.round(p.commissionRate * 100)}%`, which is **"1%"** beside a commission
+computed at 1.2% — on every receipt the app can paint. The audit line's own formatter, `fmtCfg`, had
+the same expression, so the change log wrote `commissionRateDefault 1% → 1%` for the move from 1.2% to
+1.0%: two different business decisions recorded as one identical edit, in the log §29 exists to keep.
+Both now print through `ratePercent()`, which the file already had for exactly this arithmetic — its
+own comment names the rounding on the admin console line, and the two sites nobody re-read after the
+number stopped being whole were the receipt and the log. A check asserts both halves of the receipt
+case (the exact string present, the rounded-away form absent) behind a population control requiring at
+least one frozen rate with a decimal, because on a seed of whole-percent rates the second half could
+never fail and would be decoration.
+
+**One defect that was already there and the same pass surfaced.** The config form's refusal toast read
+`Check commission cannot exceed 1.3% — a rate cannot be negative.` for a rate that was too *high*: one
+tail sentence served three different refusals, so the reason a person received contradicted the thing
+they had typed, and the category rows were identified as `cfgcat-plumbing`. Each refusal now states
+its own reason and names the trade in words. Two checks read the toast the app actually raised.
+
+**The mutation family.** `node tools/falsify-business-rules.cjs` — its first run caught 9 of 13 and
+printed three `MISSED` readings that were about the family, not the application; all three were
+re-pointed, and four more breaks were added for the wording checks. Read the run's own line for the
+totals. What the three misses taught:
+
+1. *the default rate goes back to ten percent* crashed the suite. `CONFIG_DEFAULTS` is not validated at
+   definition, so a 10% default throws at the first read — `suite crashed: the commission rate for the
+   default rate is 10%, above the 1.3% cap`. A guard condemning a mutant is not a check observing it,
+   so the break now moves the default to **1.3%**: legal, under the ceiling, and still not 1.2%, which
+   makes `₱800 at the pilot fee takes ₱9.60` the thing that goes red.
+2. *the ceiling stops being read from configuration* named the wrong label. Neutering the cap inside
+   `assertWithinFeeCap` condemns the **setConfig** guard, because the form has its own comparison
+   against `CONFIG.commissionRateCap` and refuses first. The break now raises the stored cap to 50%, so
+   the form's rule is what fails — and that is also the proof the cap is one number, not two copies.
+3. *a per-category override stored without passing the cap* printed **exit 0**: bypassing the cap on
+   the read path is an **equivalent mutant** under this build, because `setConfig` already refuses an
+   illegal override so none ever reaches the getter. It was not deleted to make the count look smaller;
+   it was re-pointed at what the label actually promises — that the refusal *names the category* —
+   which a message of `'an override'` breaks immediately.
+
+**A test that passed on a screen it never opened.** The two refusal checks navigated with
+`state.adminScreen = 'money'`. No render branch answers that word: the console's Money tab is
+`state.adminScreen === 'finance'`, and an unknown value falls through to `adminDashboard()`. The
+checks still went green, because the harness hands out a fake element for *any* id asked for — so the
+test typed into a field the painted screen had never drawn. This is the trap `AGENTS.md` has written
+down four times for the camera ("a setup script that moves the model without moving the field
+photographs a state nobody can reach"), arriving inside a test rather than a walk. Both checks now
+name the destination the render branch answers, and refuse before typing unless
+`id="cfg-commissionRateDefault"` / `id="cfgcat-cleaning"` is in the painted markup — a precondition,
+so the check cannot be satisfied by a conjured stub again.
+
+**Figures, as commands.** `node tools/verify.cjs` prints the total (766 at the close of this slice,
+up from 743 before it; twenty-three of them new here).
+`node tools/falsify-business-rules.cjs` prints its own applied / caught / not-applied line — the pass
+that landed read 21 of 21 caught, 0 not applied, 0 gate failures. `node tools/measure.cjs` reports
+14,245 lines, 115 tokens with the same three declared-and-unreached as before, and `node
+tools/shot.cjs --measure` read every failure tally zero over the full walk, the only nonzero line
+being the OpenStreetMap tile requests the build has always made. `node tools/sweep-text-scale.cjs` is
+the ten-corner proof. The README's worked example was rewritten to ₱9.60 with the 1.0% alternative and
+the signed-quote condition still stated, so the developer documentation says what the code does without
+presenting any figure as settled business policy. The roadmap's §3 rows for the transaction fee and the
+gateway fee moved to built with code pointers and test names; C1 stays open in the ledger because 1.0%
+versus 1.2% is the owner's to choose, not because the code still says 10%.
+
+**One deviation from the brief, stated rather than smoothed.** The brief asks that "a flag off means
+the screen and the posting path are unreachable, and a test proves it". Two flags have both halves
+proved now: `voiceInput` (the dictation seam answers the flag before the browser, and the step says so)
+and `lendingReferral` (the funding seam declines in both flag states). The other three have nothing to
+reach yet — `subscriptions`, `promotedListings` and `partnerRevenue` have no record, no price and no
+ledger account, which is slice S7's work. What is proved today is that no account and no event in the
+books mentions any of them, which is the strongest honest claim available until the models exist.
+
+**Left open, and whose.** The gateway rates are published-page rates with no signed merchant quote on
+file; the plan requires one, and the source string says so on the screen beside the number.
+
+## 172. The reference schema caught up with the kernel, and the audit that keeps them honest found a bug in itself first
+
+Not a slice of the ordered sequence — this is Stage B's document half, taken early because it is the
+one part of the backend brief that touches neither `Sukinnect-next.html` nor the screens. The
+application was not modified, and the gate still reports what section 171 left it reporting.
+
+**Why it could not wait.** Slice S1 gave the money model a new account, `gateway_fee_payable`, and
+the reference schema is the artefact a backend team copies. A schema that omits it re-invents the
+defect the account exists to prevent: the fee gets folded into a payout line and reads as money the
+provider earned. Meanwhile the brief's own row B11 lists eleven missing table groups — consent,
+verification cases, notifications, portfolio and credential detail, subscriptions, promotions, price
+references, analytics events, moderation actions, the AI-suggestion log and feature flags — and every
+one of them is a surface the plan's trust model or its funding gates are measured from.
+
+**What landed** (`schema/sukinnect.reference.sql`, 19 tables to 34):
+
+- Rule 6, stated once at the top: 1.2% under a hard 1.3% ceiling enforced where a rate is *written*,
+  and the processor's fee funded by the payer — never platform revenue, never absorbed, never
+  returned by a refund. This is the money rule a deployment is most likely to lose.
+- `users.role` carries the plan's five groups (`business` and `moderator` added), with the sentence
+  that until slice S5 puts `can(actor, action)` in the kernel an enum is not a permission. A row a
+  reader mistakes for an enforced boundary is the same defect as a badge typed onto a profile.
+- Fifteen Stage B tables, each naming the slice that would create it, in the shape the prototype's
+  records already taught: `verification_documents.submitted_at IS NULL` *is* outstanding rather than
+  a second status column for the same fact; `documents` is versioned with the text's SHA-256 so a
+  re-consent is provable; `ai_suggestions.method` is an enum that makes `model_ref`, `source_url` and
+  `fetched_at` mandatory when the method is `external_model`; `notifications` carries
+  `route_kind`/`route_id` because a notification that opens nothing is a message about nothing;
+  `credentials` stores no document image and says why in the comment beside the column.
+- `analytics_events` holds ids and codes only. A free-text column in an analytics table is personal
+  data wearing an analytics name.
+
+**The accounts list is generated, not remembered.** The first draft of that block was written by
+hand and got three of ten rows wrong — `escrow_held` as a liability, `customer_deposit` as an asset,
+and an invented `gateway_fee_expense` that nothing posts. The patcher now reads `boot().ACCOUNTS` and
+emits the INSERT from it, and `node tools/audit-schema-parity.cjs` compares the two lists in both
+directions, checks every `REFERENCES` target against the tables the file declares, and checks each
+row's kind and scope against the enum it claims to satisfy. It refuses with `NO CONCLUSION` rather
+than reporting clean when it read no tables, when the file is missing, or when the kernel boots with
+no accounts — the failure mode of a comparison tool is never a wrong verdict, it is a skipped side
+that leaves the remaining rows agreeing.
+
+`node tools/falsify-schema-parity.cjs` — 8 breaks, 8 caught, 0 missed, 0 not applied. Two of them are
+judged in the *opposite* direction from a normal break, and that is the finding worth keeping: the
+guards they remove (`--schema=PATH` honoured, `--quiet` still exiting nonzero) are guards whose
+removal makes the tool answer **clean about a defect**. Asserting "the run must refuse" against such
+a break reports MISSED while the guard is genuinely gone, which is this repository's oldest lesson —
+*a break that prints MISSED is read, not deleted* — arriving the fourth time as a direction error in a
+family written minutes after the rule was quoted. The fixture control runs first (an unmutated audit
+must report the deleted row, with and without `--quiet`), so neither reverse break can be credited
+for a refusal that was never there.
+
+**A hazard I created and the recovery, because it is the documented one.** The full mutant aggregate
+was started against the clean committed tree, and then this work wrote two new files under `tools/`
+while it ran. `falsify-all.cjs` compares `git status` for `tools/` before and after every family and
+**reports rather than restores** — so two rows printed `LEFT AN INSTRUMENT MUTATED` naming my own
+legitimate edits, and every family after the first of them had run against a tool I was rewriting.
+Then stopping the pass left a real mutant stranded: `tools/audit-commit-subjects.cjs` came back with
+`if (!subject) refuse(...)` replaced by `if (false) refuse(...)`, planted by `falsify-commit-subjects`
+and never restored because its process died between the edit and its `finally`. Three commands,
+exactly as AGENTS.md documents them: save the bytes, `git checkout -- tools/audit-commit-subjects.cjs`
+(only after `git diff` proved that file held one hunk and no work of mine), and re-run the gate. The
+aggregate itself is discarded, not quoted: 10 of its 12 rows read clean, including the two families
+that matter for slice S1 (`business-rules` 21 of 21, `blank-query` 2 of 2), and a run whose middle is
+entangled with its own tooling is a run that cannot be partly trusted. **The rule it teaches is not
+"never write tools during a pass" — it is that `tools/` is inside the mutex for exactly the families
+that mutate an instrument, and a session that starts the aggregate should do nothing to `tools/`
+until it prints its last row.**
+
+**One standing state, stated rather than fixed.** `falsify-build-bytes` aborts on this tree: the page
+moved and three built copies (`dist/`, the staged Android asset, the APK bundle) deliberately have
+not, because the brief says to re-sync them only after the owner accepts. The family refuses to run
+its breaks over a baseline that is already red — which is correct behaviour, and the reason the
+aggregate must be re-run with that family excluded, or after the re-sync, and its totals quoted from
+whichever of those runs produced them.
+
+**Figures are commands.** `node tools/audit-schema-parity.cjs`, `node tools/falsify-schema-parity.cjs`
+and `node tools/verify.cjs` each print their own totals; nothing in this section is the authority for
+a number.
+
+## 173. Slice S2a: the match score stops being a number somebody typed, and the screen says what ranked it
+
+Branch `feat/startup-backend`. This is Tier 1.2 of the backend brief and the first row of its own
+audit table, B1: **CONFIRMED**. Eight provider records carried `smartMatch:{score, reasons[]}` with
+scores 96, 91, 94, 87, 93, 89, 84 and 78 typed into the seed; the results screen printed
+`${p.smartMatch.score}% Match` under a header reading "Sorted by: Smart Job Match"; and
+`providerMatches()` was a `PROVIDERS.filter(...)` with no score and no sort. Three claims, one defect:
+a user-visible AI result that was not computed, an ordering that was not performed, and reasons that
+named facts no record holds — "Average response time under 20 mins" and "300+ completed local parcel
+trips" are not fields on any provider in this build.
+
+**The finding that explains how it survived.** `grep -rn smartMatch tools/` answered *no files*. Not
+one check, probe or mutation family referenced the surface. The camera walked `resident-results` and
+measured its geometry clean, which is exactly the limit AGENTS.md records for the Insights screen: a
+camera measures boxes, so a screen can pass every tally and still be a decorative statistic. A claim
+nobody checks is the one that survives longest.
+
+**What was built.**
+
+- `scoreProvider(provider, request, context)` in the kernel: pure, returns `{score, signals[],
+  reasons[], scoredOn, weightUsed}`. Eight signals, each from a field the records own — category fit,
+  declared service area (`providerServes`), declared distance band, stated availability band, a
+  smoothed rating, completion rate, cancellation rate, and days since the last job this device
+  recorded as completed.
+- **No signal without a record.** There is no response-time field and no last-activity field on a
+  provider here, so neither is scored and neither is mentioned. That is the honest form of the plan's
+  matching list rather than a ninth invented number, and it is the same rule the Insights rewrite
+  applied when it deleted a capacity bar no record could produce.
+- **The smoothing is the reputation panel's own sentence, used for ordering.** `smoothedRating`
+  shrinks toward `CONFIG.matchRatingPrior` (4.0) with a weight of five ratings, using the same
+  `seedRatings` / `ratingsFromDevice` fields the reputation pass introduced, so the score cannot
+  disagree with the profile page. A 5.0 on one rating no longer outranks a 4.6 on two hundred, and a
+  check asserts that direction with those exact numbers.
+- **A signal the record cannot answer leaves the denominator.** A null sub-score is not a zero
+  sub-score: a provider is not punished for this device having no history of them. The check names
+  the expected weight rather than asking for "less than the total", because a range assertion cannot
+  see a denominator that dropped the wrong thing.
+- `CONFIG.matchWeights` — eight weights summing to 1.0, with a check that the table names exactly the
+  signals `MATCH_SIGNALS` declares, so a ninth signal added tomorrow without a weight fails instead
+  of being silently renormalised. `[OWNER DECISION]` in the comment: these are the platform's choice,
+  not a measurement, and the plan's learned-model alternative needs labelled outcomes the pilot has
+  not collected (S2b's recorder starts collecting them).
+- `providerMatches()` now sorts by the computed score with a name tie-break, so the same records
+  rendered twice cannot shuffle themselves between two taps. `rankedProviders()` returns the rows with
+  their reasons and deliberately re-scores rather than caching: a cache is a second copy of a derived
+  number, and the order is already settled, so re-computing can change nothing but the cost.
+- The screen: "Providers near you" / "Ranked by a **rule-based score** from records on this device";
+  the chip reads `N rule score` rather than `N% Match`, because a percentage reads as a probability
+  and this is a weighted sum of bands; the fold reads "Why this ranking (N)" with N produced by the
+  signals, every sentence escaped, and a disclosure on any row whose score rested on fewer signals
+  than the table declares. The top bar's unfiltered branch now says "8 ranked providers" instead of
+  "8 smart matches".
+
+**Two assertions were re-pointed, not relaxed.** The blank-query family's count-line rule — a blank
+query is not a constraint — reads the words the screen paints, and those words changed. Its needle
+moved from `/smart matches/` to `/ranked providers/` in the check, its prose and its refusal message;
+the property is identical and `falsify-blank-query` still reads 2 of 2. Its two mutants needle
+`function providerMatches(){` plus the query line and `function residentResults(){` plus the same,
+both of which this slice left byte-identical, which is why the family survived the change at all.
+
+**The checks read the painted card, not only the returned object.** Eight kernel assertions would all
+have passed with a typed `96` in the chip and four invented sentences under a summary counting three —
+the defect in its original form. So two more compare the markup: the chip's number against
+`scoreProvider` for the same id, and the fold's painted sentence count, its summary count and its
+sentence text against the reasons that computation produced. The population is read from the
+`data-provider-detail` attribute the app itself paints, so it is the rows that rendered rather than a
+list of ids kept beside them.
+
+**Figures, from the runs that printed them.** `node tools/verify.cjs` — **776 checks passed**, ten of
+them new here (eight on the computation, two on the painted card). `node tools/falsify-matching.cjs` —
+**9 of 9 caught, 0 not applied, 0 gate failures**. `node tools/falsify-blank-query.cjs` — **2 of 2**
+after the re-point, so the rule it guards is still guarded. `node tools/measure.cjs` — 14,366 lines,
+115 tokens with the same three declared-and-unreached as before. `node tools/shot.cjs --measure` —
+**102 screens, 0 skipped, no console errors**, every failure tally zero; the only nonzero line is
+`requests that left the device for a network: 1777`, the OpenStreetMap tiles this build has always
+asked for. `node tools/sweep-text-scale.cjs` — **10 of 10 corners clean at 26 tallies each**, including
+the 320px/200% corner where a long reason sentence would have been the first thing to break.
+
+**Left for the next slice, deliberately.** Popular and frequent suggestions (F1) are not built here:
+they are counts over bookings *and searches*, and the search half has no recorder yet. Building them
+from bookings alone would have produced a rail that claims to know what the neighbourhood books while
+reading one device's sample records. S2b adds the event recorder first, then the suggestions, with the
+provenance split stated on the screen and a cold-start fallback that says what it fell back to.

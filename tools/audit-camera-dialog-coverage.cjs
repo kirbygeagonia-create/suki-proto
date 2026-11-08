@@ -162,7 +162,9 @@ const sheetRows = sheetNames.map(n => {
      Match on "non-word characters between the call and the quoted name" instead of a spelling. */
   const clicked = new RegExp("openSheet[^A-Za-z0-9]{0,6}'" + n + "'").test(sheetBlock) ||
     new RegExp("state\\.sheet\\s*=\\s*'" + n + "'").test(sheetBlock);
-  const byOpener = openers.some(f => sheetBlock.includes(f + '('));
+  const clickedByOpener = openers.some(f =>
+    new RegExp("clickPainted\\(/" + f + "[^/]*/").test(sheetBlock));
+  const byOpener = openers.some(f => sheetBlock.includes(f + '(')) || clickedByOpener;
   return { name: n, openers, covered: clicked || byOpener };
 });
 const unopenedSheets = sheetRows.filter(r => !r.covered);

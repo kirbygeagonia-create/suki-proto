@@ -15,8 +15,16 @@ function gate() {
 
 const mutants = [
   { name: 'bookingsForProvider goes back to ignoring its argument',
+    /* Scoped by anchor, not by widening the threshold. The body line this break edits is declared
+       identically by loyaltyTier() since the wallet landed, so a plain occurrence count matched 2 and
+       the mutant printed NOT APPLIED for a rule that was still very much in the file — the quietest
+       shape of coverage loss, because every other row read healthy. Asking for the first match inside
+       the function that owns it makes exactly one site eligible, and the loop refuses if the anchor
+       moves or the count is not one, so a future rename shows up as NOT APPLIED about the anchor
+       rather than as a silent skip. */
     from: '  const id = providerId || CURRENT_PROVIDER_ID;',
     to: '  const id = CURRENT_PROVIDER_ID;',
+    after: 'function bookingsForProvider(',
     expect: 'bookingsForProvider honours the id it is handed' },
   { name: 'the credential warning window loses its boundary',
     from: "if (days <= CONFIG.credentialWarnDays) return { code:'expiring', days };",
@@ -48,9 +56,32 @@ let applied = 0, caught = 0;
 try {
   for (const m of mutants) {
     const text = pristine.toString('utf8').replace(/\r\n/g, '\n');
-    const hits = text.split(m.from).length - 1;
-    if (hits !== 1) { console.log('NOT APPLIED  ' + m.name + ' (needle matched ' + hits + ', expected 1)'); continue; }
-    fs.writeFileSync(FILE, text.replace(m.from, m.to).replace(/\n/g, '\r\n'));
+    /* One eligible site, either anywhere in the file or after a named anchor. A needle counted over the
+       whole file cannot tell "this line is unique" from "two functions declare the same line", and the
+       second reading silently retires the break. */
+    let hits = 0, at = -1;
+    if (m.after) {
+      const anchor = text.indexOf(m.after);
+      if (anchor < 0) { console.log('NOT APPLIED  ' + m.name + ' (anchor ' + JSON.stringify(m.after) + ' is not in the file)'); continue; }
+      /* Scope to the function's OWN body, not to everything after its name. Counting from the anchor to
+         the end of the file still matched 2, because loyaltyTier() declares the same line further down —
+         which is the very ambiguity this break was stranded on. The scope ends at the first top-level
+         closing brace after the anchor. */
+      const bodyEnd = text.indexOf('\n}', anchor);
+      if (bodyEnd < 0) { console.log('NOT APPLIED  ' + m.name + ' (no closing brace found after the anchor)'); continue; }
+      const scope = text.slice(anchor, bodyEnd);
+      hits = scope.split(m.from).length - 1;
+      if (hits === 1) at = anchor + scope.indexOf(m.from);
+    } else {
+      hits = text.split(m.from).length - 1;
+      if (hits === 1) at = text.indexOf(m.from);
+    }
+    if (hits !== 1) {
+      console.log('NOT APPLIED  ' + m.name + ' (needle matched ' + hits + ' times' +
+        (m.after ? ' inside the anchored function body' : ' in the file') + ', expected exactly 1)');
+      continue;
+    }
+    fs.writeFileSync(FILE, (text.slice(0, at) + m.to + text.slice(at + m.from.length)).replace(/\n/g, '\r\n'));
     applied++;
     const r = gate();
     const failedLines = r.out.split('\n').filter(l => l.startsWith('FAIL'));
