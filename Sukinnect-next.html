@@ -1845,7 +1845,6 @@
       transition-duration:.01ms !important;
     }
   }
-
   /* Circular back buttons for dark topbars */
   .back-btn{
     /* The hit area is unchanged at the tap floor; only the plate around it goes. A circle with a
@@ -2106,8 +2105,19 @@ function capabilityLabel(provider){
 
 const SERVICES = [
   {id:'plumbing',label:'Plumbing',short:'Plumbing',icon:'plumbing'},{id:'electrical',label:'Electrical',short:'Electrical',icon:'electrical'},
-  {id:'cleaning',label:'Cleaning',short:'Cleaning',icon:'cleaning'},{id:'tutoring',label:'Tutoring',short:'Tutoring',icon:'tutoring'},
-  {id:'appliance',label:'Appliance',short:'Appliance',icon:'appliance'},{id:'delivery',label:'Delivery',short:'Delivery',icon:'delivery'},
+  {id:'cleaning',label:'Cleaning',short:'Cleaning',icon:'cleaning',behaviour:{cadence:'weekly',repeatable:true}},
+  {id:'tutoring',label:'Tutoring',short:'Tutoring',icon:'tutoring',behaviour:{cadence:'weekly',repeatable:true}},
+  {id:'appliance',label:'Appliance',short:'Appliance',icon:'appliance'},
+  {id:'delivery',label:'Delivery',short:'Delivery',icon:'delivery',behaviour:{cadence:'biweekly',repeatable:true}},
+  /* These are pilot candidates, not a claim that providers or demand exist. The resident
+     catalogue keeps them hidden until repeatCategories is deliberately enabled. */
+  {id:'laundry',label:'Laundry',short:'Laundry',icon:'cleaning',candidate:true,themeId:'cleaning',behaviour:{cadence:'weekly',repeatable:true}},
+  {id:'water-gas',label:'Water & gas delivery',short:'Water & gas',icon:'droplet',candidate:true,themeId:'delivery',behaviour:{cadence:'weekly',repeatable:true}},
+  {id:'motor-wash',label:'Motorcycle wash',short:'Motor wash',icon:'cleaning',candidate:true,themeId:'cleaning',behaviour:{cadence:'weekly',repeatable:true}},
+  {id:'barber',label:'Barber / haircut',short:'Barber',icon:'home',candidate:true,themeId:'plumbing',behaviour:{cadence:'monthly',repeatable:true}},
+  {id:'makeup',label:'Makeup',short:'Makeup',icon:'sparkles',candidate:true,themeId:'tutoring',behaviour:{cadence:'monthly',repeatable:true}},
+  {id:'gown-rental',label:'Gown rental',short:'Gown rental',icon:'home',candidate:true,themeId:'tutoring',behaviour:{cadence:'monthly',repeatable:true,commissionBasis:'labour_only'}},
+  {id:'sound-system',label:'Sound system rental',short:'Sound system',icon:'calendar',candidate:true,themeId:'delivery',behaviour:{cadence:'monthly',repeatable:true,commissionBasis:'labour_only'}},
   /* A pilot category, not a validated one. It carries behaviour because a produce
      transaction is not the same shape as the six above; see CATEGORY_DEFAULTS. */
   {id:'fruit',label:'Fruit Harvest & Buy',short:'Fruit',icon:'fruit',pilot:true,behaviour:{
@@ -2146,7 +2156,10 @@ const SERVICES = [
 // Brand blue stays dominant — these remain secondary cues (45).
 /* The tile and the row ask one function for a trade's tonal pair, so the pair has one source
    and no screen invents a third shade beside it. */
-function serviceTheme(id){ return SERVICE_THEME[id] || SERVICE_THEME.plumbing; }
+function serviceTheme(id){
+  const service = SERVICES.find(s => s.id === id);
+  return SERVICE_THEME[(service && service.themeId) || id] || SERVICE_THEME.plumbing;
+}
 const SERVICE_THEME = {
   plumbing:{bg:'#E7EDFF', fg:'#0352AE'},
   electrical:{bg:'#FFF3D6', fg:'#8A5A00'},
@@ -2171,6 +2184,8 @@ const CATEGORY_DEFAULTS = {
   capabilities: ['service'],
   safetyRules: [],
   matchingRules: ['category', 'barangay', 'availability'],
+  cadence: 'oneoff',
+  repeatable: false,
   /* 'labour' is the only basis the pilot has any basis to charge on. A category that
      also moves goods must not inherit a fee on the goods by accident. */
   commissionBasis: 'labour'
@@ -2181,6 +2196,16 @@ function categoryBehaviour(serviceId){
      else's modes, safety rules, matching rules or commission basis. */
   const svc = SERVICES.find(s => s.id === serviceId);
   return Object.assign({}, CATEGORY_DEFAULTS, (svc && svc.behaviour) || {});
+}
+function servicesForDiscovery(){
+  const candidatesOn = !!(CONFIG.featureFlags && CONFIG.featureFlags.repeatCategories);
+  return SERVICES.filter(s => !s.candidate || candidatesOn);
+}
+function canRepeatCategory(serviceId){
+  const svc = SERVICES.find(s => s.id === serviceId);
+  const behaviour = categoryBehaviour(serviceId);
+  return !!svc && (!svc.candidate || servicesForDiscovery().some(item => item.id === serviceId))
+    && behaviour.repeatable === true && behaviour.cadence !== 'oneoff';
 }
 /* An unknown trade used to be drawn as Plumbing: the label, the droplet icon, the
    plumbing tint and the plumbing rate on every card, because SERVICES[0] was the
@@ -2479,6 +2504,7 @@ let CURRENT_PROVIDER_ID = 'p1';
 
 const PROVIDER_DEMO_ACCOUNTS = {
   'ramil@demo.ph':   'p1',   // Ramil Odiada — plumbing, the trade the prototype shipped with
+  'cristy@demo.ph':  'p3',   // Cristy Fernandez — cleaning, repeat-service example
   'erning@demo.ph':  'p7'    // Erning Bautista — the Fruit Harvest & Buy pilot
 };
 
@@ -2492,6 +2518,13 @@ const PROVIDER_DEMO_PROFILES = {
         bankAccount:'GCash (0918***4321)',
         workingHours:'8:00 AM – 5:00 PM (Mon–Sat)',
         emergencyDispatch:'Enabled (Accepts urgent pings)' },
+  p3: { name:'Cristy Fernandez', email:'cristy@demo.ph', phone:'Not shared in this prototype',
+        service:'Cleaning Specialist', barangay:'Poblacion',
+        rateCentavos:50000, rateUnit:'per visit',
+        serviceRadius:'Poblacion and nearby listed barangays',
+        bankAccount:'Not configured in this prototype',
+        workingHours:'Not recorded for this demo account',
+        emergencyDispatch:'Not configured' },
   p7: { name:'Erning Bautista', email:'erning@demo.ph', phone:'+63 917 555 8102',
         service:'Fruit Harvest & Buy', barangay:'Buayan',
         rateCentavos:80000, rateUnit:'per tree, harvesting',
@@ -2811,6 +2844,358 @@ function bookingsForProvider(providerId){
   return BOOKINGS.filter(b => b.providerId === id);
 }
 
+function repeatSeriesById(id){ return REPEAT_SERIES.find(s => s.id === id) || null; }
+function repeatSeriesForResident(){
+  return REPEAT_SERIES.filter(s => s.customerId === CURRENT_CUSTOMER_ID);
+}
+function repeatSeriesBookings(seriesId){
+  return BOOKINGS.filter(b => b.seriesId === seriesId).sort((a, b) => a.occurrenceIndex - b.occurrenceIndex);
+}
+function repeatAddressExists(addressId, profile){
+  const person = profile || state.profileData;
+  if (typeof addressId !== 'string' || !addressId.trim()) return false;
+  const saved = Array.isArray(person.savedAddresses) ? person.savedAddresses : [];
+  return addressId === person.address || saved.includes(addressId);
+}
+function addCalendarMonths(date, months){
+  const day = date.getDate();
+  const target = new Date(date.getFullYear(), date.getMonth() + months, 1);
+  target.setDate(Math.min(day, new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate()));
+  return target;
+}
+function localDayString(date){
+  return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0')
+    + '-' + String(date.getDate()).padStart(2, '0');
+}
+function repeatOccurrenceDate(series, index){
+  const start = new Date(series.schedule.startDate + 'T00:00:00');
+  if (series.schedule.frequency === 'weekly' || series.schedule.frequency === 'biweekly') {
+    const step = series.schedule.frequency === 'weekly' ? 7 : 14;
+    return new Date(start.getFullYear(), start.getMonth(), start.getDate() + step * index);
+  }
+  return addCalendarMonths(start, index);
+}
+function repeatHorizonDates(series, afterDate, limit){
+  const after = afterDate || isoDay(0);
+  const rows = [];
+  for (let index = 0; index < 5200 && rows.length < (limit || 4); index++) {
+    if (series.schedule.count != null && index >= series.schedule.count) break;
+    const date = repeatOccurrenceDate(series, index);
+    const day = localDayString(date);
+    if (series.schedule.endDate && day > series.schedule.endDate) break;
+    if (day >= after) rows.push({ index, date: day });
+  }
+  return rows;
+}
+function validateRepeatSeriesDraft(draft){
+  const service = SERVICES.find(s => s.id === draft.serviceId);
+  const provider = PROVIDERS.find(p => p.id === draft.providerId);
+  const customer = CUSTOMERS.find(c => c.id === draft.customerId);
+  const schedule = draft.schedule || {};
+  const date = typeof schedule.startDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(schedule.startDate)
+    ? new Date(schedule.startDate + 'T00:00:00') : null;
+  if (!service || !canRepeatCategory(service.id)) throw new GuardRejected('this service is not enabled for repeat bookings.');
+  if (!provider || provider.serviceId !== service.id || !providerAccepting(provider))
+    throw new GuardRejected('choose an available provider for this service.');
+  if (!customer || customer.id !== CURRENT_CUSTOMER_ID)
+    throw new GuardRejected('this series does not belong to the signed-in household.');
+  if (draft.sourceBookingId) {
+    const source = bookingsForResident().find(b => b.id === draft.sourceBookingId);
+    if (!source || source.status !== 'completed' || source.providerId !== provider.id
+        || providerOf(source).serviceId !== service.id)
+      throw new GuardRejected('start a repeat schedule from a completed booking with this provider and service.');
+  }
+  if (draft.sourceBookingId) {
+    const source = bookingsForResident().find(b => b.id === draft.sourceBookingId);
+    if (!source || source.status !== 'completed' || source.providerId !== provider.id
+        || providerOf(source).serviceId !== service.id)
+      throw new GuardRejected('start a repeat schedule from a completed booking with this provider and service.');
+  }
+  if (!repeatAddressExists(draft.addressId)) throw new GuardRejected('choose an address saved on this account.');
+  if (!SERIES_FREQUENCIES.includes(schedule.frequency)) throw new GuardRejected('choose a supported repeat frequency.');
+  if (!date || isNaN(date.getTime()) || localDayString(date) !== schedule.startDate
+      || schedule.startDate < isoDay(0))
+    throw new GuardRejected('choose a valid date from today onward.');
+  if (['weekly', 'biweekly'].includes(schedule.frequency)
+      && (!Number.isInteger(schedule.weekday) || schedule.weekday < 0 || schedule.weekday > 6
+        || date.getDay() !== schedule.weekday))
+    throw new GuardRejected('the selected weekday must match the start date.');
+  if (timeMinutes(schedule.time) === Number.MAX_SAFE_INTEGER)
+    throw new GuardRejected('choose a valid time.');
+  const hasCount = schedule.count != null;
+  const hasEnd = schedule.endDate != null;
+  if (hasCount === hasEnd || (hasCount && (!Number.isInteger(schedule.count) || schedule.count < 1))
+      || (hasEnd && (!/^\d{4}-\d{2}-\d{2}$/.test(schedule.endDate) || schedule.endDate < schedule.startDate)))
+    throw new GuardRejected('set either a positive visit count or a valid end date.');
+  return { service, provider, customer };
+}
+function createRepeatSeries(draft){
+  const checked = validateRepeatSeriesDraft(draft || {});
+  const now = new Date().toISOString();
+  const row = {
+    id: 'rs' + (REPEAT_SERIES.reduce((max, s) => Math.max(max, Number(String(s.id).replace(/\D/g, '')) || 0), 0) + 1),
+    customerId: checked.customer.id,
+    providerId: checked.provider.id,
+    serviceId: checked.service.id,
+    sourceBookingId: draft.sourceBookingId || null,
+    addressId: draft.addressId,
+    schedule: {
+      frequency: draft.schedule.frequency,
+      weekday: draft.schedule.weekday == null ? null : draft.schedule.weekday,
+      startDate: draft.schedule.startDate,
+      time: draft.schedule.time,
+      count: draft.schedule.count == null ? null : draft.schedule.count,
+      endDate: draft.schedule.endDate == null ? null : draft.schedule.endDate
+    },
+    status: 'active',
+    acceptedPriceCentavos: null,
+    createdAt: now,
+    updatedAt: now
+  };
+  REPEAT_SERIES.push(row);
+  materializeRepeatHorizon(row.id);
+  persist();
+  return row;
+}
+function materializeRepeatHorizon(seriesId){
+  const series = repeatSeriesById(seriesId);
+  if (!series || series.status !== 'active') return [];
+  const existing = repeatSeriesBookings(seriesId);
+  const future = new Set(existing.filter(b => b.dateIso >= isoDay(0)
+    && !['completed','cancelled','expired','no_show'].includes(b.status)).map(b => b.occurrenceIndex));
+  const needed = Math.max(0, 4 - future.size);
+  if (!needed) return [];
+  const dates = repeatHorizonDates(series, isoDay(0), 5200)
+    .filter(row => !existing.some(b => b.occurrenceIndex === row.index))
+    .slice(0, needed);
+  const source = series.sourceBookingId && bookingById(series.sourceBookingId);
+  const provider = PROVIDERS.find(p => p.id === series.providerId);
+  const address = series.addressId;
+  const created = [];
+  dates.forEach((slot, i) => {
+    const date = new Date(slot.date + 'T00:00:00');
+    const customer = customerOf({ customerId: series.customerId });
+    const booking = {
+      id: 'b' + (++bookingSeq),
+      customerId: series.customerId,
+      providerId: series.providerId,
+      summary: serviceMeta(series.serviceId).label + ' repeat visit',
+      request: source ? source.request : serviceMeta(series.serviceId).label + ' repeat visit',
+      date: date.toLocaleDateString('en-PH', { weekday:'short', month:'short', day:'numeric' }),
+      dateIso: slot.date,
+      time: series.schedule.time,
+      status: 'requested',
+      amountCentavos: series.acceptedPriceCentavos || (source && source.amountCentavos) || provider.rateCentavos || 0,
+      payStatus: 'unpaid',
+      payMethod: source && source.payMethod || 'cash',
+      barangay: customer && customer.barangay || state.profileData.barangay,
+      address,
+      lat: customer && customer.lat || null,
+      lng: customer && customer.lng || null,
+      notes: 'Repeat-series request. Price and scope are confirmed with the provider for each visit.',
+      seriesId: series.id,
+      occurrenceIndex: slot.index,
+      source: 'repeat',
+      createdAt: new Date().toISOString()
+    };
+    BOOKINGS.push(booking);
+    recordStatusEvent(booking, null, 'requested', { role:'customer', id:series.customerId },
+      'Repeat visit request raised', booking.createdAt);
+    postMessage(booking, 'customer', booking.request, booking.createdAt);
+    created.push(booking);
+  });
+  if (created.length) series.updatedAt = new Date().toISOString();
+  return created;
+}
+function updateRepeatSeriesStatus(seriesId, nextStatus){
+  const series = repeatSeriesById(seriesId);
+  if (!series || series.customerId !== CURRENT_CUSTOMER_ID) throw new GuardRejected('this series is not on this account.');
+  if (!SERIES_STATES.includes(nextStatus)) throw new GuardRejected('that series state is not supported.');
+  if (series.status === 'ended' || (series.status === 'paused' && nextStatus === 'paused'))
+    throw new GuardRejected('this series cannot move from its current state.');
+  if (nextStatus === 'ended'
+      && SERIES_PRICE_OFFERS.some(o => o.seriesId === seriesId && o.status === 'pending'))
+    throw new GuardRejected('resolve the pending price proposal before ending this series.');
+  series.status = nextStatus;
+  series.updatedAt = new Date().toISOString();
+  if (nextStatus === 'active') materializeRepeatHorizon(series.id);
+  persist();
+  return series;
+}
+function pauseRepeatSeries(seriesId){ return updateRepeatSeriesStatus(seriesId, 'paused'); }
+function resumeRepeatSeries(seriesId){ return updateRepeatSeriesStatus(seriesId, 'active'); }
+function endRepeatSeries(seriesId){ return updateRepeatSeriesStatus(seriesId, 'ended'); }
+function skipRepeatOccurrence(seriesId, bookingId){
+  const series = repeatSeriesById(seriesId);
+  const booking = bookingById(bookingId);
+  if (!series || series.customerId !== CURRENT_CUSTOMER_ID || !booking || booking.seriesId !== seriesId)
+    throw new GuardRejected('that visit does not belong to this repeat series.');
+  attemptTransition(bookingId, 'cancelled', { role:'customer', id:CURRENT_CUSTOMER_ID }, { reason:'Resident skipped this repeat visit.' });
+  materializeRepeatHorizon(seriesId);
+  persist();
+  return booking;
+}
+function swapRepeatProvider(seriesId, providerId, customerConsent){
+  const series = repeatSeriesById(seriesId);
+  const replacement = PROVIDERS.find(p => p.id === providerId);
+  if (!series || series.customerId !== CURRENT_CUSTOMER_ID) throw new GuardRejected('this series is not on this account.');
+  if (customerConsent !== true) throw new GuardRejected('confirm the provider change before it is applied.');
+  if (!replacement || replacement.serviceId !== series.serviceId || !providerAccepting(replacement)
+      || !providerServes(replacement, state.profileData.barangay))
+    throw new GuardRejected('the replacement must offer this service and cover the household area.');
+  series.providerId = replacement.id;
+  series.updatedAt = new Date().toISOString();
+  persist();
+  return series;
+}
+function proposeRepeatPrice(seriesId, amountCentavos, actor){
+  const series = repeatSeriesById(seriesId);
+  if (!series || !actor || actor.role !== 'provider' || actor.id !== series.providerId)
+    throw new GuardRejected('only the series provider can propose a price.');
+  if (series.status !== 'active'
+      || SERIES_PRICE_OFFERS.some(o => o.seriesId === seriesId && o.status === 'pending'))
+    throw new GuardRejected('this series cannot accept another price proposal right now.');
+  if (!Number.isSafeInteger(amountCentavos) || amountCentavos <= 0)
+    throw new GuardRejected('a proposed price must be a positive amount in centavos.');
+  const offer = { id:'rpo' + (SERIES_PRICE_OFFERS.length + 1), seriesId, amountCentavos,
+    status:'pending', proposedBy:actor.id, proposedAt:new Date().toISOString(), answeredAt:null };
+  SERIES_PRICE_OFFERS.push(offer);
+  persist();
+  return offer;
+}
+function answerRepeatPrice(offerId, answer){
+  const offer = SERIES_PRICE_OFFERS.find(o => o.id === offerId);
+  if (!offer || !['accept', 'decline'].includes(answer)) throw new GuardRejected('that price offer cannot be answered.');
+  const series = repeatSeriesById(offer.seriesId);
+  if (!series || series.customerId !== CURRENT_CUSTOMER_ID || series.status === 'ended' || offer.status !== 'pending')
+    throw new GuardRejected('that price offer is not waiting for this household.');
+  offer.status = answer === 'accept' ? 'accepted' : 'declined';
+  offer.answeredAt = new Date().toISOString();
+  if (answer === 'accept') series.acceptedPriceCentavos = offer.amountCentavos;
+  series.updatedAt = offer.answeredAt;
+  persist();
+  return offer;
+}
+function nextRepeatStartDate(weekday){
+  const today = new Date();
+  const delta = (weekday - today.getDay() + 7) % 7 || 7;
+  return localDayString(new Date(today.getFullYear(), today.getMonth(), today.getDate() + delta));
+}
+function openRepeatSetup(bookingId){
+  const booking = bookingsForResident().find(b => b.id === bookingId);
+  const serviceId = booking && providerOf(booking).serviceId;
+  if (!booking || booking.status !== 'completed' || !canRepeatCategory(serviceId)) {
+    showToast('Repeat scheduling is not available for this booking');
+    return;
+  }
+  const weekday = new Date().getDay();
+  state.repeatDraft = {
+    sourceBookingId: booking.id,
+    serviceId,
+    providerId: booking.providerId,
+    customerId: booking.customerId,
+    addressId: state.profileData.address || requestAddressBook()[0] || '',
+    frequency: categoryBehaviour(serviceId).cadence,
+    startDate: nextRepeatStartDate(weekday),
+    weekday,
+    time: booking.time || '9:00 AM',
+    count: 4
+  };
+  state.repeatError = null;
+  state.sheet = 'repeatSetup';
+  render();
+}
+function createRepeatSeriesFromSheet(){
+  const draft = state.repeatDraft;
+  if (!draft) throw new GuardRejected('choose a completed booking before setting up a repeat.');
+  const frequency = document.getElementById('repeat-frequency').value;
+  const startDate = document.getElementById('repeat-start').value;
+  const time = document.getElementById('repeat-time').value;
+  const addressId = document.getElementById('repeat-address').value;
+  const count = Number(document.getElementById('repeat-count').value);
+  const start = new Date(startDate + 'T00:00:00');
+  try {
+    const series = createRepeatSeries({
+      sourceBookingId: draft.sourceBookingId,
+      serviceId: draft.serviceId,
+      providerId: draft.providerId,
+      customerId: draft.customerId,
+      addressId,
+      schedule: { frequency, weekday: start.getDay(), startDate, time, count, endDate:null }
+    });
+    state.repeatDraft = null;
+    state.repeatError = null;
+    state.sheet = null;
+    render();
+    showToast('Repeat schedule started; each visit is still a separate request');
+    return series;
+  } catch (err) {
+    if (!(err instanceof GuardRejected)) throw err;
+    state.repeatError = err.message;
+    render();
+    return null;
+  }
+}
+function openRepeatServices(){
+  const generated = REPEAT_SERIES.filter(s => s.customerId === CURRENT_CUSTOMER_ID && s.status === 'active')
+    .reduce((n, s) => n + materializeRepeatHorizon(s.id).length, 0);
+  if (generated) persist();
+  state.sheet = 'repeatServices';
+  render();
+}
+function repeatSeriesAction(action, seriesId){
+  try {
+    if (action === 'pause') pauseRepeatSeries(seriesId);
+    else if (action === 'resume') resumeRepeatSeries(seriesId);
+    else if (action === 'end') endRepeatSeries(seriesId);
+    else if (action === 'skip') {
+      const next = repeatSeriesBookings(seriesId).find(b =>
+        b.dateIso >= isoDay(0) && !FINISHED_STATES.includes(b.status));
+      if (!next) throw new GuardRejected('there is no upcoming visit to skip.');
+      skipRepeatOccurrence(seriesId, next.id);
+    } else throw new GuardRejected('that repeat-series action is not supported.');
+    render();
+    showToast(action === 'skip' ? 'Visit skipped; the remaining requests are unchanged' : 'Repeat schedule updated');
+  } catch (err) {
+    if (!(err instanceof GuardRejected)) throw err;
+    showToast(err.message);
+  }
+}
+function repeatSeriesReplacementOptions(series){
+  return PROVIDERS.filter(p => p.id !== series.providerId && p.serviceId === series.serviceId
+    && providerAccepting(p) && providerServes(p, state.profileData.barangay));
+}
+function submitRepeatPriceProposal(seriesId, bookingId){
+  const booking = findProviderBooking(bookingId);
+  const input = document.getElementById('repeat-price-' + bookingId);
+  if (!booking || booking.seriesId !== seriesId || booking.providerId !== CURRENT_PROVIDER_ID || !input) {
+    showToast('This repeat visit is not on your provider account.', 'error');
+    return;
+  }
+  try {
+    const offer = proposeRepeatPrice(seriesId, toCentavos(Number(input.value)), {
+      role:'provider', id:CURRENT_PROVIDER_ID
+    });
+    render();
+    showToast('Price proposal sent for the household to review');
+    return offer;
+  } catch (err) {
+    if (!(err instanceof GuardRejected)) throw err;
+    showToast(err.message, 'error');
+    return null;
+  }
+}
+function swapRepeatProviderFromUI(seriesId, providerId){
+  try {
+    swapRepeatProvider(seriesId, providerId, true);
+    render();
+    showToast('Provider changed for future repeat requests');
+  } catch (err) {
+    if (!(err instanceof GuardRejected)) throw err;
+    showToast(err.message);
+  }
+}
+
 /* A reputation that never moves is a photograph, not a reputation. The seed figures
    are sample data, so they are held aside as seeds and every published figure is
    recomputed from the seed plus what this device recorded — recomputed, never
@@ -2951,7 +3336,10 @@ const CONFIG_DEFAULTS = {
     promotedListings: false,
     partnerRevenue: false,
     lendingReferral: false,
-    voiceInput: false
+    voiceInput: false,
+    repeatCategories: false,
+    sukiPlans: false,
+    leakNudge: false
   },
   fixedFeeCentavos: 0,                   /* booking or processing fee, ₱0 at pilot */
   taxRate: 0,                            /* applies to the platform fee only */
@@ -4700,6 +5088,10 @@ function kgText(grams){
    the first person — nothing is invented that the record does not say. (26, 77) */
 const MESSAGES = [];
 let messageSeq = 0;
+const REPEAT_SERIES = [];
+const SERIES_PRICE_OFFERS = [];
+const SERIES_STATES = ['active', 'paused', 'ended'];
+const SERIES_FREQUENCIES = ['weekly', 'biweekly', 'monthly'];
 
 function threadKeyOf(customerId, providerId){ return 't-' + customerId + '-' + providerId; }
 function threadKeyFor(booking){ return threadKeyOf(booking.customerId, booking.providerId); }
@@ -5650,11 +6042,9 @@ function resetDemoData() {
    dump holds rows stamped 'Sep 10, 2026' / '2:42 PM' with no instant behind them, and
    nothing on disk can tell those from a real time — so a device holding 15 starts again
    rather than showing a log that prints an empty timestamp against every entry. */
-/* Stays at 16. A reschedule request is a new key, and a v16 dump simply has no such key — an
-   absence that is unambiguous, not a v15 dump's typed-date rows pretending to be real instants.
-   Bumping here would throw away every tester's saved bookings, edited provider profile and audit
-   rows to protect nothing. `hydrate()` reads the missing key as an empty list instead. */
-const SCHEMA_VERSION = 16;
+/* 17 adds recurring-service series, which create ordinary bookings over time. A v16
+   snapshot has no series records, so it starts fresh rather than restoring a partial model. */
+const SCHEMA_VERSION = 17;
 const STORE_KEY = 'sukinnect.snapshot.v1';
 
 const Store = (function () {
@@ -5720,6 +6110,8 @@ const SEED = {
   statusEvents: cloneRecords(STATUS_EVENTS),
   messages: cloneRecords(MESSAGES),
   ledger: cloneRecords(LEDGER),
+  repeatSeries: cloneRecords(REPEAT_SERIES),
+  seriesPriceOffers: cloneRecords(SERIES_PRICE_OFFERS),
   config: cloneRecords(CONFIG)
 };
 
@@ -5741,6 +6133,8 @@ function snapshot() {
     statusEvents: STATUS_EVENTS,
     messages: MESSAGES,
     ledger: LEDGER,
+    repeatSeries: REPEAT_SERIES,
+    seriesPriceOffers: SERIES_PRICE_OFFERS,
     config: CONFIG,
     /* The change log travels with the values it describes. A console that shows a
        15% rate with no record of who set it is not auditable (AGENTS.md 29, 31). */
@@ -5832,6 +6226,22 @@ function hydrate() {
       snap.rescheduleRequests.some(r => !r || !RESCHEDULE_STATES[r.status]
         || (r.raisedBy !== 'resident' && r.raisedBy !== 'provider')))
     return { restored:false, kind:Store.kind, rejected:'a reschedule request carries a state or a proposer that does not exist' };
+  if (!Array.isArray(snap.repeatSeries)
+      || snap.repeatSeries.some(s => !s || !SERIES_STATES.includes(s.status)
+        || !SERIES_FREQUENCIES.includes(s.schedule && s.schedule.frequency)
+        || !/^\d{4}-\d{2}-\d{2}$/.test(s.schedule && s.schedule.startDate || '')
+        || timeMinutes(s.schedule && s.schedule.time) === Number.MAX_SAFE_INTEGER
+        || (s.schedule.frequency !== 'monthly'
+          && (!Number.isInteger(s.schedule.weekday) || s.schedule.weekday < 0 || s.schedule.weekday > 6))
+        || ((s.schedule.count == null) === (s.schedule.endDate == null))
+        || (s.schedule.count != null && (!Number.isInteger(s.schedule.count) || s.schedule.count < 1))
+        || (s.schedule.endDate != null && !/^\d{4}-\d{2}-\d{2}$/.test(s.schedule.endDate))
+        || !Number.isSafeInteger(s.acceptedPriceCentavos) && s.acceptedPriceCentavos !== null))
+    return { restored:false, kind:Store.kind, rejected:'a repeat series carries a state or schedule this app does not support' };
+  if (!Array.isArray(snap.seriesPriceOffers)
+      || snap.seriesPriceOffers.some(o => !o || !Number.isSafeInteger(o.amountCentavos)
+        || o.amountCentavos <= 0 || !['pending','accepted','declined'].includes(o.status)))
+    return { restored:false, kind:Store.kind, rejected:'a repeat-series price offer carries an invalid amount or state' };
   /* An acceptance is a claim about this device, so a dump that names a document the app does not
      have, or a role the app does not issue, is refused rather than shown as an agreement. */
   if (Array.isArray(snap.termsAcceptances) &&
@@ -5853,6 +6263,19 @@ function hydrate() {
   if (snap.bookings.some(b => (b.providerId && !known(snap.providers, b.providerId))
                            || (b.customerId && !known(snap.customers, b.customerId))))
     return { restored:false, kind:Store.kind, rejected:'a booking belongs to a provider or customer that does not exist' };
+  if (snap.repeatSeries.some(s => !known(snap.providers, s.providerId)
+      || !known(snap.customers, s.customerId) || !SERVICES.some(cat => cat.id === s.serviceId)
+      || !repeatAddressExists(s.addressId, snap.profileData || state.profileData)))
+    return { restored:false, kind:Store.kind, rejected:'a repeat series names a provider, customer, service or address that does not exist' };
+  if (snap.repeatSeries.some(s => s.sourceBookingId && !snap.bookings.some(b =>
+      b.id === s.sourceBookingId && b.customerId === s.customerId && b.status === 'completed'
+      && snap.providers.some(p => p.id === b.providerId && p.serviceId === s.serviceId))))
+    return { restored:false, kind:Store.kind, rejected:'a repeat series has no matching completed source booking' };
+  if (snap.bookings.some(b => b.seriesId && (!snap.repeatSeries.some(s => s.id === b.seriesId)
+      || !Number.isInteger(b.occurrenceIndex) || !/^\d{4}-\d{2}-\d{2}$/.test(b.dateIso || ''))))
+    return { restored:false, kind:Store.kind, rejected:'a repeat booking has no valid series occurrence' };
+  if (snap.seriesPriceOffers.some(o => !snap.repeatSeries.some(s => s.id === o.seriesId)))
+    return { restored:false, kind:Store.kind, rejected:'a repeat-series price offer belongs to no series' };
   if (Array.isArray(snap.listings) &&
       snap.listings.some(l => l && l.providerId && !known(snap.providers, l.providerId)))
     return { restored:false, kind:Store.kind, rejected:'a listed service belongs to no provider' };
@@ -5883,6 +6306,8 @@ function hydrate() {
      an offer. A v16 dump has no such key, and the absence is read as an empty list — which is
      why the schema version did not move for this feature. */
   if (snap.rescheduleRequests) replaceContents(RESCHEDULE_REQUESTS, snap.rescheduleRequests);
+  replaceContents(REPEAT_SERIES, snap.repeatSeries);
+  replaceContents(SERIES_PRICE_OFFERS, snap.seriesPriceOffers);
   OFFERS.forEach(o => { const num = parseInt(String(o.id).replace(/[^0-9]/g, ''), 10);
                         if (!Number.isNaN(num) && num > offerSeq) offerSeq = num; });
   DISPUTES.forEach(d => { const n = parseInt(String(d.id).split('-').pop(), 10); if (!Number.isNaN(n) && n > disputeSeq) disputeSeq = n; });
@@ -6029,6 +6454,8 @@ function restoreSeed() {
   replaceContents(MESSAGES, []);
   messageSeq = 0;
   replaceContents(LEDGER, []);
+  replaceContents(REPEAT_SERIES, []);
+  replaceContents(SERIES_PRICE_OFFERS, []);
   /* Back to the persona the file ships with, or a reset leaves the demo signed in
      as someone the sample data was not written for. */
   applyProviderIdentity('p1');
@@ -6061,6 +6488,8 @@ let state = {
   // profile modals it belongs to the screen that raised it, so it clears on
   // every destination change.
   sheet: null,
+  repeatDraft: null,
+  repeatError: null,
   // Live discovery filters. null means "no constraint" so one shape covers all.
   providerFilters:{ serviceId:null, barangay:null, maxWait:null },
   // In-place loading UI: never part of a destination, so it repaints without
@@ -6622,7 +7051,9 @@ function scoreProvider(provider, request, context) {
 function providerMatches(){
   const query = (state.searchQuery || '').trim().toLowerCase();
   const f = state.providerFilters || {};
+  const discoveryIds = new Set(servicesForDiscovery().map(s => s.id));
   const matched = PROVIDERS.filter(p =>
+    discoveryIds.has(p.serviceId) &&
     (!query || p.name.toLowerCase().includes(query) ||
       p.service.toLowerCase().includes(query) ||
       p.barangay.toLowerCase().includes(query)) &&
@@ -7524,6 +7955,95 @@ function connectionsEntry() {
 
 function openWallet() { state.sheet = 'wallet'; render(); }
 
+function repeatSetupSheet(){
+  const draft = state.repeatDraft;
+  if (!draft) return emptyState('calendar', 'Choose a completed service first',
+    'Open a completed booking to set up a repeat schedule.');
+  const addresses = requestAddressBook();
+  const times = REQUEST_TIMES.includes(draft.time) ? REQUEST_TIMES : [draft.time].concat(REQUEST_TIMES);
+  return `
+    <div class="sheet-head"><div><h2 class="sheet-title">Repeat this service</h2>
+      <div class="sheet-sub">Each visit becomes a separate request. The provider confirms scope and price each time.</div></div>
+      <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close">${ic('x',15)}</button></div>
+    <div class="sheet-body">
+      <div class="card" style="border-radius:var(--r-card);padding:var(--s-3);margin-bottom:var(--s-3);">
+        <b>${esc(serviceMeta(draft.serviceId).label)}</b>
+        <div style="font-size:var(--t-caption);color:var(--ink-soft);margin-top:4px;">Provider: ${esc(providerOf(bookingById(draft.sourceBookingId)).name)}</div>
+      </div>
+      <label class="form-label" for="repeat-frequency">How often?</label>
+      <select id="repeat-frequency" class="form-input">
+        ${SERIES_FREQUENCIES.map(freq => `<option value="${freq}" ${freq === draft.frequency ? 'selected' : ''}>${freq === 'biweekly' ? 'Every two weeks' : freq[0].toUpperCase() + freq.slice(1)}</option>`).join('')}
+      </select>
+      <label class="form-label" for="repeat-start">First visit date</label>
+      <input id="repeat-start" class="form-input" type="date" value="${esc(draft.startDate)}">
+      <label class="form-label" for="repeat-time">Preferred time</label>
+      <select id="repeat-time" class="form-input">
+        ${times.map(time => `<option value="${esc(time)}" ${time === draft.time ? 'selected' : ''}>${esc(time)}</option>`).join('')}
+      </select>
+      <label class="form-label" for="repeat-address">Service address</label>
+      <select id="repeat-address" class="form-input">
+        ${addresses.map(address => `<option value="${esc(address)}" ${address === draft.addressId ? 'selected' : ''}>${esc(address)}</option>`).join('')}
+      </select>
+      <label class="form-label" for="repeat-count">Number of visits</label>
+      <select id="repeat-count" class="form-input">
+        ${[4,8,12].map(count => `<option value="${count}" ${count === draft.count ? 'selected' : ''}>${count} visits</option>`).join('')}
+      </select>
+      ${state.repeatError ? `<div class="inline-error" role="alert">${ic('alert-triangle',12)} ${esc(state.repeatError)}</div>` : ''}
+      <p style="font-size:var(--t-caption);color:var(--ink-soft);line-height:1.55;">Only the next four visit requests are created on this device. No provider is booked until they accept each request.</p>
+    </div>
+    <div class="sheet-foot"><button type="button" class="btn" style="flex:1;" onclick="createRepeatSeriesFromSheet()">Start repeat schedule</button></div>`;
+}
+function answerRepeatPriceFromUI(offerId, answer){
+  try {
+    answerRepeatPrice(offerId, answer);
+    render();
+    showToast(answer === 'accept' ? 'New price accepted for future visits' : 'Price offer declined');
+  } catch (err) {
+    if (!(err instanceof GuardRejected)) throw err;
+    showToast(err.message);
+  }
+}
+function repeatServicesSheet(){
+  const rows = repeatSeriesForResident();
+  if (!rows.length) return `
+    <div class="sheet-head"><div><h2 class="sheet-title">Repeat services</h2>
+      <div class="sheet-sub">Recurring schedules on this device</div></div>
+      <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close">${ic('x',15)}</button></div>
+    <div class="sheet-body">${emptyState('calendar', 'No repeat schedules yet', 'Start one from an eligible completed booking. Each visit still needs provider acceptance.')}</div>
+    <div class="sheet-foot"><button type="button" class="btn secondary" style="flex:1;" onclick="closeSheet()">Close</button></div>`;
+  return `
+    <div class="sheet-head"><div><h2 class="sheet-title">Repeat services</h2>
+      <div class="sheet-sub">Each visit remains its own booking request</div></div>
+      <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close">${ic('x',15)}</button></div>
+    <div class="sheet-body">
+      ${rows.map(series => {
+        const provider = PROVIDERS.find(p => p.id === series.providerId);
+        const occurrences = repeatSeriesBookings(series.id);
+        const pendingOffer = SERIES_PRICE_OFFERS.find(o => o.seriesId === series.id && o.status === 'pending');
+        const replacements = series.status === 'active' ? repeatSeriesReplacementOptions(series) : [];
+        return `<div class="card" style="border-radius:var(--r-card);padding:var(--s-3);margin-bottom:var(--s-3);">
+          <div class="row"><b style="flex:1;">${esc(serviceMeta(series.serviceId).label)}</b><span class="chip">${esc(series.status)}</span></div>
+          <div style="font-size:var(--t-caption);color:var(--ink-soft);margin:4px 0 8px;">${esc(provider ? provider.name : 'Provider not on this device')} · ${esc(series.schedule.frequency)} · ${series.schedule.count == null ? 'through ' + series.schedule.endDate : series.schedule.count + ' visits'} · ${esc(series.addressId)}</div>
+          ${occurrences.slice(0,4).map(b => `<div class="row" style="font-size:var(--t-caption);padding:4px 0;"><span style="flex:1;">${esc(b.date)}, ${esc(b.time)}</span><span>${esc(label(b.status))}</span></div>`).join('')}
+          ${pendingOffer ? `<div class="card" style="padding:var(--s-2);margin-top:8px;"><b>New price proposal: ${peso(pendingOffer.amountCentavos)}</b>
+            <div class="row" style="margin-top:6px;"><button type="button" class="btn sm" onclick="answerRepeatPriceFromUI('${pendingOffer.id}','accept')">Accept</button>
+            <button type="button" class="btn sm secondary" onclick="answerRepeatPriceFromUI('${pendingOffer.id}','decline')">Decline</button></div></div>` : ''}
+          ${series.status === 'active' ? `<div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap;">
+            <button type="button" class="btn sm secondary" onclick="repeatSeriesAction('pause','${series.id}')">Pause</button>
+            <button type="button" class="btn sm secondary" onclick="repeatSeriesAction('skip','${series.id}')">Skip next visit</button>
+            <button type="button" class="btn sm secondary" onclick="repeatSeriesAction('end','${series.id}')">End schedule</button>
+          </div>
+          ${replacements.length ? `<div style="font-size:var(--t-caption);margin-top:8px;">Use a different provider for future requests:</div>
+            ${replacements.map(p => `<button type="button" class="btn sm secondary" style="margin:4px 4px 0 0;" onclick="swapRepeatProviderFromUI('${series.id}','${p.id}')">Use ${esc(p.name)} for future requests</button>`).join('')}` : ''}`
+            : series.status === 'paused' ? `<button type="button" class="btn sm secondary" style="margin-top:8px;" onclick="repeatSeriesAction('resume','${series.id}')">Resume</button>
+              <button type="button" class="btn sm tertiary" style="margin-top:8px;" onclick="repeatSeriesAction('end','${series.id}')">End schedule</button>`
+              : '<div style="font-size:var(--t-caption);color:var(--ink-soft);margin-top:8px;">Ended. Existing booking records remain in your history.</div>'}
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="sheet-foot"><button type="button" class="btn secondary" style="flex:1;" onclick="closeSheet()">Close</button></div>`;
+}
+
 function walletSheet() {
   const w = walletSnapshot(CURRENT_PROVIDER_ID);
   const tier = loyaltyTier(CURRENT_PROVIDER_ID);
@@ -7664,7 +8184,12 @@ const PROFILE_SECTION_BODIES = {
 };
 
 function openSheet(name){ state.sheet = name; render(); }
-function closeSheet(){ state.sheet = null; render(); }
+function closeSheet(){
+  state.sheet = null;
+  state.repeatDraft = null;
+  state.repeatError = null;
+  render();
+}
 
 function toggleProviderFilter(key, value){
   const f = state.providerFilters;
@@ -7720,6 +8245,10 @@ function startDiscovery(query){
 // previous shortlist. Both the Home tiles and the Concierge hand-off use this so
 // the two entry points cannot drift apart.
 function openCategory(serviceId){
+  if (serviceId !== 'all' && !servicesForDiscovery().some(s => s.id === serviceId)) {
+    showToast('That pilot category is not enabled for discovery');
+    return;
+  }
   state.searchQuery = '';
   /* "All services" is the grid's eighth tile (§4.4). It is not a category, so it clears the
      service filter instead of filtering to a trade nobody holds — otherwise the tile that
@@ -7798,7 +8327,7 @@ function providerFiltersSheet(){
     <div class="sheet-body">
       <div class="sheet-group">
         <div class="sheet-label">Service</div>
-        ${SERVICES.map(s => filterOption(f.serviceId === s.id, s.icon, s.label, `toggleProviderFilter('serviceId','${s.id}')`)).join('')}
+        ${servicesForDiscovery().map(s => filterOption(f.serviceId === s.id, s.icon, s.label, `toggleProviderFilter('serviceId','${s.id}')`)).join('')}
       </div>
       <div class="sheet-group">
         <div class="sheet-label">Barangay</div>
@@ -7816,7 +8345,7 @@ function providerFiltersSheet(){
     </div>`;
 }
 
-const SHEET_LABELS = { providerFilters:'Filter providers', bookingRequest:'Book an appointment', reschedule:'Propose a new time', legalDoc:'Legal document', rateWizard:'Set a service rate', verification:'Verify your account', signupGuide:'Guide me through signing up', wallet:'Your wallet', connections:'Your connections', raiseCase:'Raise a case', profileSection:'Profile section', makeOffer:'Make an offer', finaliseProduce:'Record the actual quantity' };
+const SHEET_LABELS = { providerFilters:'Filter providers', bookingRequest:'Book an appointment', reschedule:'Propose a new time', legalDoc:'Legal document', rateWizard:'Set a service rate', verification:'Verify your account', signupGuide:'Guide me through signing up', wallet:'Your wallet', connections:'Your connections', raiseCase:'Raise a case', profileSection:'Profile section', makeOffer:'Make an offer', finaliseProduce:'Record the actual quantity', repeatSetup:'Repeat this service', repeatServices:'Repeat services' };
 
 const REQUEST_TIMES = ['8:00 AM','10:00 AM','1:00 PM','3:00 PM','5:00 PM'];
 
@@ -9248,6 +9777,8 @@ function cancelBookingRequest(id){
 }
 
 function sheetHTML(){
+  if(state.sheet === 'repeatSetup') return repeatSetupSheet();
+  if(state.sheet === 'repeatServices') return repeatServicesSheet();
   if(state.sheet === 'providerFilters') return providerFiltersSheet();
   if(state.sheet === 'bookingRequest') return bookingRequestSheet();
   if(state.sheet === 'reschedule') return rescheduleSheet();
@@ -10169,7 +10700,7 @@ function loginHTML(){
         </div>` : ''}
 
         ${state.role === 'provider' && !isRegister ? `<div class="auth-hint">
-          Two demo pros to sign in as: <b>ramil@demo.ph</b> for plumbing, or
+          Demo pros: <b>ramil@demo.ph</b> for plumbing, <b>cristy@demo.ph</b> for cleaning and repeat visits, or
           <b>erning@demo.ph</b> for the Fruit Harvest &amp; Buy pilot. Same app, different work.</div>` : ''}
         ${isRegister ? '' : `<button type="button" class="auth-forgot" onclick="showToast('Password reset is not part of this prototype.')">Forgot password?</button>`}
 
@@ -10638,9 +11169,12 @@ function residentHome(){
       </div>
     </div>    <div class="section-label">Browse by service</div>
     <div class="catgrid">
-      ${SERVICES.map(s=>`<button type="button" class="cat" data-service="${s.id}"><span class="tile lg" style="--tile-bg:${serviceTheme(s.id).bg}; --tile-fg:${serviceTheme(s.id).fg}">${ic(s.icon,28)}</span><span class="cat-label">${esc(s.short || s.label)}</span>${s.pilot ? '<span class="chip pilot-tag">pilot</span>' : ''}</button>`).join('')}
+      ${servicesForDiscovery().map(s=>`<button type="button" class="cat" data-service="${s.id}"><span class="tile lg" style="--tile-bg:${serviceTheme(s.id).bg}; --tile-fg:${serviceTheme(s.id).fg}">${ic(s.icon,28)}</span><span class="cat-label">${esc(s.short || s.label)}</span>${s.pilot ? '<span class="chip pilot-tag">pilot</span>' : ''}</button>`).join('')}
       <button type="button" class="cat" data-service="all"><span class="tile lg">${ic('grid',28)}</span><span class="cat-label">All services</span></button>
     </div>
+    <button type="button" class="btn sm secondary" style="margin-top:8px;" onclick="openRepeatServices()">
+      ${ic('calendar',13)} Repeat services (${repeatSeriesForResident().filter(s => s.status !== 'ended').length})
+    </button>
 
 
     <!-- A job in motion is the reason the app was opened, so it sits above the
@@ -11596,6 +12130,11 @@ function residentBookingDetail(){
           ${ic("refresh-cw",13)} Book Again (${pesoShort(b.amountCentavos)})
         </button>
       ` : ''}
+      ${b.status === 'completed' && canRepeatCategory(providerOf(b).serviceId) ? `
+        <button type="button" class="btn secondary" style="width:100%;margin-top:8px;" onclick="openRepeatSetup('${b.id}')">
+          ${ic('calendar',14)} Set up repeat visits
+        </button>
+      ` : ''}
 
     </div>
   </div>`;
@@ -11865,7 +12404,7 @@ function adminDashboard(){
     </button>
     <button type="button" class="job-row" onclick="state.adminScreen='categories'; render();" aria-label="Open the category catalogue">
       <span class="tile" style="--tile-bg:var(--background); --tile-fg:var(--text-secondary);">${ic('fruit',20)}</span>
-      <span style="min-width:0; flex:1;"><span class="jr-t">Pilot category under review <span class="chip count-chip">${SERVICES.filter(s => s.pilot).length}</span></span><span class="jr-s">${SERVICES.length} categories live</span></span>
+      <span style="min-width:0; flex:1;"><span class="jr-t">Pilot categories and candidates <span class="chip count-chip">${SERVICES.filter(s => s.pilot || s.candidate).length}</span></span><span class="jr-s">${SERVICES.filter(s => !s.candidate).length} categories in discovery; candidates are off until enabled</span></span>
       <span style="color:var(--mist); display:inline-flex;">${ic('arrow-right',14)}</span>
     </button>
 
@@ -14076,6 +14615,23 @@ function providerBookings(){
   </div>`;
 }
 
+function repeatPriceProviderCard(booking){
+  if (!booking.seriesId || booking.providerId !== CURRENT_PROVIDER_ID) return '';
+  const series = repeatSeriesById(booking.seriesId);
+  if (!series) return '';
+  const pending = SERIES_PRICE_OFFERS.find(o => o.seriesId === series.id && o.status === 'pending');
+  if (pending) return `<div class="card"><b>Repeat price proposal</b><div style="font-size:var(--t-caption);color:var(--ink-soft);margin-top:6px;">${peso(pending.amountCentavos)} · waiting for the household to review</div></div>`;
+  if (series.status !== 'active') return `<div class="card"><b>Future repeat visits</b><div style="font-size:var(--t-caption);color:var(--ink-soft);margin-top:6px;">Price proposals are available only while the schedule is active.</div></div>`;
+  const amount = series.acceptedPriceCentavos == null ? booking.amountCentavos : series.acceptedPriceCentavos;
+  return `<div class="card"><b>Future repeat visits</b>
+    <div style="font-size:var(--t-caption);color:var(--ink-soft);margin-top:6px;line-height:1.5;">A new price needs the household’s approval. Existing booking requests will not change.</div>
+    <label class="form-label" style="margin-top:10px;">Proposed price in pesos
+      <input id="repeat-price-${booking.id}" type="number" min="0.01" step="0.01" inputmode="decimal" class="form-input" value="${amount == null ? '' : toPesos(amount)}">
+    </label>
+    <button type="button" class="btn sm secondary" style="margin-top:8px;" onclick="submitRepeatPriceProposal('${series.id}','${booking.id}')">Send price proposal</button>
+  </div>`;
+}
+
 function providerBookingDetail(){
   const booking = findProviderBooking(state.selectedProviderBookingId);
   /* An id outside this account's inbox used to fall back to the first job in the list.
@@ -14114,6 +14670,7 @@ function providerBookingDetail(){
     </div>
 
     ${fruitCard(booking, 'provider')}
+    ${repeatPriceProviderCard(booking)}
 
     <div class="card">
       <div style="font-size:var(--t-body-sm); font-weight:800; margin-bottom:8px;">Client location</div>

@@ -11,6 +11,7 @@ const APP = path.join(__dirname, '..', 'Sukinnect-next.html');
    eval so a suite can ask for what it needs and gets undefined for what has not
    landed yet, instead of the whole harness failing to boot over one symbol. */
 const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'CREDENTIALS', 'LISTINGS', 'NOTIFICATIONS', 'LEDGER',
+  'REPEAT_SERIES', 'SERIES_PRICE_OFFERS',
   'PAYMENTS', 'STATUS_EVENTS', 'PAYOUTS', 'DISPUTES', 'CONFIG', 'state', 'Store', 'snapshot',
   'hydrate', 'persist', 'restoreSeed', 'bookingsForResident', 'bookingsForProvider',
   'pendingProviderRequests', 'bookingById', 'providerOf', 'customerOf', 'listingsOf',
@@ -78,6 +79,12 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'CREDENTIALS', 'LISTINGS'
   'openOfferFor', 'offerTotals', 'offerDirection', 'describeOffer', 'makeOffer',
   'answerOffer', 'kgText', 'seedFruitOffers', 'fruitCapability', 'providerCanMode',
   'capabilityLabel', 'categoryBehaviour', 'CATEGORY_DEFAULTS', 'SERVICES',
+  'servicesForDiscovery', 'canRepeatCategory', 'SERIES_STATES', 'SERIES_FREQUENCIES',
+  'repeatSeriesById', 'repeatSeriesForResident', 'repeatSeriesBookings', 'repeatHorizonDates',
+  'createRepeatSeries', 'materializeRepeatHorizon', 'pauseRepeatSeries', 'resumeRepeatSeries',
+  'endRepeatSeries', 'skipRepeatOccurrence', 'swapRepeatProvider', 'proposeRepeatPrice',
+  'answerRepeatPrice', 'openRepeatSetup', 'createRepeatSeriesFromSheet', 'repeatSetupSheet',
+  'repeatServicesSheet', 'repeatSeriesAction', 'repeatSeriesReplacementOptions',
   /* the resident's fruit sheet and the readers every screen share */
   'bookingRequestSheet', 'modeRail', 'modesFor', 'fruitBlock', 'fruitFields', 'fruitField',
   'fruitInput', 'pickFruitField', 'toggleFruitBool', 'requestPhotos', 'dropFruitPhoto',
@@ -93,6 +100,7 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'CREDENTIALS', 'LISTINGS'
   'pickOfferWho', 'capabilityCard', 'providerJobAction', 'realRequestCard', 'jobActionBar',
   'requestActionCard', 'PROVIDER_DEMO_ACCOUNTS', 'PROVIDER_DEMO_PROFILES',
   'signInAsProvider', 'applyProviderIdentity', 'signedInProvider',
+  'findProviderBooking', 'providerBookingDetail', 'repeatPriceProviderCard', 'submitRepeatPriceProposal',
   /* the operator's view of the pilot */
   'adminMarketplaceIntelligence', 'adminCategories', 'intelligenceStats', 'bookingsInWindow',
   'ADMIN_PRICING_WORDS', 'ADMIN_CAPABILITY_WORDS', 'ADMIN_SAFETY_WORDS',

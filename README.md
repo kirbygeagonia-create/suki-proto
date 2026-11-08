@@ -318,6 +318,11 @@ A seventh category, marked **pilot** everywhere it appears, that a reviewer can 
 end: `erning@demo.ph` signs in as the harvester-buyer, `ramil@demo.ph` is still the plumbing
 account. Same provider shell, same screens — only the identity differs.
 
+`cristy@demo.ph` is the cleaning demo account used to review repeat-service requests and
+provider price proposals. Its contact and schedule details are explicitly incomplete demo
+data, not a real provider profile. Seven additional cadence-tagged service candidates are
+hidden behind the `repeatCategories` flag; they do not appear in resident discovery by default.
+
 Three modes, because they are three different transactions: **Harvest Only** (you keep the
 fruit, you pay for labour), **Sell My Fruit** (a buyer pays you and takes it), **Harvest + Buy**
 (both). The request sheet asks which one first; the fields that follow come from the category's

@@ -40,8 +40,8 @@ const BREAKS = [
     expect: 'refuse' },
   { name: 'the app scan raises no layer, so its population is silently empty',
     file: 'audit',
-    from: '      a.state[modalKey] = name;\n      a.render();',
-    to: '      a.state[modalKey] = null;\n      a.render();',
+    from: 'a.state[modalKey] = name;',
+    to: 'a.state[modalKey] = null;',
     expect: 'refuse' },
   { name: 'the table is no longer being read, and the row-count guard is what says so',
     file: 'audit',
@@ -62,7 +62,12 @@ const BREAKS = [
     file: 'audit',
     from: "appSrc.match(/state\\.sheet\\s*===\\s*'([A-Za-z_]+)'/g)",
     to: "appSrc.match(/state\\.sheetZZZ\\s*===\\s*'([A-Za-z_]+)'/g)",
-    expect: 'refuse' }
+    expect: 'refuse' },
+  { name: 'a painted click naming a sheet opener stops counting as coverage',
+    file: 'audit',
+    from: 'const clickedByOpener = openers.some(f =>',
+    to: 'const clickedByOpener = false && openers.some(f =>',
+    expect: 'more' }
 ];
 
 let applied = 0, caught = 0, missed = 0, notPlanted = 0;

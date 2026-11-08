@@ -4003,9 +4003,9 @@ suite('fruit', async () => {
     app.SERVICES.filter(s => s.pilot).map(s => s.id).join(',') === 'fruit',
     app.SERVICES.filter(s => s.pilot).map(s => s.id).join(',') || '(none)');
   c.check('the grid carries seven categories without a new nav tab',
-    app.SERVICES.length === 7 && app.ROOT_TABS.resident.length === 4 &&
+    app.servicesForDiscovery().length === 7 && app.ROOT_TABS.resident.length === 4 &&
     app.ROOT_TABS.provider.length === 5,
-    app.SERVICES.length + ' services, ' + (app.ROOT_TABS.resident || []).length + ' resident tabs');
+    app.servicesForDiscovery().length + ' discovery categories, ' + (app.ROOT_TABS.resident || []).length + ' resident tabs');
 
   /* ---- the record is linked, the way every other job is ---- */
   c.check('each fruit job has its own timeline',
@@ -4937,6 +4937,197 @@ suite('dates', async () => {
       ['unpaid', 'pending_site'].some(k => seenCodes[k]) && pay.PAYMENTS.length >= 8,
     Object.keys(seenCodes).map(k => k + '=' + seenCodes[k]).join(' ') + ' | rows ' + pay.PAYMENTS.length);
 
+  return c;
+});
+
+suite('repeat services', async () => {
+  const c = makeChecker();
+  const app = boot();
+  c.check('repeat-category candidates stay off the resident catalogue by default',
+    app.servicesForDiscovery().length === 7
+      && !app.servicesForDiscovery().some(s => s.candidate)
+      && app.CONFIG.featureFlags.repeatCategories === false,
+    app.servicesForDiscovery().map(s => s.id).join(','));
+  c.check('only declared repeatable service categories can start a series',
+    ['cleaning','tutoring','delivery'].every(id => app.canRepeatCategory(id))
+      && ['plumbing','electrical','appliance'].every(id => !app.canRepeatCategory(id)),
+    app.SERVICES.filter(s => app.canRepeatCategory(s.id)).map(s => s.id).join(','));
+  const monthEnd = app.repeatHorizonDates({
+    schedule:{ frequency:'monthly', startDate:'2024-01-31', count:3, endDate:null }
+  }, '2024-01-01', 4);
+  c.check('monthly visits preserve the day and clamp to each month end',
+    monthEnd.map(r => r.date).join(',') === '2024-01-31,2024-02-29,2024-03-31',
+    monthEnd.map(r => r.date).join(','));
+  const untilDate = app.repeatHorizonDates({
+    schedule:{ frequency:'weekly', weekday:0, startDate:app.isoDay(0), count:null, endDate:app.isoDay(15) }
+  }, app.isoDay(0), 5200);
+  c.check('an end-date schedule stops on its declared calendar day',
+    untilDate.length === 3 && untilDate.every(r => r.date <= app.isoDay(15))
+      && untilDate[untilDate.length - 1].date === app.isoDay(14));
+  app.CONFIG.featureFlags.repeatCategories = true;
+  c.check('enabling the discovery flag exposes candidate categories without inventing providers',
+    app.servicesForDiscovery().filter(s => s.candidate).length === 7
+      && app.providerMatches().every(p => !app.SERVICES.find(s => s.id === p.serviceId).candidate),
+    app.servicesForDiscovery().filter(s => s.candidate).map(s => s.id).join(','));
+
+  const store = fakeStorage();
+  const maker = boot({ storage: store });
+  const startDate = maker.isoDay(7);
+  const start = new Date(startDate + 'T00:00:00');
+  const series = maker.createRepeatSeries({
+    sourceBookingId:'b3', serviceId:'cleaning', providerId:'p3', customerId:maker.CURRENT_CUSTOMER_ID,
+    addressId:maker.state.profileData.address,
+    schedule:{ frequency:'weekly', weekday:start.getDay(), startDate, time:'9:00 AM', count:8, endDate:null }
+  });
+  const generated = maker.repeatSeriesBookings(series.id);
+  c.check('a repeat series creates only the next four visit requests',
+    generated.length === 4 && generated.every(b => b.status === 'requested')
+      && new Set(generated.map(b => b.occurrenceIndex)).size === 4
+      && generated.every(b => b.seriesId === series.id && b.dateIso),
+    generated.length + ' visits: ' + generated.map(b => b.occurrenceIndex).join(','));
+  c.check('each generated visit starts in the ordinary booking history and message thread',
+    generated.every(b => maker.bookingTimeline(b.id).length === 1
+      && maker.bookingTimeline(b.id)[0].to === 'requested'
+      && maker.threadMessages(maker.threadKeyFor(b)).some(m => m.bookingId === b.id)),
+    generated.map(b => maker.bookingTimeline(b.id).length + '/' + maker.threadMessages(maker.threadKeyFor(b)).length).join(','));
+  c.check('a malformed schedule is refused before it creates records', (() => {
+    const count = maker.REPEAT_SERIES.length, bookings = maker.BOOKINGS.length;
+    let refused = false;
+    try { maker.createRepeatSeries({
+      sourceBookingId:'b3', serviceId:'cleaning', providerId:'p3', customerId:maker.CURRENT_CUSTOMER_ID,
+      addressId:maker.state.profileData.address,
+      schedule:{ frequency:'weekly', weekday:start.getDay(), startDate, time:'9:00 AM', count:0, endDate:null }
+    }); } catch (err) { refused = /positive visit count/.test(err.message); }
+    return refused && maker.REPEAT_SERIES.length === count && maker.BOOKINGS.length === bookings;
+  })());
+  c.check('repeat setup is anchored to a completed booking on this household and service', (() => {
+    const source = maker.BOOKINGS.find(b => b.id !== 'b3' && b.status !== 'completed');
+    if (!source) return false;
+    let refused = false;
+    try { maker.createRepeatSeries({
+      sourceBookingId:source.id, serviceId:'cleaning', providerId:'p3', customerId:maker.CURRENT_CUSTOMER_ID,
+      addressId:maker.state.profileData.address,
+      schedule:{ frequency:'weekly', weekday:start.getDay(), startDate, time:'9:00 AM', count:8, endDate:null }
+    }); } catch (err) { refused = /completed booking/.test(err.message); }
+    return refused;
+  })());
+  maker.persist();
+  const restored = boot({ storage:store });
+  const hydration = restored.hydrate();
+  c.check('series and generated bookings survive a reload together',
+    hydration.restored && restored.REPEAT_SERIES.length === 1
+      && restored.repeatSeriesBookings(series.id).length === 4
+      && restored.repeatSeriesBookings(series.id).every(b => restored.bookingById(b.id)),
+    JSON.stringify(hydration));
+  const danglingStore = fakeStorage();
+  const danglingDump = JSON.parse(store.getItem('sukinnect.snapshot.v1'));
+  danglingDump.repeatSeries[0].providerId = 'provider-no-longer-exists';
+  danglingStore.setItem('sukinnect.snapshot.v1', JSON.stringify(danglingDump));
+  c.check('a stored series with a dangling provider is refused rather than substituted',
+    boot({ storage:danglingStore }).hydrate().restored === false);
+  c.check('a v16 snapshot cannot be half-loaded into the new record shape', (() => {
+    const old = fakeStorage();
+    old.setItem('sukinnect.snapshot.v1', JSON.stringify({ schemaVersion:16, bookings:[] }));
+    return boot({ storage:old }).hydrate().restored === false && restored.SCHEMA_VERSION === 17;
+  })());
+
+  let skipped = null;
+  try { skipped = restored.skipRepeatOccurrence(series.id, restored.repeatSeriesBookings(series.id)[0].id); }
+  catch (err) { skipped = { error:err.message }; }
+  c.check('skipping one occurrence replaces it in the four-visit horizon without ending the series',
+    skipped && !skipped.error && skipped.status === 'cancelled'
+      && restored.repeatSeriesById(series.id).status === 'active'
+      && restored.repeatSeriesBookings(series.id).filter(b => b.status === 'requested').length === 4
+      && restored.repeatSeriesBookings(series.id).length === 5,
+    skipped && skipped.error || restored.repeatSeriesBookings(series.id).map(b => b.status).join(','));
+  restored.pauseRepeatSeries(series.id);
+  c.check('a paused series generates no additional requests',
+    restored.materializeRepeatHorizon(series.id).length === 0
+      && restored.repeatSeriesById(series.id).status === 'paused');
+  restored.resumeRepeatSeries(series.id);
+  restored.endRepeatSeries(series.id);
+  c.check('ending a series stops future generation and leaves existing bookings intact',
+    restored.materializeRepeatHorizon(series.id).length === 0
+      && restored.repeatSeriesBookings(series.id).length === 5
+      && restored.repeatSeriesById(series.id).status === 'ended');
+
+  const swap = boot();
+  const swapSeries = swap.createRepeatSeries({
+    sourceBookingId:'b3', serviceId:'cleaning', providerId:'p3', customerId:swap.CURRENT_CUSTOMER_ID,
+    addressId:swap.state.profileData.address,
+    schedule:{ frequency:'weekly', weekday:start.getDay(), startDate, time:'9:00 AM', count:8, endDate:null }
+  });
+  const alternate = Object.assign({}, swap.PROVIDERS.find(p => p.id === 'p3'), {
+    id:'p3-alt', name:'Alternate demo cleaner'
+  });
+  swap.PROVIDERS.push(alternate);
+  let declinedSwap = false;
+  try { swap.swapRepeatProvider(swapSeries.id, alternate.id, false); } catch (err) { declinedSwap = true; }
+  swap.swapRepeatProvider(swapSeries.id, alternate.id, true);
+  swap.skipRepeatOccurrence(swapSeries.id, swap.repeatSeriesBookings(swapSeries.id)[0].id);
+  const swappedFuture = swap.repeatSeriesBookings(swapSeries.id).find(b => b.occurrenceIndex === 4);
+  c.check('provider replacement requires resident consent and affects only future requests',
+    declinedSwap && swapSeries.providerId === 'p3-alt'
+      && swap.repeatSeriesBookings(swapSeries.id).filter(b => b.occurrenceIndex < 4)
+        .every(b => b.providerId === 'p3')
+      && swappedFuture && swappedFuture.providerId === 'p3-alt');
+
+  const price = boot();
+  const priceSeries = price.createRepeatSeries({
+    sourceBookingId:'b3', serviceId:'cleaning', providerId:'p3', customerId:price.CURRENT_CUSTOMER_ID,
+    addressId:price.state.profileData.address,
+    schedule:{ frequency:'weekly', weekday:start.getDay(), startDate, time:'9:00 AM', count:8, endDate:null }
+  });
+  const priorAmounts = price.repeatSeriesBookings(priceSeries.id).map(b => b.amountCentavos).join(',');
+  let priceOffer = null, refusedPrice = false;
+  try { priceOffer = price.proposeRepeatPrice(priceSeries.id, 55000, { role:'provider', id:'p3' }); }
+  catch (err) { refusedPrice = true; }
+  c.check('a provider price change creates a pending offer, not a silent series edit',
+    !!priceOffer && priceOffer.status === 'pending' && priceSeries.acceptedPriceCentavos === null
+      && price.repeatSeriesBookings(priceSeries.id).map(b => b.amountCentavos).join(',') === priorAmounts
+      && !refusedPrice);
+  price.answerRepeatPrice(priceOffer.id, 'accept');
+  c.check('only an explicit customer acceptance changes the price for future visits',
+    priceSeries.acceptedPriceCentavos === 55000 && priceOffer.status === 'accepted'
+      && price.repeatSeriesBookings(priceSeries.id).every(b => b.amountCentavos !== 55000));
+  const canceled = price.repeatSeriesBookings(priceSeries.id)[0];
+  price.skipRepeatOccurrence(priceSeries.id, canceled.id);
+  const replacement = price.repeatSeriesBookings(priceSeries.id).find(b => b.occurrenceIndex === 4);
+  c.check('the accepted price is used only when a later occurrence is materialized',
+    !!replacement && replacement.amountCentavos === 55000
+      && price.repeatSeriesBookings(priceSeries.id).filter(b => b.occurrenceIndex < 4)
+        .every(b => b.amountCentavos !== 55000));
+
+  const providerUI = boot();
+  providerUI.signInAsProvider('cristy@demo.ph');
+  const providerSeries = providerUI.createRepeatSeries({
+    sourceBookingId:'b3', serviceId:'cleaning', providerId:'p3', customerId:providerUI.CURRENT_CUSTOMER_ID,
+    addressId:providerUI.state.profileData.address,
+    schedule:{ frequency:'weekly', weekday:start.getDay(), startDate, time:'9:00 AM', count:8, endDate:null }
+  });
+  const providerBooking = providerUI.repeatSeriesBookings(providerSeries.id)[0];
+  providerUI.state.selectedProviderBookingId = providerBooking.id;
+  const priceCard = providerUI.repeatPriceProviderCard(providerBooking);
+  const priceInput = providerUI._document.getElementById('repeat-price-' + providerBooking.id);
+  priceInput.value = '575.00';
+  const sentPrice = providerUI.submitRepeatPriceProposal(providerSeries.id, providerBooking.id);
+  c.check('the repeat-service provider can sign in, see and submit a future-visit price proposal',
+    /Send price proposal/.test(priceCard) && sentPrice && sentPrice.amountCentavos === 57500
+      && providerUI.signedInProvider().id === 'p3'
+      && providerUI.SERIES_PRICE_OFFERS.some(o => o.id === sentPrice.id && o.status === 'pending'),
+    'provider=' + (providerUI.signedInProvider() || {}).id + ', card=' + /Send price proposal/.test(priceCard)
+      + ', offer=' + JSON.stringify(sentPrice));
+
+  const screen = boot();
+  screen.openRepeatSetup('b3');
+  const setup = screen.sheetHTML();
+  c.check('the completed-booking entry reaches a labelled repeat schedule sheet',
+    screen.state.sheet === 'repeatSetup' && /Repeat this service/.test(setup)
+      && /repeat-frequency/.test(setup) && /repeat-start/.test(setup) && /repeat-address/.test(setup));
+  screen.state.sheet = 'repeatServices';
+  const empty = screen.sheetHTML();
+  c.check('the series manager explains its empty state and how to start',
+    /No repeat schedules yet/.test(empty) && /completed booking/.test(empty));
   return c;
 });
 

@@ -1009,6 +1009,29 @@ const SCREENS = [
                         state.sheet='bookingRequest'; render();`],
   ['booking-detail',   `state.view='app'; state.role='resident';
                         openBookingDetail(BOOKINGS.find(b=>b.status==='upcoming'&&b.customerId===CURRENT_CUSTOMER_ID).id);`],
+  ['repeat-setup-sheet', `state.view='app'; state.role='resident'; openBookingDetail('b3');
+                        clickPainted(/openRepeatSetup/, 'Set up repeat visits');`],
+  ['repeat-services-empty', `state.view='app'; state.role='resident'; state.tab='home'; render();
+                        clickPainted(/openRepeatServices/, 'Repeat services');`],
+  ['repeat-services-populated', `state.view='app'; state.role='resident'; openBookingDetail('b3');
+                        clickPainted(/openRepeatSetup/, 'Set up repeat visits');
+                        clickPainted(/createRepeatSeriesFromSheet\\(\\)/, 'Start repeat schedule');
+                        var homeNav=document.querySelector('.navitem[data-nav="home"]');
+                        if(!homeNav) throw new Error('the Home tab is not painted');
+                        homeNav.click();
+                        clickPainted(/openRepeatServices/, 'Repeat services');`],
+  ['repeat-provider-price-proposal', `state.view='app'; state.role='resident'; openBookingDetail('b3');
+                        clickPainted(/openRepeatSetup/, 'Set up repeat visits');
+                        clickPainted(/createRepeatSeriesFromSheet\\(\\)/, 'Start repeat schedule');
+                        var repeatBooking=repeatSeriesBookings(REPEAT_SERIES[0].id)[0];
+                        applyProviderIdentity('p3');
+                        state.view='app'; state.role='provider'; state.tab='provider_booking_detail';
+                        openProviderBooking(repeatBooking.id);
+                        var repeatCard=[].slice.call(document.querySelectorAll('#screen .card'))
+                          .find(function(el){return el.textContent.indexOf('Future repeat visits')>=0;});
+                        if(!repeatCard) throw new Error('the Future repeat visits price-proposal card is not painted');
+                        document.getElementById('screen').style.scrollBehavior='auto';
+                        repeatCard.scrollIntoView({block:'center'});`],
   /* The pilot category, reached the way a resident reaches it: pick the category's
      provider, open the sheet, choose a mode. Screens nobody can navigate to are
      not screens — they are markup. */
