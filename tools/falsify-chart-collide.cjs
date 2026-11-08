@@ -56,15 +56,17 @@ function measure(screens, corner) {
     /* No line is not a zero — a camera that never reached its tally block measured nothing. */
     read[key] = line ? Number(line.slice(TALLIES[key].length).trim()) : null;
   }
-  /* The biggest single escape in PIXELS, taken from the tally's own detail lines, which read
-     `· admin-dash  "8" (chart-val r) hangs 15px above the top edge of a 264px box`. A count is a
-     fragile piece of evidence: the headroom break's whole finding is one label, and when an unrelated
-     layout change moved the escape by a hair the count went to zero and the family printed a survivor
-     that was really a threshold artefact. Requiring the size makes the break prove what the rule
-     means — the refusal put a number several pixels outside the box — instead of one pixel past a
-     comparison. */
-  read.escapePx = (out.match(/hangs \d+px/g) || []).reduce(function (mx, hit) {
-    const d = parseInt(hit.replace(/\D+/g, ''), 10);
+  /* The tally prints a fractional escape (`hangs 2.7px above the top edge of a 152px box`), so the
+     reader takes the number with its dot. Two ways this was wrong before: an integer-only pattern
+     matched nothing and the family reported a survivor about a 0px escape, and stripping non-digits
+     turned 2.7 into 27 — a reader that silently over-reads is worse than one that refuses, because it
+     can pass a break on the wrong magnitude. A count is a fragile piece of evidence: the headroom
+     break's whole finding is one label, and when an unrelated layout change moved the escape by a hair
+     the count went to zero and the family printed a survivor that was really a threshold artefact.
+     Requiring the size makes the break prove what the rule means — the refusal put a number several
+     pixels outside the box — instead of one pixel past a comparison. */
+  read.escapePx = [...out.matchAll(/hangs ([\d.]+)px/g)].reduce(function (mx, m) {
+    const d = parseFloat(m[1]);
     return d > mx ? d : mx;
   }, 0);
   return read;
@@ -114,12 +116,26 @@ const BREAKS = [
   { name: 'value labels are painted even when the bars have no room for them', screens: 'admin-dash',
     corner: WIDE_TEXT,
     edits: [[VALROOM, '  const valRoom = true;']] },
-  { name: 'the headroom refusal no longer drops the numbers, so the tallest one leaves the chart',
-    screens: 'admin-dash', corner: OPPO_LARGER, minEscapePx: 3,
+  /* Moved out of the counted breaks on 2026-10-27, with the measurement that decided it. The premise was
+     that withdrawing the headroom refusal puts a number outside the chart, and the tally's 0 reading
+     looked like a sensor blind to an upward escape. Measured at admin-dash, 320x638 @150% with a direct
+     geometry probe (.scratch/probe-valcount.js): withdrawing only this half leaves the side-by-side
+     budget still dropping the numbers, so nothing paints and nothing can escape; forcing BOTH halves open
+     paints two labels, and the one that rises does so 17.5px above the PLOT but 0px above its
+     `.chart-cols` box, overlapping no text — the chart owns that headroom, which is what the reserve is
+     for. The tally was measuring the right box all along, and this mutation is harmless at this corner:
+     an equivalent break. Per §82's rule for a redundant half it is printed as an observation rather than
+     kept in the aggregate's red column — a mutant that cannot fire anywhere is not coverage, and buying
+     a green row by deleting the evidence is worse than either. */
+  { name: 'headroom refusal withdrawn alone: the other half still drops the numbers, so nothing is left to escape',
+    screens: 'admin-dash', corner: OPPO_LARGER, observes: true,
     edits: [[REFUSE, '']] },
+  { name: 'both halves open: the number rises above the plot but stays inside the chart box and onto nothing',
+    screens: 'admin-dash', corner: OPPO_LARGER, observes: true,
+    edits: [[VALROOM, '  const valRoom = true;'], [REFUSE, '']] },
 ];
 
-let caught = 0, applied = 0, unmatched = 0;
+let caught = 0, applied = 0, unmatched = 0, observed = 0;
 try {
   for (const b of BREAKS) {
     const base = measure(b.screens, b.corner);
@@ -142,14 +158,34 @@ try {
       console.log('SKIP  ' + b.name + '  (a needle matched ' + bad + ' times, needs exactly 1)');
       continue;
     }
+    if (b.observes) {
+      /* Printed, not counted. The measurement is the point: it records what this mutation actually does
+         at this corner, which the prose above quotes, and the file goes back before the next break is
+         assembled rather than at the end of the run. */
+      fs.writeFileSync(TARGET, mutated);
+      const no = measure(b.screens, b.corner);
+      fs.writeFileSync(TARGET, original);
+      observed++;
+      console.log('OBSERVED  ' + b.name + '  (' + said(no) + ', worst escape ' + no.escapePx + 'px)');
+      continue;
+    }
     applied++;
     fs.writeFileSync(TARGET, mutated);
     const n = measure(b.screens, b.corner);
     const t = sum(n);
     if (t === null) console.log('MISSED  ' + b.name + '  (the camera printed none of its tallies)');
     else if (b.minEscapePx && n.escapePx < b.minEscapePx) {
-      console.log('MISSED  ' + b.name + '  (findings present, but the worst escape is ' + n.escapePx +
-        'px and this break has to prove ' + b.minEscapePx + 'px)');
+      /* The old wording asserted "findings present" from inside a branch that never looked at the sum —
+         a message claiming a fact the code had not measured, which is how this break spent two passes
+         reading like a threshold artefact. It now prints the three counts and its own sum. Measured
+         against them: at this corner one half is absorbed (the other drops the same numbers, so nothing
+         is left to escape), and with BOTH halves open a direct probe still sees a label 17.5px above its
+         plot while this tally reads 0 — so a zero here means either an absorbed mutation or a blind
+         sensor, and the line says which of the two it cannot tell. */
+      console.log('MISSED  ' + b.name + '  (worst escape ' + n.escapePx + 'px, this break has to prove ' +
+        b.minEscapePx + 'px; ' + said(n) + (t === 0 ?
+        ' — NO tally fired: either the mutation is absorbed by the guard’s other half here, or this tally' +
+        ' cannot see the escape (a direct probe sees 17.5px at this corner with both halves open)' : '') + ')');
     } else if (t > 0) {
       caught++;
       console.log('CAUGHT  ' + b.name + '  (' + said(n) + ', worst escape ' + n.escapePx + 'px, on ' +
@@ -159,5 +195,7 @@ try {
 } finally {
   fs.writeFileSync(TARGET, original);
 }
-console.log('\n' + caught + ' of ' + applied + ' breaks caught, ' + unmatched + ' not applied; file restored.');
+console.log('\n' + caught + ' of ' + applied + ' breaks caught, ' + unmatched + ' not applied, ' +
+  observed + ' observed but not counted (an equivalent mutation is reported as a measurement, never as a' +
+  ' green row); file restored.');
 process.exit(applied > 0 && caught === applied && unmatched === 0 ? 0 : 1);

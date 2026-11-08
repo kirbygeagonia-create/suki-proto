@@ -8,18 +8,57 @@ The product spec, brand rules and the prototype-versus-production discipline liv
 **[`AGENTS.md`](AGENTS.md)**. Read it before changing anything. The money model in this
 rebuild is summarised in **[`CHANGES.md`](CHANGES.md)**.
 
-## Startup status
+## Startup status (6 November 2026)
 
-Sukinnect is a pre-revenue startup with a working browser prototype, not a production
-service. The pilot is planned for five Tupi barangays: Poblacion, Polonuling, Cebuano,
-Kablon and Bunao. The current demo records do not represent that pilot geography or
-real users. The current app is `Sukinnect-next.html`; authentication, shared server
-storage and real payment processing are not implemented. See
-[`SUKINNECT_CONTEXT.md`](SUKINNECT_CONTEXT.md) for read-first context and
-[`SUKINNECT_STARTUP_ROADMAP.md`](SUKINNECT_STARTUP_ROADMAP.md) for the sourced feature
-register, open decisions and evidence gates. Targets and forecasts are not traction.
-The backend API, privacy and stack documents are proposals only; the MySQL reference
-migration has not been applied to a database.
+Sukinnect is no longer only a prototype exercise: it is a **pre-revenue startup with a working
+prototype and no production backend**. Launch is Tupi, South Cotabato, in five barangays — Poblacion,
+Polonuling, Cebuano, Kablon and Bunao — and the 12-month pilot is a **gated validation** plan whose
+base case is not expected to break even inside the year. That is the plan's own position, stated so a
+reader cannot mistake the pilot for a launch.
+
+| | |
+|---|---|
+| Built in the prototype | discovery, provider profiles and verification records, booking lifecycle, ledger and payments behind a mock gateway, disputes, chat, admin review, the fruit-harvest pilot, a versioned consent gate, a hash-chained (not blockchain) ledger, a derived wallet view, connections and a standing tier |
+| Simulated, and labelled as such | the AI concierge's analysis, the payment gateway, "money held with a licensed partner", ID/OCR/liveness, bot checks, exchange rates, funding eligibility |
+| In plan, not built as of this date (see the F1–F21 register in `SUKINNECT_STARTUP_ROADMAP.md`) | a computed matching engine, event instrumentation and the KPI console, moderator and service-business roles, subscriptions and promoted listings, real payments, any server |
+| Decided by the owner, not by this repository | the pilot fee (1.2 % vs 1.0 %, cap 1.3 %), the wallet contradiction, Fruit Harvest & Buy, public-chain anchoring, voice input, the final legal text, which vendors to evaluate |
+
+The full picture is in two files: **[`SUKINNECT_CONTEXT.md`](SUKINNECT_CONTEXT.md)** — the read-first
+file for humans and AI, which answers what the product is, which document decides what, and what must
+not be claimed — and **[`SUKINNECT_STARTUP_ROADMAP.md`](SUKINNECT_STARTUP_ROADMAP.md)** — the goals,
+needs register, F1–F21 feature register, C1–C12 conflict ledger and traceability table. The business
+sources themselves (`*.docx`, with the financial and investor terms they contain) are **kept local and
+are not committed**; see `.gitignore`.
+
+## Start here: the project knowledge system
+
+Sukinnect is a startup *and* a prototype. This map says where each kind of answer lives, so a new
+developer, collaborator or AI coding agent does not have to rediscover the project.
+
+| If you want to know… | Open |
+|---|---|
+| The one-page orientation (what is real, what is simulated, which file to trust) | **[`AI_CONTEXT_INDEX.md`](AI_CONTEXT_INDEX.md)** — AI assistants start here |
+| The startup: problem, market, model, roadmap, KPIs, risks, and the list of unresolved document conflicts | **[`SUKINNECT_STARTUP_MASTER_PLAN.md`](SUKINNECT_STARTUP_MASTER_PLAN.md)** |
+| The detailed development, product and design rules | **[`AGENTS.md`](AGENTS.md)** (new §0 sits at the top) |
+| The pitch deck | `SEAIT SUKINNECT - PITCHDECK.pdf` / `.pptx` (same content; Git LFS) |
+| The November 2026 business documents | `Sukinnect_Master_Plan_Revised_November_2026.docx`, `Sukinnect_Market_Research_and_Business_Development_Plan.docx`, `Potential_Collaborations_and_New_and_Refine_Features.docx` — working documents; all figures are assumptions |
+| The running prototype | `Sukinnect-next.html` (working rebuild) · `Sukinnect.html` (earlier shipped version) |
+| The rebuild's decisions and audit history | [`CHANGES.md`](CHANGES.md) · handset checks in [`DEVICE-PASS.md`](DEVICE-PASS.md) |
+| The intended production data shape | `schema/sukinnect.reference.sql` (reference only; not loaded by the app) |
+| Verification and build instruments | `tools/` — start with `node tools/verify.cjs` |
+
+**Reading order for an AI agent** (do not assume your platform loads `AGENTS.md` by itself):
+`AI_CONTEXT_INDEX.md` → `AGENTS.md` → `SUKINNECT_STARTUP_MASTER_PLAN.md` and the pitch deck →
+this README and `CHANGES.md` → the application files → verify the implementation before changing
+anything.
+
+**Status in one line:** a prototype with demo data and simulated payments and AI — no server, no
+authentication, no real users or bookings. Planning figures in any document are targets, not
+traction.
+
+**Private documents stay private.** The strategy documents, the `.docx` files, the pitch deck, the
+prompts, `schema/` and `tools/` are not published; Netlify serves only the explicit list in
+`tools/build-web-dist.cjs`.
 
 ## Clone and run
 
@@ -56,8 +95,7 @@ The Netlify homepage serves `Sukinnect-next.html`. `netlify.toml` runs
 `node tools/build-web-dist.cjs` and publishes the `dist/` it writes, so the deploy carries only what
 the two pages actually ask for — the HTML files, the logo, `assets/`, `avatars/`, `fonts/`,
 `leaflet/`, and `reicon.js`, the older page's icon library — 60 files, about 11 MB. The pitch deck,
-`AGENTS.md`, this file, the change log, the three prompt documents, `schema/` and `tools/` stay in
-the repository and off the internet. Publishing the root had made every one of them fetchable at a
+`AGENTS.md`, this file,the change log, `SUKINNECT_UX_RELIABILITY_MVP_PLAN.md`, `schema/` and `tools/` stay in the repository and off the internet. The three 2026-10-10 visual-redesign documents do not sit at the root any more: they were archived to `Old/2026-10-10_visual-redesign-prompts/`, whose `INDEX.md` is the master record. Publishing the root had made every one of them fetchable at a
 guessable path; a subset built from an explicit list is the version of this that cannot leak by
 accident, and the build refuses to finish when the app starts asking for something the list does not
 carry. Prove it yourself: remove `'avatars'` from `SERVE` and the run exits 1 reporting 17 of the 29
@@ -152,6 +190,9 @@ week guarding nothing.
 
 ```
 node tools/audit-open-items.cjs     # every "still owed" sentence the present-tense documents still make
+node tools/audit-matrix-coverage.cjs       # the improvement plan's 47-row matrix: every id present, once, classified
+node tools/audit-report-coverage.cjs       # and each of those rows actually dispositioned in the plan's own report
+node tools/audit-citations.cjs             # every file and quoted gate-check the plan cites resolves, or says why not
 node tools/audit-camera-dialog-coverage.cjs   # profile dialogs the camera's walk has never opened
 node tools/audit-compat-floor.cjs   # the oldest WebView that can render this page, and which feature decides
 node tools/deploy-check.cjs         # what the live site actually serves, read from outside the repository
@@ -190,6 +231,7 @@ node tools/shot.cjs --list          # what the named screens are
 node tools/shot.cjs --only=resident-home,provider-detail
 node tools/shot.cjs --measure       # also print the audit tally below
 node tools/shot.cjs --reduced-motion
+node tools/shot.cjs --offline         # emulate a device with no network: only map tiles may fail
 node tools/shot.cjs --desktop       # the phone frame inside the desktop shell
 node tools/shot.cjs --probe=@file   # any expression, evaluated after the page settles
 ```
@@ -202,7 +244,12 @@ its worst stop), controls still covered by the bottom nav after the screen is sc
 end, clipped or ellipsised copy, type sizes off the declared scale, horizontal overflow, a map
 tile escaping its own frame, and any control inside an open modal that something else is
 sitting on top of. Vendored Leaflet chrome is counted separately, because resizing it means
-fighting vendor CSS.
+fighting vendor CSS. `--offline` asks Chrome to emulate a device with no network at all, which is
+the only way to test §1.7's promise from the right side: with it, the map panes are read for what
+they paint when a tile never arrives (`tools/probe-offline-map.js`), and every other asset must
+still render. Note that under that flag the line `requests that left the device for a network`
+counts requests *issued*, not requests that arrived — Chrome reports the send even when nothing
+can come back, so a large number there is the emulation working, not a leak.
 
 These tools exist because instruments saturate. After a few rounds every check reported zero and
 the next four defects — a dashboard that contradicted itself, an ETA shown for a provider who
@@ -263,15 +310,34 @@ Every amount is an **integer count of centavos**, and the unit is in the field n
 (`basePriceCentavos`, `amountCentavos`). A percentage computed on a float peso eventually
 prints a cent nobody charged.
 
-For a job with a ₱800 base at the prototype's current 10 % configuration (a demo
-setting, not an approved pilot rate):
+For a job with a ₱800 base at the pilot's **1.2 %**, paid in cash:
 
 | | |
 |---|---|
 | Customer pays | ₱800.00 |
-| Provider keeps | ₱720.00 |
-| Sukinnect earns | ₱80.00 |
+| Provider keeps | ₱790.40 |
+| Sukinnect earns | ₱9.60 |
 | Parts/materials (if any) | charged at cost, **not commissioned**, reimbursed to the provider |
+
+**Aligned with the 27 October plan, 7 November 2026.** The configuration now defaults to
+`commissionRateDefault = 0.012` with `commissionRateCap = 0.013`, and the cap is enforced on the way
+*in* — `setConfig` refuses a default rate or a per-category override above it, names which one, and
+writes no audit row for a refusal. The pitch deck's 10 % is no longer what the code does; it remains
+the history of the decision, recorded as conflict C1 in
+[`SUKINNECT_STARTUP_ROADMAP.md`](SUKINNECT_STARTUP_ROADMAP.md). **1.0 % is the plan's stated
+alternative and is one configuration change away**, so no figure here is presented as settled
+business policy — the owner decides, the code carries the decision as data.
+
+The same plan forbids Sukinnect absorbing gateway fees during the pilot: at 1.2 %, an absorbed
+QR Ph / Maya / GCash fee loses ₱2.41 / ₱6.44 / ₱10.38 on an ₱800 booking. The build now models that
+as a **pass-through**: for an online payment method the processing fee is its own disclosed line,
+funded by the payer *on top of* the service money, posted to the ledger as `gateway_fee_payable` and
+paid away to the processor the day the job settles. It is never inside `platformRevenueCentavos`,
+and a refund returns the service money without it. Cash and direct carry no fee because no processor
+is in the path. The rates are configuration with a **dated source string** ("PayMongo published
+standard pricing, checked 2026-10-27, ex-VAT; no signed quote on file") rather than an agreement:
+the plan asks for a signed merchant quote, and until one exists these are published figures a
+reviewer should treat as unvalidated.
 
 - The fee is deducted **from the provider's share**, so the price on the card is the price
   the customer pays. Nothing appears at the till that was not on the card.
@@ -287,9 +353,6 @@ setting, not an approved pilot rate):
   refund walks **this booking's own posted lines** back, pro rata — never a rate recomputed
   against today's configuration, which would put commission on parts and materials. A cash
   job can only have its fee forgiven: the platform never held the visit money.
-- **Prototype-only wording:** the above describes the intended transaction model, not a
-  live arrangement. `MockGateway` simulates authorize/capture/refund/void in this browser;
-  no real funds are held, transferred or settled by Sukinnect.
 - **There is no stored-value wallet** and no resident balance. A customer's money is an
   obligation to deliver or refund, never a number they can spend (AGENTS.md §23).
 - Cash-on-arrival is a first-class path: the platform never held that money, so the fee is a
@@ -300,11 +363,6 @@ setting, not an approved pilot rate):
   trail. They apply to bookings made after the change; an accepted job keeps the terms
   frozen when it was accepted. The deck's own position governs: launch monetization is not
   assumed, and take rates are validated per category during the pilot.
-- The November 2026 documents disagree on the pilot commission (the Master Plan's working
-  1.2% / 1.3% ceiling versus a separate 8–12% recommendation). The owner has not selected
-  a rate or fee payer. At 1.2%, an ₱800 booking yields ₱9.60 before costs; that is a
-  scenario, not the current prototype setting or a decided policy. See the roadmap conflict
-  ledger.
 - Payments sit behind a four-verb gateway seam (`authorize · capture · refund · void`).
   Today it is `MockGateway`, with no network call; a partner implementation changes one line.
 
@@ -312,16 +370,21 @@ setting, not an approved pilot rate):
 built. **It is not loaded by the prototype** — it exists so the centavos, append-only and
 no-wallet rules are written where they cannot be misread.
 
+Two things are true of that file and a reader has to hold both. Its money half is *current*: the
+chart of accounts is generated from the kernel's own `ACCOUNTS` map rather than written beside it,
+`node tools/audit-schema-parity.cjs` compares the two in both directions on every run, and a fee
+account the schema forgot is a finding instead of a backend that quietly absorbs it. Its Stage B half
+is *designed, not built*: the consent, verification, moderation, subscription, promotion, price-reference,
+analytics, AI-suggestion, notification, portfolio and credential tables each name the slice that would
+create them, and none of them exists in the running app. `node tools/falsify-schema-parity.cjs` proves
+the audit can fail — including against the bug the audit's own first draft had, an ignored `--schema=`
+argument that made it report a clean result about the wrong file.
+
 ## Fruit Harvest & Buy — the pilot category
 
 A seventh category, marked **pilot** everywhere it appears, that a reviewer can walk end to
 end: `erning@demo.ph` signs in as the harvester-buyer, `ramil@demo.ph` is still the plumbing
 account. Same provider shell, same screens — only the identity differs.
-
-`cristy@demo.ph` is the cleaning demo account used to review repeat-service requests and
-provider price proposals. Its contact and schedule details are explicitly incomplete demo
-data, not a real provider profile. Seven additional cadence-tagged service candidates are
-hidden behind the `repeatCategories` flag; they do not appear in resident discovery by default.
 
 Three modes, because they are three different transactions: **Harvest Only** (you keep the
 fruit, you pay for labour), **Sell My Fruit** (a buyer pays you and takes it), **Harvest + Buy**
@@ -385,24 +448,98 @@ reads the live catalogue back — modes, pricing models, commission basis, decla
 safety rules, supply against 30-day demand — and says plainly that editing those rules is not
 available here, because they decide how money moves and are still being validated.
 
+## Rescheduling a job
+
+A conflict after an appointment is agreed no longer has to end in a cancellation. Either side can
+propose a day and an hour on a booking that is accepted but not started; the proposal is a record
+(`RESCHEDULE_REQUESTS`), and the booking's own `date` and `time` change **only** when the other side
+accepts. Declining, withdrawing, or answering a request that was already decided moves nothing, and
+the other side may also **counter with a different time**, which retires the proposal it answers
+as `superseded` rather than editing a decision that already happened. Each request stores the
+schedule it was raised against, so an answer arriving after the booking moved for some other reason
+is refused and retired as no longer current instead of overwriting that change. The
+proposing side never sees an accept button on its own request, one proposal at a time is allowed per
+booking, and an unknown booking id resolves to nothing rather than to the first job in the table.
+Requests and decisions survive a reload; the record family is additive, so `SCHEMA_VERSION` stayed
+where it was. Neither side has to hunt for an open question: **both booking lists carry a pending card**
+— a provider sees "Waiting for your answer", the resident sees the same proposal marked as waiting for the
+provider, and each row opens the booking it was raised against. The card reads the same records the detail
+screen reads, so it cannot disagree with them, and an answered proposal disappears from both.
+
+## Legal drafts and the acceptance record
+
+Three documents — Terms & Conditions, Sukinnect Policy, Privacy Notice — are drafted for this
+prototype and **every one of them is marked "Draft — not reviewed by Philippine counsel."** They are
+not legal advice, and no part of this build should be read as certified compliance: qualified
+Philippine counsel and a privacy professional must review the text before any public launch. Facts
+the business has not decided (entity name, registered address, the person answerable for privacy, a
+complaint channel, retention periods, an effective date) appear as square-bracketed placeholders
+marked `NOT DECIDED`, and a gate check fails if a bracket loses its mark or if an invented contact
+address appears outside one. Providers are described as merchants offering services through the
+platform, which is the characterisation that decides whether the Internet Transactions Act's invoice
+and disclosure duties attach at all; it is flagged for counsel, not settled here.
+
+Registration carries one unchecked **accept** box that is never pre-ticked, a separate optional
+consent row that is recorded only when ticked, and a refusal that names the box. The acceptance is
+written to this device's storage before the typed name is applied to the profile, so the record says
+which document version was agreed and does not silently store an account. It is a local record, not a
+server-side audit trail, and the screens say so.
+
+## What each mark and each number is for
+
+A short list of the conventions a reviewer is likely to test, because each of them was earned by a
+measurement rather than chosen for taste:
+
+- **Figures share one rule.** Every number a reader compares — money in a receipt row, a chart value, a
+  count in a stat strip, a rate in a form field — is right-aligned *and* set in tabular figures by a
+  single stylesheet rule. Right alignment alone was the half-fix: the interface face paints proportional
+  digits, so a column of amounts leaned whichever way its digits fell. The property was measured in a
+  browser on the font the app actually loads before it was claimed.
+- **An icon means one thing.** `chart` is a dashboard for either role, `calendar` is a date somebody has
+  to keep, `scale` is a case being read for evidence, and `shield` is a trust promise — verification,
+  warranty, and the platform's own authority at sign-in. The shield is deliberately not the admin's
+  Dashboard icon any more, and the meanings are a table in the page that the gate reads, so a glyph
+  cannot be hired for a second job without somebody writing down what it means.
+- **A count comes with a door.** The admin's "needing attention" figure, the card beside it and the
+  filterable queue under the Providers tab are one list, produced once; the queue can be narrowed by the
+  reason a provider is there, and the reason it prints is the reason it was counted. Nothing suspends or
+  deletes a provider from any of these screens.
+- **A booking detail is grouped, not paged.** Its schedule, progress, contact, price, completion and
+  receipt are separately labelled, in an order that puts what is happening now above everything else,
+  and a group whose records do not exist yet is not painted at all rather than painted empty — which is
+  why a job nobody has answered shows no completion time and no receipt.
+- **A word stays a word.** A status chip is a word, not a paragraph, so it never breaks mid-token
+  ("ACCEPTE / D"), and a card head — a title with a count beside it — is allowed to wrap so the count
+  falls onto its own line instead of crushing the heading. Both halves exist because of each other:
+  making the chip unbreakable on its own moved the break onto the title, and neither wording is visible
+  to a sensor that only asks about boxes, so the rule is pinned in the gate as a shape. The same squeeze
+  has now been found in four row shapes — a sticky action bar's primary button, a ratings label, a score
+  pill and a service badge — and the fix is always the row, never the word.
+- **A button's weight says its rank.** PRIMARY, SECONDARY, TERTIARY and DESTRUCTIVE are four classes, and
+  tertiary exists because two screens painted a chat control and the platform's phone number as
+  byte-identical buttons: the system had no low-priority tier, so the rule could not be expressed. A
+  tertiary control is quieter and still a full 44px target — the demotion is mass, not reach.
+
 ## Honest labelling
 
-Demo data is `source:'demo'`, records you create in a session are `source:'live'`. Planning
-figures vary by source: the deck cites 150 providers, 3,000 users and 6,000 bookings; the
-November plan proposes 60–100 verified providers and 3,270 base / 15,200 stretch
-Year-1 booking scenarios. These are targets or assumptions, never activity or traction.
-There is no server: the AI concierge is a simulated flow, and Smart Match uses a transparent
-record-derived demo heuristic. Neither is a real AI result, live availability signal or
-validated production ranking.
+Demo data is `source:'demo'`, records you create in a session are `source:'live'`. Pilot
+targets — **150 verified providers, 3,000 registered users, 3,270 completed bookings** over twelve
+months (base case; the 15,200-booking figure is a post-validation multi-town stretch scenario, not a
+forecast) — are planning assumptions and are never presented as activity. Corrected 6 November 2026:
+this line previously said 6,000 bookings, which is the pitch deck's number and is superseded by
+`Sukinnect_Master_Plan_Revised_27Oct2026.docx` §4.3 (conflict C3 in
+[`SUKINNECT_STARTUP_ROADMAP.md`](SUKINNECT_STARTUP_ROADMAP.md)). There is no server: an AI concierge
+that describes, analyses and matches is a simulated flow, and the screens say so.
 
 ## Assets
 
 | What | Where | Notes |
 |---|---|---|
 | Logo | `Sukinnect_Logo.png` | exact case. Official mark — never redrawn, recoloured, stretched or replaced. It has a white background, so change the surface around it, not the file. |
-| Icons | an inline SVG set inside `Sukinnect-next.html`; `reicon.js` (LFS) for `Sukinnect.html` | The rebuild loads no icon library: 43 glyphs are drawn in the file and every one of the 38 names the app can reach has one — whether the name is written in markup, carried by a service record, or passed to an empty state. Those two figures come from `node tools/measure.cjs`, not from a count kept in prose. The gate checks all three and fails if a new name arrives undrawn. Measured with reicon disabled, that set drew the same icons on every screen the camera walks — 73 now where the claim was made at 40, and `node tools/shot.cjs --list` is the count — so the rebuild dropped the 8 MB custom element and the four seconds of iconless paint it cost when registration lost the race. `Sukinnect.html` still uses reicon, so add a name to both files or neither. |
-| Type | `fonts/` | The two files differ here deliberately. `Sukinnect.html` uses Fraunces for display and Plus Jakarta Sans for UI. `Sukinnect-next.html` runs one sans family across every role — Atkinson Hyperlegible Next in four self-hosted weights, with Plus Jakarta Sans behind it for any glyph Atkinson does not carry — and its `--font-display` is an alias for `--font-ui`, so the serif paints nothing there (AGENTS.md §68). Self-hosted in both; no remote fonts. |
+| Icons | an inline SVG set inside `Sukinnect-next.html`; `reicon.js` (LFS) for `Sukinnect.html` | The rebuild loads no icon library: 47 glyphs are drawn in the file, every one of them from **Material Symbols** (Google's `material-design-icons`, Apache-2.0 — family, commit, retrieval date, licence text and the full glyph list are recorded in `assets/ICON-LICENSES.md`), and every name the app can reach has one — whether the name is written in markup, carried by a service record, or passed to an empty state. Those two figures come from `node tools/measure.cjs`, not from a count kept in prose. The gate checks all three and fails if a new name arrives undrawn. Measured with reicon disabled, that set drew the same icons on every screen the camera walks — 88 now where the claim was made at 40, and `node tools/shot.cjs --list` is the count — so the rebuild dropped the 8 MB custom element and the four seconds of iconless paint it cost when registration lost the race. `Sukinnect.html` still uses reicon, so add a name to both files or neither. |
+| Type | `fonts/` | The two files differ here deliberately. `Sukinnect.html` uses Fraunces for display and Plus Jakarta Sans for UI. `Sukinnect-next.html` runs **Poppins** for words and **Plus Jakarta Sans** for digits — measured with `node tools/shot.cjs --probe=@tools/probe-zero-style.js`, because Poppins carries no tabular figure feature (184.33px for `111111` against 361.73px for `000000`) and Atkinson's tabular zero is **slashed**, which is what made money and times read like source code. Both faces are self-hosted, `--font-display` is an alias for `--font-ui`, so the serif paints nothing there (AGENTS.md §68). Self-hosted in both; no remote fonts. |
 | Photos | `avatars/` | local PNGs, mapped per persona in `PRO_PHOTOS`. Keep imagery local — the APK runs offline. |
+| Category art | `assets/category-art/` — **retired, unreferenced** | The seven machine-generated 256 px PNGs are no longer asked for by any screen: each trade draws its own Material Symbol in a tonal container, so the icon system is one family rather than two. The files are left on disk because deleting them is the owner's call, not a pass's; `tools/build-web-dist.cjs` no longer names the folder, and the gate fails if any code asks for it again. |
 | Maps | `leaflet/` | vendored. Tiles come from OpenStreetMap, the one network dependency, so a map is blank with no connection. |
 
 To swap an image, replace the file and keep the name. To add a trade, add a row to
@@ -411,7 +548,11 @@ To swap an image, replace the file and keep the name. To add a trade, add a row 
 ## Known limitations
 
 - No authentication: role is chosen on a demo sign-in screen and there is no session, so
-  nothing enforces a boundary between roles.
+  nothing enforces a boundary between roles. **One session is one role, deliberately.** A provider who
+  signs in as a resident sees resident screens and nothing of their own jobs, and the reverse holds too;
+  there is no dual-role identity in this build and none is implied anywhere in it. The brief lists "which
+  bookings may a provider see" as an open product question, so the prototype keeps the sessions separate
+  rather than inventing a merge that a later authorisation model would have to undo.
 - No server, so nothing runs while the app is closed — due transitions (a lapsed request, an
   auto-confirmed completion) are evaluated on open, with their real timestamps.
 - Storage can be unavailable (`file://` on some browsers, private windows), can refuse a write
@@ -422,10 +563,13 @@ To swap an image, replace the file and keep the name. To add a trade, add a row 
   will read is not a warning.
 - `Sukinnect-Android/app/src/main/assets/` holds a **separate copy** of the web files. Any
   accepted change must be re-synced there before it reaches a device build. It currently holds the
-  rebuild — `assets/Sukinnect.html` carries the same bytes as `Sukinnect-next.html`, and
-  `md5sum` on both answering one hash is the whole check — staged under the name the shell loads, and
-  those bytes went out as `1.2-preview.39` and were read on **two** handsets (the OPPO CPH2179 at 320 CSS px
-  and the vivo 1906 at 450). The comparison is now an instrument rather than a habit:
+  rebuild — `Sukinnect-Android/app/src/main/assets/Sukinnect.html` carries the same bytes as `Sukinnect-next.html`, and
+  `node tools/audit-build-bytes.cjs` is the check — staged under the name the shell loads, and those bytes
+  went out as `1.2-preview.44`. **`preview.44` has been installed on nothing**: the last build read on real
+  handsets was `preview.39`, on the OPPO CPH2179 at 320 CSS px and the vivo 1906 at 450, and five builds have
+  been cut since without a phone on the bus — so nothing in this file's layout claims is a device reading.
+  The comparison is
+  now an instrument rather than a habit:
   `node tools/audit-build-bytes.cjs` prints one row per copy — source, `dist/`, staged asset, and the file
   extracted back out of the built APK — reports `findings: N` when they disagree, and **refuses** with
   `NO CONCLUSION` when an artifact cannot be read or fewer than four were compared. See

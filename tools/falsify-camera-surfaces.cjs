@@ -33,6 +33,8 @@ const MUTANTS = [
     to: "const WALK = '#screen *, .sheet *, .auth-sheet *';" },
   { name: 'the convention is renamed, so a new walk has nothing to derive from',
     needle: 'const SURFACES = [', to: 'const SURFACE_LIST = [' },
+  { name: 'the SKIP branch stops feeding the tally, so a row that never paints reads as a clean run',
+    needle: 'skipped.push({ name, why: err })', to: 'void 0', label: 'a camera row that never paints is counted by the run, not only printed' },
   { name: 'the shot label asks the sheet before the dialog raised from it',
     needle: "const t = document.querySelector('.modal-layer b') || document.querySelector('.sheet .sheet-title') ||",
     to: "const t = document.querySelector('.sheet .sheet-title') || document.querySelector('.modal-layer b') ||",

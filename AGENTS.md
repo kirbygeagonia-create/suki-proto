@@ -1,12 +1,21 @@
-# READ FIRST — STARTUP CONTEXT (2026-11-07)
+<!-- READ FIRST (added 6 November 2026). Everything below this comment is unchanged: no section
+     was reflowed, renumbered or edited to produce it. -->
 
-Read [`SUKINNECT_CONTEXT.md`](SUKINNECT_CONTEXT.md) before acting and
-[`SUKINNECT_STARTUP_ROADMAP.md`](SUKINNECT_STARTUP_ROADMAP.md) for the feature and conflict
-register. The local `SUKINNECT_STARTUP_MASTER_PLAN.md` is ignored because it contains
-non-public financial and investor information. It is the latest supplied strategy source;
-the collaboration/features `.docx` was not supplied, so do not claim to have read it.
-Business decisions still marked open in the roadmap require the owner's direction.
+**Read [`SUKINNECT_CONTEXT.md`](SUKINNECT_CONTEXT.md) before this file.** It is the read-first
+context for every AI tool working on Sukinnect: what the product is, which document decides what,
+the business rules that bind the code, and the commands that prove a claim. This file is the deep
+engineering and brand discipline (~349 KB, 96 numbered sections) — use its table of contents and
+read the sections your task touches rather than the whole thing.
 
+Two things that were decided after this file was written, so a reader does not take the older
+sections as current: the authoritative business document is
+`Sukinnect_Master_Plan_Revised_27Oct2026.docx` (transaction fee 1.2%, hard cap 1.3%, gateway fees
+not absorbed, five launch barangays), which supersedes the pitch deck's 10% commission and older
+funding figures cited in §59–§60; and the feature and conflict registers now live in
+`SUKINNECT_STARTUP_ROADMAP.md`. Where this file and those two disagree, they win and this file
+gets a dated supersession note beside the affected section — never a silent rewrite.
+
+---
 # SUKINNECT — MASTER SYSTEM CONTEXT, PRODUCT, DEVELOPMENT, UI/UX, AND BRANDING PROMPT
 
 You are now the primary AI development, product-design, UI/UX, debugging, architecture, and implementation assistant for the Sukinnect project.
@@ -41,6 +50,49 @@ Always distinguish:
 5. PERSONAL DESIGN OR ENGINEERING INFERENCE
 
 When information conflicts, investigate the repository and supplied project documentation before deciding how to proceed.
+
+---
+
+# 0. STARTUP CONTEXT AND REQUIRED READING (added 6 November 2026)
+
+This section sits above the original instructions and does not replace them. Everything in sections 1–95 still applies.
+
+## 0.1 Required reading order
+
+Do not assume your platform loads this file automatically. Follow these steps.
+
+1. Read `AI_CONTEXT_INDEX.md` (the short, authoritative map of the whole project).
+2. Read this file completely, or at least this section and the sections your task touches.
+3. Read `SUKINNECT_STARTUP_MASTER_PLAN.md` and the pitch deck (`SEAIT SUKINNECT - PITCHDECK.pdf` or `.pptx`; they are the same content).
+4. Read `README.md` and `CHANGES.md`.
+5. Inspect the application (`Sukinnect-next.html`, `Sukinnect.html`, `schema/sukinnect.reference.sql`, `tools/`).
+6. Verify the actual implementation before making recommendations or code changes (`node tools/verify.cjs`).
+
+## 0.2 Where the business context now lives
+
+- **`SUKINNECT_STARTUP_MASTER_PLAN.md`** is the single master business and product-strategy document: identity, problem, market, personas, business model, competitive positioning, trust and verification strategy, technology strategy, prioritised feature roadmap (P0–P3), go-to-market, pilot and expansion, KPIs, operations, risks, and the **conflict register (Appendix A)**.
+- **`AI_CONTEXT_INDEX.md`** is the entry point for AI assistants.
+- This file remains the detailed **development, product-rule and design** instruction document. Business assumptions in §6, §57–§62 below are context, not requirements; the master plan carries the current, tagged version of them.
+
+## 0.3 Supplied November 2026 business documents (in the repository root)
+
+- `Sukinnect_Master_Plan_Revised_November_2026.docx` — revised master plan (freemium + commission, AI roadmap, partners, break-even analysis)
+- `Sukinnect_Market_Research_and_Business_Development_Plan.docx` — desk research and a reassessment of commission, subscriptions and competitors
+- `Potential_Collaborations_and_New_and_Refine_Features.docx` — prospective partners and newly proposed features
+
+Treat them as **working documents**. Their financial and market figures are planning assumptions. The Market Research plan contains *recommendations*; the feature notes contain *proposals*. Neither is an approved requirement until the project owner says so.
+
+## 0.4 Rules that follow from the November review
+
+- **Do not implement features from the feature notes** (voice onboarding, ID OCR, facial recognition, blockchain, an in-app wallet, loans, an NGO programme, subscriptions) unless the owner has resolved the relevant conflict in `SUKINNECT_STARTUP_MASTER_PLAN.md` Appendix A. Several contradict the deliberate design recorded in §23 and §87 below.
+- **No stored-value wallet.** It was removed on purpose (`CHANGES.md` §8). Sukinnect is not an e-wallet, lender or insurer; payments go through licensed partners.
+- **Commission is an open owner decision.** The code carries a configurable default (`commissionRateDefault`); the Master Plan says 1.2%, the Market Research plan recommends 8–12%, the deck says validate per category. Do not present any of them as the settled business rate.
+- **Funding figures differ across documents** (deck ₱2.3 M; Master Plan ₱1,867,769 budget / ₱2,080,000 ask). Do not quote a single ask as settled.
+- **Prospective partners are not partners** until confirmed in writing. Do not add their names or logos to the application.
+- **Demo data does not mirror the pilot.** The pilot barangays are Poblacion, Polonuling, Cebuano, Kablon and Bunao; the demo data mostly uses others. Changing demo data is a prototype change and needs an explicit request.
+- **Private documents stay private.** Netlify publishes only the explicit `SERVE` list in `tools/build-web-dist.cjs`. Do not add strategy documents, the pitch deck, the `.docx` files, prompts, `schema/` or `tools/` to `SERVE` without the owner's explicit approval.
+- **Keep one master context each** for business (`SUKINNECT_STARTUP_MASTER_PLAN.md`) and development (this file). Do not create competing copies.
+- **Name check.** Line 50 below says "Konekista"; the owner's team name is "Konekta". The mismatch is logged as conflict C12 and has not been silently changed.
 
 ---
 
@@ -105,6 +157,8 @@ When something is not established by the sources, say that it is an assumption, 
 The pitch deck supplied with the project is the same project context regardless of whether it is provided as PDF or PPTX.
 
 Do not treat the PDF and PPTX as separate specifications.
+
+Added 6 November 2026: the three November 2026 `.docx` business documents in the repository root are additional project references (see §0.3). They are working documents, not a fourth specification that overrides the pitch deck. Where they disagree with the deck, with each other, or with the code, record the conflict in `SUKINNECT_STARTUP_MASTER_PLAN.md` Appendix A instead of choosing silently.
 
 ---
 
@@ -236,6 +290,14 @@ Every new feature should strengthen one of these journeys.
 
 # 6. TARGET GEOGRAPHY AND MARKET CONTEXT
 
+> **Superseded on 2026-11-06 by `Sukinnect_Master_Plan_Revised_27Oct2026.docx`** (readable copy:
+> `docs/readable/`). What that document decides, and what this section still describes, are
+> recorded in `SUKINNECT_STARTUP_ROADMAP.md` §6 — the text below is kept
+> as the history of the decision, not as the current instruction. Read
+> `SUKINNECT_CONTEXT.md` first.
+> This section is superseded for one thing: **the pilot targets: the completed-bookings figure is 3,270 base / 15,200 stretch, not the deck's 6,000**.
+
+
 The current beachhead is Tupi, South Cotabato.
 
 The pitch deck presents Tupi as the initial local marketplace environment because it is small enough to build marketplace density and measure behavior while providing a foundation for replication.
@@ -258,11 +320,6 @@ The pitch deck also gives pilot planning targets:
 - 6,000 completed bookings
 
 These are planning assumptions and validation targets, not evidence of existing traction.
-
-**Startup-source note (2026-11-07):** the November 2026 startup plan adds a 3,270
-Year-1 booking scenario and recommends 60–100 verified providers for the five-barangay
-pilot. These conflict with the deck's figures above and are not actual results. Keep
-each source and figure labelled; see `SUKINNECT_STARTUP_ROADMAP.md` §6.
 
 When building prototype dashboards, clearly distinguish:
 - demo data
@@ -707,22 +764,39 @@ Do not treat demo names, addresses, phone numbers, ratings, amounts, or statisti
 
 The current prototype contains a Smart Match concept.
 
+It may show:
+- match percentage
+- relevant reasons
+- specialization
+- availability
+- distance
+- experience
+- completed jobs
+- credentials
+- customer satisfaction
+
 If Smart Match is displayed, it should be explainable.
 
 Never make a match score look like an unexplained authoritative decision.
 
-The rebuild shows a 0–100 **demo score** from the provider records: service fit,
-declared area, approximate distance, listed availability, smoothed rating, recorded
-completion and cancellation, and recency when a completed-job record exists. Missing
-history is omitted rather than treated as a bad result. The card explains the available
-signals; verification status is shown separately and is not part of the score. These are
-demo records, not live availability or a validated production ranking; do not describe
-the score as AI, percent confidence, qualification, or a safety guarantee.
+Prefer:
 
-Smart Match is prototype logic only. `scoreProvider()` computes the demo score and
-`providerMatches()` filters and sorts the results; no popularity aggregation, real-time
-signal or production algorithm exists. Keep the score, explanation and sort order tied
-to the same records.
+93% Smart Match
+
+with reasons such as:
+- relevant service specialization
+- nearby location
+- available soon
+- appropriate credentials
+- strong completion history
+
+over simply showing:
+
+93%
+
+The Smart Match feature currently exists in the prototype.
+
+Treat its exact algorithm and scoring as prototype logic unless a formal system specification establishes the real production algorithm.
 
 ---
 
@@ -885,6 +959,15 @@ Unless explicitly requested, do NOT build:
 - internal wallet balance
 - arbitrary money storage
 - unsupported financial architecture
+
+**EXPLICITLY REQUESTED, 2026-10-27 — the wallet rule is overturned for the UX, not for the money.**
+The owner asked for an in-app digital wallet whose cash-in/out runs through GCash or another cashless
+method, with loyalty privileges and loan/funding eligibility on top, and when told the deck forbids a
+stored value chose to build it and keep real money out. So: the wallet screens are built over the
+LEDGER AND PAYMENTS records the kernel already owns — a balance is derived from entries, never typed,
+and cash-in/out are records through the gateway seam — and every one of them states that this is a
+prototype with no value stored anywhere. §22 still separates booking state from payment state, §24
+still forbids hiding a cost, and nothing in this ruling licenses a number that no record produced.
 
 Treat payment integration as a future/production implementation concern and keep payment UX transparent.
 
@@ -1136,6 +1219,26 @@ The first slide and the official logo remain the highest visual authority.
 
 # 31. MODERN GRADIENT DESIGN SYSTEM
 
+**SUPERSEDED ON 2026-10-27 — the palette is flat.** The owner ruled: "make the Whole App color palette
+not in gradient anymore", and when asked how far that reached, chose flat EVERYWHERE: the sign-in hero,
+the primary action, the active navigation pill, the splash, the chat header and the desktop backdrop.
+What follows this line is retained as the history of how the brand colours were derived and WHICH
+colour is which — §30's measured hexes still decide every colour in the app — but the gradient
+MECHANISM it prescribes no longer exists in `Sukinnect-next.html`. The eight `--grad-*` tokens are gone
+and there are four solid ones in their place: `--surface-brand` (#0352AE, the logo blue, on bars and
+buttons and the splash), `--surface-brand-deep` (#061364, a selected chip), `--surface-brand-soft`
+(#F1F5FF, the field behind the sign-in card) and `--accent-brand` (#05BCC4, the active rule and the
+current step). Depth now comes from the shadows and the tinted tracks, which were always there. Two
+decorative radial auras and one skeleton shimmer were deleted rather than re-coloured; the shimmer kept
+its travel, so §47's loading feedback is intact. `node tools/verify.cjs` asserts the rule
+(`the palette is flat: no linear or radial fill remains, and the one ring that uses a gradient says
+why`) with comments stripped — several sentences below still name the gradient they describe having
+removed, and to a scanner those are the same string as a rule painting one. The single remaining
+gradient FUNCTION is the workload ring, declared in the page beside it as `flat-palette-exception:
+conic-gradient`, because a ring chart drawn with hard colour stops is a segmented circle, not a blend.
+§10 is untouched by any of this: the logo is a PNG and is still the only brand image on the sign-in.
+The token census in the block below is printed by `node tools/measure.cjs`, not by this document.
+
 Translate the first-slide visual identity into a modern mobile-app gradient system.
 
 The resulting application should feel:
@@ -1191,12 +1294,18 @@ Sukinnect.html     — 4,707 lines, ONE :root block, 1,138 var() usages, 86 toke
                     the rebuild; still identical to main — see the note below on how to prove
                     that, and still carrying the old
                     gradient-hero sign-in.
-Sukinnect-next.html— 11,836 lines, ONE :root block, 1,751 var() usages, 95 tokens declared with 92
-                    of them reached. Twenty-four hex-shaped strings sit outside :root, and the
+Sukinnect-next.html— 13,981 lines, ONE :root block, 2,381 var() usages, 115 tokens declared with 112
+                    of them reached — the three exceptions are `--info`, kept declared because §31 names it
+                    and §34 forbids spending it on a brand chip, plus `--accent-brand` and
+                    `--surface-brand-soft`, which §31A's ruling 1 names as the cyan rule and the field
+                    behind the sign-in card while the surfaces that painted them went flat. The gate pins
+                    the SET rather than the count: the unreached set must equal `TOKEN_EXCEPTIONS`, and
+                    every exception must still be declared (see the token paragraph below). Twenty-nine
+                    hex-shaped strings sit outside :root, and the
                     tool that counts them refuses to explain the ones it cannot decide: fourteen are
                     the seven-trade SERVICE_THEME palette, two values per trade, deliberately literal
                     (§45 — the seventh is Fruit Harvest & Buy); one is the <meta
-                    name="theme-color"> value, which cannot take a var(). The remaining nine are
+                    name="theme-color"> value, which cannot take a var(). The remaining fourteen are
                     printed line by line, because a comment quoting a measured brand value and a
                     hard-coded colour in markup are the same string to any scanner — and one of
                     them (`#9021`) is a booking id, not a colour at all. Fifteen `#fff` values that
@@ -1210,23 +1319,29 @@ Sukinnect-next.html— 11,836 lines, ONE :root block, 1,751 var() usages, 95 tok
                     heading count, all of them moved by the nav-label work — which is why the
                     figures above were re-run rather than re-read. They moved a fourth time the
                     next day (§76's eleven lines of day helpers) and a fifth the same evening
-                    (§77's dialog labelling), a sixth time with §78's register branch, a seventh for §79's nav-box correction, an eighth for §81's analytics row, a ninth for §82's Insights rewrite, a tenth for §83's single clock reading and an eleventh for §85's declared scheme and dashboard header, a twelfth for §89’s seven lines of nav-floor comment and conversion — and each time the fix was to run the tool, not to re-read the sentence. The next
+                    (§77's dialog labelling), a sixth time with §78's register branch, a seventh for §79's nav-box correction, an eighth for §81's analytics row, a ninth for §82's Insights rewrite, a tenth for §83's single clock reading and an eleventh for §85's declared scheme and dashboard header, a twelfth for §89’s seven lines of nav-floor comment and conversion, and a thirteenth across the mobile-app visual pass — 244 lines, 15 tokens and a heading count that changed meaning when the chrome pass moved every bar title into one component — and each time the fix was to run the tool, not to re-read the sentence. The next
                     reader should cite the tool rather than trust it.
                     Everything that was a real violation is now a token: #fff became
                     --surface and --on-brand, the modal dim became --scrim, and the phone
                     mockup's bezel and signal bars became --device-bezel and
-                    --device-signal. Type is fully on the scale: of the 121 `font-size`
-                    declarations in the stylesheet, 119 take a var(), none is a literal px,
+                    --device-signal. Type is fully on the scale: of the 131 `font-size`
+                    declarations in the stylesheet, 129 take a var(), none is a literal px,
                     and the two that are neither are the `h1, h2` reset set to `inherit` — which is
                     what lets an <h1> sit in a flex bar as the div it replaced — and the `:root`
                     line §68 explains at length, `min(1em, 20px)`, which a phone ignores and the
-                    sweep exists to absorb. The 403 `font-size` declarations inside
+                    sweep exists to absorb. The 457 `font-size` declarations inside
                     markup's inline styles all take a var() too, except one: the throwaway span
                     `navFontScale()` measures the phone's text inflation with, which has to be a
                     literal 100px or it is measuring nothing. Every screen in the app now opens with
-                    an <h1> and every sheet with an <h2> — 24 and 6, the sixth being the weighing
-                    sheet — because an app of seventy-odd screens with no headings has no outline for
-                    a screen reader to navigate. This sentence was false when it was first written, and
+                    an <h1> and every sheet with an <h2> — the tool counts 6 and 14 **source literals**,
+                    which is not the painted figure and has not been since the chrome pass moved every
+                    bar title into `screenHeader()`: the headings are painted from one component, so the
+                    literals went down while the screens they render stayed the same. The painted claim
+                    is the one the gate holds (`no app screen paints no <h1>`), and the literal count is
+                    the one `node tools/measure.cjs` can print without a browser — and the rule is there
+                    because an app of a hundred screens with no headings has no outline for a screen
+                    reader to navigate.
+                    This sentence was false when it was first written, and
                     stayed false for two screens (the resident's booking detail hand-rolled a bare
                     <div> where the provider's used the shared header, and the chat room titled
                     itself with a name in a div): the screens pass in tools/verify.cjs now fails
@@ -1262,7 +1377,7 @@ official mark is a PNG, not an icon, and it is still the only brand image on the
 The rebuild also added a real verification surface, because reading the file cannot
 see a layout: `node tools/shot.cjs` drives the machine's own Chrome headless over the
 DevTools Protocol with no npm packages, and `--measure` runs an in-page instrument
-across every screen in the walk (82 as of §99; `node tools/shot.cjs --list` is the count) for tap
+across every screen in the walk (100 as of the pass that added the wallet and connections sheets; `node tools/shot.cjs --list` is the count) for tap
 targets, WCAG contrast (sampling gradients at the text's
 own position), clipped text, off-scale fonts, content trapped under the nav, unnamed
 controls, form fields a screen reader cannot name, images that asked for a file and got no
@@ -1836,7 +1951,7 @@ says: one space and three spaces each show all eight providers, exactly as no qu
 "xyzzy" shows none and prints `No provider matches “xyzzy”` with a way out. The gate pins it on both
 halves of the rule: the matcher's count, and the **count line**, which is built from a second copy of
 the trimmed query and reads `8 of 8 providers` only when something narrows the list and
-`8 demo matches` when nothing does. `node tools/falsify-blank-query.cjs` — **2 of 2, 0 not applied**.
+`8 smart matches` when nothing does. `node tools/falsify-blank-query.cjs` — **2 of 2, 0 not applied**.
 The second break was MISSED on the family's first run, when the check only counted providers; the
 check was widened rather than the mutant deleted, because an unobservable mutant is a gap in coverage
 and not a verdict about the code.
@@ -2630,6 +2745,90 @@ a break, because a break that reads zero belongs in prose while a surviving muta
 aggregate's red column, and the nav-fit family already recorded what happens when the two are
 conflated.
 
+A FIX THAT MOVES A BREAK IS NOT A FIX, AND THE SCREEN IT BREAKS IS THE ONE BESIDE IT. The same
+`overflow-wrap:anywhere` min-content rule then bit the other half of a card head. A status chip was
+breaking mid-token — "ACCEPTE / D", "COMPLETE / D" on the provider's booking list, seen in a screenshot
+and invisible to every tally that asks about boxes — so `.chip` took `white-space:nowrap; flex-shrink:0`,
+which is right for a chip alone. In a `.row` head, where the chip sits beside the card title, it stopped
+the chip from giving way and handed the break to the heading instead: the reschedule inbox painted
+"Waitin / g for / the / residen / t to / answer" across six lines at the **default** panel width, and the
+8-corner sweep stayed silent at 25 tallies each, because a word on its own line is not clipped, does not
+collide, is on the scale, and clears contrast. The fix is on the row, not on either child —
+`.card-head{ flex-wrap:wrap }` on the 22 title+chip heads, so the count falls onto its own line and the
+title keeps whole words. Two rules follow. **When a flex row holds two things that must stay whole,
+wrap the row; making one of them unbreakable only chooses which one shatters.** And **a shape assertion
+belongs in the gate for any defect a screenshot shows and a tally cannot**: the check counts the
+title+chip pairs the markup paints and requires each to carry the class, behind a floor of ten pairs so a
+pattern that stops matching reports "0 of 0" rather than passing; its sibling pins that the class is
+`flex-wrap` and the chip is `nowrap`, because the second is the first's failed attempt. Proven by
+`node tools/falsify-coherence.cjs`, which grew first to 10 breaks — one head loses the class, then the class
+loses `flex-wrap` while all the rows still name a rule that no longer exists — and to 15 with the three sections
+below. The pair count it asserts is a live number printed by the check, not a figure carried here.
+
+THE SAME DEFECT LIVES IN EVERY ROW SHAPE, AND WHEN THE SYSTEM CANNOT SAY IT, THE MISSING VOCABULARY IS THE
+DEFECT. Two more rounds at the phone's own 320 CSS px / 135% text found the identical squeeze in three places
+the card-head rule did not cover: the sticky action bar's primary button painted "Book / Appointme / nt", the
+provider profile's ratings row painted "Custo / mer / Ratin / gs" with its score pill splitting into "4 . 9", and
+the service badge split into "Plumbi / ng". Each was invisible to all 25 tallies at every corner, for the same
+reason as before — a word alone on a line is not clipped, does not collide, is on the scale and clears contrast —
+and each was fixed the same way: **the row wraps, the words hold** (the sticky bar and two more rows take
+flex-wrap, the pill and the badge take flex-shrink:0 with white-space:nowrap). Do not read this as three bugs: it
+is one rule about overflow-wrap:anywhere meeting a flex row that will not give way, and the fourth instance will be
+on a row nobody has photographed yet.
+
+The R6 half of that work is a different lesson. The booking detail and the provider profile each painted a
+btn secondary chat control beside a byte-identical btn secondary tel: link, and **nothing in the file could call
+it wrong, because the button system has PRIMARY, SECONDARY and DESTRUCTIVE and no tertiary tier at all** — §70
+names the tier, the stylesheet did not have it, so the rule was unexpressible rather than unobserved. The fix is
+.btn.tertiary in the stylesheet, not a quieter inline style on two buttons, and the 44px floor is untouched because
+the demotion is mass, not reach. **When a stated rule cannot be expressed, look for the missing vocabulary before
+looking for the missing check.** Three new gate checks and five new breaks in falsify-coherence (now 15 of 15,
+0 not applied) pin the tier, §42's reading order on the provider profile, and the credential list that now reads
+credentialsOf()/credentialLine() instead of painting a green check beside two documents the records call expiring.
+
+AN ADMIN SPOKE IS A DRILL-IN, AND A BACK RULE THAT IGNORES IT REMOVES THE USER'S BACK RATHER THAN AIMING IT.
+A11 was found as "the header button and the phone's Back disagree". Reading onRootTab() showed worse: an admin
+spoke keeps state.tab on the console's root tab while state.adminScreen names the screen, so onRootTab() answered
+"root" with a drill-in on screen — syncBackHandles() claimed **no** history entry, stepBack() returned early with
+nothing to undo, and the phone's Back at an admin spoke had nowhere to go. The reported symptom (two destinations)
+was a third of the defect; the other two were that one of the paths did not exist at all, and that pointing the
+button at stepBack() — the obvious fix — would have done nothing. The rule now answers about the screen, not only
+the tab. Two checks hold it: one textual (no spoke hard-codes adminScreen='overview'), one behavioural (account
+tab → audit log → back is the **account tab**; console → Money → back is the console), and the falsifier break that
+deletes the onRootTab() clause reports tab=admin_dashboard screen=audit — the button doing nothing, which is what
+the check is for. The same break is why a rule about a destination has to be asserted by landing on it: the
+textual check alone would have passed on the first fix, which changed the string and not the behaviour.
+
+A CITATION IS A CLAIM ABOUT A TOOL, AND THIS SESSION MADE THREE FALSE ONES BEFORE A CHECK EXISTED.
+While auditing the improvement plan for whether every row it describes is actually implemented, prose
+written in this same session cited `falsify-status-duplication` (no such family), a `login`-suite check on
+the role boundary (no such check), and §85's declared-state check reading the admin lock dialog (that
+family is about dark mode and the "Pro" label). Each was caught by `ls` or `grep` — but only because the
+author stopped to check, which is luck wearing a discipline's clothes. `node tools/audit-citations.cjs`
+is the discipline: every file and every bold-quoted gate-check label the plan cites must resolve, or be
+absent with a reason stated beside it in a `citation-exempt:` marker — the same idiom §"THE COMPATIBILITY
+FLOOR" uses for CSS the page keeps on purpose, and with the same rule that a stale exemption is itself a
+finding. `node tools/falsify-citations.cjs` proves it three ways, one of them in the direction that only
+looks right: blinding the resolver's walk over the tracked tree must make it **refuse a correct plan** with
+a phantom file finding, because a check that invents defects teaches the reader to ignore it. Two facts it
+surfaced are worth more than the tool. **The brief this work was commissioned under,
+`SUKINNECT_UX_RELIABILITY_MVP_PROMPT.md`, is not in the workspace and has never been committed** — so the
+plan's §13 matrix is the only surviving record of what was asked, and "is everything in the Markdown file
+implemented?" can only ever be answered against the plan. *(citation-exempt: SUKINNECT_UX_RELIABILITY_MVP_PROMPT.md — absent by
+fact, stated here so the audit reports it as exempt rather than letting a true absence read as a phantom
+file.)* And **a citation a reader cannot run is a false
+citation**: the §14 table named a family with an ellipsis standing in for its prefix, which no one can type.
+
+THE ANSWER TO "IS EVERYTHING IMPLEMENTED?", STATED SO THE NEXT SESSION DOES NOT RE-DERIVE IT. Of the plan's
+47 concerns: 45 are built, ruled out of scope, or resolved by an earlier pass with an instrument behind
+them; `A2` is deferred by the owner pending a screenshot; `G11`'s one-to-three-minute number and `R10`'s
+keyboard-open composer are handset-gated by standing ruling and are reported as **not verified**, never as
+passing. Three rows the first pass claimed were fine were found by reading the sections nobody re-audits:
+`A9` was **over-claimed as built** in the completion report, `R6` was a scope contradiction between §4 and
+§13 rather than owed work, and `A11`'s "already resolved" rested on a sentence about the back machinery
+while the painted button had no back to take. **The matrix is not the audit — §1 to §17 are the audit,** and
+a section that has not been re-read is a section still making claims.
+
 A SCREEN CAN SATISFY EVERY SENSOR AND STILL BE A DECORATIVE STATISTIC. `adminProviderInsights` — the
 Providers bar's "Insights" button — was missing from the camera's table until §81 added it, and once it
 was in, it read clean on all 25 tallies at every corner. That is the lesson worth keeping: the camera
@@ -3412,9 +3611,567 @@ the frame stops doing what it does after boot", not a fixed nap. And the leg no 
 its scope and judges the question that holds at every level, whether the page paints under a system bar, which is what
 the two handsets here (OPPO API 29, vivo API 30) can actually answer.
 
+A PROPOSED TIME IS A RECORD, AND THE BOOKING MOVES ONLY WHEN THE OTHER SIDE AGREES. `reschedul`
+appeared zero times in this file before 2026-10-25, so a household with a conflict after an
+appointment was agreed had exactly one door — cancel — and the booking's own `cancelWarning()` names
+the fee that costs. `RESCHEDULE_REQUESTS` now holds one row per proposal against a
+`RESCHEDULE_STATES` vocabulary, seeded **empty**, because a sample request would be a written record
+of an agreement nobody proposed (§86). Only `upcoming` may move: a request nobody answered has no
+agreed time to change, and once a provider is `en_route` or `arrived`, a new hour is a no-show
+waiting to happen. Accepting is the only statement in the file that writes `b.date` and `b.time`, and
+it writes nothing else on the booking — no amount, no `status`, no payment state — which is asserted by
+reading the booking back, not by trusting the handler. It does append one timeline row, described below. The proposing side is not offered an accept button on its
+own request, one proposal per booking is the rule, and the whole flow is in the camera's walk
+(`reschedule-sheet`, `reschedule-answer`) reached through the app's own openers. Three consequences of
+reading §9 of the plan rather than only the prompt: an accepted move writes **one `STATUS_EVENTS`
+row** and `decidedAt` is derived from that same reading, because two representations of one press need
+one clock (§83) — the check asserts `Date.parse(event.at) === r.decidedAt` instead of timing anything;
+that row is rendered from its own **note**, since the status never changes and printing the label twice
+is §7's repeated indicator; an optional **reason** rides on the record, escaped, and an untouched reason
+is stored as `null` so the card never prints quotation marks around nothing; and the answering side may
+**counter**, which marks the ask it answers `superseded` and raises a fresh one rather than editing a
+decision that already happened — its error path first restored a superseded ask to `pending`, which
+re-opened a proposal the other side had already answered, so a refusal now mutates nothing at all. A request also carries **the schedule it was raised against**
+(`fromDate`/`fromTime`): an answer whose booking has moved on is refused, the row retired as `stale`,
+nothing written - the plan rule it closes is "a stale request is refused with its reason named", and
+the deviation that survives is that `requested` bookings are NOT offered a reschedule, because an
+unanswered request has no agreed time to move. Recorded, not smoothed over.
+`node tools/falsify-reschedule.cjs` proves seventeen properties; break 1 is the honesty one (a proposal
+that moves the appointment while the message says it did not), and the two structural breaks — the
+event writer ignoring the handed instant, the timeline printing the label — exist because a behavioural
+check cannot pin a race that usually does not happen.
+
+A FLOW THAT WORKS ONLY IF YOU ALREADY KNOW WHERE TO LOOK IS HALF BUILT. Re-reading the plan's own audit
+matrix a day after the reschedule flow shipped found that rule 6 of §9 — "the resident sees it in their
+list, the provider in the request inbox; each entry opens the booking" — had never been implemented. Every
+check in the `reschedule` suite asked what happens *inside* the flow; none asked how a person
+*gets into* it. So a provider with six accepted jobs had to open each one to discover which carried a
+proposal, which is the same defect as a stat strip that counts six flagged providers with no list behind
+it: the mechanism existed and the door did not. Both booking lists now render the pending asks, each row
+opening the booking it was raised against, and the check reads the rendered lists with a fixture pushed
+inside the test (the seed ships an empty request set on purpose, so a scan of the seed could not have
+found this) and asserts a decided ask appears nowhere. **When a flow is added, audit its entry points the
+same way as its guards.**
+
+That check was vacuous twice, and its own three breaks are what said so — all three printed MISSED while
+the check reported clean. The first version asserted that the rendered booking *list* contained the
+heading and `openBookingDetail('b3')`; a booking list contains that call on every row, so **the page
+satisfied the assertion by being a booking list.** The second version read the card's own markup and still
+passed, and the real cause was the checker: the condition handed to `c.check` was the object
+`{ ok, why }` returned by the IIFE, and the checker coerces with `!!`, so an object is truthy forever.
+`verdict(label, probe)` exists to unwrap that pair — the check was written in `verdict`'s shape and called
+through `check`. **`makeChecker` now throws on an object condition beside the function guard it already
+had**, which is the 2026-10-13 lesson arriving one shape over in code written months later. Only forcing
+`ok: false` by hand and watching it print PASS settled the question; the check's own green line had been
+the evidence, and it was worth nothing.
+
+Two more findings from the same minute: each phase of a behavioural check has to own the world it asserts
+about — earlier checks leave a real pending ask on the books, so the card held two rows and a heading
+chosen by the leftover — so the phases empty the list and restore it; and a camera row that submits
+through the app's own path must be idempotent, because the flow refuses a second proposal while one is
+waiting and the next line then reached for a null draft, so the row produced no screenshot at all —
+**the walk's order is not part of a row's contract**. And an inbox filtered by *who raised* the ask hides
+a provider's own open question from them, so it filters by whose job it is.
+
+A SCHEMA BUMP IS FOR AN AMBIGUITY, NOT FOR A NEW KEY. The approved plan said this feature would move
+`SCHEMA_VERSION`; it does not. A v16 dump simply has no `rescheduleRequests` key, and an absent key
+is unambiguous — unlike the v15 dump whose typed-date rows were indistinguishable on disk from real
+instants, which is the precedent that earned a bump. Bumping here would have deleted every tester's
+saved bookings, edited provider profile and audit rows to protect nothing, so `hydrate()` reads the
+missing key as an empty list and the number stays put with a comment saying why. **Read the approved
+wording as the intent, not the implementation:** the deviation is recorded in `CHANGES.md` §132
+rather than smoothed over.
+
+THE REGISTER WRITES THE ACCEPTANCE BEFORE IT WRITES AN IDENTITY. `this account is not stored` was
+true while registration wrote no bytes at all. An acceptance nobody can point at afterwards is a
+claim rather than a record, so the versioned acceptance is now stored — and the order is the whole
+claim: `state.termsAcceptances` is written and `persist()` is called **before** the typed name and
+barangay are applied to the profile, so the bytes this action leaves hold a versioned acceptance plus
+the demo household's own profile. The toast was rewritten to say exactly that, because the sentence
+and the bytes must be checked against each other (`suite('login')`: an unticked box refuses with a
+message naming the box and writes nothing; an accepted register writes the acceptance and not the
+account; the optional consent appears only when that box was ticked). A later edit made deliberately
+is stored by that edit, which is existing behaviour and is not hidden by the register's sentence.
+
+THREE DOCUMENTS, AND EVERY FACT THE BUSINESS HAS NOT DECIDED IS A BRACKET. Terms, Sukinnect Policy
+and Privacy Notice are drafted into `Sukinnect-next.html` as a sheet reached from the sign-in card.
+They are **drafts**: each carries a visible "Draft — not reviewed by Philippine counsel" banner, and
+that status is also in `SUKINNECT_UX_RELIABILITY_MVP_PLAN.md` §11 and in `README.md`, because §11 of
+the improvement brief asks for the review status to be visible in the plan *and* the developer
+documentation. `privacy.gov.ph` answered 403 on both pages the brief names, `ecommerce.dti.gov.ph`
+failed to connect, and the Senate issuance library was unreachable, so the text was written against
+full-text reproductions on LawPhil and says which statutes it leaned on: RA 10173 §§12–13 and 16
+(consent is ONE of six grounds — the notice separates contract, legal obligation, legitimate
+interests and consent instead of treating every process as consented), RA 11967 (marketplaces, not
+pure consumer-to-consumer deals; the merchant issues the invoice), RA 8792, RA 7394 (which reaches
+services, not only goods). Providers are described as **merchants offering services through the
+platform** — the owner's ruling, and the choice that decides whether RA 11967's duties attach at all,
+flagged for counsel rather than presented as settled. The gate enforces the shape rather than the
+sentiment: an entity name, address, privacy officer, complaint channel, retention period or effective
+date that has not been decided appears only inside a bracket marked `NOT DECIDED`, and a check fails
+if a bracket loses its mark, if an email address appears outside one, or if the text claims NPC
+registration it does not have. `node tools/falsify-legal-truth.cjs` proves those.
+
+A LABEL MAY NOT PROMISE A MECHANISM, AND THE HONEST FIX IS SOMETIMES DELETION. "Arrives within" sat
+above a filter that compared `availabilityMin` — when a provider can *start*, not when anybody
+reaches the door — so the group is "Can start within" with a line saying nobody is on the way yet, and
+the card that said "arrives ~N min" says "can start in ~N min". "About 0.8 km from you" was a number
+typed into the seed, so the provider card's map line now calls it a sample figure not measured from
+the reader — which matters more since registration accepts the reader's own barangay. On the FSM
+screen, "Dynamic Availability Optimizer — suggests when to go Available/Busy based on real-time surge
+predictions" became a plain statement of what the switch does (nothing reads it; no routing exists in
+this build), and "Route & Schedule Optimizer — optimized sequence for your 2 active jobs today…
+travel time minimized by 18 mins" was **deleted rather than reworded**, because the dashboard already
+lists today's jobs in the order their own times put them and a second list of the same day is the
+drift this file keeps calling a defect. A check now fails if FSM grows a `Today` heading again.
+
+FOUR INSTRUMENT LESSONS FROM THE SAME PASS, ALL ABOUT THE CHECKER. (1) **A check that reads a field
+the harness zeroes measures the harness.** Two reschedule checks first asserted `state.sheet`; in the
+Node harness `openSheet()` leaves that flag null after `render()` — and the pre-existing booking
+sheet does the same, which is how the artifact was recognised instead of filed as an app defect. The
+checks now assert the armed draft and the sheet's own markup, and the comment says the camera walks
+both sheets in a real browser. (2) **A substring needle can fail a correct build.** The
+no-provider-is-called-"Pro" check tested `codeOnly.indexOf('Service Pro') < 0`, and the legal
+documents write "Service Professional" legitimately; the rule is `\bService Pro\b` now, on both
+halves. (3) **The gate had never rendered the FSM screen.** `providerFSM` was absent from the harness
+export list, so no check could reach it — the same "a destination no instrument reads" class as the
+admin Account tab and the audit log — and the mutant that found it was a card inserted into the wrong
+function, which died on `today is not defined`. (4) **A break that prints MISSED is read, not
+deleted**, for the sixth time in this repository: the id-substitution break survived because the
+table's first booking happened not to be at a movable stage, so "nothing opened, nothing written"
+stayed true for an unrelated reason. The check was widened to make that row reschedulable first and to
+assert the lookup itself answers `null` — a positive control, not a softer needle.
+
+A BREAK THAT PRINTS MISSED CAN BE WRONG ABOUT THE INSTRUMENT, AND THE FIX IS TO APPLY THE BREAK YOURSELF
+AND READ THE WHOLE OUTPUT. §140's aggregate left one survivor: `falsify-report-coverage`'s break that strips
+every mention of one plan row, which reported `findings 3, exit 1` against an expectation of `silent: A11`. Re-run
+alone it reproduced, so it was not the load flake `chart-collide` had been. The cause was the break's own needle:
+the audit had never printed the word `silent`, it prints `LIST MISMATCH  CD list omits: A11` — and the row's §4
+class is CD, not the AR the break's sentence asserted. The guard was right and the expectation was invented. Two
+rules: when a break fails, run its mutation by hand and print the target's **entire** stdout before touching
+either file (a scratch script that applies the same edit, runs the tool, and restores in a `finally` answers the
+question in one minute and leaves nothing behind); and an `expect:` string is a claim about output, so it has to
+be copied from a real run rather than written from the intent behind it. The same minute found the family's
+headline number had never been exercised at all — `not dispositioned: 0` had no break that could make it climb,
+because deleting one row's *listed* mentions leaves the id named inside other bullets' prose, and the disposition
+rule credits any bullet that names it. The family now carries a section-scoped mutation (strip an id from
+everything after the `## 17` heading, leaving §4's row intact) and requires the tally itself to move: **5 breaks,
+5 caught, 0 not applied**. A guard whose failure path has never been reached is a number nobody has tested.
+
+A MEASUREMENT THAT RISES WHEN YOU PRAISE THE THING MEASURED IS MEASURING THE PRAISE. §17 of the improvement plan
+used to close with "Each is still backed by an instrument that runs — a named honesty/machine/storage check, a
+camera tally, or a probe — except P1e and A13", one sentence covering 21 rows and naming evidence for none. An
+instrument was written to test it — `tools/audit-row-instruments.cjs` reads the matrix and counts only evidence that
+resolves, a file under `tools/` that exists or a bold-quoted label equal to one of the 647 labels the gate prints — and
+it answered **15 of 47 rows traceable**. Then the sentence was improved to name real instrument files, and the
+count rose to **27**. Nothing about the application had changed: the sentence sits inside the bullet that lists all
+21 AR ids, so it became evidence for every one of them. The unit was the defect, not the arithmetic. A block naming
+more than two ids is now treated as a class list rather than a disposition, and the honest figure is **10 of 47 traceable,
+34 built-class rows naming nothing runnable, zero rows quoting a check label**. Two rules follow, and both are about
+scanners rather than prose: **state the scope unit a count was taken at, because line, bullet, and section give
+different answers from the same file**; and **be suspicious of a metric that improves when you edit the text the
+metric reads** — the fix is to narrow what counts as evidence, never to accept the lift.
+
+ASKED AND ANSWERED, THIS TIME WITHOUT A GATE: no `tools/*.cjs` or `tools/probe-*.js` names a plan row id at all
+— a grep for all 23 untraced ids hit only the tool that parses the table. So row-to-guard mapping cannot be
+recovered from the code, and section-scope attribution in the change log was tried and rejected: it credited every
+row discussed in §138 with `falsify-all`, and gave R6 the wrong family. A generous scope is not a truer one; it
+manufactures evidence, including against its author.
+
+A MODAL CHECK HAS TO RENDER TWICE, AND A FAMILY MUST NOT REWRITE A FILE IT DOES NOT OWN. `render()` clears every
+`*Modal` field when the destination changes, so a gate check that sets `state.adminAccountModal` and renders once
+reads "the dialog painted no Unlock button" about a correct build — measured in a sandbox against
+`git show HEAD:` bytes: one render, 4,913 chars and no button; settle-then-raise, 5,888 chars with the layer.
+Prove a new check there, before it enters the gate. In the same hour `tools/falsify-row-instruments.cjs` twice left
+622 of its own `c.check(`→`c.checkNote(` mutants inside `tools/verify.cjs` after its finally, turning the whole suite red
+about a tree with no application defect; the break was deleted, not hardened, because the channel it probed was
+already reported empty by the census it tested. Its self-report of a clean restore did not print on the last run
+even though the restore had happened — output written immediately before `process.exit` can be lost — so the
+standing rule is to check the target file with a grep rather than trust a tool's own sentence about itself.
+
+THREE INSTRUMENT TRAPS FROM THE SAME SESSION, ALL CHEAP TO AVOID. A regular expression built inside a JavaScript
+template literal loses its backslashes (`<\/button>` becomes `</button>`), which surfaces as a syntax error in the
+generated probe and looked like a test that had gone red rather than a test that never compiled; a needle containing
+a semicolon passed through a shell command line gets the command split, and it made a **baseline** read as failing,
+which is only visible if the baseline is required green before any mutant runs; and a relative `../tools/` path inside a
+script run from the repo root resolves one directory too high, producing a confident "0 of 29 resolved" that read as
+a finding about the change log and was a finding about a path. Bake needles into generated files, prefer string tests
+to regexes in generated probes, and assert that a scan's population equals the thing it claims to scan before its
+answer leaves the building.
+
+THE FIGURES FOR THIS PASS ARE COMMANDS, NOT SENTENCES: `node tools/verify.cjs` prints the check total,
+`node tools/shot.cjs --list` prints the screens the walk reaches, and `node tools/falsify-all.cjs`
+prints one row per mutant family with applied / caught / not-applied / missed. Quote a run, not a
+number carried forward in prose.
+
+A DENSITY METRIC THAT NAMES ONE AFFORDANCE SHAPE INVENTS FINDINGS. Phase A reported seven screens that
+bury their first large action below the fold, measured by a probe asking "where is the first `.btn` at
+least 40px tall". Promoted to `node tools/shot.cjs --probe=@tools/probe-density.js` with a selector
+that counts anything a thumb can press (`button, a[href], [onclick], .btn`), the honest population on
+the untouched build was **one**: the admin's Money screen, whose only two operations sat 2,239px down
+a 2.5-screen scroll beneath the three cards they change. Master Administrator's 13 pressable rows
+begin at 121px and the thing 2,054px down is its lock/logout pair, which belongs at the bottom of an
+account screen; Categories' single button is a link to fee settings on a screen whose own copy says the
+catalogue is read-only, so promoting it would have surfaced a convenience above the content. The action
+card was hoisted and extracted as `thisDeviceCard()` so its position is one line a check can order
+(`node tools/falsify-action-above-fold.cjs`). Two rules: **print the old figure beside the new one when
+widening a selector**, because a changed headline with no comparison is a vocabulary change masquerading
+as a finding; and navigate by the value a render branch answers, not the word printed on the button —
+`state.tab='dash'` painted nothing, and the check that inherited it failed loudly only because it
+requires each marker to exist before comparing positions.
+
+RIGHT-ALIGNED NUMBERS ARE NOT ALIGNED NUMBERS. §13 asks twice whether figures line up, and the file
+answered it with five separate `text-align:right` declarations across a 1,600-line stylesheet — two in
+component rules, one typed into a number input's inline style, two on markup blocks — and no numeral
+rule at all. Alignment was never the whole defect: **Atkinson Hyperlegible Next paints proportional
+digits**, measured in Chrome on the shipped face at 32px type — `111111` renders 78.16px against
+`000000` at 124.42px — so a column of amounts leans whichever way its digits fall. Under
+`font-variant-numeric: tabular-nums` both strings are 121.36px. One rule now carries both halves
+(`.row > b, .row-value, .offer-line .ol-v, .chart-value, .stat-strip .f b, .stat .num,
+input[type=number]`), the gate pins that it is *exactly one* of each declaration so a per-screen
+override cannot return, and `node tools/falsify-figures.cjs` proves it (7 breaks, 7 caught). The face
+was identified before the property was claimed, because §68 already warns what a measurement taken on a
+fallback proves: `"Atkinson Next"` alone renders identically to the full stack and differently from
+Plus Jakarta Sans (90.06px), so the reading is of the WOFF2 and not of a substitute. `document.fonts`
+iterated **empty** on the same page — a second instrument lesson: a FontFaceSet scan is not evidence
+the font loaded, and a width comparison against the families that would have stood in for it is.
+
+A SCALE TOKEN NOTHING ASKS FOR IS A LIE ABOUT THE SCALE. `measure.cjs` had been printing "95 tokens
+declared with 92 reached" for weeks, and three unreached names (`--s-1`, `--s-8`, `--info`) meant the
+comment above them — "one 4pt rhythm … so a component asks for a step instead of inventing a number" —
+described an intention rather than a file. Two of the three were reached by converting the literal they
+already equalled (`padding:32px 12px` → `var(--s-8) var(--s-3)`, three `gap/padding:4px` → `var(--s-1)`),
+which changes no pixel and makes the sentence true. The third is kept unreached and named: `--info` is
+the token §31's palette mapping mandates for INFO, and §34 forbids dressing a brand surface as a status,
+so it was not spent on a chip to make a count look clean. The gate now asserts the whole rule instead of
+the number: the unreached set must equal the exception list, and every exception must still be declared —
+so deleting `--info` fails exactly like adding a dead token does, and a positive control on the
+declaration count stops the scan passing because it matched nothing. One conversion cost a rotted needle:
+`falsify-compat-floor` needles the old `padding:32px 12px` line to delete the `vh` fallback, so the
+scale edit orphaned that break — found by grepping the families for the strings before running them,
+which is the cheaper order than reading `not applied` in the aggregate afterwards.
+
+AN ICON THAT NAMES TWO THINGS NAMES NEITHER. `shield` was the admin's Dashboard glyph while the same mark
+carried "Nothing under warranty" and "No provider is flagged" — a promise about somebody's documents and
+a wall of figures, in one shape. The admin Dashboard now takes `chart`, which is what the provider's Dash
+already meant, and the shield stays on the trust surfaces; the sign-in badge keeps it on purpose, where
+it reads "this is the platform's own console". The meanings are a constant (`ICON_MEANING`) and the gate
+reads it: every glyph a nav item or a role badge asks for must have a row, and `shield` must not appear
+in a `navItem`, so hiring an icon for a new job without writing down what it means fails the check
+rather than quietly doubling its meaning.
+
+A FILTER HAS TO CHANGE WHAT IS PAINTED, AND IN BOTH DIRECTIONS. The brief asks twice whether the discovery
+filters "actually work", and a screenshot cannot answer that: each of these four axes has already had a
+shape that looked correct in a picture. The gate now narrows from the records themselves and compares the
+whole id set against an expectation *it builds itself* — a filter that keeps a row it should have dropped
+is a wrong answer, and a filter that drops a row it should have kept is a smaller wrong answer that still
+reads as a narrowing, so a count alone cannot tell the two apart. `activeFilterCount()` must equal the
+number of axes that actually narrowed, because the Clear button beside that count promises a reset of a
+state the screen is not in. Proven by `node tools/falsify-filter-function.cjs`. The population guard
+(≥ 2 matchable rows, each axis a proper subset) is what stops the whole thing passing on a seed where no
+filter could narrow anything.
+
+A COUNT WITHOUT A DOOR IS A DECORATION. The stat strip's "needing attention" figure and the card beside
+it were once derived and typed separately; the fix was one shared filter (`networkAttentionList`), which
+closed the drift and still left a reader with a number and nowhere to ask which six. The queue is that
+filter with a label on it — a fifth segment on Providers, filterable by the three things a record can
+actually assert (a case open, a document off, an account not settled) — and `attentionQueue(null)` is
+required by the gate to answer exactly what the shared filter answers, so the day the queue computes its
+own membership is the day the check goes red rather than the day two screens start disagreeing. Reasons
+are sentences and kinds are their keys, produced in the same object, and asserted to have the same length
+per provider: the wording a person reads and the filter an admin taps cannot come apart. Its
+filtered-to-nothing branch is asserted by the gate and deliberately **not** photographed, because every
+kind on the seed has at least one provider and no tap can reach that wording.
+
+SEPARATE IS A READING ORDER, NOT A WIDGET. §10 asks that a booking's schedule, timeline, contact, price,
+completion and receipt be separate things. The temptation is a tab control; the obligation is that a
+reader can tell which fact is which *and* a decision never has to be hunted for. So the resident's detail
+names the six groups in the order the screen actually reads them — decision-first: what is happening now
+comes before who is coming, because a household opening this screen on a job already on the calendar is
+asking where the plumber is. Two halves of the rule: the arrival and completion stamps moved out of the
+figures grid into their own block (they had printed "Arrived: Completed" beside a total), and a group
+whose records do not exist yet is not painted at all rather than painted empty — the gate requires a
+`requested` job to *not* carry the Completion or Receipt heading, which is the same discipline that keeps
+the receipt off an unfinished job. `BOOKING_GROUPS` is checked against the gate's own literal list, so the
+order is not a constant that re-labels itself.
+
+FIVE EMPTY KINDS AND ONE CENSUS, BECAUSE "NOTHING YET" AND "NO MATCHES" LOOK IDENTICAL. §10 names five
+distinct empty states. All five are painted, and they were painted by twenty-two calls that happened to
+word themselves differently — nothing said which kind a screen was answering, and the distinction is the
+point: one sentence means the records are empty, the other means the screen is hiding something the reader
+asked for. The gate now classifies every literal empty-state title into a kind, requires all five to have
+a representative, and counts the call sites against the classified literals plus one named site whose
+title is built by an expression — so a new empty state with a ternary title fails the census instead of
+drifting out of it. Deleting a kind's only representative (the unavailable screen adopting "No requests
+yet") is a break in `node tools/falsify-empty-kinds.cjs`, because a tally of titles cannot tell those two
+sentences apart and the kind count can.
+
+A TIME THAT WAS NOT MEASURED DOES NOT GO IN THE DOCUMENTATION. §10 asks whether browse → review → book
+takes one to three minutes; no instrument in this repository has ever measured that, and the number is
+about a hand on a screen. The method is now written in `DEVICE-PASS.md` — the fixed five-step task, one
+named device, five runs, median with min and max, tap and back counts, a human thumb rather than an
+injected pointer — with the results table **empty** and the row reading `not run`. A bench run in Chrome
+is labelled a bench run, because a desktop engine has no soft keyboard, no text inflation and no tap
+latency; three separate handset findings already prove that a bench reading of a phone-shaped claim is
+worthless. An earlier section of this file refused to build a mechanism it could only demonstrate; the
+same rule applies to a metric: the method is the deliverable, the number waits for a phone.
+
+A SCREEN NAME THAT IS ALSO BODY COPY IS INVISIBLE TO EVERY SENSOR THAT ASKS ABOUT SIZE. The owner's
+"not a real system, every screen is inconsistent" was counted before it was argued, and the count came
+from the most repeated element in the app: the top bar, painted by all 88 screens the camera walks.
+`.topbar .title` carried the heading's family, size and weight while `h1` is reset to
+`font-size:inherit`, so a bar that remembered the class painted its screen name at 20px/600 and a bar
+that wrote a plain `<h1>` painted it at the inherited body size — 16px/400, which is exactly what the
+`.sub` line under it already was. 43 of 83 bars were in that second group and 16 of them printed a
+heading indistinguishable from its own caption. No tally could see it: 16px is on the type scale, clears
+§68's floor, passes contrast, is not clipped and collides with nothing. The fix is positional — the
+heading is sized by the bar it sits in, so a screen cannot decline it — and `node
+tools/shot.cjs --probe=@tools/probe-bar-titles.js` now prints the population as `drill:20×48 root:24×35`
+with `titleEqualsSub=0` beside `drift=0`. Two `hygiene` checks pin the shape with positive controls
+(the positional rule must exist, at least ten `<h1>` must exist), and `node tools/falsify-bar-titles.cjs`
+proves 4 of 4.
+
+THE CAMERA COMMITTED THE DEFECT IT WAS MEASURING. The same probe then reported `data-root=0` on six
+genuine root tabs while the Node harness answered `data-root=1` for all thirteen — two instruments
+disagreeing about one element, which is a defect in one of them, not a finding about the app. The state
+printed beside the reading named it: `isChatOpen` was true on all six. The bottom navigation's handler is
+`clearModals()`, then `state.isChatOpen = false`, then the tab, then `render()`, and the walk ran the
+first and the last but not the middle, because that flag must not be cleared inside `clearModals()`
+(opening a room IS a destination change). Every screen after the chat-room row was therefore painted
+with a chat still open, `onRootTab()` answered false, and the root header treatment was replaced by the
+drill-in one — the precise symptom the application's own comment beside that line describes, committed
+by the harness rather than by the code. Confirmed by driving it as a thumb does: tap the painted thread
+row, then the painted Profile item, and the bar reads `isChatOpen=false data-root=1 title=24px "Resident
+Profile"`. **A walk that moves the model without moving the field photographs a state nobody can reach,
+and this is the fourth form of that trap** — after the missing SCREENS row, the setup that moved the
+model but not the input, and the probe that typed into a detached node. When two instruments disagree,
+read the state the app was actually in at paint time before touching either file, and print the
+disagreement's cause as a break (`falsify-bar-titles` break 4 removes the line from the camera and
+requires the root count to fall).
+
+NINETEEN TOP BARS ARE ONE COMPONENT NOW, AND THE COUNTS THAT SAY SO ARE RATCHETED. The owner's
+"not a real system, every screen is inconsistent" was converted into a metric per idea
+(`node tools/audit-design-consistency.cjs`: 13 metrics, each with a ceiling that can only go down, plus a
+`--bless` that rewrites them). `topbar_divs_handwritten` 19 → 0; `screenheader_calls` 13 → 32 — held to a
+FLOOR, not a ceiling, because every other metric counts ways-to-say-a-thing and this one counts the
+opposite, so ratcheting it upward would refuse the fix; `bar_title_class_rules`,
+`bar_titles_self_sized`, `bar_left_groups_handwritten`, `bar_action_styles_inline` all 0;
+`literal_paddings` 111 → 15 and `distinct_paddings` 41 → 7, where the 15 left are deliberate: 2px and 3px
+hairlines, two values above the scale's top, and the numbers inside `calc(18px + var(--sat))`;
+`inline_styles` 1035 → 1003. The three identity bars landed last so the `avatar`/`nav` options the
+component gained were never dead code, and the resident Home notification button was EXTRACTED from the
+original bar rather than retyped, because a hand-copy of an inline SVG is a new claim about pixels. Proof
+that a structural refactor moved nothing: the painted population read identically before and after — 83
+bars, `drill:20×48 root:24×35`, `drift=0`, `titleEqualsSub=0` — and the only number that moved was
+`classless`, 46 → 0.
+
+A RULE THAT CARRIES TWO IDEAS MAKES BOTH OF THEM MANDATORY, AND A PSEUDO-ELEMENT IS INVISIBLE TO A GREP
+FOR THE PROPERTY IT REPLACES. Three defects, one shape. The shared numeral rule aligned *and* tabulated
+every figure, which is right for a money column and wrong for a headline number in a tile — inheriting
+`text-align:right` is what pushed the admin's roster figures into the far corner of their own tiles; the
+rules are now two and the gate asserts the relation (anything right-aligned must also be tabulated), with
+a mutation break that leaves a figure aligned but un-tabulated, because that is the failure the split
+introduces. `.jr-time` was the leading slot of a job row holding three ideas — a booking time, the word
+"Open", and a bare count — and only the counts carried an inline colour, making the hue the sole carrier
+of a state the words beside them already state. And the card-title accent bar survived two passes that
+each reported the class closed, because they grepped for `border-left` while the bar was painted by
+`.card > b:first-child::before` on 63 cards, under a comment praising the consistency. When a rule says
+"no bar", ask what else can draw a line.
+
+A POSITIVE CONTROL THAT COUNTS MARKUP FAILS THE CORRECT REFACTOR — TWICE IN ONE SESSION, AND ONCE IN A
+GUARD BUILT TO CATCH THAT. One gate check required ten `<h1>` in the source; it saw eight, then five, as
+bars converged on the component, which is the change this file had been asking for. Another required the
+admin's provider-management back button to exist in its hand-written attribute form. And a refactor guard
+asserting "the multiset of every `id` and `onclick` string is unchanged" reported two ids lost on a
+*correct* conversion, because the component parameterises names: `id="back-home-btn"` becomes
+`backId:'back-home-btn'`. The repairs are the rule: count the abstraction's use sites, compare every
+spelling of a moved name, and state plainly that a painted population belongs to the instrument that
+renders it. `node tools/falsify-bar-titles.cjs` is 7 breaks, 7 caught; `node tools/falsify-figures.cjs`
+8 of 8; and the family's own re-point left a dangling constant that crashed it on load while the
+background wrapper reported `exit 0`, because the command ended in an `echo` — read the log, not the exit
+code.
+
+A BREAK CAN GO STALE BY BEING SUPERSEDED, AND IT PRINTS `0 not applied` WHILE IT DOES. `falsify-flex-crush`
+reported 4 of 5 — the quietest shape of a stale break, since "not applied" is the column everyone reads.
+Its notification-button break removed the narrow `flex-shrink:0` and the bar's wrap, which is what proved
+the guard when it was written; a later rule that keeps top-bar controls from wrapping also gives them
+`flex:0 0 auto`, whose middle value *is* `shrink:0`. Two declarations of one idea, and a break that
+removes only one proves nothing while still looking applied. It removes all three now and reports 3
+crushed circles where it used to read 0 — the first time that break has measured the rule it names. The
+same session found the mirror case in the application: an approval to delete the card `:hover` lift,
+whose stated reason was that a phone has no hover, when a `@media (hover:none)` block already neutralises
+it there. Re-asked rather than executed: a wrong *reason* for an approval is not permission to spend it.
+`falsify-control-reach`'s top-bar break went the same way for the same cause and is now over-determined
+correctly: **four** rules hold that one overflow (the bar's `flex-wrap`, `min-width:0` on the bar's
+children, the bar-level `flex:0 0 auto`, and the title group's own `min-width:0`), the break removes all
+four, and it reports 1 control out of reach where removing any subset reported 0.
+
+A NOT-APPLIED ROW THAT NOTHING MARKS IS THE QUIETEST COVERAGE LOSS IN THE SUITE. `node
+tools/falsify-all.cjs` prints a `not applied` column and this file has told every reader to look at it —
+while its own trouble predicate asked only about silent rows, survivors, empty families and stranded
+mutants. So when §149's header convergence moved the resident greeting inside `screenHeader()`, the
+sixth mutant in `falsify-escaping` lost its needle, printed `NOT APPLIED`, applied 5 and caught 5, and
+the aggregate row read healthy: one rule's proof simply stopped existing, and only a number in an
+unmarked column said so. Two runner repairs, both general rather than per family. A row now prints
+`NEEDLE MISSED — n needle(s) no longer match the target, so that coverage is gone`, and `skipped` is taken
+as the larger of the family's own arithmetic and the `SKIP`/`NOT APPLIED` lines it printed, because
+**nine of the fifty-three families that print an `N of M caught` summary never fold their own skip
+counter into the line** (measured by grepping each summary for a `not applied` clause on 2026-10-26), so
+their `not applied` is derived as applied minus caught, which is 0 for a loop that `continue`s on a
+stranded needle without incrementing anything — the count shrinks and every row still reads clean.
+`PARTIAL` joined the note filter for the same reason: a gate that fails on a check other than the named
+one is not a catch, and the word carries that. The marker has been seen to fire: `node
+tools/falsify-preflight.cjs` plants a stranded needle in one family's source and requires the row to
+carry `NEEDLE MISSED`, echo the `SKIP` line, exit non-zero and invent no survivor — a string inside the
+runner's row builder would otherwise be decoration. The re-point that produced this paragraph also
+taught the compile rule the hard way — taking `screenHeader(esc(…)` as the needle and dropping `esc(`
+while keeping its closing paren left a file that does not parse, and the suite answered `suite crashed:
+Missing } in template expression`; **a mutant that does not compile tests nothing**, and a family that
+credits it is worse than one that never ran. Mutate the balanced call, or nothing. That break first ran
+**after** the two dirty-tree breaks, and printed MISSED with `exit=1` and no flagged row at all: the
+runner correctly refused to run a family against a target the previous break left dirty on purpose, so the
+guard was working and the reading was about the fixture. **A break mounted after another break's hazard
+setup measures that setup**, which is why the stranded-needle break is now third, and why it refuses to
+run at all unless `gitClean()` says the target is clean — and its MISSED line now prints the nested
+pass's own rows, because four booleans could not say which of them the child never got to answer.
+
+A STRANDED FIXTURE IN AN INSTRUMENT REDENS THE GATE, AND EVERY FAMILY AFTER IT THEN LIES ABOUT ITSELF. The
+pass-level git guard watches `Sukinnect-next.html`, which is the file the families are the only writer of —
+but several families also edit a *tool* to prove that tool can fail: `falsify-compat-floor` blinds
+`audit-compat-floor.cjs`'s feature scan, `falsify-camera-surfaces` and `falsify-dialog-focus` edit
+`tools/shot.cjs`. On 2026-10-27 one of those runs died between the edit and its `finally` and left
+`const hits = [];` in the audit, so the audit answered `0 of 17 patterns matched` for every caller, the gate
+went red, and three families reported their own needles as stale. **Two of those were nearly "repaired" into
+new bugs on the strength of a reading that was really about a dead scan in a different file** — the cheapest
+way to corrupt a suite is to make its gate red for a reason no row names. `node tools/falsify-all.cjs` now
+compares `git status` for `tools/` before and after every family and prints
+`LEFT AN INSTRUMENT MUTATED` naming the file, and it **reports rather than restores**: a tool file is where a
+session's live work legitimately lives, so `git checkout -- tools/` would delete the very work the reader is
+trying to protect. The same pass now refuses when the list-building rule and the counting rule disagree about
+how many families exist (they are two copies of one pattern on purpose, so a mutation of either is visible as a
+disagreement), and a full pass below a floor of 40 families answers `NO CONCLUSION` instead of running a subset
+and printing a healthy total. `node tools/falsify-preflight.cjs` proves all of it — 7 breaks, 7 caught. That
+break was wrong **twice** before it was right, and both ways were the family's own: it first narrowed the
+*selector*, which emptied `families`, so the older `NO MATCH` guard answered first and the new refusal never
+ran (an expectation written from the intent rather than from what the child printed); it then anchored on an
+expression that occurs twice, because the `NO MATCH` message recomputes the same count inline. Narrow the
+counting rule instead, anchor on a whole declaration, and read the nested pass's rows.
+
+WHICH LAYER IS ON TOP WAS ELEVEN NUMBERS, AND THREE OF THEM DESCRIBED ONE IDEA. The design census (§147)
+counted definitions per idea for headings, bars, chips and spacing; `z-index` had never been through the token
+set at all. Nine distinct values across eleven literals: three sticky action footers carried 10, 20 and 25, and
+the verification review painted its own overlay at 50 in a file declaring `.modal-layer` at 70 — because that
+layer has no class, which §72's focus walk had already discovered and had not been able to say out loud in the
+stylesheet. They are six named rungs now (`--z-sticky < --z-nav < --z-sheet < --z-modal < --z-map-veil <
+--z-toast`), every element keeping its exact position, so no stacking pixel moved. The gate asserts the
+**relations** rather than the numbers: `the layer ladder declares every rung and keeps their order` requires
+them strictly ascending, so a change of values that preserves the order passes and an inversion cannot. Two
+lessons in the wiring. `a modal opened from a sheet sits above the sheet` read literals only, so on the correct
+build it returned `null` for both rules and failed — **a check pinned to the old spelling of a value fails the
+fix, which looks exactly like the fix being wrong**; its helper resolves a literal or a `var()` now. And
+`no layer types its own stacking number` first flagged `.seg-count`, an 18px count pill on a 3% navy wash —
+a tint, not a dim — so the rule is scoped by the geometry that makes something a dim (four zero offsets
+painting a navy `rgba`), which is also what caught `.sheet-scrim` typing `rgba(3,0,43,.52)` beside `--scrim`'s
+`.48` while the token's own comment claimed every layer wrote it. Comments are stripped before counting, for
+the §31 reason: a sentence quoting an old number is the same string to a scanner as a rule typing a new one.
+`node tools/falsify-modal-stacking.cjs` proves the ladder, 5 breaks 5 caught — and two of its mutants name a
+*different* check than the other three, because inverting a rung and typing a literal into a classless overlay
+leave the modal/sheet pair perfectly ordered. **A family that compares every mutant against one label condemns
+whichever rule it did not think of.** `literal_z_index` is a ratchet metric at ceiling 0, and writing it
+surfaced that the audit's one floor metric read its floor from a hardcoded number while `--bless` wrote the
+measured count into the baseline: the file advertised 32 and the code enforced 13.
+
+A BREAK CAN GO STALE BECAUSE THE CHECK IT NAMES MOVED SEMANTICALLY, AND THEN NOTHING AT ALL SAYS SO.
+`falsify-typography` renamed the last **Atkinson** face and named the check that guards the four weights.
+For a whole pass that check had been counting the weights of the **UI family**, which since the Poppins
+ruling is Poppins — so the mutation could not move the number it existed to move, the family printed one
+survivor, and every part of the needle was still true: the block it renamed exists, the line it matches
+appears once, the mutant applied. This is the third way a verifier expectation ages — not a spelling, not
+a wording, not a twin line, but the *meaning* of the check migrating underneath the break. The repair was
+two breaks instead of one, discriminating in opposite directions against the same seed: withdraw ONE
+Poppins semibold block and the weight-set check stays green while the new relational check fails; withdraw
+BOTH and the relational check goes quiet while the weight-set check fails. A single break proves a guard;
+a pair with opposite answers proves that the two guards are different guards, which is what §68's
+distinct-weights amendment had quietly undone. Prove such a pair in memory first — `node
+.scratch/prove-71-family.js` lifts the helper out of the family's own bytes with a slice and `eval`, so
+the code under proof is the code that will run, and `fonts/fonts.css` is never written while anything else
+is reading it.
+
+SHELL-ESCAPING IS PART OF THE CODE PATH, AND A PATCHER CAN DIE WITHOUT FAILING. Three separate commands
+in one session wrote a `RegExp` string through a quoted heredoc and had `\\s` collapse to `\s`, which
+JavaScript reads as the literal character `s`; the resulting filter matched **zero** `@font-face` blocks,
+so the break returned the file unchanged, printed SKIP, and the suite would have reported a healthy run
+minus one guard. The fix is not a better escape — it is to remove the escaping layer: `indexOf` on
+`'font-weight: ' + weight + ';'` instead of a constructed regex, and the **Write tool** instead of a
+heredoc for any file whose content contains backslashes. Measured the same way each time: print the counts
+the filter sees (24 blocks, 8 carrying `font-family: 'Poppins'`, 7 at weight 600, intersection 2) before
+believing a zero.
+
+A BACKGROUND STAGE THAT PIPES LOSES ITS VERDICT, AND EXIT 0 WILL TELL YOU NOTHING. The seven-family chain
+ended with the eight-corner sweep appended to the same command. The chain reported `completed (exit code
+0)`, its task output file was **empty**, and the log it was writing stopped at the stage marker — while
+the screenshots in `.shots/` were stamped sixteen minutes later, proving the sweep had genuinely run and
+genuinely painted. Nothing recovered its answer, so the entire run had to be repeated into
+`.scratch/sweep-159.log`. This document already says to redirect rather than pipe, because a pipeline that
+has printed nothing is not a run that has finished; what this adds is that the harness's own `exit code 0`
+and `completed` are not evidence either, and that **a run whose output cannot be read is a run that did
+not happen** — quote it as absence, never as a clean result. The related refusal, found while writing the
+tool that lands the re-run's numbers: a guard that counts processes is not a guard, because in one shell
+`ps -W | grep -ci node.exe` answered 1 and `tasklist | grep -ci node.exe` answered 2 for the same instant,
+and `tasklist //FI "IMAGENAME eq node.exe"` dies when spawned from here. Count what the tool can prove
+instead — the run's own eight corner headers, its final verdict line, and `git status` on the file a live
+mutant pass would own — and refuse on `unreadable` rather than defaulting it to zero.
+
+---
+
+# 31A. OWNER RULINGS OF 2026-10-27 THAT OVERRIDE SECTIONS 30–33, 68 AND 23
+
+Sections 30, 31, 32, 33 and 68 below describe the ORIGINAL direction: a gradient brand system, and
+Fraunces for headings with Plus Jakarta Sans for the interface. Those sections are retained because
+they record WHICH measured hex is which brand colour and why the earlier draft values were wrong. They
+are no longer the instruction. The owner ruled, on 2026-10-27, in these terms:
+
+1. **"Make the Whole App color palette not in gradient anymore."** Flat everywhere: the sign-in hero,
+   the primary action, the active navigation pill, the splash, the chat header and the desktop backdrop.
+   The eight `--grad-*` tokens are gone and four solid tokens replaced them — `--surface-brand`
+   (#0352AE), `--surface-brand-deep` (#061364), `--surface-brand-soft` (#F1F5FF) and `--accent-brand`
+   (#05BCC4). Section 30's measured values still decide every colour; only the blending mechanism is
+   retired. Depth comes from the shadows and the tinted tracks.
+2. **"Simple font and style, the poppins font."** `--font-ui` is Poppins, self-hosted as eight WOFF2
+   faces, so the app still needs no network at runtime. What measuring the swap found: **Poppins has no
+   tabular figures** — `font-variant-numeric:tabular-nums` is a no-op in it, so a money column leans
+   whichever way its digits fall. A new `--font-figures` token carries digits in Atkinson, in the one
+   rule that already owns `tabular-nums`. Hierarchy comes from weight and spacing, not from a serif.
+3. **The wallet rule in section 23 is overridden for the UX, not for the money.** The owner asked for
+   an in-app digital wallet with cash-in/out through a cashless method, loyalty privileges and loan or
+   funding eligibility, and when told the deck forbids a stored value, chose to build the experience and
+   keep real money out of it. So: the wallet is a VIEW over the ledger and payments records the kernel
+   already owns — a balance is derived, never typed; cash-in and cash-out are seams that record nothing;
+   the tier attaches no privilege; funding eligibility declines to answer. Every one of those screens
+   says it is a prototype with no value stored anywhere. Section 22's separation of booking state from
+   payment state, and section 24's ban on hiding a cost, are unchanged.
+4. **"Admin access should be in only Web, not within the app."** In the app shell the admin console is
+   replaced by a stated refusal, and admin sign-in there is refused with a reason rather than silently
+   redirected.
+5. **AI surfaces are either record-derived or a named seam.** Frequent actions, market rate bands, the
+   wallet, standing tiers and connections are computed from records this device holds. What is not built
+   is named, on the screen where a person would otherwise assume it ran: OCR of an ID, face matching,
+   voice dictation, an exchange-rate feed, a usual-labour-rate lookup from outside the app, funding
+   eligibility, a bot check at sign-up, and an organisation or NGO as a party. A seam returns
+   `available: false` with a reason and records nothing. Blockchain is present as the property that makes
+   a chain worth having — a hash chain over the ledger, recomputed, that shows whether an entry was
+   edited — and the screen says plainly that it is not a blockchain, not a network, and not encryption.
+
+The history of each ruling, with the measurements and the instrument failures behind it, is in
+`CHANGES.md` sections 152 through 158.
+
 ---
 
 # 32. GRADIENT USAGE
+
+**Retired by the owner's ruling of 2026-10-27** (§31's supersession note): there are no gradients to
+apportion, so "intentional" is moot. Every GOOD USE CASE below is now a FLAT BRAND SURFACE use case —
+the same places, one colour each, and the same discipline about not painting every card.
 
 Gradients should be intentional.
 
@@ -3452,6 +4209,11 @@ The interface must remain practical.
 ---
 
 # 33. BRAND GRADIENT HIERARCHY
+
+**Retired by the owner's ruling of 2026-10-27**, same as §32. The four stops named here are still the
+brand colours and still mean what they mean — navy for the deepest surface, logo blue for the brand
+surface, electric blue for the light step, cyan for a thin accent — but they are used as four solids,
+not as blends, and the cyan remains a rule rather than a fill.
 
 Use several controlled layers.
 
@@ -4105,6 +4867,14 @@ Do not fabricate actual providers or actual marketplace traction.
 
 # 59. BUSINESS MODEL CONTEXT
 
+> **Superseded on 2026-11-06 by `Sukinnect_Master_Plan_Revised_27Oct2026.docx`** (readable copy:
+> `docs/readable/`). What that document decides, and what this section still describes, are
+> recorded in `SUKINNECT_STARTUP_ROADMAP.md` §6 — the text below is kept
+> as the history of the decision, not as the current instruction. Read
+> `SUKINNECT_CONTEXT.md` first.
+> This section is superseded for one thing: **the commission: 1.2% of completed booking value with a hard cap of 1.3%, gateway fees not absorbed in the pilot; the deck's 10% is legacy**.
+
+
 The pitch deck describes the primary intended revenue model as:
 
 commission on completed transactions.
@@ -4127,14 +4897,19 @@ Therefore:
 
 Do not hard-code arbitrary final commission rules into the prototype unless explicitly requested.
 
-**Startup-source note (2026-11-07):** the November 2026 strategy documents conflict on the
-pilot rate and fee payer. The current code's 10% setting is not an owner-approved pilot
-policy; the roadmap records the 1.2% / 1.3% proposal and the 8–12% alternative as an open
-decision. Do not silently change the configuration or treat either proposal as settled.
+Added 6 November 2026: the November documents give different answers (Master Plan 1.2%, Market Research plan 8–12%, with a lower Pro-tier rate), and the working code defaults to 10% as an admin-editable configuration value with a per-category override. The produce (fruit) commission is deliberately `null` (undecided). Keep the rate configurable and audited; do not describe any figure as the final business rate. See conflict C1 in `SUKINNECT_STARTUP_MASTER_PLAN.md`.
 
 ---
 
 # 60. PLANNING BUDGET CONTEXT
+
+> **Superseded on 2026-11-06 by `Sukinnect_Master_Plan_Revised_27Oct2026.docx`** (readable copy:
+> `docs/readable/`). What that document decides, and what this section still describes, are
+> recorded in `SUKINNECT_STARTUP_ROADMAP.md` §6 — the text below is kept
+> as the history of the decision, not as the current instruction. Read
+> `SUKINNECT_CONTEXT.md` first.
+> This section is superseded for one thing: **the budget and funding figures: the 27 October plan supersedes the deck's, and the amounts are in the local `.docx`, not in a committed file**.
+
 
 The pitch deck contains a proposed 12-month pilot budget of ₱2.3 million.
 
@@ -4151,6 +4926,8 @@ These are project planning assumptions.
 They are NOT current system functionality.
 
 Do not create application features merely because a budget line exists.
+
+Added 6 November 2026: the November documents use a ₱1,867,769 approved budget and a ₱2,080,000 funding ask (budget plus a ₱212,231 cash buffer), whereas this section records the deck's ₱2.3 million. The two have not been reconciled (conflict C2). Do not quote one as settled.
 
 ---
 
@@ -4335,6 +5112,24 @@ Brand color migration is semantic, not mechanical.
 
 # 68. TYPOGRAPHY
 
+**AMENDED 2026-10-27 — the rebuild's UI face is now Poppins, and the digits are not.** The owner ruled
+"simple font and style, the poppins font" for the whole app. The one objection the plan recorded — that
+Poppins is not a local asset — is answered by self-hosting, not by a network: eight WOFF2 faces
+(400/500/600/700 × latin + latin-ext) now sit in `fonts/` beside Atkinson's four, with
+`POPPINS-OFL.txt` next to them, and the app still needs no network at runtime, so §81 and the offline
+rule are unchanged. What the swap broke, and what was caught by measuring rather than reasoning:
+**Poppins has no tabular figures.** `font-variant-numeric:tabular-nums` is a no-op in it — the probe
+read "111111" at 61.45px against "000000" at 120.58px WITH the property applied, where Atkinson
+equalises both at 121.36px. A `1` is half the width of a `0`, so every money column §13 of the plan
+asks to line up would have leaned worse than it ever did under Atkinson. The answer is not to drop the
+ruling: `--font-ui` is Poppins for words, and a new `--font-figures` carries the digits in Atkinson, in
+the one shared rule that already owns `tabular-nums`. `node tools/shot.cjs
+--probe=@tools/probe-face-and-figures.js` measures the face that loads, the face that paints, the two
+digit widths with and without the property, and the brand surface as painted; it reports
+`findings: 0` on this build. `node tools/falsify-typography.cjs` owns the faces, and the gate's
+weight check now counts distinct WEIGHTS rather than @font-face BLOCKS — a family split by subset has
+eight blocks for four weights, and the old count would have failed a correct swap.
+
 The current prototype uses:
 - Fraunces for prominent headings
 - Plus Jakarta Sans for body/interface text
@@ -4441,8 +5236,15 @@ probes that measure nothing. `falsify-probe-population` belongs to both lists: i
 the runner. `falsify-preflight` belongs to neither: it drives `falsify-all.cjs` itself, and is the only
 family whose target is the test machinery's own hygiene.
 
-Measure it with `node tools/sweep-text-scale.cjs` — eight phone corners, the camera each time: 320px
-@ 200% text, default width @ 200%, 450px @ 135% (a vivo panel at the OPPO's setting), **320x638 @
+Measure it with `node tools/sweep-text-scale.cjs` — ten phone corners, the camera each time, and the
+run prints its own list so this sentence is never the count: 320px
+@ 200% text, default width @ 200%, 450px @ 135% (a vivo panel at the OPPO's setting), **360 CSS px at
+100% and at 135%** (the width the mobile-app brief named and no handset in this repository reports —
+it is the density-3.0 phone, 1080 physical px over 3.0, so it had never been produced by a photograph
+and had therefore never been swept. It earned its two corners on the first run: the booking sheet's
+payment rail left 2px of "Cash on Arrival" past its own scroller on all three sheets, at the
+*default* text size, which is exactly the shape a corner set that pairs narrow with large cannot see),
+**320x638 @
 135%** (the OPPO CPH2179 as measured on the device — added on 2026-10-18 from a photograph of that
 handset whose nav labels read `Booki…` and `Mess…`, and corrected the next day from the device itself:
 `Override density: 360` on a 720px panel is a **density**, so the layout width is 720 ÷ 2.25 = **320
@@ -4450,7 +5252,7 @@ CSS px**, `innerHeight` 638 with the system bars taken off. The case was labelle
 is what happens when a corner is named after a device without asking the device), 320x480 @ 200%
 (a short handset or split-screen), 320x300 @ 100% (what a keyboard leaves on a small phone, since
 nothing here emulates a keyboard), **450x889 @ 200%** (the vivo's own panel at the device's largest text —
-handset walk 7 produced it, and the seven corners before it paired narrow panels with large text because that
+handset walk 7 produced it, and the corners before it paired narrow panels with large text because that
 is where clipping was found), and the 100% anchor — which fails if any tally is nonzero and
 treats a tally it does not recognise as must-be-zero, so a sensor added tomorrow cannot be silently
 informational. Single corners are still runnable:
@@ -4987,6 +5789,8 @@ Do not erase the prototype behavior unless asked.
 
 Do not incorrectly claim that a wallet is part of the confirmed system.
 
+Added 6 November 2026: the feature notes in `Potential_Collaborations_and_New_and_Refine_Features.docx` propose an in-app digital wallet with cash-in/out, loan eligibility and wallet-based privileges, while the revised Master Plan says Sukinnect must not present itself as an e-wallet, lender or insurer. The prototype removed its stored-value wallet on purpose. Correct interpretation: the wallet, lending and blockchain proposals are *unresolved proposals* (conflicts C4 and C5), not confirmed product direction and not implemented behaviour. Do not build them, and do not delete the proposals from the record.
+
 Another example:
 
 CURRENT PROTOTYPE:
@@ -5215,46 +6019,74 @@ It should feel like ONE application.
 
 It should feel like SUKINNECT.
 
-# 96. STARTUP PLAN AND SOURCE STATUS (2026-11-07)
+# 96. STARTUP CONTEXT, SOURCE PRECEDENCE AND THE 27 OCTOBER BUSINESS PLAN (added 6 November 2026)
 
-The current startup source is the locally supplied `SUKINNECT_STARTUP_MASTER_PLAN.md`,
-which is ignored by Git because the public repository must not disclose its financial or
-investor terms. Its non-confidential product context, source conflicts and feature status
-are summarized in `SUKINNECT_CONTEXT.md` and `SUKINNECT_STARTUP_ROADMAP.md`. The separate
-`Potential_Collaborations_and_New_and_Refine_Features.docx` was not supplied; do not
-reconstruct it or attribute details to it. The backend/features prompt supplied by the
-owner is available as an implementation brief, not as evidence that any listed feature
-exists.
+Sukinnect is a pre-revenue startup with a working single-file prototype and no production
+backend. This section does not replace §1–§95; it says which document outranks which, and what
+a reader of this file must not take as current.
 
-For startup claims, distinguish sourced facts, prototype behavior, simulated behavior,
-forecasts, targets and recommendations. The Master Plan is the strategy reference, but
-its own conflict register and this roadmap remain open where sources disagree; no
-recommendation becomes an owner decision by being repeated in code or documentation. The
-existing app remains a browser-only prototype: `Sukinnect-next.html` is the current
-rebuild, `Sukinnect.html` is the earlier shipped prototype, and neither provides a
-production backend, real authentication, real payment processing or real AI.
+## 96.1 Precedence
 
-No public document or app surface may claim that demo records are real users or traction,
-that proposed partners are confirmed, or that a simulated gateway, verification, AI or
-notification is a real service. Any AI-flavoured output must say what it is: rule-based
-and computed from records on this device, simulated, or a suggestion from an external
-model with source and date. It must not be presented as fact or a verified result; users
-must be able to override it and their choice must be recorded.
+| Question | Authority |
+|---|---|
+| Business facts: geography, fee and cap, gateway rule, funding, investors, risks, allowed claims | `Sukinnect_Master_Plan_Revised_27Oct2026.docx` |
+| Partnerships and the intent of new features | `Potential_Collaborations_and_New_and_Refine_Features.docx` — proposed, in-plan only |
+| Engineering discipline, prototype-versus-production rules, honest labelling | this file |
+| What is actually implemented | `Sukinnect-next.html` and `node tools/verify.cjs` |
+| History and why | `CHANGES.md`, `DEVICE-PASS.md` |
+| Goals, needs, the feature register, the conflict ledger | `SUKINNECT_STARTUP_ROADMAP.md` |
+| Read-first orientation for any AI tool | `SUKINNECT_CONTEXT.md` |
 
-The current fee policy is unresolved: the Master Plan's 1.2% working rate and 1.3% cap
-conflict with an 8–12% recommendation in the Market Research plan and the existing 10%
-prototype setting. The gateway-fee rule is that fees must not be silently absorbed, but
-actual rates require a signed merchant quote. Keep the existing no-stored-value-wallet
-rule. Do not implement lending, insurance, public-chain anchoring or biometric capture
-without the prerequisites and owner decisions recorded in the roadmap.
+The two `.docx` files, and the readable copies under `docs/readable/`, are **not committed**:
+the repository is public and the Master Plan carries a funding ask, a valuation, an investor
+split, a liquidation waterfall and budget lines. They sit in this folder for every local AI, and
+`.gitignore` says why. A tool that skips ignored files must still get the safe facts from
+`SUKINNECT_CONTEXT.md`.
 
-The deployment uses a reviewed allow-list; private source documents must remain ignored
-and outside `dist/`. No external partner is confirmed in the sources available for this
-pass. The feature register, conflict ledger, needs and traceability status are in
-`SUKINNECT_STARTUP_ROADMAP.md`; update them only when code and tests support a status
-change.
+## 96.2 The fee decision, stated once
 
-The Stage B API, security/privacy and stack documents are proposals only. The additive
-MySQL reference migration is not applied to any database, and it does not settle the
-commission rate, cap or fee payer. The Stage A Smart Match demo heuristic is computed
-from current provider records and remains non-production.
+- **1.2%** of completed booking value, **1.0%** as the stated alternative, **hard cap 1.3%**.
+- Gateway fees are **not absorbed** in the pilot: cash/direct, or a separate disclosed line paid
+  by the payer. Charging 1.2% while absorbing the fee loses money on every online booking.
+- The prototype still carries a configurable **10%** default and prints it in the admin console.
+  That is legacy, it is conflict **C1**, and changing it is a code decision the owner has not yet
+  made. Nothing in this repository may present any single figure as the settled business rate.
+- Subscription, promoted-listing and partner revenue are **assumptions**, unvalidated, and count
+  as zero until a paid pilot or a signed agreement exists.
+
+## 96.3 Claims discipline
+
+Official statistics are facts. Every Sukinnect forecast, target, price, conversion rate and
+financial scenario is an assumption until field data, a signed agreement or a dated quotation
+supports it. Prospective partners are proposed — the collaboration notes say in their own words
+that they "do not imply existing formal partnerships or institutional endorsements". New features
+are in plan, not delivered. The full list of what must not be claimed is §5 of
+`SUKINNECT_CONTEXT.md`, lifted from the Master Plan §1.
+
+## 96.4 Honest labelling for AI output (a rule, not a tone)
+
+Every AI-flavoured result in the app must say which of these it is, in words a user can read on
+the screen where the result appears:
+
+1. **rule-based, computed from records on this device** — and it must name the signals it used;
+2. **simulated** — a flow that looks functional and is hard-coded or local demo state;
+3. **suggestion from an external model, with source and date** — which this build cannot produce,
+   so it does not claim to.
+
+None may be shown as fact, as a verified result, or with a precision the method cannot support.
+A user must be able to override it, and what they chose must be recorded. A reason that was not
+computed must not appear; a score that was typed into a seed must not be presented as a match
+the system produced.
+
+**The last sentence above was true when this section was written and is closed by slice S2a
+(7 November 2026).** It read "This is the rule the current Smart Match surface breaks, and it is the
+first row of the backend brief." It does not break it any more: the eight typed `smartMatch` blocks
+are deleted, `scoreProvider()` computes from eight signals the records own, `providerMatches()` sorts
+by that computation, and every sentence in the fold is produced by a signal that contributed. Two
+things this section still asks for and the surface does not yet do: **the user cannot override the
+ranking**, and **no override is recorded** — the event recorder that would carry one is slice S2b.
+What is proved today is `node tools/falsify-matching.cjs` and ten checks in the `honesty` suite, two of
+which read the painted card rather than the returned object, because a typed `96` in the chip beside a
+computed score satisfies every kernel assertion. The finding that explains how the original defect
+survived: `grep -rn smartMatch tools/` answered no files before this slice, so the surface had never
+been checked — the same limit §76 records for a statistic no record produced.

@@ -1,118 +1,169 @@
-# Sukinnect — read-first context
+# SUKINNECT — READ FIRST
 
-Updated: 2026-11-07. Read this before editing code.
+**Purpose of this file.** A fresh AI session, or a new person, should be able to work correctly on
+this project after reading *only* this file. It is deliberately short and deliberately opinionated
+about what is a fact. Written 6 November 2026. If it and a source disagree, the source wins and this
+file is the bug.
 
-Sukinnect is a hyperlocal services marketplace for households, small businesses and
-local providers. Its core loop is **FIND → REVIEW → BOOK → RECORD**. The project is
-pre-revenue: it has a working browser prototype, but no production backend, real
-authentication, real payments, real users or completed real bookings.
+---
 
-## Pilot and claims
+## 1. What Sukinnect is
 
-The planned beachhead is Tupi, South Cotabato: Poblacion, Polonuling, Cebuano, Kablon
-and Bunao. The deck's 150-provider, 3,000-user and 6,000-booking figures are targets.
-The November plan instead proposes 60–100 verified active providers and cites a
-3,270-booking Year-1 base and 15,200-booking stretch scenario. These are not results;
-the figures differ by source and the underlying workbook was not supplied.
+Sukinnect is a **hyperlocal service marketplace** for a municipality in the Philippines: households
+and small businesses find, compare, book and record local service work — plumbing, electrical,
+cleaning, tutoring, appliance repair, delivery, and a fruit-harvest pilot — through one workflow:
+**FIND → REVIEW → BOOK → RECORD**. It exists because local supply and local demand already exist and
+the *connection* between them is fragmented across referrals, Facebook groups and old contacts.
 
-The prototype has three roles: Resident/Customer, Service Provider and Administrator.
-The startup plan discusses service businesses/teams and moderator operations; those
-roles are not implemented as production identities or permissions. A real auth system
-and server-side role enforcement do not exist.
+**Stage: pre-revenue startup with a working prototype and no production backend.** The app is one
+HTML file that runs entirely in a browser or a WebView. There is no server, no real account system,
+no real payment, and no real AI model. Everything that looks like those things is either computed
+from records held on the device, or simulated, and must be labelled as such.
 
-The supplied November Master Plan lists a 1.2% working commission with a 1.3% ceiling,
-while it reports that a separate market-research plan recommends 8–12%; the current
-prototype defaults to 10%.
-The owner has not selected a pilot rate or fee payer. At 1.2%, an ₱800 job produces
-₱9.60 before costs, but that is only a scenario. Do not silently change or claim the
-current setting is approved policy. Gateway fees must not be hidden or absorbed; actual
-processor prices are unconfirmed until a signed merchant quote. Sukinnect must
-not operate or claim a stored-value wallet; use licensed partners for regulated payment
-or financial services. AI flags and consequential decisions require human oversight.
-Sensitive identity or biometric data must never be placed on a public or immutable chain.
+## 2. Where it launches, and what the numbers are
 
-## What must not be claimed
+Launch: **Tupi, South Cotabato**, starting in five barangays — **Poblacion, Polonuling, Cebuano,
+Kablon and Bunao** (about 55.5% of Tupi households; Master Plan §1).
 
-- Demo data, provider names, ratings, transactions and dashboard figures are not real
-  users, activity, traction or validated demand.
-- Targets, forecasts, market-size estimates and proposed prices are assumptions, not
-  achievements or commitments.
-- There is no production backend, account security, payment settlement, ID verification,
-  live AI, confirmed partnership or production notification delivery.
-- A simulated gateway, verification result or recommendation is not a real service or
-  verified fact.
-- Do not describe the product as a wallet, lender, insurer, blockchain system or
-  "AI marketplace." No legal, safety or provider-competence guarantee is established.
-
-## Sources and their authority
-
-| Question | Source |
+| Figure | Status |
 |---|---|
-| Startup strategy, pilot and business assumptions | Local `SUKINNECT_STARTUP_MASTER_PLAN.md`; non-public financial/investor content is excluded from Git |
-| Proposed partnerships and feature intent | Supplied owner implementation brief and companion source documents if provided; the collaboration/features `.docx` was not supplied for this work |
-| Engineering constraints and prototype-vs-production discipline | `AGENTS.md` |
-| What is implemented | `Sukinnect-next.html` and the checks that exercise it |
-| Why behavior changed | `CHANGES.md`; device evidence, if relevant, in `DEVICE-PASS.md` |
+| 150 verified providers, 3,000 registered users, **3,270** completed bookings in 12 months | **targets / forecasts**, not traction. The spend gate at launch is 20+ active verified providers. |
+| 15,200 bookings, 600 subscribers | **stretch scenario**, post-validation and multi-town. Never presented as an expectation. |
+| PSA household and population counts | official statistics — facts. |
+| Any Sukinnect forecast, target, price, conversion rate or financial scenario | **assumption** until field data, a signed agreement or a dated quotation supports it. |
 
-The Master Plan itself records conflicts. Read the roadmap's conflict ledger and do not
-turn a recommendation into an owner decision. The confidential local source is ignored;
-it must not be committed or copied into `dist/`.
+The prototype's demo data uses other barangays (San Isidro, Sta. Cruz, San Jose, Barangay 2, Buayan).
+**Demo data is not the launch geography** and changing it is an explicit request, not a cleanup.
 
-## Engineering orientation
+## 3. Roles
 
-`Sukinnect-next.html` is the current rebuild; `Sukinnect.html` is the earlier shipped
-prototype and must not be modified for rebuild work. Keep the single-file, `file://`-
-compatible architecture: no ES modules, and the domain kernel must not call into a
-screen. Money is integer centavos; records store codes rather than display sentences;
-booking status and payment status remain separate. The Android WebView wrapper and its
-asset copy are local-only; changing the web file does not automatically sync the shell.
-Never edit `Sukinnect-Android/`, `.git/`, `dist/` or `Python/` without explicit direction.
-Preserve CRLF when editing app files. `AGENTS.md` is very large: read its headings and
-only relevant sections.
+Built today (three): **resident** (customer), **service provider**, **admin**.
+Planned by the Master Plan §2 (five): customer, individual provider, **service business / team**,
+**moderator**, **super admin**. The gap is a register row in `SUKINNECT_STARTUP_ROADMAP.md`, not
+something to invent in the prototype. Admin console is **web-only** by owner ruling: inside the app
+shell it shows a stated refusal.
 
-## Verification
+## 4. Business decisions that bind the engineering
 
-- `node tools/verify.cjs` — behavioral and structural gate for the current rebuild.
-- `node tools/measure.cjs` and `node tools/shot.cjs --measure` — source and painted-page checks.
-- `node tools/audit-open-items.cjs` — a list to read, not a pass/fail verdict.
-- `node tools/falsify-all.cjs` — mutates `Sukinnect-next.html`; run only with
-  `git status --porcelain -- Sukinnect-next.html` clean before and after, one pass at a
-  time. The app file is the mutex.
-- `node tools/audit-build-bytes.cjs` and `node tools/build-web-dist.cjs` — build-copy
-  consistency and explicit deployment allow-list.
+- Transaction fee **1.2%** of completed booking value, **1.0%** is the stated alternative, **hard cap
+  1.3%**. **The code carries this now** (7 Nov 2026): `commissionRateDefault = 0.012`, `commissionRateCap
+  = 0.013`, enforced at every read, in `setConfig` and in the admin form. The deck's **10%** is legacy
+  in the documents, and 1.0% remains an open owner choice (C1) that is one `setConfig` call away.
+- **Gateway fees are not absorbed in the pilot.** Customers pay cash/direct, or the gateway fee is a
+  separate, disclosed line paid by the payer. Charging 1.2% while absorbing the fee loses ₱2.41–₱10.38
+  per ₱800 online booking (Master Plan §6.3). **Built 7 Nov 2026** as a pass-through: the fee is inside
+  the payer's total, outside `platformRevenueCentavos`, settles through its own ledger account and
+  event, is excluded from a refund, and `assertGatewayNotAbsorbed` throws at the seam if a breakdown
+  would put the loss on the platform. The rates in `CONFIG.gatewayFees` are **published-page figures
+  with a dated source and no signed quote on file** — the screen says so, and the plan requires the
+  quote before launch.
+- **No stored-value wallet, no lending, no insurance underwriting.** Licensed partners do those.
+- Payments, lending and insurance go through **licensed** providers; a rate or fee shown to a user must
+  trace to a signed quote, not a published page.
+- **AI may recommend, rank or flag; it never decides.** A human moderator handles identity and risk
+  flags, users can correct data, and there is an appeal route.
+- **Biometric data, government ID images and sensitive personal data never go on a public or immutable
+  chain.** Tamper-evidence, encryption and public anchoring are three different things — say which one
+  you mean.
 
-House rule: **a check that cannot fail is not a check**. Never weaken a gate to make a
-change pass. Do not push. Keep private data, secrets, real identity documents, contact
-details and payment details out of source, seed data and localStorage.
+Financial and investor terms — the funding ask, valuation, investor split, liquidation waterfall,
+budget lines and salaries — are in the Master Plan `.docx` in this folder. They are **kept local**
+(see `.gitignore`) and are not repeated in any committed file.
 
-## Status snapshot
+## 5. What must not be claimed
+
+Do not claim Sukinnect already has 150 verified providers, 3,000 users, or any completed bookings.
+Do not present the stretch case (its ROI, its profit month, its payback month, its booking count) as a
+forecast or an expected result. Do not call PSA household counts customers, or imply PSA measured
+service-market spending for Sukinnect. Do not claim a proprietary e-wallet or direct lending. Do not
+describe the investor pool as a transaction charge. Do not claim a 1.2% fee if the platform actually
+absorbs gateway costs. Do not claim subscription, listing or partner revenue as secured before a paid
+pilot or a signed agreement exists. Prospective partners are **proposed**: the collaboration notes say
+in their own words that they "do not imply existing formal partnerships or institutional endorsements".
+
+## 6. Which source decides what
+
+| Question | Authority |
+|---|---|
+| Business facts: geography, fee and cap, gateway rule, funding, investors, risks, allowed claims | **`Sukinnect_Master_Plan_Revised_27Oct2026.docx`** (readable copy: `docs/readable/`). It supersedes the earlier deck and concept note, whose 10% commission and older funding figures are legacy. |
+| Partnerships, and the *intent* of new features | `Potential_Collaborations_and_New_and_Refine_Features.docx`. Proposed and in-plan only. |
+| Engineering discipline, prototype-vs-production rules, honest labelling | `AGENTS.md` (349 KB — read its table of contents and the sections you need, not the whole file) |
+| **What is actually implemented today** | the code, `Sukinnect-next.html`, and what `node tools/verify.cjs` proves |
+| History and why | `CHANGES.md`, `DEVICE-PASS.md` |
+
+Two sources disagreeing is **not** averaged and **not** picked silently: it is recorded in the conflict
+ledger (C1–C12) in `SUKINNECT_STARTUP_ROADMAP.md` with an owner-decision column.
+
+## 7. Engineering orientation
+
+- **One app file: `Sukinnect-next.html`** (~14,000 lines, CRLF). Single-file on purpose: the Android
+  WebView loads it over `file://`, so ES modules are blocked and nothing may be fetched at runtime
+  except OpenStreetMap tiles. `Sukinnect.html` is the older shipped file — **do not touch it**; the
+  owner intends to retire it.
+- Inside that file: a **domain kernel** (centavos integers for money, a Store adapter, a booking state
+  machine, a double-entry ledger, payment records behind a gateway seam, disputes, threads) and an
+  **app layer** of screens. **The kernel never calls up into a screen.** Records store *codes*, never
+  sentences; a status never moves without its consequence.
+- Honest labels — `demo` versus `live`, "sample figures", "declared, not verified", the simulated-AI
+  disclosure — may be restyled but never removed or weakened.
+- `Sukinnect-Android/` is **untracked on purpose** and holds a **separate copy** of the page. Editing
+  the HTML does not update the app; `node tools/audit-build-bytes.cjs` compares the four copies and is
+  the only way to see that they drifted. Never push, delete or rewrite anything in that folder.
+- Line endings: the app and several documents are CRLF on this machine. A patcher that writes LF into a
+  CRLF file, or that spells `\r\n` once and produces `\r\r\n`, has broken this repo more than once.
+
+## 8. How to verify
+
+| Command | What it proves |
+|---|---|
+| `node tools/verify.cjs` | the gate — 766 checks as of 7 Nov 2026, run it again for a current number |
+| `node tools/shot.cjs --measure` | real Chrome over the DevTools protocol: tap targets, contrast, clipping, unreachable controls, painted `undefined` |
+| `node tools/measure.cjs` | token, glyph and heading census of the file |
+| `node tools/falsify-all.cjs` | the mutation suite — **only under the clean-tree procedure** |
+
+**Clean-tree procedure.** `falsify-all.cjs` rewrites `Sukinnect-next.html` and restores it; the app
+file is the mutex. Run `git status --porcelain -- Sukinnect-next.html` first and stop if it is not
+empty; run it **once, alone**; run the status check again and repair before trusting any number. Never
+start a second mutating pass over a running one, and never pipe a long run — redirect it to a log.
+
+**House rule: a check that cannot fail is not a check.** Every new rule gets a gate check *and* a
+mutation family that breaks the rule and requires the check to fail. A break that prints `MISSED` is
+read and explained, not deleted.
+
+## 9. Rules for any agent working here
+
+Read before changing. Never touch `Sukinnect-Android/`, `.git/`, `dist/`, `Python/`, or the `.docx`
+sources. Preserve each file's line endings. Do not weaken a gate to reach green — replace it with an
+equivalent assertion. Label simulated things as simulated. **Never invent providers, counts, prices,
+partners or quotes.** Do not push. Business questions go to the owner as decisions, not resolutions.
+
+## 10. Status snapshot
 
 | Area | State | Evidence |
 |---|---|---|
-| Single-file web prototype, booking lifecycle, centavo ledger | Built, prototype-only | `Sukinnect-next.html`; `node tools/verify.cjs` |
-| Payment gateway and payout | Simulated | `MockGateway`; README money model |
-| Authentication and production backend | Not started | Demo role selection; no server |
-| Smart Match / concierge | Prototype-only / simulated | Smart Match is a rule-based demo score from provider records; concierge is local keyword logic |
-| Provider review and disputes | Prototype-only | Demo records and local UI |
-| Pilot geography and real field evidence | In plan / not validated | Master Plan and roadmap |
-| Consent UX | Versioned read-to-end gate and local versioned records for draft legal documents | Prototype only; no server-side consent enforcement or audit trail |
-| Assisted onboarding and local quote guidance | In plan | Roadmap F-7, F-8 |
-| Moderator, subscriptions, promotions, pilot KPI console | Not implemented / in plan | Roadmap feature register |
-| Wallet, direct lending, biometric capture, public blockchain | Not built; not approved | Scope guard and conflict ledger |
+| Discovery, booking, records, chat, admin review, fruit pilot | **built in the prototype**, over on-device records | `node tools/verify.cjs`; `node tools/shot.cjs --list` (102 screens) |
+| Persistence | prototype-only: `localStorage` behind a Store adapter, versioned schema | `hydrate()`/`persist()`, `falsify-storage-truth` |
+| Payments | **simulated** — `MockGateway`; no money moves; no value stored | README money model; `falsify-pay-records` |
+| Fee, cap and gateway pass-through | **the plan's rule is the code's rule** (7 Nov 2026): 1.2% with a 1.3% cap enforced at every read, in `setConfig` and in the form; the processor's fee is a disclosed line the payer funds, outside platform revenue and outside a refund, and a breakdown that would absorb it throws at the seam | `CONFIG_DEFAULTS.commissionRateDefault`, `assertWithinFeeCap`, `gatewayFeeFor`, `assertGatewayNotAbsorbed`, `payGatewayFee`; `node tools/falsify-business-rules.cjs` |
+| Smart Match / ranking | **computed since 7 Nov 2026** (S2a): the eight typed `smartMatch` blocks are gone, `scoreProvider()` scores eight signals from record fields, `providerMatches()` sorts by that score, and the screen says "Ranked by a rule-based score from records on this device" with reasons produced by the signals that contributed. No response-time or last-activity field exists, so neither is scored or claimed | `scoreProvider`, `smoothedRating`, `rankingRequest`, `rankedProviders`, `CONFIG.matchWeights`; `node tools/falsify-matching.cjs` |
+| AI concierge | keyword matching over six trades, honestly labelled as not reading pictures | `CONCIERGE_SORTS`, `matchConciergeService` |
+| Terms and Privacy consent: scroll gate, short pane counts as read, versioned persisted record | **built** (F8) | the legal-document sheet, `docScrolled`, `state.termsAcceptances`; `falsify-legal-truth` |
+| Tamper-evident ledger chain — labelled "not a blockchain, not a network, not encryption" | **built** (F10) | `chainHash`, `buildLedgerChain`, `verifyLedgerChain`; a gate check tampers with a record and requires the head to move |
+| Pricing band and the provider rate wizard; standing tier; connections; wallet as a derived view | **built, computed from records on this device** (F5, F13, F20, F12) | `rateBandFor`, `openRateWizard`, the tier ternary, `connectionsSheet`, `walletSheet` |
+| OCR / liveness, exchange rates, bot check, funding eligibility, an organisation as a party | **named seams that decline** — they say what is missing and record nothing (F6, F7, F9, F14, F21) | `seam(ocr.reason)`, `exchangeRateSeam`, `spamCheckSeam`, `gatewayCashSeam` |
+| Sign-up guide (typed, one question at a time) with the browser's own dictation behind a named seam | **built** (F3) | `openSignupGuide`, `SIGNUP_GUIDE_STEPS`, `speechSeam`; the `signup-guide` suite, 8 checks |
+| Computed matching and sorting, moderator and service-business roles, an onboarding/verification stepper, the subscription and promotion models, event instrumentation and the KPI console | **in plan, not built** — the paid and regulated *flags* exist and are all off (`CONFIG.featureFlags`, read by `featureEnabled`), so none of it can be reached by accident; no subscription or promotion record, price or ledger account is modelled yet | roadmap F1–F2, F4, F15–F19 |
+| Visual system | flat brand palette, one icon family (Material Symbols, Apache-2.0, 48 glyphs), one top-bar/nav/sheet system | `assets/ICON-LICENSES.md`, `DESIGN-TOKENS.md` |
+| Backend, real accounts, real payments, legal sufficiency of the draft terms | **not started**; design and seams only | Master Plan §9; `SUKINNECT_STARTUP_ROADMAP.md` |
 
-For the full feature register, dependencies, needs, conflicts and traceability, read
-[`SUKINNECT_STARTUP_ROADMAP.md`](SUKINNECT_STARTUP_ROADMAP.md).
-Stage B design-only artifacts are [`docs/api-contract.md`](docs/api-contract.md),
-[`docs/security-and-privacy.md`](docs/security-and-privacy.md),
-[`docs/backend-stack.md`](docs/backend-stack.md), and the additive MySQL reference
-migration [`schema/migrations/001_startup_records.mysql.sql`](schema/migrations/001_startup_records.mysql.sql).
-None is deployed or run against a production system.
+## 11. Reading order
 
-## Reading order
-
-1. This file.
-2. [`README.md`](README.md).
-3. [`SUKINNECT_STARTUP_ROADMAP.md`](SUKINNECT_STARTUP_ROADMAP.md).
-4. The relevant `AGENTS.md` sections.
-5. The local Master Plan and other supplied source documents, when available and
-   authorized. The collaboration/features Word document was not supplied for this pass.
+1. this file;
+2. `README.md` (what a reviewer runs, and the honest-labelling table);
+3. `SUKINNECT_STARTUP_ROADMAP.md` (goals, needs, the F1–F21 feature register, the C1–C12 conflict
+   ledger, open questions);
+4. the `AGENTS.md` sections your task touches — start from its table of contents;
+5. `docs/readable/Sukinnect_Master_Plan_Revised_27Oct2026.md` and
+   `docs/readable/Potential_Collaborations_and_New_and_Refine_Features.md` for the business sources —
+   **the `.docx` in the root wins over those copies**;
+6. `CHANGES.md` for why a rule exists, and `DEVICE-PASS.md` for what has ever been measured on a phone.

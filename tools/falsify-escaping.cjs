@@ -38,10 +38,20 @@ const mutants = [
   /* The first version of this mutant used preferredPayment and the gate correctly ignored it:
      that field is never assigned from an input, so it is outside the rule. This one uses a
      direct object read rather than the alias, which is the spelling the check originally
-     missed when it only knew `rp.x`. */
+     missed when it only knew `rp.x`.
+     Re-pointed on 2026-10-26: §149's header convergence moved the resident greeting from a
+     hand-written bar into screenHeader(), so the old standalone `${esc(…)}` interpolation
+     matched 0 times. The family still printed 5 of 5 caught, and the aggregate's `not applied`
+     column was the only place that said the coverage had dropped by one — which is the whole
+     reason this line names the site rather than trusting the count.
+     The first re-point took `screenHeader(esc(…)` as the needle and produced an unbalanced
+     mutation: dropping `esc(` while keeping the paren that closed it leaves the template
+     expression unclosed, the suite answers `suite crashed: Missing } in template expression`,
+     and the family correctly reports PARTIAL rather than CAUGHT. A mutant that does not compile
+     tests nothing. Take the balanced call — `esc(X)` → `X` — and let the check decide. */
   { name: 'a direct read of a typed field is painted without escaping',
-    from: "${esc(state.profileData.name.split(' ')[0])}",
-    to: "${state.profileData.name.split(' ')[0]}",
+    from: "esc(state.profileData.name.split(' ')[0])",
+    to: "state.profileData.name.split(' ')[0]",
     expect: 'no keyboard-writable field is painted without escaping' },
 ];
 
@@ -67,7 +77,11 @@ try {
     const r = gate();
     const failed = r.out.split('\n').filter(l => l.startsWith('FAIL'));
     const hit = failed.some(l => l.includes(m.expect));
-    if (r.code !== 0 && hit) { caught++; console.log('CAUGHT       ' + m.name + '\n               → ' + failed[0].slice(0, 100)); }
+    /* Print the FAIL that carries this mutant's own named check, not failed[0]. The gate goes red on
+       several rows at once — a literal hex breaks the on-dark rating AND empties `--rating-on-dark`,
+       so the token check fires first — and printing the first line reads as though an unrelated check
+       caught the mutation, which is exactly how a real guard gets mistaken for decorative. */
+    if (r.code !== 0 && hit) { caught++; console.log('CAUGHT       ' + m.name + '\n               → ' + failed.find(l => l.includes(m.expect)).slice(0, 100)); }
     else if (r.code !== 0) { console.log('PARTIAL      ' + m.name + ' — gate failed, but not on the expected check:\n               ' + failed.join('\n               ').slice(0, 160)); }
     else console.log('MISSED       ' + m.name + ' — the gate stayed green with the rule broken');
   }

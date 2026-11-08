@@ -17,6 +17,11 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'CREDENTIALS', 'LISTINGS'
   'pendingProviderRequests', 'bookingById', 'providerOf', 'customerOf', 'listingsOf',
   'listingById', 'agoText', 'clockText', 'dayName', 'timeMinutes', 'byWhen', 'serviceMeta', 'peso', 'pesoShort', 'pesoCompact', 'rateLabel',
   'toCentavos', 'toPesos', 'computeBreakdown', 'breakdownForBooking', 'postEvent', 'settlementLines', 'settlementToProvider', 'freezePricing', 'commissionRateFor', 'CONFIG_DEFAULTS', 'CONFIG_AUDIT',
+  'gatewayFeeFor', 'assertGatewayNotAbsorbed', 'payGatewayFee', 'featureEnabled', 'assertWithinFeeCap', 'ratePercent',
+  'GATEWAY_METHOD_NAMES',
+  'scoreProvider', 'rankedProviders', 'rankingRequest', 'MATCH_SIGNALS', 'signalBand',
+  'smoothedRating', 'daysSinceLastCompleted',
+  'esc',
   'accountBalance', 'ledgerBalance', 'ledgerFor', 'ACCOUNTS', 'LEDGER_EVENTS',
   'PAYMENTS', 'PAYOUTS', 'PAYMENT_LABELS', 'paymentsFor', 'recordPayment', 'Gateway',
   'earningsCard', 'jobActionBar', 'realRequestCard', 'listingsPanel', 'threadsFor', 'adminDashboard',
@@ -27,20 +32,24 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'CREDENTIALS', 'LISTINGS'
   'refundBooking', 'settleCashBooking', 'providerBalances', 'runPayoutCycle', 'platformStatement',
   'providerStatement', 'commissionReceivableAgeing', 'SCHEMA_VERSION', 'ROOT_TABS',
   'submitBookingRequest', 'answerRequest', 'providerJobAction', 'openProviderDetail',
+  'providerBookingDetail',
   'render', 'showToast', 'resetDemoData', 'setConfig', 'rateFor', 'LedgerImbalance',
   'CURRENT_CUSTOMER_ID', 'CURRENT_PROVIDER_ID', 'CONFIG_DEFAULTS', 'commissionRateFor',
   /* Discovery and the provider's own availability, pulled through so a suite can ask
      whether a filter actually changes what a resident is shown. */
-  'providerMatches', 'scoreProvider', 'rankingRequest', 'providerVerificationChip', 'providerServes', 'providerAccepting', 'coverageLines',
+  'providerMatches', 'scoreProvider', 'rankingRequest', 'providerVerificationChip',
+  'providerServes', 'providerAccepting', 'blankFilters', 'activeFilterCount', 'coverageLines',
   'setProviderAvailable', 'setProviderBusy', 'reputationSeedOf', 'refreshReputation',
   'adminCounts', 'marketplaceRates', 'opsWorkload', 'intelligenceStats', 'supplyGaps', 'disputeCard', 'statementCard', 'configPanel',
   'DISPUTE_STATES', 'disputeLabel', 'caseIsOpen', 'providerCases', 'resolveCase', 'resolveDispute', 'commitConfig', 'setIntFilter', 'runPayoutNow', 'openDispute',
   'categorySupply', 'weeklyBookings', 'providerWeeklyEarnings', 'providerDemandByBarangay', 'weekStart', 'MIN_SHARE_SAMPLE', 'chartShare', 'chartColumns', 'chartBars', 'chartEmpty', 'chartScale', 'chartSummary', 'adminFinanceScreen', 'ageingCard',
   'residentFinished', 'residentPaid', 'bookingTotal', 'residentSpendByService', 'warrantyEndsAt', 'shortDate', 'residentSectionBody',
   'adminProviderMeta', 'credentialState', 'credentialsOf', 'worstCredentialState', 'verifiedProviderList', 'expiringProviderCount', 'bookingsForProvider', 'providerSectionBody', 'adminSectionBody', 'openCasesFor', 'credentialSummaryFor', 'closedJobCount', 'networkSummary',
-  'adminProviderInsights', 'networkAttentionList', 'networkServiceRows', 'networkHealthRows', 'networkFlagSummary',
+  'adminProviderInsights', 'networkAttentionList', 'adminAttentionSection', 'adminDisputes', 'attentionQueue', 'networkServiceRows', 'networkHealthRows', 'networkFlagSummary',
   'PENDING_APPLICANTS', 'APPLICATION_DOCS', 'APPLICATION_DOC_KINDS', 'applicationDocs', 'applicationDocsSubmitted', 'applicationDocsOutstanding', 'applicationDocLabel', 'applicantWaitDays', 'applicantWaitLabel', 'applicantIssue', 'pendingApplicantList', 'reviewOf', 'reviewStatusLine', 'reviewTimeline', 'verificationApplication', 'verificationAction', 'openProviderVerification', 'reopenReview', 'docsOutstanding',
-  'loginHTML', 'AUTH_ROLE_LABEL', 'DEMO_LOGIN', 'LEGAL_DOCUMENTS', 'acceptanceUnlocked',
+  'loginHTML', 'AUTH_ROLE_LABEL', 'AUTH_ROLE_ICON', 'ICON_MEANING',
+  'BOOKING_GROUPS', 'ATTENTION_KINDS', 'attentionQueue', 'rescheduleAskCard',
+  'pendingRescheduleAsks', 'DEMO_LOGIN', 'LEGAL_DOCUMENTS', 'acceptanceUnlocked',
   'docIsRead', 'docScrolled',
   /* Added after the audit: the guards, the money readers and the case door were
      unreachable from the suite, which is exactly how a severed entry point could
@@ -104,8 +113,44 @@ const EXPORTS = ['BOOKINGS', 'CUSTOMERS', 'PROVIDERS', 'CREDENTIALS', 'LISTINGS'
   /* the operator's view of the pilot */
   'adminMarketplaceIntelligence', 'adminCategories', 'intelligenceStats', 'bookingsInWindow',
   'ADMIN_PRICING_WORDS', 'ADMIN_CAPABILITY_WORDS', 'ADMIN_SAFETY_WORDS',
-  'residentResults', 'residentProviderDetail', 'providerBookings', 'providerDashboard',
-  'openBookingRequest', 'submitBookingRequest', 'openProviderBooking', 'findProviderBooking'];
+  'residentResults', 'residentProviderDetail', 'residentBookings', 'providerBookings', 'providerDashboard', 'providerFSM',
+  'openBookingRequest', 'submitBookingRequest', 'openProviderBooking', 'findProviderBooking',
+  /* the reschedule flow: a proposal is a record, so the gate drives the real handlers and reads
+     the booking back rather than trusting that a button was wired. */
+  'RESCHEDULE_REQUESTS', 'RESCHEDULE_STATES', 'reschedulable', 'pendingReschedule',
+  'bookingTimeline', 'timelineRows',
+  'rescheduleBooking', 'rescheduleHistory', 'openRescheduleRequest', 'submitRescheduleRequest', 'answerReschedule',
+  'withdrawReschedule', 'counterReschedule', 'rescheduleCard', 'rescheduleRow', 'rescheduleSheet',
+  /* the three documents and the acceptance record, so the gate can drive the real register path */
+  'LEGAL_DOCUMENTS', 'LEGAL_VERSION', 'legalDoc', 'openLegalDoc', 'legalDocSheet', 'legalLinks',
+  /* the scroll gate: which documents the consent sentence names, and the one function a scroll
+     calls. The gate drives these rather than writing state.docRead, so the reading rule itself is
+     what the checks exercise. */
+  'acceptDocIds', 'docIsRead', 'acceptanceUnlocked', 'docScrolled', 'noteUnscrollableDocs',
+  /* the floating concierge door on Home, so the gate can resolve the handler the painted attribute
+     names and prove the click lands somewhere */
+  'conciergeFab', 'openConcierge',
+  /* the Phase D surfaces: the record-derived suggestions, the web-only admin refusal, and the rate
+     wizard. Each is driven through its own function so the gate runs the procedure rather than reading
+     the source that describes it. */
+  'frequentActionRows', 'frequentActionsCard', 'openFrequentAction',
+  'adminWebOnly', 'exitAdminShell',
+  'rateBandFor', 'marketRateHint', 'openRateWizard', 'rateWizardSheet',
+  'rateWizardGo', 'rateWizardChoose', 'rateWizardSave',
+  /* the verification stepper and its two named seams */
+  'openVerificationWizard', 'verificationSheet', 'verificationGo', 'verificationAttach',
+  'verificationField', 'verificationSummary', 'saveVerificationDraft',
+  'readIdDocumentSeam', 'matchFaceSeam',
+  /* the sign-up guide and its dictation seam */
+  'openSignupGuide', 'signupGuideSheet', 'guideWrite', 'guideGo', 'guideDictate', 'speechSeam',
+  /* the wallet view and its two money seams */
+  'openWallet', 'walletSheet', 'walletSnapshot', 'walletEntries',
+  'chainHash', 'buildLedgerChain', 'verifyLedgerChain',
+  'gatewayCashSeam', 'cashMovementSeam', 'loyaltyTier', 'fundingEligibilitySeam',
+  'exchangeRateSeam', 'spamCheckSeam',
+  /* connections: a view over the bookings on both sides */
+  'residentConnections', 'providerConnections', 'connectionsFor', 'connectionGroups',
+  'PROVIDER_VISIBLE_STATES', 'organizationSeam', 'openConnections', 'connectionsSheet', 'connectionsEntry'];
 
 function boot({ appMode = false, storage = null } = {}) {
   const src = fs.readFileSync(APP, 'utf8');
@@ -233,6 +278,15 @@ function makeChecker() {
          and nine mutants walked through them. Fail loudly instead. */
       if (typeof cond === 'function') {
         throw new Error('check("' + label + '") was handed a function, not a verdict — invoke the body');
+      }
+      /* The same trap one shape over, found on 2026-10-26: a check whose condition is an IIFE returning
+         `{ ok, why }` is handed an OBJECT, and `!!{}` is true forever — the inbox check printed PASS
+         while all three of its falsifier breaks reported MISSED, twice over, through two rewrites.
+         `verdict(label, probe)` exists to unwrap that pair; a bare `check` has no business receiving
+         one. An array is rejected for the same reason: `!![]` is true, empty or not. */
+      if (cond !== null && typeof cond === 'object') {
+        throw new Error('check("' + label + '") was handed an object, not a verdict — ' +
+          'use verdict(label, {ok, why}) or pass a boolean');
       }
       results.push({ label, ok: !!cond, extra });
       console.log(`${cond ? 'PASS' : 'FAIL'}  ${label}${cond ? '' : '   ' + (extra || '')}`);

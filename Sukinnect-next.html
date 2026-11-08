@@ -6247,7 +6247,7 @@ function hydrate() {
   if (Array.isArray(snap.termsAcceptances) &&
       snap.termsAcceptances.some(a => !a || typeof a.version !== 'string'
         || !['resident','provider','admin'].includes(a.role)
-        || !['terms','policy','marketing-consent'].includes(a.doc)))
+        || !['terms','policy','privacy','marketing-consent'].includes(a.doc)))
     return { restored:false, kind:Store.kind, rejected:'an acceptance names a document or a role that does not exist' };
   if (Array.isArray(snap.offers) &&
       snap.offers.some(o => o.bookingId && !snap.bookings.some(b => b.id === o.bookingId)))
@@ -10259,13 +10259,14 @@ const AUTH_ROLE_ICON = { resident:'home', provider:'wrench', admin:'shield' };
    those duties, and it is flagged for counsel rather than presented as settled.
    None of this is legal advice and none of it has been reviewed by a Philippine lawyer. */
 const MARKETING_CONSENT_VERSION = '1';
+const LEGAL_VERSION = 'Draft 1';
 /* `consent` is how each document is stood behind at sign-up: 'accept' means the reader agrees to it,
    'read' means the reader is told it exists and confirms having read it. A notice is not an agreement —
    RA 10173 lists consent as one lawful basis of six — and the sentence on the card says which is which.
    Every document has to declare one of the two, which the gate asserts: a field that goes missing would
    otherwise be read as 'accept' by the comparison and quietly ask a reader to agree to a notice. */
 const LEGAL_DOCUMENTS = [
-  { id: 'terms', title: 'Terms & Conditions', label: 'Terms & Conditions', version: 'Draft 1', consent: 'accept',
+  { id: 'terms', title: 'Terms & Conditions', label: 'Terms & Conditions', version: LEGAL_VERSION, consent: 'accept',
     intro: 'What you and Sukinnect each promise when a job is found, booked and recorded.',
     sections: [
       { h: 'What Sukinnect is', p: [
@@ -10297,7 +10298,7 @@ const LEGAL_DOCUMENTS = [
       { h: 'The limits of this build', p: [
         'Nothing here means a real service was performed, a real payment was taken, or a real document was verified by a real officer. The records you see are the sample records of a demonstration.',
         '[Effective date — NOT DECIDED] · Draft, not reviewed by Philippine counsel.' ] } ] },
-  { id: 'policy', title: 'Sukinnect Policy', label: 'Community & Provider Standards', version: 'Draft 1', consent: 'accept',
+  { id: 'policy', title: 'Sukinnect Policy', label: 'Community & Provider Standards', version: LEGAL_VERSION, consent: 'accept',
     intro: 'The house rules for listing, accepting and doing work on Sukinnect.',
     sections: [
       { h: 'Say what you can actually do', p: [
@@ -10321,7 +10322,7 @@ const LEGAL_DOCUMENTS = [
         'There is no automatic suspension and no appeal queue yet — [appeal route — NOT DECIDED].' ] },
       { h: 'This policy is a draft', p: [
         'It describes how this prototype behaves, not how a launched platform is regulated. It is not legal advice and has not been reviewed by Philippine counsel; the standards above must be confirmed with the enforcement process a real operation can actually staff.' ] } ] },
-  { id: 'privacy', title: 'Privacy Notice', label: 'Privacy Notice', version: 'Draft 1', consent: 'read',
+  { id: 'privacy', title: 'Privacy Notice', label: 'Privacy Notice', version: LEGAL_VERSION, consent: 'read',
     intro: 'What this prototype holds about you, who can see it, and what you can ask for.',
     sections: [
       { h: 'What is collected, and why it is small', p: [
@@ -10410,7 +10411,7 @@ function legalDocSheet(){
       <div class="sheet-sub">No legal document on this device carries that id.</div></div>
       <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="Close">${ic("x",15)}</button></div>`;
   }
-  const accepted = (state.termsAcceptances || []).filter(a => a.doc === d.id);
+  const accepted = (state.termsAcceptances || []).filter(a => a.role === state.role && a.doc === d.id);
   const lastAcceptance = accepted.length ? accepted[accepted.length - 1] : null;
   return `
     <div class="sheet-head">
@@ -10444,10 +10445,10 @@ function legalDocSheet(){
 function legalLinks(){
   return `<section class="auth-documents" aria-labelledby="auth-documents-title">
     <h2 id="auth-documents-title">Review before registering</h2>
-    <p>Open each current version and scroll to its end. Registration stays locked until all three are read.</p>
+    <p>Open each current version and scroll to its end. Registration stays locked until all ${LEGAL_DOCUMENTS.length} are read.</p>
     ${LEGAL_DOCUMENTS.map(d => `<button type="button" onclick="openLegalDoc('${esc(d.id)}')">
       <span>${esc(d.label)}<span class="doc-version">${esc(d.version)}</span></span>
-      <span class="doc-state">${docIsRead(d.id) ? 'Read to end' : 'Read document'}</span>
+      <span class="doc-state">${docIsRead(d.id) ? 'Re-read' : 'Read document'}</span>
     </button>`).join('')}
   </section>`;
 }
@@ -11177,6 +11178,7 @@ function residentHome(){
     </button>
 
 
+
     <!-- A job in motion is the reason the app was opened, so it sits above the
          browsing rather than below it: the category grid is for finding someone
          new, and it should not push the plumber who is already on the way off the
@@ -11592,7 +11594,7 @@ function residentResults(){
 
     <div class="row" style="margin-bottom:10px; font-size:var(--t-body-sm);">
       <span style="font-weight:700; color:var(--ink);">Providers near you</span>
-      <span style="color:var(--mist); font-size:var(--t-caption);">Rule-based demo match · not AI or live availability</span>
+      <span style="color:var(--mist); font-size:var(--t-caption);">Rule-based score from records on this device · demo only, not AI or live availability</span>
     </div>
 
     ${state.searching ? providerSkeletons() : list.length === 0 ? emptyState(
@@ -11606,7 +11608,7 @@ function residentResults(){
       <div class="card" data-provider-detail="${p.id}" style="cursor:pointer;">
         <div class="row" style="margin-bottom:10px;">
           <span style="background:var(--brand-tint-soft); color:var(--brand-primary); font-size:var(--t-caption); font-weight:800; padding:var(--s-1) var(--s-2); border-radius:6px; display:inline-flex; align-items:center; gap:3px;">
-            ${ic("zap",12)} ${m.score} / 100 demo score
+            ${ic("zap",12)} ${m.score} / 100 rule score · demo
           </span>
           ${providerVerificationChip(p)}
         </div>
@@ -11634,7 +11636,7 @@ function residentResults(){
         <!-- Summary first, evidence on demand: the reasons stay one tap away so
              the list can be scanned (19, 8). -->
         <details class="why-fold">
-          <summary>How this demo score is built (${m.reasons.length})</summary>
+          <summary>Why this ranking (${m.reasons.length})</summary>
           <div style="padding-top:7px;">
             ${m.reasons.map(r => `<div><span style="color:var(--success-ink); display:inline-flex; vertical-align:-2px;">${ic("check",12)}</span> ${esc(r)}</div>`).join('')}
             ${m.scoredOn < MATCH_SIGNALS.length ? `<div class="mut">Ranked on ${m.scoredOn} of the ${MATCH_SIGNALS.length} signals this build knows. The rest have no record for this provider on this device, so a thin score is a rule with little to go on, not a prediction of how your job will go.</div>` : ''}

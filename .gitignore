@@ -20,6 +20,18 @@ local.properties
 *.jks
 .env
 
+# The business documents are authored sources that sit in this folder for every local AI, and the
+# repository is PUBLIC (measured 2026-11-06 with `gh repo view --json visibility`). The Master Plan
+# carries a funding ask, a valuation, an investor split, a liquidation waterfall, budget lines and
+# named prospective partners; publishing any of that on a public repository is not reversible by
+# deleting the file later. So they are ignored rather than committed. Three of them were tracked on
+# `feat/mobile-app-visual-pass` and are removed from the index by the commit that adds this block;
+# none of them ever reached `origin/main`, so nothing was published. The readable copies under
+# `docs/readable/` are ignored for the same reason — they are the same words in another format.
+# Owner may reverse this in one line if the repository is made private.
+*.docx
+docs/readable/
+
 # OS / editor noise
 .DS_Store
 Thumbs.db

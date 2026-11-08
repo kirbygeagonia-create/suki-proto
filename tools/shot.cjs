@@ -17,6 +17,7 @@
      node tools/shot.cjs --width=390 --height=844 --dpr=2
      node tools/shot.cjs --measure             # also run the audit over each painted frame
      node tools/shot.cjs --reduced-motion      # emulate prefers-reduced-motion: reduce
+     node tools/shot.cjs --offline             # emulate a device with no network at all
      node tools/shot.cjs --probe=@file         # evaluate an expression after the page settles
      node tools/shot.cjs --desktop             # the phone frame inside the desktop shell
      node tools/shot.cjs --out=.shots          # where the PNGs go
@@ -62,6 +63,12 @@ const MEASURE = has('measure');
 /* Asks Chrome to report prefers-reduced-motion, so a claim that the app honours
    that setting can be measured instead of assumed. */
 const REDUCED = has('reduced-motion');
+/* §1.7 promises the app needs no network but map tiles, and §81 forbids a remote dependency for
+   anything essential. That was evidenced by a tally counting the requests that DID leave, plus a
+   reading of mapFallback(). This makes it a run: Chrome is told the device is offline, so a tile
+   that never arrives is the case a reviewer on a bus actually gets, and any other asset that
+   needed the network shows up as a blank image the tallies already count. */
+const OFFLINE = has('offline');
 /* Asks Chrome for prefers-color-scheme: dark. The app declares no color-scheme, so this is not
    a question about a theme it has — it is the question of what the *browser* paints on the
    controls the app leaves to the user agent, which is exactly the Android-in-dark-mode case no
@@ -1032,6 +1039,75 @@ const SCREENS = [
                         if(!repeatCard) throw new Error('the Future repeat visits price-proposal card is not painted');
                         document.getElementById('screen').style.scrollBehavior='auto';
                         repeatCard.scrollIntoView({block:'center'});`],
+  /* A proposed time is a record, and the sheet that files it and the card that answers it are two
+     destinations reached by tapping. The walk creates the request the way a resident does — the real
+     opener, the real submit — rather than pushing a row into the array, because a screen whose state
+     was written by the harness is a screen nobody can reach. */
+  ['reschedule-sheet',  `state.view='app'; state.role='resident';
+                        const mv = BOOKINGS.find(b=>b.status==='upcoming'&&b.customerId===CURRENT_CUSTOMER_ID) || BOOKINGS[0];
+                        mv.status='upcoming'; openBookingDetail(mv.id);
+                        openRescheduleRequest(mv.id); state.sheet='reschedule'; render();`],
+  /* The legal sheet is the screen a person reaches from the sign-in card before they agree to
+     anything, so it is walked from its own opener. */
+  ['legal-terms',       `state.view='login'; state.role='resident'; state.authMode='register'; render();
+                        openLegalDoc('terms'); state.sheet='legalDoc'; render();`],
+  /* The scroll gate has two painted states and a thumb reaches both: the sheet with its bottom still
+     ahead, and the same sheet after the bottom has been hit. Scrolling for real — move scrollTop, then
+     dispatch the event the browser would fire — is what makes this the reader's path and not a model of
+     it, because the inline `onscroll` handler is the thing under test and only an event reaches it. */
+  ['legal-terms-read',  `state.view='login'; state.role='resident'; state.authMode='register'; render();
+                        openLegalDoc('terms');
+                        const pane = document.querySelector('[data-doc-body]');
+                        pane.scrollTop = pane.scrollHeight; pane.dispatchEvent(new Event('scroll'));`],
+  /* And the card the reader comes back to, with the box turned on — reached by opening each named
+     document, scrolling it, and closing it, which is the whole rule rather than its end state. */
+  ['register-read',     `state.view='login'; state.role='resident'; state.authMode='register'; render();
+                        acceptDocIds().forEach(id => {
+                          openLegalDoc(id);
+                          const p = document.querySelector('[data-doc-body]');
+                          p.scrollTop = p.scrollHeight; p.dispatchEvent(new Event('scroll'));
+                          closeSheet();
+                        });
+                        render();`],
+  ['reschedule-answer', `state.view='app'; state.role='resident';
+                        const ans = BOOKINGS.find(b=>b.status==='upcoming') || BOOKINGS[0];
+                        ans.status='upcoming'; openRescheduleRequest(ans.id);
+                        state.rescheduleDraft.dayIdx=1; state.rescheduleDraft.timeIdx=2;
+                        submitRescheduleRequest();
+                        applyProviderIdentity(ans.providerId); state.role='provider';
+                        openProviderBooking(ans.id); render();`],
+  /* §9's rule 6 — the pending proposal has to reach each side's own list — is only proved on a screen
+     the camera paints. Both rows raise a real ask through the app's own submit path (not by pushing a
+     record), then render the list that should carry it, so the inbox card, its row and its tap target
+     are measured like any other markup rather than asserted only in Node. */
+  /* §9's rule 6 — the pending proposal has to reach each side's own list — is only proved on a screen
+     the camera paints. Both rows raise the ask through the app's own submit path (not by pushing a
+     record), then paint the list that should carry it, so the inbox card, its row and its tap target are
+     measured like any other markup rather than asserted only in Node.
+
+     The `pendingReschedule` guard is not decoration. The first version of these two rows each submitted
+     unconditionally, and the second row died before painting: the app refuses a second proposal while one
+     is waiting — that is one of the flow's own rules — so no draft was armed, and the next line reached
+     for `state.rescheduleDraft.dayIdx` on a null draft. A camera row that depends on a clean slate is a
+     row that only works first; each of these now works on a page where the other has already run. And a
+     row has to sign in as somebody who can see the job: the first `provider-asks` raised the ask as the
+     resident on the resident's booking and then called `applyProviderIdentity` for its provider, which
+     falls back to p1 for anyone without a demo profile — so the screenshot came back with no card at
+     all, and a walk that paints nothing measures nothing. */
+  ['resident-asks', `state.view='app'; state.role='resident';
+                     const ra = bookingsForResident().find(b=>b.status==='upcoming');
+                     openBookingDetail(ra.id);
+                     if (!pendingReschedule(ra.id)) { openRescheduleRequest(ra.id);
+                       state.rescheduleDraft.dayIdx=1; state.rescheduleDraft.timeIdx=2;
+                       submitRescheduleRequest(); }
+                     state.sheet=null; state.tab='bookings'; render();`],
+  ['provider-asks', `state.view='app'; state.role='provider'; state.tab='bookings'; render();
+                     const pa = bookingsForProvider().find(b=>b.status==='upcoming');
+                     openProviderBooking(pa.id);
+                     if (!pendingReschedule(pa.id)) { openRescheduleRequest(pa.id);
+                       state.rescheduleDraft.dayIdx=1; state.rescheduleDraft.timeIdx=2;
+                       submitRescheduleRequest(); }
+                     state.sheet=null; state.tab='bookings'; render();`],
   /* The pilot category, reached the way a resident reaches it: pick the category's
      provider, open the sheet, choose a mode. Screens nobody can navigate to are
      not screens — they are markup. */
@@ -1058,6 +1134,30 @@ const SCREENS = [
                         state.isChatOpen=true; render();`],
   ['resident-profile', `state.view='app'; state.role='resident'; state.tab='profile'; render();`],
   ['concierge',        `state.view='app'; state.role='resident'; state.tab='concierge'; render();`],
+  /* The concierge now opens with a suggestion block counted from this device's records, and the rate
+     wizard is a three-step sheet a provider reaches from their own pricing section — both are
+     destinations, so both are walked. */
+  ['concierge-suggested', `state.view='app'; state.role='resident'; state.tab='concierge'; render();`],
+  ['resident-connections',   `state.view='app'; state.role='resident'; state.tab='home'; render(); openConnections();`],
+  ['provider-connections',   `state.view='app'; state.role='provider'; state.tab='profile'; render(); openConnections();`],
+  ['provider-wallet',      `state.view='app'; state.role='provider'; state.tab='profile'; render(); openWallet();`],
+  ['signup-guide-step2',   `state.view='login'; state.role='resident'; state.authMode='register'; render();
+                        openSignupGuide(); guideWrite(0, 'Nueva Residente'); guideGo(1);`],
+  ['verification-docs',     `state.view='app'; state.role='provider'; state.tab='profile'; render();
+                        openVerificationWizard(); verificationGo(1);`],
+  ['verification-review',  `state.view='app'; state.role='provider'; state.tab='profile'; render();
+                        openVerificationWizard(); verificationAttach('idFile', { files:[{ name:'philsys-front.jpg' }] });
+                        verificationField('qualType', 'TESDA NC II'); verificationGo(3);`],
+  ['rate-wizard-step2',   `state.view='app'; state.role='provider'; state.tab='profile'; render();
+                        openRateWizard(); rateWizardGo(1);`],
+  ['rate-wizard-confirm', `state.view='app'; state.role='provider'; state.tab='profile'; render();
+                        openRateWizard(); rateWizardChoose(45000); rateWizardGo(2);`],
+
+  /* The concierge door on Home is a painted control now, so the walk opens it the way a thumb does —
+     click the control the app painted — rather than assigning the tab. If the handler goes away this
+     shot fails by name instead of photographing a screen nobody can reach. */
+  ['concierge-from-fab', `state.view='app'; state.role='resident'; state.tab='home'; render();
+                        clickPainted(/openConcierge\\(\\)/, 'the floating concierge control on Home');`],
   /* The answer the concierge gives when the words sort into nothing. Typed into the
      field and submitted through the painted button, because the state only exists if
      a thumb can create it — and until this change an unsortable description was
@@ -1088,6 +1188,18 @@ const SCREENS = [
   ['provider-bookings',`state.view='app'; state.role='provider'; state.tab='bookings'; render();`],
   ['provider-job',     `state.view='app'; state.role='provider'; state.tab='bookings'; render();
                         openProviderBooking(pendingProviderRequests()[0].id);`],
+  /* The path itself sits below the fold on a job that has already started, so the picture a reader
+     gets of the stepper is of nothing unless the entry scrolls to it. A job on the path, not a
+     request waiting at step one, because that is the state where six steps are worth drawing. */
+  ['provider-job-path', `state.view='app'; state.role='provider'; state.tab='bookings'; render();
+                        const onPath = bookingsForProvider().find(b => b.status === 'ongoing')
+                          || bookingsForProvider().find(b => JOB_STAGES.indexOf(b.status) >= 0);
+                        if (!onPath) throw new Error('the signed-in provider holds no job at a stage the path draws');
+                        openProviderBooking(onPath.id);
+                        const st = document.querySelector('.stepper');
+                        const sc = document.getElementById('screen');
+                        sc.style.scrollBehavior = 'auto';
+                        sc.scrollTop += st.getBoundingClientRect().top - 12;`],
   ['provider-profile', `state.view='app'; state.role='provider'; state.tab='profile'; render();`],
   /* The profile modules open as sheets, and until now no sheet like this was in the table at
      all — so the resident's spending card and the provider's new credential list had never been
@@ -1109,9 +1221,13 @@ const SCREENS = [
   ['provider-payout-modal', `state.view='app'; state.role='provider'; state.tab='profile'; render();
                           openProfileSection('provider','payout','Payout & Earnings','Where the money goes');
                           clickPainted(/ProfileAction\\(.payout.\\)/, 'the manage-payout button');`],
-  ['admin-security-modal', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+  /* The only admin surface a phone can reach, and until now the only admin screen with no row: a
+     refusal page still has tap targets, contrast and a heading, and the ruling that moved the console
+     to the web did not delete the screen the shell paints in its place. */
+  ['admin-shell-refusal',   `state.view='app'; state.role='admin'; state.appShell=true; state.tab='profile'; render();`],
+  ['admin-security-modal', `state.view='app'; state.role='admin'; state.appShell=false; state.tab='profile'; render();
                           openProfileSection('admin','security','Security & Sign-in','What this device keeps');
-                          clickPainted(/AccountAction\\(.pin.\\)/, 'the security-PIN button');`],
+                          clickPainted(/AccountAction\\(.pin.\\)/, 'the security-PIN button'); requirePaintedDialog('the Security PIN dialog');`],
   /* Four more dialogs on the same shelf, found by measuring rather than by noticing. `node
      tools/audit-camera-dialog-coverage.cjs` asks which profile controls the app paints that raise a
      layer, and which of those names any row of this table clicks: the difference is a destination the
@@ -1121,15 +1237,15 @@ const SCREENS = [
      contrast and dialog semantics). This is the fourth time the class was found by a person happening
      to look — `admin-account`, the audit log, the verification review, the logout confirm — and the
      first time an instrument asked the question on its own. */
-  ['admin-password-modal', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+  ['admin-password-modal', `state.view='app'; state.role='admin'; state.appShell=false; state.tab='profile'; render();
                           openProfileSection('admin','security','Security & Sign-in','What this device keeps');
-                          clickPainted(/adminAccountAction\\('password'\\)/, 'the Password button');`],
-  ['admin-twofa-modal', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+                          clickPainted(/adminAccountAction\\('password'\\)/, 'the Password button'); requirePaintedDialog('the Password dialog');`],
+  ['admin-twofa-modal', `state.view='app'; state.role='admin'; state.appShell=false; state.tab='profile'; render();
                           openProfileSection('admin','security','Security & Sign-in','What this device keeps');
-                          clickPainted(/adminAccountAction\\('twofa'\\)/, 'the Two-factor button');`],
-  ['admin-sessions-modal', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+                          clickPainted(/adminAccountAction\\('twofa'\\)/, 'the Two-factor button'); requirePaintedDialog('the Two-factor dialog');`],
+  ['admin-sessions-modal', `state.view='app'; state.role='admin'; state.appShell=false; state.tab='profile'; render();
                           openProfileSection('admin','security','Security & Sign-in','What this device keeps');
-                          clickPainted(/adminAccountAction\\('sessions'\\)/, 'the View Sessions button');`],
+                          clickPainted(/adminAccountAction\\('sessions'\\)/, 'the View Sessions button'); requirePaintedDialog('the View Sessions dialog');`],
   ['provider-dispatch-modal', `state.view='app'; state.role='provider'; state.tab='profile'; render();
                           openProfileSection('provider','dispatch','Emergency Dispatch','Urgent requests');
                           clickPainted(/providerProfileAction\\('dispatch'\\)/, 'the Enable Dispatch button');`],
@@ -1139,9 +1255,9 @@ const SCREENS = [
      hub markup was read too, these three surfaced on the same run that added the four above. */
   ['provider-logout-modal', `state.view='app'; state.role='provider'; state.tab='profile'; render();
                           clickPainted(/providerProfileAction\\('logout'\\)/, 'the Log Out button under the account rail');`],
-  ['admin-logout-modal', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+  ['admin-logout-modal', `state.view='app'; state.role='admin'; state.appShell=false; state.tab='profile'; render();
                           clickPainted(/adminAccountAction\\('logout'\\)/, 'the Log Out button under the account rail');`],
-  ['admin-lock-modal', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+  ['admin-lock-modal', `state.view='app'; state.role='admin'; state.appShell=false; state.tab='profile'; render();
                           clickPainted(/adminAccountAction\\('lock'\\)/, 'the Lock Admin Session button');`],
   /* The six forms where a person types the app's most sensitive facts — a name, a phone, a home
      address, a household item, a service price, a portfolio entry. Three dialog screens already
@@ -1169,7 +1285,7 @@ const SCREENS = [
   ['provider-portfolio-form', `state.view='app'; state.role='provider'; state.tab='profile'; render();
                           openProfileSection('provider','portfolio','Work Portfolio','Service photos and examples');
                           clickPainted(/providerProfileAction\\('portfolio_add'\\)/, 'the add-work button');`],
-  ['admin-edit-form', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+  ['admin-edit-form', `state.view='app'; state.role='admin'; state.appShell=false; state.tab='profile'; render();
                           clickPainted(/adminAccountAction\\('edit'\\)/, 'the Edit Profile button');`],
   /* The dialog a save shows when nothing on the form was edited (§68). Reached the way a person
      reaches it — open the form, press Save — because a screen that has never been painted has never
@@ -1180,7 +1296,7 @@ const SCREENS = [
   ['provider-save-unchanged', `state.view='app'; state.role='provider'; state.tab='profile'; render();
                           clickPainted(/providerProfileAction\\('edit'\\)/, 'the Edit Professional Profile button');
                           clickPainted(/saveProviderProfessionalProfile\(\)/, 'the Save Changes button');`],
-  ['admin-save-unchanged', `state.view='app'; state.role='admin'; state.tab='profile'; render();
+  ['admin-save-unchanged', `state.view='app'; state.role='admin'; state.appShell=false; state.tab='profile'; render();
                           clickPainted(/adminAccountAction\\('edit'\\)/, 'the Edit Profile button');
                           clickPainted(/saveAdminProfile\(\)/, 'the Save Changes button');`],
   ['admin-dash',       `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='overview'; render();`],
@@ -1199,6 +1315,12 @@ const SCREENS = [
   ['admin-categories', `state.view='app'; state.role='admin'; state.tab='admin_dashboard'; state.adminScreen='categories'; render();`],
 
   ['admin-verifiers',  `state.view='app'; state.role='admin'; state.tab='admin_verifications'; state.adminProviderCategory='pending'; render();`],
+  /* The attention queue is a segment a thumb taps, so it is a destination: the fifth rail item on the
+     Providers screen, reached by the same state value the button writes. Its filtered-to-nothing branch
+     is deliberately not in this table, because every kind on the seed has at least one provider, so no
+     tap can reach that wording — the gate asserts it instead, which is the rule for a state nobody can
+     enter rather than a screen nobody has checked. */
+  ['admin-attention',  `state.view='app'; state.role='admin'; state.tab='admin_verifications'; state.adminProviderCategory='attention'; state.adminAttentionKind=null; render();`],
   /* The review screen was in no table at all — a whole destination, reached by tapping
      "Open verification" on a pending applicant, that had never been photographed. Its
      modals now carry checkboxes and selects, so they are reached by clicking the painted
@@ -1234,7 +1356,7 @@ const SCREENS = [
      tab='profile' dispatch the other two roles use. It sat out every camera run since the
      table was written — 46 screens never included it — and it is the screen that holds the
      admin's editable name, phone and office. */
-  ['admin-account',    `state.view='app'; state.role='admin'; state.tab='profile'; render();`],
+  ['admin-account',    `state.view='app'; state.role='admin'; state.appShell=false; state.tab='profile'; render();`],
   /* Reached by the "Insights" button in the Providers top bar — a whole destination behind a
      real control, and the word 'insights' appeared nowhere in this file until this entry was
      added, so it had never been
@@ -1464,6 +1586,11 @@ async function main() {
     await session.send('Emulation.setTimezoneOverride', { timezoneId: TIMEZONE });
     console.log('  emulating timezone: ' + TIMEZONE);
   }
+  if (OFFLINE) {
+    await session.send('Network.enable', {});
+    await session.send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+    console.log('  emulating an offline device: no request may leave it');
+  }
 
   const loaded = new Promise(resolve => {
     const check = (e) => { if (e.method === 'Page.loadEventFired') resolve(); };
@@ -1516,6 +1643,18 @@ async function main() {
         hit.click();
         return label + ' (' + hit.tagName.toLowerCase() + (inForm ? ' in form' : '') + ')';
      };
+     /* A row named after a dialog has to reach one. clickPainted proves the control exists and fires
+        it; it says nothing about what the app painted afterwards, which is how four admin-*-modal rows
+        came to photograph a sheet for weeks — the button set a state field whose dialog lives on a
+        screen that was not mounted. Refuse, and name the control, so a dead button fails the walk by
+        its own label instead of reporting a clean screen. (Not wired into the rows yet: the four
+        buttons are still dead, so a guard here would redden the walk with no shipped fix behind it.
+        See CHANGES.md §158 and task #67.) */
+     window.requirePaintedDialog = function (label) {
+        var m = document.querySelector('.modal-layer[data-layer="modal"]');
+        if (!m || !m.firstElementChild) throw new Error(label + ' paints no dialog layer — the control is dead from this surface');
+        return 'dialog painted for ' + label;
+     };
      return true;
   })()`);
   await sleep(500);
@@ -1536,6 +1675,7 @@ async function main() {
   }
 
   const manifest = [];
+  const skipped = [];
   /* Wide enough for the longest screen name in the table, so the column stays readable as the
      table grows — six of the names added in §63 are longer than the fixed 20 this printed at,
      and the output started running "resident-payment-modalshows" together, which is the same
@@ -1551,6 +1691,26 @@ async function main() {
          before the cause was the harness rather than the markup. */
       await session.evaluate(`(function(){
          try { clearModals(); } catch (e) {}
+         /* The bottom navigation's own handler is clearModals(), then state.isChatOpen = false,
+            then the tab, then render() — and the walk ran the first and the last but not the
+            middle one, because clearModals() must not clear the flag (opening a room IS a
+            destination change, so clearing there closes it the instant it opens). So after the
+            chat-room row, every later screen was photographed with a chat still flagged open,
+            which makes onRootTab() answer false: the resident's Profile, the provider's Dash, the
+            FSM screen, the provider's Bookings, the admin's Dashboard and Account all painted
+            their screen name at the drill-in size, while a thumb that leaves a chat gets the root
+            treatment — proven by tapping the painted thread row and then the painted Profile
+            item, which reads isChatOpen=false, data-root=1, title 24px Resident Profile. A setup
+            that moves the model without moving the field measures a state nobody can reach. */
+         try { state.isChatOpen = false; } catch (e) {}
+         /* The same trap one level up. Nine rows of the walk sign in as the fruit harvester with
+            applyProviderIdentity('p7'), and it is a module binding rather than a screen-local, so
+            every provider row after the first of them was measured against p7's bookings while its
+            own name still said "provider". That is how provider-job-path died at every corner: it
+            asks for a job already on the path, and the harvester holds none. A row that wants
+            another account sets it in its own entry; a row that names a screen gets the account that
+            screen's name claims. */
+         try { if (typeof CURRENT_PROVIDER_ID !== 'undefined' && CURRENT_PROVIDER_ID !== 'p1') applyProviderIdentity('p1'); } catch (e) {}
          /* The app pays back the entries it owns with real history.back() calls, which is
             right on a phone and wrong here: the walk jump-cuts between screens, and a back()
             past the page's own entries leaves the file entirely and Chrome closes the target.
@@ -1562,7 +1722,7 @@ async function main() {
       const err = await session.evaluate(`(function(){
          try { ${nav} return ''; } catch(e){ return String(e && e.message || e); }
       })()`);
-      if (err) { console.log('  SKIP ' + name + ' — ' + err); continue; }
+      if (err) { console.log('  SKIP ' + name + ' — ' + err); skipped.push({ name, why: err }); continue; }
       /* Let transitions settle: the app animates sheets and toasts, and a shot
          taken mid-flight photographs a half-moved screen. */
       await session.evaluate(`(function(){
@@ -1574,6 +1734,19 @@ async function main() {
          try { if (typeof state !== 'undefined' && state.view === 'splash') { /* leave it on screen */ } } catch (e) {}
          return true;
       })()`);
+      /* The admin console is a web surface by the owner's ruling of 2026-10-27, so in the shell render()
+         replaces every admin screen with adminWebOnly(). Correct as product, and it voided every camera
+         measurement that leans on an admin screen: the Weekly charts, the class-less verification
+         overlay, the admin bottom nav. Each reported a clean 0 over a refusal page, which is how three
+         falsifier families printed five surviving mutants at once while twelve camera-driven siblings
+         passed the same run. Derived here from the state the row actually set rather than patched row
+         by row — a list is how nine rows got fixed and the rest kept measuring nothing. A row that
+         names appShell itself wins, because the refusal page below has to be allowed to ask for the
+         shell. */
+      await session.evaluate(`(function(){
+         try { if (!/appShell/.test(ROW_NAV) && typeof state !== 'undefined' && state.role === 'admin' && state.appShell) { state.appShell = false; render(); } } catch (e) {}
+         return true;
+      })()`.replace('ROW_NAV', JSON.stringify(String(nav))));
       await sleep(parseInt(flag('wait', APP_MODE ? '700' : '900'), 10));
       /* A sheet needs one more push: the app's own render pass can hand the sheet
          state to a screen change before the layer mounts, and the second call lands
@@ -1691,6 +1864,14 @@ async function main() {
     generatedAt: new Date().toISOString(), viewport: { width: WIDTH, height: HEIGHT, dpr: DPR },
     appMode: APP_MODE, url, screens: manifest, consoleErrors
   }, null, 2));
+  /* A row that throws in its own setup paints nothing, and every tally in the run is then a
+     measurement of one screen fewer than the table claims. The old tell was the screen count in a
+     sentence nobody compares against --list; this is the same fact as a number the sweep already
+     fails on, because sweep-text-scale.cjs treats any count it does not recognise as must-be-zero. */
+  console.log('\ncamera rows that never painted a screen (a skipped row is a screen nobody measured): ' +
+    skipped.length);
+  skipped.forEach(s => console.log('  ' + s.name + ' — ' + s.why));
+
   if (MEASURE) {
     const flat = (key) => manifest.flatMap(m => (m.audit && m.audit[key] || []).map(x => ({ screen: m.name, ...x })));
     const tally = (rows, label, fmt) => {

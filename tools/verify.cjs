@@ -441,23 +441,101 @@ suite('ledger', async () => {
   const app = boot();
   const { LEDGER, BOOKINGS, ACCOUNTS, postEvent, accountBalance, computeBreakdown,
           platformStatement, providerStatement, providerBalances, settlementLines, settlementToProvider,
-          CONFIG, setConfig } = app;
+          CONFIG, setConfig, isSettled, refundableCentavos, refundLines, featureEnabled,
+          assertGatewayNotAbsorbed } = app;
 
-  /* the deck's own worked example must be reproducible */
+  /* The Master Plan's worked example, and the arithmetic the deck's used to prove. The property is
+     unchanged — a ₱800 job is priced, commissioned and split in front of the test — the number is
+     the one the business decided: 1.2% of ₱800.00 is ₱9.60, and the provider keeps ₱790.40. */
   const d = computeBreakdown({ baseCentavos: 80000, categoryId: 'plumbing' });
-  c.check('₱800 at the pilot rate takes ₱80', d.commissionCentavos === 8000, String(d.commissionCentavos));
-  c.check('and leaves the provider ₱720', d.providerShareCentavos === 72000, String(d.providerShareCentavos));
+  c.check('₱800 at the pilot fee takes ₱9.60', d.commissionCentavos === 960, String(d.commissionCentavos));
+  c.check('and leaves the provider ₱790.40', d.providerShareCentavos === 79040, String(d.providerShareCentavos));
   c.check('the customer pays the price on the card', d.customerTotalCentavos === 80000, String(d.customerTotalCentavos));
   c.check('commission plus share equals the base',
     d.commissionCentavos + d.providerShareCentavos === d.baseCentavos);
 
+  /* ---- the gateway fee, from the plan's rule that the platform does not absorb it ----
+     Four separate claims, because one number can be right while the other three are wrong:
+     the fee exists for an online method and does not exist for cash; it is inside what the
+     payer is charged; it is NOT inside what the platform earns; and it cannot be booked as
+     though it were, which is proved by making the ledger try and watching it refuse. */
+  const online = computeBreakdown({ baseCentavos: 80000, categoryId: 'plumbing', payMethod: 'gcash' });
+  const offline = computeBreakdown({ baseCentavos: 80000, categoryId: 'plumbing', payMethod: 'cash' });
+  c.check('a cash job carries no processing fee at all',
+    offline.gatewayFeeCentavos === 0 && offline.customerTotalCentavos === 80000,
+    String(offline.gatewayFeeCentavos));
+  c.check('an online job discloses the fee as its own amount',
+    online.gatewayFeeCentavos > 0 && online.gatewayFee && online.gatewayFee.source.length > 20
+      && /2026-10-27/.test(online.gatewayFee.source),
+    JSON.stringify(online.gatewayFee).slice(0, 120));
+  c.check('the fee is inside what the payer is charged',
+    online.customerTotalCentavos === 80000 + online.gatewayFeeCentavos,
+    online.customerTotalCentavos + ' against 80000 + ' + online.gatewayFeeCentavos);
+  c.check('and is not inside what the platform earns',
+    online.platformRevenueCentavos === online.commissionCentavos + online.fixedFeeCentavos,
+    String(online.platformRevenueCentavos));
+
+  /* The two refusals the rule is actually made of. Each hands the kernel a breakdown that is
+     identical to a good one in every field except the one that would move the loss onto
+     Sukinnect, and requires the seam to say no — naming which no it said, so neither clause can
+     be quietly deleted while the other keeps the check green. */
+  c.check('a breakdown that leaves the fee out of what the payer is charged is refused',
+    (() => {
+      const absorbed = Object.assign({}, online, {
+        customerTotalCentavos: online.customerTotalCentavos - online.gatewayFeeCentavos });
+      try { assertGatewayNotAbsorbed(absorbed); return false; }
+      catch (err) { return /cannot be absorbed/.test(err.message); }
+    })(), 'the kernel accepted a breakdown that absorbs the fee');
+  c.check('a breakdown that counts the fee as platform revenue is refused',
+    (() => {
+      const counted = Object.assign({}, online, {
+        platformRevenueCentavos: online.platformRevenueCentavos + online.gatewayFeeCentavos });
+      try { assertGatewayNotAbsorbed(counted); return false; }
+      catch (err) { return /not platform revenue/.test(err.message); }
+    })(), 'the kernel accepted the processor\'s cut as its own earnings');
+  c.check('and a cash breakdown is not refused, because there is nothing to absorb',
+    (() => { try { assertGatewayNotAbsorbed(offline); return true; } catch (e) { return false; } })(),
+    'the guard refused a booking that carries no processing fee');
+  c.check('a settlement that absorbed the fee cannot be booked', (() => {
+    /* The absorption test, run against the ledger rather than argued: take a real online job,
+     * drop the fee out of what the customer is recorded as paying, and try to post the
+     * settlement. The credit side still carries the fee, so the event does not balance — which
+     * is the accounting form of the business rule, and the reason the rule cannot be broken by
+     * a screen that forgets to add the line. */
+    const b = BOOKINGS.find(x => x.pricing && x.pricing.gatewayFeeCentavos > 0);
+    if (!b) return false;
+    const absorbed = Object.assign({}, b.pricing,
+      { customerTotalCentavos: b.pricing.customerTotalCentavos - b.pricing.gatewayFeeCentavos });
+    const fake = Object.assign({}, b, { pricing: absorbed });
+    const lines = [{ account: 'customer_deposit', scope: b.id, direction: 'debit',
+                    amountCentavos: absorbed.customerTotalCentavos }].concat(settlementLines(fake));
+    try { postEvent('test.absorbed-fee', lines, { bookingId: b.id }); return false; }
+    catch (err) { return /does not balance/.test(err.message); }
+  })(), 'a fee-absorbing settlement was accepted by the ledger');
+  c.check('a refund returns the service money and not the processor\'s fee', (() => {
+    const b = BOOKINGS.find(x => x.pricing && x.pricing.gatewayFeeCentavos > 0 && isSettled(x));
+    if (!b) return false;
+    const cap = refundableCentavos(b);
+    return cap === b.pricing.customerTotalCentavos - b.pricing.gatewayFeeCentavos
+      && refundLines(b, cap).every(l => l.account !== 'gateway_fee_payable');
+  })(), 'the refund path was funding the processor out of the platform');
+  c.check('paid and regulated features are off, and nothing in the books is waiting for them',
+    ['subscriptions', 'promotedListings', 'partnerRevenue', 'lendingReferral', 'voiceInput']
+      .every(f => CONFIG.featureFlags[f] === false)
+      && Object.keys(ACCOUNTS).every(a => !/subscription|promotion|partner/i.test(a))
+      && LEDGER.every(e => !/subscription|promotion|partner/i.test(e.eventType)),
+    JSON.stringify(CONFIG.featureFlags));
+  c.check('a flag is read by the kernel, not by the markup',
+    featureEnabled('voiceInput') === false && featureEnabled('nothing') === false,
+    String(featureEnabled('voiceInput')));
+
   /* parts are collected for the provider, never commissioned */
   const p = computeBreakdown({ baseCentavos: 50000, categoryId: 'cleaning',
                                inclusions: [{ label: 'Cleaning supplies', amountCentavos: 1500 }] });
-  c.check('a parts charge does not raise the commission', p.commissionCentavos === 5000, String(p.commissionCentavos));
+  c.check('a parts charge does not raise the commission', p.commissionCentavos === 600, String(p.commissionCentavos));
   c.check('the customer total includes the parts', p.customerTotalCentavos === 51500, String(p.customerTotalCentavos));
   c.check('settlement to the provider includes the parts',
-    settlementToProvider(p) === 45000 + 1500, String(settlementToProvider(p)));
+    settlementToProvider(p) === 49400 + 1500, String(settlementToProvider(p)));
   c.check('so the split still balances',
     settlementToProvider(p) + p.commissionCentavos === p.customerTotalCentavos);
 
@@ -470,7 +548,8 @@ suite('ledger', async () => {
   c.check('every ledger event balances', unbalanced.length === 0,
     unbalanced.map(e => e.eventType).join(','));
   c.check('the seed wrote real history', LEDGER.length > 0, String(LEDGER.length));
-  const KINDS = ['payment.authorized', 'payment.voided', 'booking.settled', 'booking.settled_cash', 'dispute.held'];
+  const KINDS = ['payment.authorized', 'payment.voided', 'booking.settled', 'booking.settled_cash',
+                 'dispute.held', 'gateway.fee_paid'];
   c.check('only money movements appear at boot',
     LEDGER.every(e => KINDS.includes(e.eventType)),
     LEDGER.map(e => e.eventType).filter(t => !KINDS.includes(t)).join(','));
@@ -566,7 +645,12 @@ suite('ledger', async () => {
     payable === owed, payable + ' vs ' + owed);
 
   /* configuration is a decision, not a constant, and history survives it */
-  c.check('the default rate is the deck’s worked example', CONFIG.commissionRateDefault === 0.10);
+  c.check('the default rate is the 1.2 percent of the Master Plan under a 1.3 percent cap',
+    CONFIG.commissionRateDefault === 0.012 && CONFIG.commissionRateCap === 0.013,
+    CONFIG.commissionRateDefault + ' / cap ' + CONFIG.commissionRateCap);
+  c.check('no seed froze a rate above the cap',
+    BOOKINGS.filter(b => b.pricing).every(b => b.pricing.commissionRate <= CONFIG.commissionRateCap),
+    BOOKINGS.filter(b => b.pricing && b.pricing.commissionRate > CONFIG.commissionRateCap).map(b => b.id).join(','));
   c.check('no booking inherits today’s rate table',
     BOOKINGS.filter(b => b.pricing).every(b => typeof b.pricing.commissionRate === 'number'));
   const before = LEDGER.length;
@@ -1066,30 +1150,114 @@ suite('admin', async () => {
   c.check('the dashboard no longer quotes an invented month', !/42,800|48,200|42\.8k/.test(dash));
   c.check('and no longer splits revenue that was never earned', !/Revenue allocation|Community programs/.test(dash));
 
-  /* configuration is editable, audited, and does not rewrite history */
+  /* configuration is editable, audited, capped, and does not rewrite history. The values typed here
+     used to be 18% and 25% — both of which the Master Plan forbids, so the block was proving that a
+     rate could be saved rather than that the right rate is saved. 1.0% is the plan's stated
+     alternative and 1.3% is exactly the ceiling, so the legal path is still exercised. */
   const before = CONFIG.commissionRateDefault;
   const frozenJob = BOOKINGS.find(b => b.pricing);
   const frozenRate = frozenJob.pricing.commissionRate;
-  el('cfg-commissionRateDefault').value = '18';
+  el('cfg-commissionRateDefault').value = '1';
   el('cfg-taxRate').value = '12';
   el('cfg-payoutMinCentavos').value = '250';
-  el('cfgcat-plumbing').value = '25';
+  el('cfgcat-plumbing').value = '1.3';
   commitConfig();
-  c.check('a saved rate takes effect', CONFIG.commissionRateDefault === 0.18, String(CONFIG.commissionRateDefault));
+  c.check('a saved rate takes effect', CONFIG.commissionRateDefault === 0.01, String(CONFIG.commissionRateDefault));
   c.check('a VAT setting is recorded, not assumed silently', CONFIG.taxRate === 0.12, String(CONFIG.taxRate));
-  c.check('a per-category override is stored separately', CONFIG.commissionRateByCategory.plumbing === 0.25);
+  c.check('a per-category override is stored separately', CONFIG.commissionRateByCategory.plumbing === 0.013,
+    String(CONFIG.commissionRateByCategory.plumbing));
   c.check('the change is written to a log', CONFIG_AUDIT.length >= 3 && CONFIG_AUDIT[0].actor === 'admin');
   c.check('and the job booked earlier keeps the rate it agreed', frozenJob.pricing.commissionRate === frozenRate);
   const withTax = app.computeBreakdown({ baseCentavos: 100000, categoryId: 'plumbing' });
-  c.check('a new job pays the category rate', withTax.commissionCentavos === 25000, String(withTax.commissionCentavos));
+  c.check('a new job pays the category rate', withTax.commissionCentavos === 1300, String(withTax.commissionCentavos));
   c.check('and VAT now appears, on the platform fee only',
-    withTax.taxCentavos === Math.round((25000 + CONFIG.fixedFeeCentavos) * 0.12), String(withTax.taxCentavos));
+    withTax.taxCentavos === Math.round((1300 + CONFIG.fixedFeeCentavos) * 0.12), String(withTax.taxCentavos));
+  /* The ceiling, twice: the form refuses it so an admin sees which field, and the kernel refuses it
+     again so no other caller can go around the form. A refusal is asserted as a stored value that
+     did NOT move, which is the only way to tell a guard from a toast. */
+  c.check('a rate above the cap is refused at the form', (() => {
+    el('cfg-commissionRateDefault').value = '8'; commitConfig();
+    return CONFIG.commissionRateDefault === 0.01;
+  })(), String(CONFIG.commissionRateDefault));
+  c.check('and refused inside setConfig, not only by the form', (() => {
+    let msg = '';
+    try { setConfig({ commissionRateDefault: 0.08 }, { role: 'admin' }); } catch (e) { msg = e.message; }
+    return /cap/.test(msg) && CONFIG.commissionRateDefault === 0.01;
+  })(), 'the save went through anyway');
+  c.check('a per-category override above the cap is refused too, and names the category', (() => {
+    let msg = '';
+    try { setConfig({ commissionRateByCategory: { cleaning: 0.05 } }, { role: 'admin' }); } catch (e) { msg = e.message; }
+    return /cleaning/.test(msg) && CONFIG.commissionRateByCategory.cleaning === undefined;
+  })(), 'an override slipped past the ceiling');
+
+  /* ---- what the console says when it says no, and what it says about its own figures ----
+     Three refusals used to share one sentence and two rates used to share one rendering, so the
+     words a person acted on described a rule that had not fired. Each is asserted from the painted
+     surface or the toast the app raised, never from the source text that explains the fix. */
+  c.check('an over-cap rate is refused in words about the ceiling, not about signs', (() => {
+    const v = boot();
+    v.state.view = 'app'; v.state.role = 'admin';
+    v.state.tab = 'admin_dashboard'; v.state.adminScreen = 'finance';
+    v.render();
+    const e = id => v._document.getElementById(id);
+    /* The harness will hand out a fake element for any id, so the field's presence in the painted
+     markup is the precondition — otherwise this types into a control the screen never drew. */
+    if (!e('screen').innerHTML.includes('id="cfg-commissionRateDefault"')) return false;
+    e('cfg-commissionRateDefault').value = '8';
+    v.commitConfig();
+    const said = (e('toast-root').children || [])
+      .map(t => (t.children || []).map(k => k.textContent).join('')).join(' | ');
+    return /cannot exceed 1\.3%/.test(said) && !/negative/.test(said)
+      && v.CONFIG.commissionRateDefault === 0.012;
+  })(), 'the refusal named a rule that had not fired');
+  c.check('and a per-category override is refused in words that name the trade', (() => {
+    const v = boot();
+    v.state.view = 'app'; v.state.role = 'admin';
+    v.state.tab = 'admin_dashboard'; v.state.adminScreen = 'finance';
+    v.render();
+    const cleaning = v.SERVICES.find(s => s.id === 'cleaning');
+    const e = id => v._document.getElementById(id);
+    if (!e('screen').innerHTML.includes('id="cfgcat-cleaning"')) return false;
+    e('cfgcat-cleaning').value = '5';
+    v.commitConfig();
+    const said = (e('toast-root').children || [])
+      .map(t => (t.children || []).map(k => k.textContent).join('')).join(' | ');
+    return said.indexOf(cleaning.label + ' rate cannot exceed 1.3%') >= 0
+      && v.CONFIG.commissionRateByCategory.cleaning === undefined;
+  })(), 'the override refusal did not say which trade it refused');
+  c.check('the console lists every priced gateway method with its dated source', (() => {
+    const v = boot();
+    const html = String(v.configPanel());
+    const methods = Object.keys(v.CONFIG.gatewayFees);
+    const offered = v.requestPaymentOptions().map(o => o.code);
+    /* The population guard: a scan that found no priced method is not a clean table, and a table
+     that omits one is the defect this check is for. */
+    if (methods.length < 4) return false;
+    return methods.every(m => {
+      const name = v.GATEWAY_METHOD_NAMES[m];
+      const at = name ? html.indexOf(name) : -1;
+      if (at < 0) return false;
+      const row = html.slice(at, at + 700);
+      const spec = v.CONFIG.gatewayFees[m];
+      const carriesSource = spec
+        ? /checked 2026-10-27/.test(row) && /no signed quote/.test(row)
+        : /no processor/.test(row) && /₱0\.00/.test(row);
+      const saysUnreachable = offered.indexOf(m) >= 0 || /not offered in this build/.test(row);
+      return carriesSource && saysUnreachable;
+    });
+  })(), 'a gateway rate was configured without being shown, or shown without its source');
+  c.check('the change log prints a rate with the decimal the rate has', (() => {
+    const v = boot();
+    v.setConfig({ commissionRateDefault: 0.01 }, { role: 'admin' });
+    const row = v.CONFIG_AUDIT.filter(a => a.key === 'commissionRateDefault').slice(-1)[0];
+    return !!row && row.from === 0.012 && /1\.2% → 1%/.test(String(v.configPanel()));
+  })(), 'two different rates printed the same in the audit log');
   c.check('the split still reconciles with tax on',
     withTax.providerShareCentavos + withTax.commissionCentavos + withTax.passThroughCentavos + withTax.fixedFeeCentavos + withTax.taxCentavos
       === withTax.customerTotalCentavos);
   c.check('a negative rate is refused', (() => {
     el('cfg-commissionRateDefault').value = '-5'; commitConfig();
-    return CONFIG.commissionRateDefault === 0.18;
+    return CONFIG.commissionRateDefault === 0.01;
   })());
   setConfig({ commissionRateDefault: before, taxRate: 0, commissionRateByCategory: {} }, { role: 'admin' });
 
@@ -1237,6 +1405,90 @@ suite('hygiene', async () => {
   const body = src.slice(src.lastIndexOf('<script>') + 8, src.lastIndexOf('</script>'));
   const css = src.slice(0, src.indexOf('</style>'));
 
+  /* The top bar is the one element every screen of the walk paints, so it is the element where
+     "not a system" shows first. The heading size used to live on `.topbar .title` while `h1` was
+     reset to `font-size:inherit`, which meant a screen that wrote a bare <h1> got 16px — the body
+     size, identical to its own `.sub` line — and a screen that remembered the class got 20px, or
+     24px on a root tab. Nineteen bars hand-wrote their heading, thirteen used the shared one, and
+     no sensor saw the split because 16px is on the scale and clears the floor. The rule is now
+     positional: an h1 inside a bar cannot decline its size.
+       Each half is asserted as a positive so the pair cannot pass by matching nothing: a blinded
+     CSS scan makes "no class-keyed rule" true and "the positional rule exists" false at once. */
+  const positional = (css.match(/\.topbar h1\{[^}]*font-size:var\(--t-title\)/g) || []).length;
+  const rootStep = (css.match(/\.screen\[data-root="1"\] \.topbar h1\{[^}]*font-size:var\(--t-title-lg\)/g) || []).length;
+  const classKeyed = (css.match(/\.topbar \.title/g) || []).length;
+  const headings = (src.match(/<h1/g) || []).length;
+  c.check('a screen name is sized by the bar it sits in, not by a class a screen can forget',
+    positional >= 1 && rootStep >= 1 && classKeyed === 0,
+    'positional=' + positional + ' rootStep=' + rootStep + ' classKeyed=' + classKeyed + ' h1InMarkup=' + headings);
+
+  /* The inline copy of the rule was the proof: one bar typed font-family, font-size and weight
+     into its own heading because the class it needed was optional.
+       The control counts the component's call sites, not the <h1> tags in the file. It used to
+     require ten of those, and it failed twice on correct builds - once at eight, once at five - as
+     bars moved into the component, which is the change this file asked for. Counting how a thing is
+     written is not counting the thing: the heading guarantee is that the component emits one and
+     that every bar goes through it, and the painted population is the camera's
+     (tools/probe-bar-titles.js reports 83 titles and names every screen with none). */
+  const selfSized = (src.match(/<h1[^>]*style="[^"]*font-size/g) || []).length;
+  const componentHeading = /<h1 class="title">\$\{title\}/.test(src);
+  const headerCalls = (src.match(/screenHeader\(/g) || []).length - 1;
+  c.check('no bar hand-types its own heading size',
+    selfSized === 0 && componentHeading && headerCalls >= 30,
+    'selfSized=' + selfSized + ' componentHeading=' + (componentHeading ? 1 : 0) + ' headerCalls=' + headerCalls);
+
+  /* The same drift one element over: five bars typed the identical translucent action style into
+     their markup and a sixth typed a different one — a filled navy pill — so the same "leave the
+     app" action looked like two things depending on which screen painted it. `.btn.onbar` is the
+     name now. The positive control counts the uses, because a rule that matches nothing would make
+     "no inline copies remain" true on a build where the class was never applied at all. */
+  const onbarUses = (src.match(/class="btn sm onbar"/g) || []).length;
+  const onbarCopies = (src.match(/style="background:rgba\(255,255,255,0?\.12\)[^"]*"/g) || []).length
+    + (src.match(/style="background:var\(--brand-navy-deep\); color:var\(--on-brand\)/g) || []).length;
+  /* The base rule is anchored at the start of a line on purpose: `.screen[data-root="1"]
+     .btn.onbar{` also contains the substring `.btn.onbar{`, so an unanchored test stayed green
+     when the family deleted the base rule — a break that prints MISSED, read as a defect in the
+     check rather than in the break. */
+  const baseRule = /(^|\n)[ \t]*\.btn\.onbar\{/.test(css);
+  c.check('a control that sits in the brand bar takes the class, not a typed style',
+    onbarUses >= 5 && onbarCopies === 0 && baseRule,
+    'uses=' + onbarUses + ' inlineCopies=' + onbarCopies + ' baseRule=' + (baseRule ? 1 : 0));
+
+  /* A root tab's bar is white — the app's own decision, stated beside the rule that makes it — so a
+     control that paints on-brand text onto the bar goes invisible there. The camera found this at
+     1:1 on rgb(255,255,255) across seven screens, on the resident hub's "Log Out". This check pins
+     the known bar controls so the next one cannot be added without its inverted twin; a control in
+     a bar that is NOT on this list is still caught, but by the camera's contrast tally at every
+     corner, which is what caught this one. The population is deliberately narrow: `.chat-head` and
+     the message bubbles also paint on-brand text and need no root variant, because they bring their
+     own dark surface with them. */
+  const BAR_CONTROLS_OLD_REMOVED = null; /* the list and the root-variant scan moved into the check
+     below, which now asks the stronger question; see the comment there. */
+  /* The mobile-app pass made the bar ONE surface — light on every screen, not light on four tabs
+     and brand on the rest — so the question is no longer "does this control have a root-tab
+     variant" but "does any control that lives in a bar still paint on-brand ink at all", which on a
+     white bar is white on white. The chat header, its tag, the sent bubble and the concierge's
+     floating button keep on-brand text and bring their own dark surface, as the comment above
+     says; a bar control appearing anywhere else is the finding. Same hazard, asserted one step
+     earlier than the camera's contrast tally, and stronger: the old form forgave a brand control on
+     a drill-in because a drill-in WAS brand. */
+  const BAR_CONTROLS = ['.onbar', '.back-btn', '.notif-btn', '.title', '.sub'];
+  const onBrandCss = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const onBrandRules = onBrandCss.match(/\.[a-z-]+\{[^{}]*color:var\(--on-brand\)[^{}]*\}/g) || [];
+  const onBrand = onBrandRules.map(r => /\.[a-z-]+\{/.exec(r)[0].slice(0, -1));
+  const onBarInLightBar = BAR_CONTROLS.filter(c => onBrand.includes(c));
+  /* The exemption used to be a list of four names, which went stale the moment one of them stopped
+     painting on-brand ink (the chat tag has) and refuses the next honest case on sight (the stepper's
+     filled disc did). It is a measurement now: a rule may carry white ink exactly when the same
+     declaration block brings its own dark surface, which is the only way white-on-white cannot happen. */
+  const DARK_SURFACE = /background:var\(--(surface-brand|deep|brand-primary|md-sys-color-primary)\)/;
+  const explained = onBrandRules.filter(r => DARK_SURFACE.test(r)).map(r => /\.[a-z-]+\{/.exec(r)[0].slice(0, -1));
+  const unexplained = onBrand.filter(c => !explained.includes(c));
+  c.check('no control in the app bar paints on-brand ink, because every bar is a light surface now',
+    onBarInLightBar.length === 0 && unexplained.length === 0 && explained.length >= 3,
+    'bar controls still on-brand=' + onBarInLightBar.join(',') + ' unexplained=' + unexplained.join(',') +
+    ' explained-by-own-dark-surface=' + explained.length + ' (need 3)');
+
   /* a button that reports success without changing anything is the bug class this
      whole rebuild was asked to remove */
   const congratulating = (body.match(/onclick="showToast\(([^)]*)\)"[^>]*>/g) || [])
@@ -1258,6 +1510,155 @@ suite('hygiene', async () => {
   c.check('the fit loop still measures the factor instead of assuming it',
     /const scale = navFontScale\(\);/.test(body) && /function navFontScale/.test(body),
     'navFontScale() must exist and must be consulted before the property is written');
+
+  /* G7: one rule aligns and tabulates every figure a reader compares. Five ad-hoc `text-align:right`
+     declarations across a 1,600-line stylesheet meant a receipt's money column and a fee table's were
+     aligned by different hands — and right alignment alone could not have made either line up, because
+     Atkinson Hyperlegible Next paints proportional digits. The property was measured before it was
+     claimed, in the browser, on the shipped face: "111111" 78.16px against "000000" 124.42px under
+     `normal`, and 121.36px for both under `tabular-nums`. Comments are stripped before the count
+     because this rule's own comment names the string several times, and a needle that reads prose as
+     code is how a check passes on the wrong evidence. */
+  const cssCode = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  /* Two rules, not one. The single rule that both aligned and tabulated every figure was correct
+     while every one of those figures was a column — and `.stat .num` is not: a headline number in a
+     tile has nothing to line up with, and inheriting `text-align:right` from the shared rule is what
+     pushed the admin's roster figures into the far corner of their own tiles with a void between the
+     number and the label under it. So the ideas are separated, and the relation that keeps them
+     honest is asserted here: anything right-aligned must also be tabulated, because a column of
+     proportional digits does not line up however it is aligned. The counts of each declaration stay
+     at exactly one, checked below, so neither half can be re-typed per component. */
+  const alignRule = /([^{}]*)\{[^}]*text-align:\s*right[^}]*\}/.exec(cssCode) || [];
+  const tabularRule = /([^{}]*)\{[^}]*font-variant-numeric[^}]*\}/.exec(cssCode) || [];
+  const sel = s => String(s || '').split(',').map(x => x.trim().replace(/\s+/g, ' ')).filter(Boolean);
+  const aligned = sel(alignRule[1]), tabulated = sel(tabularRule[1]);
+  const untabulated = aligned.filter(s => !tabulated.includes(s));
+  c.check('alignment and tabular digits are two rules, and every aligned figure is also tabulated',
+    aligned.length >= 4 && tabulated.length >= aligned.length && untabulated.length === 0
+      && /\.row > b/.test(alignRule[1] || '') && /input\[type=number\]/.test(tabularRule[1] || ''),
+    'aligned=' + aligned.length + ' tabulated=' + tabulated.length
+      + ' untabulated=[' + untabulated.join(', ') + ']');
+  const alignCount = (cssCode.match(/text-align:\s*right/g) || []).length;
+  const tabularCount = (cssCode.match(/font-variant-numeric/g) || []).length;
+  c.check('no screen aligns its own numbers any more — one alignment and one numeral rule in the page',
+    alignCount === 1 && tabularCount === 1,
+    'text-align:right ' + alignCount + ' · font-variant-numeric ' + tabularCount +
+      ' (both must be exactly 1: a second is a per-screen override returning)');
+  const markupCode = src.replace(/\/\*[\s\S]*?\*\//g, '');
+  c.check('the value blocks that typed their own alignment take the shared class',
+    /class="row-value"/.test(markupCode) && !/style="[^"]*text-align:\s*right/.test(markupCode),
+    'row-value painted: ' + /class="row-value"/.test(markupCode) +
+      ' · inline right-align left: ' + (markupCode.match(/style="[^"]*text-align:\s*right/g) || []).length);
+
+  /* A card head is the one place a whole word and a count share a line, and a chip that refuses to
+     break hands the break to the heading instead. The rule is therefore on the row, not the chip, so
+     it has to be present at every head: count the pairs the markup actually paints and require each
+     one to sit in a wrapping row. The floor of ten is the positive control — a scan whose pattern
+     stopped matching would otherwise report "0 of 0 unwrapped" and read as clean. */
+  const heads = markupCode.match(/<div class="row([^"]*)"[^>]*>\s*<b class="card-title">[\s\S]{0,400}?<\/b>\s*<span class="chip"/g) || [];
+  const wrapped = heads.filter((h) => /class="row card-head"/.test(h));
+  c.check('every card head with a count beside its title is allowed to wrap',
+    heads.length >= 10 && wrapped.length === heads.length,
+    wrapped.length + ' of ' + heads.length + ' title+chip heads carry .card-head');
+  c.check('and the class that grants it is flex-wrap, not a chip that shrinks',
+    /\.card-head\s*\{[^}]*flex-wrap:\s*wrap/.test(cssCode) && /\.chip\s*\{[^}]*white-space:\s*nowrap/.test(cssCode),
+    '.card-head wraps: ' + /\.card-head\s*\{[^}]*flex-wrap:\s*wrap/.test(cssCode) +
+      ' · chip holds its word: ' + /\.chip\s*\{[^}]*white-space:\s*nowrap/.test(cssCode));
+
+  /* R6: §70 names a tertiary tier and this file never had one, which is how two screens could paint the
+     platform's phone line with the same weight as the in-app chat. The rule is on the tier, so the check is
+     both halves: the fallback wears it, nothing else still dresses a `tel:` link as a secondary, and the class
+     exists in the stylesheet rather than being invented inline per screen. */
+  const tertiaryTels = (markupCode.match(/class="btn tertiary"[^>]*href="tel:/g) || []).length;
+  const loudTels = (markupCode.match(/class="btn(?: secondary)?"[^>]*href="tel:/g) || []).length;
+  c.check('a call to the platform is dressed as the fallback it is on every screen that offers one',
+    tertiaryTels === 2 && loudTels === 0,
+    tertiaryTels + ' tertiary tel controls · ' + loudTels + ' still styled as a primary or secondary action');
+  c.check('and the tertiary tier is a rule in the system, not a style attribute on one button',
+    /\.btn\.tertiary\s*\{[^}]*background:\s*transparent/.test(cssCode) &&
+      /\.btn\{[^}]*min-height:var\(--tap\)/.test(cssCode),
+    '.btn.tertiary declared: ' + /\.btn\.tertiary\s*\{[^}]*background:\s*transparent/.test(cssCode) +
+      ' · .btn still carries the tap floor: ' + /\.btn\{[^}]*min-height:var\(--tap\)/.test(cssCode));
+
+  /* A9: §42's order is a reading order, and the screen used to lead with a credential pill stack and a map
+     that paints an empty rectangle offline, pushing rating and reviews below the fold. `hygiene` reads source
+     text everywhere else, so this is the one place in it that boots the page — the order is a property of what
+     the screen paints, and a grep over markup cannot see a template's evaluation order. */
+  const app = boot();
+  app.state.view = 'app'; app.state.role = 'resident'; app.state.selectedProvider = app.PROVIDERS[0];
+  const pdHtml = String(app.residentProviderDetail());
+  const pdOrder = ['Customer Ratings', 'Verification:', 'Chat Inquiries', 'id="leafletmap"']
+    .map((t) => pdHtml.indexOf(t));
+  c.check('the provider profile answers §42: rating, then verification, then contact, with the map last',
+    pdOrder.every((i) => i >= 0) && pdOrder.every((i, k) => k === 0 || i > pdOrder[k - 1]),
+    'positions ' + pdOrder.join(' < ') + ' (any -1 means the block is not painted at all)');
+  c.check('and its credential list reads the records, not a second copy of names',
+    pdHtml.indexOf('Verified credentials & certificates') < 0 &&
+      pdHtml.indexOf('Expiring soon') >= 0 && pdHtml.indexOf('Barangay Clearance') >= 0,
+    'old pill heading still painted: ' + (pdHtml.indexOf('Verified credentials & certificates') >= 0) +
+      ' · a record state shown: ' + (pdHtml.indexOf('Expiring soon') >= 0) +
+      ' · a record named: ' + (pdHtml.indexOf('Barangay Clearance') >= 0));
+
+  /* A11: an admin spoke kept the console's tab value, so `onRootTab()` answered "root" while a drill-in was on
+     screen — the page claimed no history entry for it, `stepBack()` returned early with nothing to undo, and
+     the only way out was a header button that hard-coded the console. Both paths now run through the page's
+     own back step, and the case that exposed it is asserted directly: enter the audit log from the account
+     tab, step back, and the account tab is where you land. */
+  c.check('no admin spoke hard-codes its own way back any more',
+    (markupCode.match(/state\.adminScreen='overview';\s*render\(\);/g) || []).length === 0 &&
+      (markupCode.match(/back:"stepBack\(\);"/g) || []).length >= 3,
+    'hard-coded destinations left: ' + (markupCode.match(/state\.adminScreen='overview';\s*render\(\);/g) || []).length);
+
+  const a11 = (function() {
+    const out = {};
+    app.state.view = 'app'; app.state.role = 'admin';
+    app.state.tab = 'profile'; app.state.adminScreen = 'overview'; app.render();
+    app.state.tab = 'admin_dashboard'; app.state.adminScreen = 'audit'; app.render();
+    out.spokeIsDrillIn = app.state.tab === 'admin_dashboard';
+    app.stepBack();
+    out.fromAccountCard = { tab: app.state.tab, screen: app.state.adminScreen };
+    app.state.tab = 'admin_dashboard'; app.state.adminScreen = 'overview'; app.render();
+    app.state.adminScreen = 'finance'; app.render();
+    app.stepBack();
+    out.fromConsole = { tab: app.state.tab, screen: app.state.adminScreen };
+    return out;
+  })();
+  c.check('and the header button lands where the phone would: account card → audit → back is the account tab',
+    a11.fromAccountCard.screen === 'overview' && a11.fromAccountCard.tab === 'profile' &&
+      a11.fromConsole.screen === 'overview' && a11.fromConsole.tab === 'admin_dashboard',
+    'from the account card: tab=' + a11.fromAccountCard.tab + ' screen=' + a11.fromAccountCard.screen +
+      ' · from the console: tab=' + a11.fromConsole.tab + ' screen=' + a11.fromConsole.screen);
+
+  /* A token declared in :root and never reached is the drift AGENTS.md §31 has been re-measuring by
+     hand in prose for weeks — "95 tokens declared with 92 of them reached" is a figure that moves with
+     every pass, which is why measure.cjs exists. The count is now a rule: the unreached set has to
+     equal the named exceptions, and the named exceptions have to still be declared. That second half is
+     what makes the exception a record rather than an escape hatch — deleting the token it names fails
+     the same check, so a token cannot quietly leave the palette while the sentence explaining it stays.
+     --info is the one exception today: §31 binds INFO to the deck's electric blue, and no surface in
+     this build paints an informational status tone, so the value is declared for the chip that will
+     use it and is measured as unreached rather than assumed to be in use.
+     The positive control is the declaration count: a scan that matched no token would report a clean
+     empty unreached list, which is this repository's named failure — a check that cannot fail looks
+     exactly like one that passes. */
+  const rootBlock = css.slice(css.indexOf(':root'), css.indexOf('}', css.indexOf(':root')));
+  const declaredTokens = [...rootBlock.matchAll(/(--[a-z0-9-]+)\s*:/g)].map(m => m[1]);
+  const unreachedTokens = declaredTokens.filter(d => !src.includes('var(' + d + ')'));
+  /* --info is kept declared because AGENTS.md §31 names it and §34 forbids spending it on a brand
+     chip. --accent-brand joins it on the same reasoning: §31A names it as one of the four flat
+     brand tokens, and the mobile-app pass spends the logo cyan through the Material 3 role name
+     --md-sys-color-secondary, which DESIGN-TOKENS.md maps to the Flutter ColorScheme field. A rule
+     that reaches for the brand name directly would be the second spelling the census exists to
+     catch, so the value stays declared and the exception says why.
+     --surface-brand-soft is used by the sign-in card, so it is not an exception. */
+  const TOKEN_EXCEPTIONS = ['--info', '--accent-brand'];
+  c.check('every :root token is reached, except the ones this file names and justifies',
+    declaredTokens.length > 80 &&
+      unreachedTokens.length === TOKEN_EXCEPTIONS.length &&
+      unreachedTokens.every(t => TOKEN_EXCEPTIONS.includes(t)) &&
+      TOKEN_EXCEPTIONS.every(t => declaredTokens.includes(t)),
+    'declared ' + declaredTokens.length + ' · unreached ' + JSON.stringify(unreachedTokens) +
+      ' · exceptions ' + JSON.stringify(TOKEN_EXCEPTIONS));
 
   /* Decided 2026-10-21: the app declares no dark theme, so it declares itself light. Without this the
      published web surface is exposed to Chrome for Android's Auto Dark Theme, which rewrites colours
@@ -1291,10 +1692,13 @@ suite('hygiene', async () => {
      been caught doing exactly that with a typed claim inside a comment. */
   const codeOnly = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '');
   const proInCode = (codeOnly.match(/\bPro\b/g) || []).length;
+  /* The bare prefix "Service Pro" also matches inside "Service Professional", which the legal
+     documents write legitimately — so the word-boundary form is the one that asks the question the
+     ruling actually answers. This check failed on a correct build for exactly that reason. */
+  const proPhrase = /Service Pro\b/;
   c.check('no code, label or painted string calls a provider "Pro"',
-    proInCode === 0 && codeOnly.indexOf('Service Pro') < 0 && src.indexOf('Service Pro') > -1,
-    'standalone Pro in code: ' + proInCode + ' · exemption comment present: ' +
-      (src.indexOf('Service Pro') > -1));
+    proInCode === 0 && !proPhrase.test(codeOnly) && proPhrase.test(src),
+    'standalone Pro in code: ' + proInCode + ' · exemption comment present: ' + proPhrase.test(src));
 
   /* Every number field in this app holds money, a weight, a count of days or a rate, and none of
      them can sensibly be negative. Seven declared a lower bound and four did not — including the
@@ -1408,8 +1812,13 @@ suite('hygiene', async () => {
   ];
   const missingTap = tapRules.filter(([, re]) => !re.test(src)).map(([n]) => n);
   c.check('every control raised to the tap floor still declares it', missingTap.length === 0, missingTap.join(' | '));
+  /* The control names the admin's return-to-roster handler, which is a real behaviour of a real bar,
+     and it accepts either spelling. It used to require the attribute form, so converting that bar
+     into the shared component - the change this file has been asking for - failed the check while
+     the button worked exactly as before. An instrument's assumption about how code is shaped is part
+     of what the code has to respect, and that is a cost worth naming rather than absorbing. */
   c.check('no hand-rolled 30px back button survives', !/width:30px; height:30px/.test(src)
-    && /class="back-btn" onclick="state\.tab='admin_verifications'; state\.adminProviderCategory='verified'/.test(src));
+    && /(class="back-btn" onclick="|back: ")[^"]*adminProviderCategory='verified'/.test(src));
   /* Scoped to a style attribute on purpose: the first cut of this pattern let [^"]* run across
      whole CSS rules and reported two false hits, because a rule that sets width and a later
      media query that overrides it are not "the same attribute declaring a size twice". */
@@ -1430,13 +1839,43 @@ suite('hygiene', async () => {
   const quoted = new Set([...body.matchAll(/\bic\(\s*['"]([a-z0-9-]+)['"]/g)].map(m => m[1]));
   const carried = new Set([...body.matchAll(/\bicon:\s*'([a-z0-9-]+)'/g)].map(m => m[1]));
   const empties = new Set([...body.matchAll(/\bemptyState\(\s*'([a-z0-9-]+)'/g)].map(m => m[1]));
-  const asked = new Set([...quoted, ...carried, ...empties]);
+  const asked = new Set([...quoted, ...carried, ...empties,
+    /* a fourth way a name arrives: reaching for the drawing directly rather than through ic(),
+       which is how the nav's filled variant is pinned further down this file. */
+    ...new Set([...body.matchAll(/\bICONS\.([a-z0-9-]+)\b/g)].map(m => m[1])),
+    /* a fifth and sixth way, both found by deleting a glyph and watching a screen lose it:
+       a nav item's second argument, and the role-icon map the sign-in chips read. */
+    ...new Set([...body.matchAll(/\bnavItem\(\s*'[^']*',\s*'([a-z0-9-]+)'/g)].map(m => m[1])),
+    ...new Set((/\bAUTH_ROLE_ICON\s*=\s*\{([^}]*)\}/.exec(body) || [, ''])[1]
+      .matchAll(/'([a-z0-9-]+)'/g).map(m => m[1]))]);
   const missing = [...asked].filter(n => !defined.has(n));
   c.check('every glyph the app can reach has a drawing', missing.length === 0, 'missing: ' + missing.join(','));
   c.check('and the names were actually looked for', asked.size >= 30 && defined.size >= asked.size,
     asked.size + ' reachable, ' + defined.size + ' drawn');
   c.check('no glyph key is declared twice', dupes === 0, dupes + ' duplicate entry(ies)');
-  c.check('the set stays the size of an icon system', defined.size <= 48, defined.size + ' entries');
+  /* The old rule was a ceiling of 48 entries, standing in for "nobody accumulates glyphs nobody
+     uses". The mobile-app pass replaces the seven AI-generated category rasters with drawn glyphs
+     for the trades themselves, gives the home grid its eighth "All services" tile and gives the
+     admin's Help Desk a support icon, so the set legitimately grows to 52 — and simply typing a
+     bigger number would have kept the proxy and lost the rule. It is replaced by what the number
+     was standing for: every entry is either reached by a call site or on a named allow-list, so an
+     unused glyph added tomorrow is still a finding, and every trade the catalogue declares still
+     has a drawing even if no `ic('name')` in markup reaches it (AGENTS.md: a name carried by a
+     data row is invisible to a grep for ic(). */
+  const DECLARED_ADDITIONS = new Set(['plumbing', 'electrical', 'cleaning', 'tutoring',
+    'appliance', 'delivery', 'fruit', 'grid', 'help']);
+  const unaccounted = [...defined].filter(n => !asked.has(n) && !DECLARED_ADDITIONS.has(n));
+  c.check('every declared glyph is reached by a call site or named as an addition',
+    unaccounted.length === 0, 'unaccounted: ' + unaccounted.join(','));
+  /* Optional marketplace categories may share a semantically related glyph; their data row must
+     still point to a glyph the rebuild actually draws. Parse the catalogue itself so IDs such as
+     `gown-rental` are included rather than silently skipped by a narrow regex. */
+  const serviceBlock = body.slice(body.indexOf('const SERVICES = ['), body.indexOf('\n];', body.indexOf('const SERVICES = [')));
+  const trades = [...serviceBlock.matchAll(/\{id:'([a-z0-9-]+)'[^}]*?icon:'([a-z0-9-]+)'/g)];
+  const tradeGaps = trades.filter(m => !defined.has(m[2])).map(m => m[1] + '->' + m[2]);
+  c.check('every catalogue service points to a declared drawable glyph',
+    trades.length >= 10 && tradeGaps.length === 0,
+    trades.length + ' services, undrawn ' + tradeGaps.join(','));
   /* reicon.js is 8 MB of LFS for a set the file now draws itself, and a page that
      waits for a custom element to register shows a screen with no icons for four
      seconds when it never does. The rebuild loads neither. */
@@ -1464,16 +1903,77 @@ suite('hygiene', async () => {
      sat above .modal-layer every control in those three dialogs was unreachable —
      the dialog was visible, dimmed, and inert. Only a hit-test in a real layout can
      see that, which is why the camera samples the panel; this pins the number the
-     layout has to keep. */
+     layout has to keep.
+     The number now lives in a named rung rather than in the rule, so the helper
+     resolves `var(--z-…)` against :root and falls back to a literal — a check that
+     only reads literals would have gone silently null on this change, which is the
+     orphaned-needle class this repository keeps meeting. And because the ladder
+     exists so no screen can invent its own rung, the assertion is the whole order,
+     not one pair. */
+  const ladderBlock = css.slice(css.indexOf(':root'), css.indexOf('}', css.indexOf(':root')));
+  const rungValue = (name) => {
+    const m = new RegExp('--' + name + '\\s*:\\s*(-?[0-9]+)').exec(ladderBlock);
+    return m ? parseInt(m[1], 10) : null;
+  };
   const layerZ = (sel) => {
     const rule = new RegExp('\\' + sel + '\\s*\\{([^}]*)\\}').exec(css);
-    const z = rule && /z-index:\s*(-?\d+)/.exec(rule[1]);
-    return z ? parseInt(z[1], 10) : null;
+    if (!rule) return null;
+    const lit = /z-index:\s*(-?\d+)/.exec(rule[1]);
+    if (lit) return parseInt(lit[1], 10);
+    const v = /z-index:\s*var\(--([a-z0-9-]+)\)/.exec(rule[1]);
+    return v ? rungValue(v[1]) : null;
   };
   const modalZ = layerZ('.modal-layer'), sheetZ = layerZ('.sheet-layer');
   c.check('a modal opened from a sheet sits above the sheet',
     modalZ !== null && sheetZ !== null && modalZ > sheetZ,
     '.modal-layer z-index ' + modalZ + ' against .sheet-layer ' + sheetZ);
+
+  const RUNGS = ['z-sticky', 'z-nav', 'z-fab', 'z-sheet', 'z-modal', 'z-map-veil', 'z-toast'];
+  const rungNums = RUNGS.map(rungValue);
+  const ladderMissing = RUNGS.filter((n, i) => rungNums[i] === null);
+  const ladderOutOfOrder = [];
+  for (let i = 1; i < rungNums.length; i++) {
+    if (rungNums[i] !== null && rungNums[i - 1] !== null && rungNums[i] <= rungNums[i - 1]) {
+      ladderOutOfOrder.push('--' + RUNGS[i] + '=' + rungNums[i] + ' against --' + RUNGS[i - 1] + '=' + rungNums[i - 1]);
+    }
+  }
+  c.check('the layer ladder declares every rung and keeps their order',
+    ladderMissing.length === 0 && ladderOutOfOrder.length === 0,
+    (ladderMissing.length ? 'no value for ' + ladderMissing.join(', ') : '') +
+    (ladderOutOfOrder.length ? ' | not ascending: ' + ladderOutOfOrder.join(', ') : '') +
+    ' | rungs ' + RUNGS.map((n, i) => n + '=' + rungNums[i]).join(' < '));
+
+  /* Nine distinct numbers used to answer one question — which layer is on top. Three sticky
+     action footers carried 10, 20 and 25, and the verification review painted its own overlay at
+     50 in a file that declares .modal-layer at 70. Comments are stripped first, because a sentence
+     quoting an old number is the same string to any scanner as a rule typing a new one — the §31
+     lesson about a hex inside a comment, arriving for a stacking value. The positive control counts
+     the var() uses: a scan whose good pattern matches nothing reads exactly like cleanliness. */
+  const markupNoComments = raw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const literalZ = (markupNoComments.match(/z-index:\s*-?[0-9]/g) || []).length;
+  const tokenZ = (markupNoComments.match(/z-index:\s*var\(--z-[a-z-]+\)/g) || []).length;
+  c.check('no layer types its own stacking number, and the ladder is what it types instead',
+    literalZ === 0 && tokenZ >= 6,
+    'literal z-index ' + literalZ + ' · var(--z-*) ' + tokenZ + ' (a floor of 6 uses, so a vanished pattern cannot pass)');
+
+  /* The dim behind a layer is one decision, and the :root comment above --scrim has claimed for some
+     time that every layer writes the token. The sheet's own scrim typed `.52` beside the dialog's `.48`,
+     so the claim was a description of an intention rather than of the file — the same shape as a token
+     nothing asks for.
+     Scoped to a *full-cover* rule rather than to every navy `background:`, because the first version
+     flagged `.seg-count` — an 18px count pill on a 3% wash, which is a tint, not a dim. The predicate is
+     the geometry that makes it a dim: four zero offsets, and a navy rgba painted straight into the rule.
+     Shadows are excluded for the same reason: a cast shadow is a different idea. */
+  const scrimRules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    .filter(([, , body]) => /top:\s?0;?\s*right:\s?0;?\s*bottom:\s?0;?\s*left:\s?0/.test(body))
+    .map(([, sel, body]) => ({ sel: sel.trim(), literal: /background:\s?rgba\(3,\s?0,\s?43/.test(body),
+      token: /background:\s?var\(--scrim\)/.test(body) }));
+  const dimLiterals = scrimRules.filter(r => r.literal).map(r => r.sel);
+  const dimTokens = scrimRules.filter(r => r.token).length;
+  c.check('the dim behind a full-cover layer is the token, not a per-layer alpha',
+    dimLiterals.length === 0 && dimTokens >= 2,
+    'literal dims on ' + (dimLiterals.join(', ') || 'no cover layer') + ' · var(--scrim) on ' + dimTokens +
+    ' (two is the floor: the sheet and the dialog)');
 
   /* Category artwork is static by owner's rule, not by taste: the picture is what
      tells a plumber from an electrician, and this app once ran 33 infinite
@@ -1506,20 +2006,37 @@ suite('hygiene', async () => {
      nothing else in this suite would notice. */
   const appDir = require('path').dirname(require('./harness.cjs').APP);
   const fsx = require('fs');
-  const artMap = src.slice(src.indexOf('const SERVICE_ART = {'), src.indexOf('const CAT_ART_PX'));
-  const artPaths = [...artMap.matchAll(/([a-z]+):\s*'([^']+)'/g)].map(m => ({ id: m[1], file: m[2] }));
   const catalogue = boot().SERVICES;
-  c.check('the art map is keyed by every category the catalogue holds',
-    catalogue.every(s => artPaths.some(a => a.id === s.id)),
-    'missing an entry for: ' + catalogue.filter(s => !artPaths.some(a => a.id === s.id)).map(s => s.id).join(','));
-  c.check('and every entry names a file that is actually on disk',
-    artPaths.length > 0 && artPaths.every(a => fsx.existsSync(require('path').join(appDir, a.file))),
-    'dangling: ' + artPaths.filter(a => !fsx.existsSync(require('path').join(appDir, a.file))).map(a => a.file).join(','));
-  c.check('category art is local — no CDN, no absolute URL, no base64 payload',
-    artPaths.every(a => /^assets\/[a-z0-9/-]+\.png$/.test(a.file)) &&
-    !/src="https?:|src="data:image/.test(src));
-  c.check('the tile image states its size and stays out of the accessibility tree',
-    /width="' \+ CAT_ART_PX \+ '" height="' \+ CAT_ART_PX/.test(src) && /alt=""/.test(src));
+  /* The seven machine-generated category PNGs are retired (mobile-app pass, §4.6). The four checks
+     above used to pin the raster contract — one file per category, on disk, local, sized, hidden
+     from the accessibility tree — and the equivalent assertions for a drawn glyph are these: every
+     category the catalogue holds names a glyph, that glyph carries real path data, the inline set
+     is the only icon source, and nothing in the page asks for a category raster at all. A blank
+     tile is still the failure being guarded; what changed is that a missing PNG is no longer how it
+     would happen. */
+  const iconKeys = new Set([...src.matchAll(/^  '?([a-z0-9-]+)'?: \{o:/gm)].map(m => m[1]));
+  const noGlyph = catalogue.filter(s => !iconKeys.has(s.icon));
+  const thinGlyph = catalogue.filter(s => {
+    const at = src.indexOf("  '" + s.icon + "': {o:");
+    const at2 = at < 0 ? src.indexOf('  ' + s.icon + ': {o:') : at;
+    if (at2 < 0) return true;
+    return src.slice(at2, at2 + 120).indexOf('d="', 10) < 0 || src.slice(at2, at2 + 120).length < 118;
+  });
+  c.check('every category the catalogue holds draws a glyph from the inline set',
+    catalogue.length >= 7 && noGlyph.length === 0,
+    'no glyph for: ' + noGlyph.map(s => s.id + '->' + s.icon).join(','));
+  c.check('and every category glyph carries real path data',
+    thinGlyph.length === 0, 'thin geometry: ' + thinGlyph.map(s => s.id).join(','));
+  /* Comments are stripped first, for the reason this repository already writes down twice: a
+     sentence explaining that the seven rasters were retired names the same path as a rule that
+     still asks for one. The history stays in the file; it is not a use. */
+  const codeOnlyForArt = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  c.check('no category asks for a raster any more',
+    !/SERVICE_ART|CAT_ART_PX|function catArt\(/.test(codeOnlyForArt) && !/assets\/category-art/.test(codeOnlyForArt),
+    'still referenced: ' + ['SERVICE_ART', 'CAT_ART_PX', 'function catArt(', 'assets/category-art']
+      .filter(p => codeOnlyForArt.includes(p)).join(','));
+  c.check('the tile glyph is sized where it is painted, not by a raster box',
+    /ic\(s\.icon,\s*28\)/.test(src));
   c.check('the flat SVG scene table is gone, not merely unused', !/const CAT_ART = \{/.test(src));
 
   /* The keyboard surface. Each of these was true-once-and-broke: a focus ring that
@@ -1586,12 +2103,62 @@ suite('hygiene', async () => {
   c.check('the face the app asks for first is one the stylesheet actually declares',
     !!firstFamily && declaredFamilies.includes(firstFamily),
     '--font-ui opens with ' + JSON.stringify(firstFamily) + '; fonts.css declares ' + declaredFamilies.join(', '));
+  /* Counted by distinct WEIGHT, not by block. fonts.css splits every family by subset, so a
+     family can arrive in eight blocks for four weights — counting blocks read 4 for Atkinson only because
+     that family happens not to be subset-split, and the check would have failed a correct Poppins swap. */
+  const uiFaces = fontFaces.filter(f => f.family === firstFamily);
+  const uiWeights = new Set(uiFaces.map(f => f.weight));
   c.check('the four weights the rebuild says it carries are really four',
-    fontFaces.filter(f => f.family === firstFamily).length === 4,
-    fontFaces.filter(f => f.family === firstFamily).map(f => f.weight || '?').join(',') || 'none');
+    uiWeights.size === 4,
+    [...uiWeights].sort().join(',') || 'none');
+  /* The set alone cannot see a deleted face: Poppins declares every weight twice (latin and latin-ext),
+     so removing one leaves four distinct weights and the check above stays green while a real file is
+     gone. The observable is the *relation* between the weights — a family that splits by subset splits
+     every weight the same way, so the counts must agree, and a weight with fewer files than its
+     neighbours is a face that stopped being declared. Stated as a relation for the reason §68 gives for
+     the block count: measured today, Atkinson carries one file per weight and Poppins two, so a fixed
+     number would fail a correct change of subset convention while this passes an added subset and
+     condemns a removed one. */
+  const uiWeightCounts = [...uiWeights].sort().reduce((m, w) => {
+    m[w] = uiFaces.filter(f => f.weight === w && f.files.length > 0).length;
+    return m;
+  }, {});
+  const uiCountVals = Object.values(uiWeightCounts);
+  const uiThin = uiCountVals.length
+    ? Object.entries(uiWeightCounts).filter(([, n]) => n !== Math.max(...uiCountVals))
+    : [['every weight', 0]];
+  c.check('every weight the interface family claims is declared the same number of times',
+    uiCountVals.length > 0 && uiThin.length === 0,
+    'files per weight: ' + Object.entries(uiWeightCounts).map(([w, n]) => w + '=' + n).join(' ') +
+      (uiThin.length ? ' — thin: ' + uiThin.map(([w, n]) => w + '=' + n).join(',') : ''));
   /* The serif only stays away if the alias holds and nothing bypasses the two tokens. */
   const literalFamilies = (css.match(/font-family:\s*[^;]+/g) || [])
     .filter(d => !/var\(--font-(ui|display)\)|inherit|font-family:\s*var\(--font/.test(d));
+  /* A face swap that silently un-aligned the money is the failure this guard exists for: the digits
+     need a family with tabular figures, and Poppins does not have one. So the shared numeral rule must
+     name --font-figures — and the check that matters is the probe's measurement, not this shape
+     assertion; this is what stops the rule quietly dropping the face again. */
+  const figureRule = /\.row > b[\s\S]{0,260}?font-variant-numeric:tabular-nums/.exec(css);
+  /* The face for digits has to be one the browser measured as TABULAR and WITHOUT a slashed zero.
+     Measured 2026-11-05 with node tools/shot.cjs --probe=@tools/probe-zero-style.js:
+       Atkinson Next      364.05 / 364.05 — tabular, and a slashed zero, seen in the screenshot
+       Plus Jakarta Sans  345.61 / 345.61 — tabular, plain round zero
+       Poppins            184.33 / 361.73 — carries no tabular feature at all
+     So the digits are Jakarta's while the words stay Poppins by the owner's ruling of 2026-10-27.
+     The previous form of this check pinned the literal "Atkinson Next" inside the declaration, so
+     it failed the FIX rather than the bug — the assertion is the relation (a figures face of its
+     own, distinct from the UI face) plus the measured choice. */
+  const figuresFace = /--font-figures:\s*"([^"]+)"/.exec(css);
+  const uiFace = /--font-ui:\s*"([^"]+)"/.exec(css);
+  c.check('the figures name their own face, because the UI face has no tabular digits',
+    !!figureRule && /font-family:var\(--font-figures\)/.test(figureRule[0]) &&
+    !!figuresFace && !!uiFace && figuresFace[1] !== uiFace[1] &&
+    figuresFace[1] === 'Plus Jakarta Sans',
+    !figureRule ? 'no shared numeral rule found'
+    : !figuresFace || !uiFace ? 'no figures or UI face declared'
+    : figuresFace[1] === uiFace[1] ? 'the figures inherit the UI face, which is not tabular'
+    : 'rule declares tabular-nums without --font-figures');
+
   c.check('no rule names a font family directly — every one goes through the two tokens',
     literalFamilies.length === 0, literalFamilies.map(d => d.slice(0, 46)).join(' | '));
   c.check('the display face is an alias, so the decorative serif stays out',
@@ -1671,6 +2238,20 @@ suite('hygiene', async () => {
       && prefixes.indexOf('suki-diag-') > -1 && hourGuard,
     prefixes.length + ' prefixes [' + prefixes.join(' ') + '], hour guard '
       + (hourGuard ? 'present' : 'MISSING'));
+
+  /* A walk row that throws in its own setup paints nothing, and until 2026-11-06 the only evidence
+     was a screen count nobody compared against --list: provider-job-path skipped at every corner of
+     every sweep from the day it was added, and eleven corners printed "0 failing tallies" over 101 of
+     102 screens while the stepper it was written to measure went unseen. The camera prints a tally a
+     sweep fails on now, and the tally is only honest if the SKIP branch feeds it — so the print and
+     the push are asserted as one statement, at a distance, because a push that moved out of the
+     branch is a tally that reads 0 forever. */
+  const skipPrint = camera.indexOf("console.log('  SKIP ' + name");
+  const skipPush = camera.indexOf('skipped.push({ name, why: err })');
+  const skipTally = camera.indexOf('camera rows that never painted a screen');
+  c.check('a camera row that never paints is counted by the run, not only printed',
+    skipPrint > -1 && skipPush > -1 && skipTally > -1 && Math.abs(skipPush - skipPrint) < 200,
+    'SKIP print at ' + skipPrint + ', push at ' + skipPush + ', tally line at ' + skipTally);
 
   /* The commit-subject instrument is the only one whose subject is the messages this repository writes, and both of
      its halves fail by printing something reassuring. The list was originally scoped `origin/main..HEAD`, which by
@@ -1775,7 +2356,7 @@ suite('hygiene', async () => {
 suite('login', async () => {
   const c = makeChecker();
   const app = boot();
-  const { state, loginHTML } = app;
+  const { state, loginHTML, LEGAL_DOCUMENTS } = app;
   const safe = (label, fn) => { try { return fn(); } catch (err) { c.check(label + ' threw', false, err.message); return ''; } };
 
   state.view = 'login';
@@ -1822,6 +2403,25 @@ suite('login', async () => {
   c.check('the form sits in one centred card on the soft brand surface',
     /\.auth-screen\{[\s\S]{0,260}?background:var\(--surface-brand-soft\)/.test(css)
     && /\.auth-sheet\{[\s\S]{0,400}?box-shadow:var\(--shadow-md\)/.test(css));
+  /* No blended fill survives anywhere in the stylesheet, by the owner's ruling of 2026-10-27 that the
+     palette is flat. Two things this has to say and cannot fake:
+       · a conic-gradient with hard stops is how a segmented ring is drawn in CSS at all — the workload
+         ring has no blend in it, so it is declared as an exception beside the rule rather than silently
+         allowed, and a stale exception is a finding;
+       · comments are stripped first. Several sentences still name the gradient they describe having been
+         removed, and to a scanner those are the same string as a rule painting one — the §31 lesson about
+         a hex in a comment, arriving for a gradient.
+     The positive control counts the flat surfaces: a scan whose good pattern matched nothing would print
+     "no gradients" forever, which is the failure this repository keeps meeting. */
+  const cssNoComments = css.replace(/\/\*[^]*?\*\//g, ' ');
+  const blendedFills = (cssNoComments.match(/linear-gradient|radial-gradient/g) || []).length;
+  const flatSurfaces = (cssNoComments.match(/var\(--surface-brand[a-z-]*\)|var\(--accent-brand\)/g) || []).length;
+  const ringDecl = (cssNoComments.match(/conic-gradient/g) || []).length;
+  const ringExcused = /flat-palette-exception:\s*conic-gradient/.test(css);
+  c.check('the palette is flat: no linear or radial fill remains, and the one ring that uses a gradient says why',
+    blendedFills === 0 && flatSurfaces >= 8 && (ringDecl === 0 || ringExcused),
+    'blended fills ' + blendedFills + ' · flat surface uses ' + flatSurfaces +
+    ' (a floor of 8) · conic uses ' + ringDecl + ' · declared exception ' + ringExcused);
   c.check('the card never outgrows the viewport, so the keyboard has room',
     /\.auth-sheet\{[\s\S]{0,400}?max-height:100%/.test(css)
     && /\.auth-screen\{[\s\S]{0,260}?overflow:hidden/.test(css));
@@ -1849,7 +2449,8 @@ suite('login', async () => {
   c.check('no disclaimer paragraph competes with the fields',
     !/auth-note-line|not an account|Demo environment/.test(one));
   c.check('and the sign-in still says the account is not stored',
-    /this account is not stored/.test(app._source));
+    /the account itself is not stored/.test(app._source)
+      && /Only the record of which documents you read is kept on this device/.test(app._source));
   c.check('forgot password reads as a link under the field', /class="auth-forgot"/.test(one));
   c.check('log in is the only primary action',
     (one.match(/class="btn" id="login-btn"/g) || []).length === 1);
@@ -1899,6 +2500,47 @@ suite('login', async () => {
     a.role === 'resident' && a.doc === d.id && a.version === d.version));
   c.check('the registration record stores the version read or accepted for each document',
     versionedAcceptances);
+  /* The owner's ruling of 2026-10-27: the acceptance box stays off until each document it names has
+     been scrolled to its end. What follows is the painted half; the real half is further down,
+     because `disabled` is a picture and a script can still tick the box — `submitAuth` refuses on
+     its own terms. The document links live in their own section on registration, while the
+     acceptance row names which documents are accepted and which are only acknowledged as read.
+     The positive control counts the documents themselves, because a gate over an empty set reports
+     "all read" forever. */
+  const consentRowOf = (m) => m.slice(m.indexOf('id="reg-terms"'), m.indexOf('id="reg-marketing"'));
+  const gateDocs = app.acceptDocIds();
+  const lockedRow = consentRowOf(reg);
+  const docStart = reg.indexOf('class="auth-documents"');
+  const docEnd = reg.indexOf('</section>', docStart);
+  const documentsSection = docStart >= 0 && docEnd >= 0 ? reg.slice(docStart, docEnd) : '';
+  const rowOpens = app.LEGAL_DOCUMENTS.map(d => d.id)
+    .filter(id => documentsSection.indexOf("openLegalDoc('" + id + "')") > -1);
+  c.check('the acceptance is gated on documents that exist (a gate over none is silence)',
+    gateDocs.length >= 2, 'consent names: ' + gateDocs.join(', ') + ' — floor of 2');
+  c.check('registration links every versioned document that its gate reads',
+    gateDocs.length >= 2 && rowOpens.length === gateDocs.length && gateDocs.every(id => rowOpens.indexOf(id) > -1),
+    'registration links ' + rowOpens.join(', ') + ' | gate requires ' + gateDocs.join(', '));
+  /* The row above is built FROM the gate, so their agreement is a tautology: filter a document out of
+     the list and the row shrinks with it and every relation still holds. This is the check that can see
+     the list itself move — the gate has to hold every document the card links, including the notice the
+     reader only acknowledges having read, which is the half of the owner's "these two" that is not an
+     acceptance. `falsify-scroll-gate` break D filters the notice out and must go red here. */
+  const linkedIds = (documentsSection.match(/openLegalDoc\('([a-z-]+)'\)/g) || []).map(s => /'([a-z-]+)'/.exec(s)[1]);
+  const noticeIds = app.LEGAL_DOCUMENTS.filter(d => d.consent === 'read').map(d => d.id);
+  c.check('the gate holds every document the card links, including the one that is only read',
+    noticeIds.length >= 1 && linkedIds.length >= 3
+      && linkedIds.every(id => gateDocs.indexOf(id) > -1)
+      && noticeIds.every(id => gateDocs.indexOf(id) > -1),
+    'card links ' + linkedIds.filter((v, i, a) => a.indexOf(v) === i).join(', ')
+      + ' · gate holds ' + gateDocs.join(', '));
+  c.check('an unread register paints the box off and says what would turn it on',
+    /disabled aria-disabled="true"/.test(lockedRow) && /class="auth-hint"/.test(reg)
+      && /scrolled it to the end/.test(reg),
+    'row of ' + lockedRow.length + ' chars, ' + rowOpens.length + ' document button(s)');
+  c.check('and a sign-in screen has no legal gate, because it creates nothing',
+    consentRowOf(one).length === 0 && lockedRow.length > 0
+      && !/class="auth-documents"/.test(one),
+    'login row length ' + consentRowOf(one).length);
   c.check('fields carry real labels, not a placeholder alone', /for="login-email"/.test(one));
   c.check('the password can be shown', /id="toggle-pw-btn"/.test(one));
   c.check('the sample credential still arrives prefilled for the chosen role',
@@ -1920,10 +2562,66 @@ suite('login', async () => {
   const seedBrgy = regBoot.state.profileData.barangay;
   regBoot.state.view = 'login'; regBoot.state.role = 'resident'; regBoot.state.authMode = 'register';
   regBoot.render();
+  /* The scroll gate is a rule about geometry, and the harness mounts no sheet — `renderSheet()`
+     paints into `#sheet-root`, outside the fragment the harness assembles — so the element is handed
+     to the app's own scroll function with the measurements a finger produces, rather than the state
+     being written. That keeps `docScrolled` in the path every check below depends on; the camera
+     walks the real sheet and proves the geometry where it exists. Note the numbers: scrollTop plus
+     clientHeight reaches scrollHeight, so this is the at-end branch, not the escape for a document
+     too short to scroll. */
+  const AT_END = { scrollTop: 1000, clientHeight: 600, scrollHeight: 1600 };
+  const HALF_WAY = { scrollTop: 300, clientHeight: 600, scrollHeight: 1600 };
+  const readEveryDoc = (b) => b.acceptDocIds().forEach(id => b.docScrolled(id, AT_END));
+  readEveryDoc(regBoot);
+  regBoot.render();
+  const unlockedRow = consentRowOf(regBoot.loginHTML());
+  c.check('once each document is read the same box paints on, and its buttons offer a re-read',
+    !/disabled aria-disabled="true"/.test(unlockedRow) && !/class="auth-hint"/.test(unlockedRow)
+      && /Re-read/.test(regBoot.loginHTML()) && /scrolled it to the end/.test(reg)
+      && regBoot.acceptanceUnlocked(),
+    'unlocked row ' + unlockedRow.length + ' chars · Re-read buttons ' + (unlockedRow.match(/>Re-read/g) || []).length);
+  const midBoot = boot();
+  midBoot.state.view = 'login'; midBoot.state.role = 'resident'; midBoot.state.authMode = 'register';
+  midBoot.render();
+  midBoot.acceptDocIds().forEach(id => midBoot.docScrolled(id, HALF_WAY));
+  c.check('opening a document is not reading it: half-way geometry unlocks nothing',
+    midBoot.acceptDocIds().every(id => !midBoot.docIsRead(id)) && !midBoot.acceptanceUnlocked()
+      && /disabled aria-disabled="true"/.test(consentRowOf(midBoot.loginHTML())),
+    'read after a half-way scroll: ' + midBoot.acceptDocIds().filter(id => midBoot.docIsRead(id)).length);
+  /* A document with no bottom to reach must not lock the reader out, or the gate is a wall. Measured
+     through the mount function rather than asserted in prose, so `noteUnscrollableDocs()` is the thing
+     under test and not its own comment. The fake pane is handed over for ONE selector: replacing
+     `querySelector` outright makes every other lookup in the page answer a document body, and the next
+     `render()` then dies in `syncBackHandles()` on a `.sheet` that has no setAttribute — an instrument
+     defect wearing the costume of an app crash. */
+  const shortBoot = boot();
+  shortBoot.state.view = 'login'; shortBoot.state.role = 'resident'; shortBoot.state.authMode = 'register';
+  const realQuery = shortBoot._document.querySelector.bind(shortBoot._document);
+  shortBoot._document.querySelector = (sel) => sel === '[data-doc-body]' ? {
+    scrollHeight: 480, clientHeight: 600, scrollTop: 0,
+    getAttribute: () => shortBoot.state.legalDoc
+  } : realQuery(sel);
+  /* One pane at a time, because the sheet shows one document — and the box only comes on when every
+     named document has been through it. Marking one read and asserting the box is enabled would be
+     a check that passes on a build where the gate ignores the second document entirely. */
+  const openedShort = shortBoot.acceptDocIds().map(id => {
+    shortBoot.state.legalDoc = id;
+    shortBoot.noteUnscrollableDocs();
+    return shortBoot.docIsRead(id);
+  });
+  const shortRow = consentRowOf(shortBoot.loginHTML());
+  c.check('a document that cannot scroll counts as read, so the gate never becomes a lockout',
+    openedShort.every(Boolean) && shortBoot.acceptanceUnlocked()
+      && shortRow.length > 200 && shortRow.indexOf('disabled') === -1,
+    'of ' + openedShort.length + ' unscrollable document(s), read: ' + openedShort.filter(Boolean).length
+      + ' · row of ' + shortRow.length + ' chars carries disabled: ' + (shortRow.indexOf('disabled') > -1));
   [['reg-name', 'Nueva Residente'], ['reg-brgy', 'Buayan'],
    ['login-email', 'nueva@example.com'], ['login-pass', 'demo1234']].forEach(([id, v]) => {
     regBoot._document.getElementById(id).value = v;
   });
+  /* The Terms box is never pre-ticked, so a walk that wants an account has to tick it — and a
+     register run that forgets to is the refusal this suite now asserts further down. */
+  regBoot._document.getElementById('reg-terms').checked = true;
   regBoot.submitAuth();
   await new Promise(r => setTimeout(r, 900));
   c.check('a register writes the name and barangay the form collected',
@@ -1944,24 +2642,95 @@ suite('login', async () => {
      shared store must leave the key exactly as it was. The control that follows writes on purpose,
      because "no change" from a checker that cannot see a change is the failure this repository has
      been taught twice — a positive control makes the zero mean something. */
+  /* What a register writes is now a precise claim, so it is measured as bytes in both directions.
+     The account is still not stored — the disclosure says so, and the dump proves it. What IS
+     stored is the acceptance: a versioned record of which document this device agreed to, because
+     an acceptance nobody can point at afterwards is a claim, not a record. The refusal case is
+     asserted too, with the box left alone: a checker that only ever runs the happy path cannot see
+     a pre-ticked box come back. */
+  const fill = (b) => {
+    [['reg-name', 'Nueva Residente'], ['reg-brgy', 'Buayan'],
+     ['login-email', 'nueva@example.com'], ['login-pass', 'demo1234']].forEach(([id, v]) => {
+      b._document.getElementById(id).value = v;
+    });
+  };
+  const refusedStore = fakeStorage();
+  const refusedBoot = boot({ storage: refusedStore });
+  refusedBoot.state.view = 'login'; refusedBoot.state.role = 'resident'; refusedBoot.state.authMode = 'register';
+  refusedBoot.render();
+  fill(refusedBoot);
+  const unreadBefore = refusedStore.getItem('sukinnect.snapshot.v1');
+  refusedBoot.submitAuth();
+  c.check('a register nobody has read is refused before the box is even asked about, and writes nothing',
+    refusedStore.getItem('sukinnect.snapshot.v1') === unreadBefore
+      && (refusedBoot.state.termsAcceptances || []).length === 0
+      && refusedBoot.state.authError && refusedBoot.state.authError.terms
+      && refusedBoot.state.authError.terms.indexOf('Open ' + gateDocs.length + ' document') === 0
+      && refusedBoot.state.view === 'login',
+    'error ' + JSON.stringify(refusedBoot.state.authError || null));
+  /* The two refusals are one branch each and must name different things: the unread case counts the
+     documents still shut, the unticked case names the box. A single message for both would let a
+     mutant that deletes the scroll gate pass as a tick check. */
+  readEveryDoc(refusedBoot);
+  refusedBoot.render();
+  const refusedBefore = refusedStore.getItem('sukinnect.snapshot.v1');
+  refusedBoot.submitAuth();
+  await new Promise(r => setTimeout(r, 900));
+  c.check('a register without the Terms box ticked is refused, in words that name the box',
+    refusedStore.getItem('sukinnect.snapshot.v1') === refusedBefore
+      && (refusedBoot.state.termsAcceptances || []).length === 0
+      && refusedBoot.state.authError && refusedBoot.state.authError.terms
+      && /Accept the Terms/.test(refusedBoot.state.authError.terms)
+      && refusedBoot.state.view === 'login',
+    'error ' + JSON.stringify(refusedBoot.state.authError || null) + ', view ' + refusedBoot.state.view);
+
   const regStore = fakeStorage();
   const regBoot2 = boot({ storage: regStore });
   regBoot2.state.view = 'login'; regBoot2.state.role = 'resident'; regBoot2.state.authMode = 'register';
   regBoot2.render();
-  [['reg-name', 'Nueva Residente'], ['reg-brgy', 'Buayan'],
-   ['login-email', 'nueva@example.com'], ['login-pass', 'demo1234']].forEach(([id, v]) => {
-    regBoot2._document.getElementById(id).value = v;
-  });
+  fill(regBoot2);
+  readEveryDoc(regBoot2);
+  regBoot2.render();
+  regBoot2._document.getElementById('reg-terms').checked = true;
   const beforeBytes = regStore.getItem('sukinnect.snapshot.v1');
   regBoot2.submitAuth();
   await new Promise(r => setTimeout(r, 900));
   const afterBytes = regStore.getItem('sukinnect.snapshot.v1');
   regBoot2.persist();
   const controlBytes = regStore.getItem('sukinnect.snapshot.v1');
-  c.check('a register stores nothing, as its own toast claims',
-    afterBytes === beforeBytes && typeof controlBytes === 'string' && controlBytes.length > 0,
+  const written = JSON.parse(afterBytes || 'null');
+  c.check('an accepted register stores the versioned acceptance and nothing else about the account',
+    typeof afterBytes === 'string' && afterBytes !== beforeBytes
+      && written && Array.isArray(written.termsAcceptances)
+      && written.termsAcceptances.some(a => a.doc === 'terms' && a.version === regBoot2.LEGAL_VERSION)
+      && written.profileData.name !== 'Nueva Residente'
+      && typeof controlBytes === 'string' && controlBytes.length > 0,
     'bytes after register: ' + (afterBytes === null ? 'none' : (afterBytes || '').length)
-      + ', after an explicit persist(): ' + (controlBytes || '').length);
+      + ' | acceptances ' + JSON.stringify(written && written.termsAcceptances || null)
+      + ' | stored name ' + (written && written.profileData ? written.profileData.name : 'none'));
+  const consentReload = boot({ storage: regStore });
+  const consentReloadResult = consentReload.hydrate();
+  c.check('the versioned Privacy Notice acknowledgement survives a reload',
+    consentReloadResult.restored === true
+      && consentReload.state.termsAcceptances.some(a =>
+        a.role === 'resident' && a.doc === 'privacy' && a.version === regBoot2.LEGAL_VERSION),
+    JSON.stringify(consentReloadResult));
+  /* The consent below the Terms is a separate yes, and refusing it must cost nothing. */
+  const noConsent = fakeStorage();
+  const ncBoot = boot({ storage: noConsent });
+  ncBoot.state.view = 'login'; ncBoot.state.role = 'resident'; ncBoot.state.authMode = 'register';
+  ncBoot.render();
+  fill(ncBoot);
+  readEveryDoc(ncBoot);
+  ncBoot.render();
+  ncBoot._document.getElementById('reg-terms').checked = true;
+  ncBoot.submitAuth();
+  await new Promise(r => setTimeout(r, 900));
+  const ncWritten = JSON.parse(noConsent.getItem('sukinnect.snapshot.v1') || 'null');
+  c.check('the optional marketing consent is not bundled into the Terms acceptance',
+    ncBoot.state.view === 'app' && ncWritten
+      && !ncWritten.termsAcceptances.some(a => a.doc === 'marketing-consent'),
+    JSON.stringify(ncWritten && ncWritten.termsAcceptances || null));
   return c;
 });
 
@@ -2053,8 +2822,52 @@ suite('journeys', async () => {
   const asked = BOOKINGS.find(b => b.status === 'requested' && b.providerId === app.CURRENT_PROVIDER_ID);
   if (asked) {
     go('provider', 'provider_booking_detail', () => { state.selectedProviderBookingId = asked.id; });
+    /* The hazard is a BUTTON wearing the past tense. The step path names the same word on purpose —
+       it is the path, not an action — so the screen must contain both: an action that reads
+       "Accept this request" and a step that reads "Accepted". Dropping the second half would let a
+       build with no stepper at all pass this check. */
+
+
     c.check('the accept button says accept, not accepted',
-      /Accept this request/.test(html()) && !/>Accepted</.test(html()));
+      /Accept this request/.test(html()) &&
+      !/<button[^>]*>[^<]*\bAccepted\b/.test(html()) &&
+      /class="slabel">Accepted</.test(html()),
+      'buttons wearing the past tense=' + (html().match(/<button[^>]*>[^<]*Accepted[^<]*/) || ['none'])[0].slice(0, 60));
+
+  /* One prominent action per state, measured on the painted screen. The request card at the top of
+     this screen and the action bar at the bottom used to offer the SAME two answers in two
+     wordings — "Accept request" and "Accept this request" — four buttons for two decisions. No
+     tally can see that: nothing is clipped, nothing collides, every control is 44px. So the count
+     of primary buttons is asserted per state, with a population floor so a loop that reached no
+     booking cannot report clean. */
+  const primaryButtons = (markup) => (markup.match(/<button[^>]*class="[^"]*"[^>]*>/g) || [])
+    .filter(t => {
+      const cls = /class="([^"]*)"/.exec(t)[1].trim().split(/\s+/);
+      return cls.length === 1 && cls[0] === 'btn';
+    });
+  const priorJob = state.selectedProviderBookingId;
+  const reachedStates = [];
+  const duplicateWordings = [];
+  ['requested', 'upcoming', 'en_route', 'arrived', 'ongoing', 'completed'].forEach(function (st) {
+    const row = BOOKINGS.filter(b => b.providerId === app.CURRENT_PROVIDER_ID && b.status === st)[0];
+    if (!row) return;
+    reachedStates.push(st);
+    go('provider', 'provider_booking_detail', () => { state.selectedProviderBookingId = row.id; });
+    const screen = html();
+    const offered = app.providerJobMoves(row).filter(m => m.kind !== 'note').length;
+    const primes = primaryButtons(screen);
+    if (primes.length !== (offered ? 1 : 0)) {
+      duplicateWordings.push(row.id + ' (' + st + ') offers ' + offered + ' move(s) but paints ' + primes.length + ' primary button(s)');
+    }
+    const words = (screen.match(/<button[^>]*>([\s\S]*?)<\/button>/g) || [])
+      .map(t => t.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()).filter(Boolean);
+    const twice = words.filter((w, i) => words.indexOf(w) !== i);
+    if (twice.length) duplicateWordings.push(row.id + ' repeats "' + twice[0] + '"');
+  });
+  state.selectedProviderBookingId = priorJob;
+  c.check('the provider’s job screen offers exactly one primary action per state, named once',
+    duplicateWordings.length === 0 && reachedStates.length >= 3,
+    duplicateWordings.join(' | ') + ' | states reached=' + reachedStates.join(','));
   }
 
   /* ── the money axis only ever holds codes ── */
@@ -2211,11 +3024,21 @@ suite('honesty', async () => {
      providers hold a flagged one. One concept must be one count on one screen. */
   const dashHtml = paint('admin', 'admin_dashboard');
   const said = (re) => { const m = dashHtml.match(re); return m ? +m[1] : null; };
+  /* The attention rows used to lead with a bare numeral in a fixed 60px column (P6). The count now
+     rides in a chip beside the words it counts, so the reader asks for both orders and prefers the
+     trailing one — the leading one would match the 20 inside ic('file-text',20) and report a
+     disagreement that does not exist. */
+  const saidNear = (words) => {
+    const after = dashHtml.match(new RegExp(words + '[^0-9]{0,60}?(\\d+)', 'i'));
+    if (after) return +after[1];
+    const before = dashHtml.match(new RegExp('(\\d+)[^0-9]{0,60}?' + words, 'i'));
+    return before ? +before[1] : null;
+  };
   const k = app.adminCounts();
   const pairs = [
-    ['applications', said(/(\d+)\s+Provider applications need review/i), said(/(\d+)\s+Applications to review/i), k.pendingVerification],
-    ['open cases',   said(/(\d+)\s+Cases open for review/i),           said(/(\d+)\s+Cases open(?!\s+for)/i),    k.liveCases],
-    ['credentials',  said(/(\d+)\s+Credentials expiring or expired/i), null,                                      k.expiringSoon],
+    ['applications', saidNear('Provider applications need review'), said(/(\d+)\s+Applications to review/i), k.pendingVerification],
+    ['open cases',   saidNear('Cases open for review'),             said(/(\d+)\s+Cases open(?!\s+for)/i),    k.liveCases],
+    ['credentials',  saidNear('Credentials expiring or expired'),   null,                                      k.expiringSoon],
   ];
   const disagreeing = pairs
     .filter(([, shown, alsoShown, truth]) => shown !== null && shown !== truth)
@@ -2381,6 +3204,24 @@ suite('honesty', async () => {
       v.isSettled(v.bookingById('b3')) && /Paid with/.test(paid) &&
       !/To be paid with/.test(paid);
   })(), 'a held payment was described in the past tense');
+  /* A rate that stopped being whole started being rounded away. The receipt is the document a
+     person keeps, so "₱6.00 · 1%" beside a commission computed at 1.2% is not a formatting
+     quibble: it tells the provider a fee different from the one the ledger booked. Both halves
+     are asserted — the figure and its rate on one line as the records produce them, and the
+     rounded-away form absent — with a population control, because on a seed of whole-percent
+     rates the second half could not fail and would be decoration. */
+  c.check('a receipt prints the rate it charged, to the decimal the rate has', (() => {
+    const v = boot();
+    const priced = v.BOOKINGS.filter(b => b.pricing && b.pricing.commissionRate);
+    const halfPercent = priced.filter(b => Math.round(b.pricing.commissionRate * 1000) % 10 !== 0);
+    if (halfPercent.length === 0) return false;
+    return halfPercent.every(b => {
+      const html = String(v.receiptCard(b));
+      const exact = v.peso(b.pricing.commissionCentavos) + ' · ' + v.ratePercent(b.pricing.commissionRate) + '%';
+      const rounded = v.peso(b.pricing.commissionCentavos) + ' · ' + Math.round(b.pricing.commissionRate * 100) + '%';
+      return html.includes(exact) && !html.includes(rounded);
+    });
+  })(), 'a receipt rounded 1.2% to 1%');
 
   /* ── the provider insights ───────────────────────────────────────────────
      Three of these cards drew numbers that no record contained: an earnings line
@@ -2599,11 +3440,19 @@ suite('honesty', async () => {
 
   /* Helpers agreeing with the records is not the same claim as the card printing them. */
   const spendingHtml = app.residentSectionBody('spending');
-  const derived = new Set([app.pesoShort(spendBefore)]
-    .concat(app.residentSpendByService(app.residentPaid()).map(x => app.pesoShort(x.centavos))));
-  const stray = [...new Set((spendingHtml.match(/₱[\d,]+/g) || []))].filter(m => !derived.has(m));
+  /* Centavos, not formatted strings. pesoShort prints ₱601.48 while the token the regex reads off
+     the card is ₱601, so the two sets stopped intersecting the moment a figure stopped being a whole
+     peso — which is exactly what a 1.2% fee produces on a ₱525 job. Parsing the printed amount back
+     into centavos tests the number, and it is a stronger check than the one it replaces: a wrong
+     decimal used to read as a match. */
+  const toCentavosFromPrint = m => Math.round(Number(m.replace(/[^\d.]/g, '')) * 100);
+  const derived = new Set([spendBefore]
+    .concat(app.residentSpendByService(app.residentPaid()).map(x => x.centavos)));
+  const printed = [...new Set((spendingHtml.match(/₱[\d,]+(?:\.\d\d)?/g) || []).map(toCentavosFromPrint))];
+  const stray = printed.filter(v => !derived.has(v));
   c.check('every peso figure on the spending card is one the records produce',
-    stray.length === 0 && derived.size > 0, 'stray: ' + stray.join(', '));
+    stray.length === 0 && derived.size > 0,
+    'stray: ' + stray.map(v => app.peso(v)).join(', ') + ' against ' + derived.size + ' derived');
 
   const receiptsHtml = app.residentSectionBody('receipts');
   c.check('no receipt names a booking that has not been paid',
@@ -2821,6 +3670,58 @@ suite('honesty', async () => {
       "adminLog('Password updated'", "adminLog('Security PIN updated'"];
     const found = claims.filter(s => appSrc.includes(s));
     return { ok: found.length === 0, why: 'still asserting: ' + found.join(' | ') };
+  })());
+
+  /* A13 asks for the session lock to be coherent or removed, and the copy was made honest. The old
+     label promised "PIN to continue" over a button that only closed the dialog, so the wording was
+     changed to state that nothing is checked. Nothing asserted that, which means any later edit could
+     restore the promise in silence and only a person reading a screenshot would notice. This reads the
+     dialog the hub actually paints, so it cannot pass by rendering nothing: the Unlock button must be
+     there, must only close, and the sentence must say the PIN is not checked. */
+  verdict('the admin lock dialog says what Unlock does, and Unlock does only that', (() => {
+    app.state.view = 'app'; app.state.role = 'admin'; app.state.tab = 'profile';
+    /* Two renders, in this order. render() clears every *Modal field when the destination changes —
+       that is how leaving a layer works — so arming the dialog before the first paint is arming it
+       against a screen render() is about to leave. Proven in the sandbox on the committed bytes: one
+       render paints 4,913 chars of hub and no Unlock button at all, which a check would read as a
+       broken dialog; settle-then-raise paints 5,888 with the layer present. */
+    app.render();
+    app.state.adminAccountModal = 'lock';
+    app.render();
+    const html = app._document.getElementById('screen').innerHTML;
+    const why = [];
+    if (!/>Unlock<\/button>/.test(html)) why.push('the lock dialog painted no Unlock button');
+    if (!/no PIN is checked/.test(html)) why.push('the copy no longer says the PIN is not checked');
+    if (/Enter PIN|PIN to continue/i.test(html)) why.push('a label promises a check the build cannot perform');
+    if (!/onclick="state\.adminAccountModal=null; render\(\);">Unlock/.test(html))
+      why.push('Unlock does something other than close the dialog, so the copy is now the false half');
+    app.state.adminAccountModal = null;
+    return { ok: why.length === 0, why: why.join(' \u00b7 ') };
+  })());
+  /* G6 asks for progressive disclosure that does not hide what matters, and §4 claims the privacy gate is
+     "enforced in code". It is — providerBookingDetail() prints 'Withheld' unless the job is on — but nothing
+     asserted it, so the row was the one AR claim the traceability census could not point at. This is the
+     assertion, with both halves required: a requested job leaks nothing AND an accepted job still shows the
+     number the provider needs to do the work. A guard that only checks the withhold passes by hiding
+     everything. */
+  verdict('the provider is given the customer phone only for a job they actually have', (() => {
+    const why = [];
+    app.state.view = 'app'; app.state.role = 'provider';
+    if (typeof app.applyProviderIdentity === 'function') app.applyProviderIdentity('p1');
+    const req = app.BOOKINGS.find(b => b.providerId === 'p1' && b.status === 'requested');
+    const job = app.BOOKINGS.find(b => b.providerId === 'p1' && ['upcoming', 'ongoing'].includes(b.status));
+    if (!req) return { ok: false, why: 'the seed holds no requested p1 job, so the withhold has no case' };
+    if (!job) return { ok: false, why: 'the seed holds no accepted p1 job, so the disclosure has no case' };
+    app.state.selectedProviderBookingId = req.id;
+    const reqHtml = String(app.providerBookingDetail());
+    if (reqHtml.includes(app.customerOf(req).phone)) why.push('a requested job printed ' + app.customerOf(req).phone);
+    if (!/Withheld/.test(reqHtml)) why.push('the requested job painted no withheld marker at all');
+    const jobPhone = app.customerOf(job).phone;
+    app.state.selectedProviderBookingId = job.id;
+    const jobHtml = String(app.providerBookingDetail());
+    if (!jobHtml.includes(jobPhone)) why.push('an accepted job hid the number its provider needs');
+    app.state.selectedProviderBookingId = null;
+    return { ok: why.length === 0, why: why.join(' \u00b7 ') };
   })());
 
   /* The payout account was typed into three places and held in a fourth: the profile
@@ -3151,7 +4052,11 @@ suite('honesty', async () => {
     const unknownTrade = a.serviceMeta('not-a-category');
     const catalogueOk = unknownTrade.label === 'Service not on this roster'
       && unknownTrade.id === null && a.serviceMeta('plumbing').label === 'Plumbing'
-      && a.serviceMeta('plumbing').icon === 'droplet';
+      && a.serviceMeta('plumbing').icon === 'plumbing';
+      /* The mobile-app pass made each trade draw its OWN glyph (droplet → plumbing), so the
+         needle that pinned the old abstract name would have failed the fix rather than the bug.
+         The assertion is the same one — an unknown trade must not inherit a real one, and a real
+         trade resolves to itself — with the spelling the catalogue now uses. */
     /* A category that does not exist must not inherit one that does: the pilot's
        harvest-and-buy mode set, its safety rules and its commission basis all live in
        that row's overrides. */
@@ -3647,11 +4552,11 @@ suite('honesty', async () => {
     const displayedScore = app.scoreProvider(p, app.rankingRequest(), { now: Date.now() }).score;
     const displayedReason = baseline.reasons.find(reason => reason.includes('Brgy. ' + targetArea));
     const reasonsVisible = !!displayedReason && p1Card.includes(displayedReason)
-      && p1Card.includes('How this demo score is built');
+      && p1Card.includes('Why this ranking');
     const suspendedBadge = app.providerVerificationChip(suspended);
     const verificationHonest = suspendedBadge.includes('Suspended') && !suspendedBadge.includes('Verified');
-    const honestCopy = html.includes('Rule-based demo match · not AI or live availability')
-      && p1Card.includes(displayedScore + ' / 100 demo score')
+    const honestCopy = html.includes('Rule-based score from records on this device · demo only, not AI or live availability')
+      && p1Card.includes(displayedScore + ' / 100 rule score · demo')
       && !html.includes('AI-powered live provider match')
       && !html.includes('99% job completion rate');
     const noTypedScores = app.PROVIDERS.every(x => !Object.prototype.hasOwnProperty.call(x, 'smartMatch'));
@@ -3680,6 +4585,239 @@ suite('honesty', async () => {
       p.verification.status = oldVerificationStatus;
     }
   })());
+
+  /* A3: a glyph that names two different things names neither. `shield` was the admin's Dashboard icon
+     while the same glyph carried "Nothing under warranty" and "No provider is flagged" — so the mark
+     that means a promise about a document was also the mark for a wall of figures, and §5.5's stable
+     semantic map was a sentence nobody could point at. The admin's Dashboard now takes the figure glyph
+     the provider's Dash already uses, the shield stays on the trust surfaces, and the meanings live in
+     one table in the page which this check reads: every glyph the navigation or the sign-in asks for
+     has to have a row in it, so a new icon fails the gate until somebody writes down what it means. */
+  const iconTable = /(const ICON_MEANING = \{[\s\S]*?\n\});/.exec(app._source) || [];
+  const iconKeys = [...(iconTable[1] || '').matchAll(/^\s{2}'?([a-z0-9-]+)'?:/gm)].map(m => m[1]);
+  const navGlyphs = [...app._source.matchAll(/navItem\('([^']+)',\s*'([^']+)'/g)].map(m => m[2]);
+  const roleGlyphs = Object.values(app.AUTH_ROLE_ICON || {});
+  const unexplained = navGlyphs.concat(roleGlyphs).filter(g => iconKeys.indexOf(g) < 0);
+  c.check('a glyph means one thing, and every glyph the app navigates by is written down',
+    iconKeys.length > 8 && !unexplained.length &&
+      navGlyphs.indexOf('shield') < 0 && iconKeys.indexOf('shield') >= 0 &&
+      /shield:\s*'[^']*trust/i.test(iconTable[1] || '') &&
+      /shield:\s*'[^']*(warrant|verif|trust)/i.test(iconTable[1] || '') &&
+      navGlyphs.filter(g => g === 'chart').length === 2,
+    'table holds ' + iconKeys.length + ' names · unexplained ' + JSON.stringify(unexplained) +
+      ' · shield in nav: ' + (navGlyphs.indexOf('shield') >= 0) +
+      ' · chart used by: ' + navGlyphs.filter(g => g === 'chart').length + ' dashboards');
+
+  /* A4: the dashboard's "needs attention" number and the card beside it were once derived and typed
+     separately, and the fix was one shared filter. A shared filter that only counts is still a dead
+     end for the person reading it — the queue it names has to exist, and it has to be the same list,
+     not a second one that can drift. So the queue's unfiltered answer is compared to the filter's,
+     every kind is compared to the reasons it claims, and the row count on the tab is the number the
+     stat strip prints. The reasons and their kinds are two shapes of one judgement, so they are
+     required to agree per provider — with a positive control on the seed, because a roster where
+     nothing carries a flag would satisfy every clause above by saying nothing. */
+  const flagged = app.networkAttentionList();
+  const kinds = Object.keys(app.ATTENTION_KINDS || {});
+  const disagree = flagged.filter(x => (x.provider && app.adminProviderMeta(x.provider).reasons.length) !==
+    (x.provider && app.adminProviderMeta(x.provider).reasonKinds.length))
+    .map(x => (x.provider || {}).name);
+  const kindsSeenOnRoster = {};
+  app.PROVIDERS.forEach(p => app.adminProviderMeta(p).reasonKinds.forEach(k => { kindsSeenOnRoster[k] = 1; }));
+  const kindMismatch = kinds.filter(k => {
+    const byKind = app.attentionQueue(k).map(x => x.provider.id).sort();
+    const expected = app.PROVIDERS.filter(p => app.adminProviderMeta(p).reasonKinds.indexOf(k) >= 0)
+      .map(p => p.id).sort();
+    return byKind.join(',') !== expected.join(',');
+  });
+  c.check('the attention queue is the shared filter with a label on it, never a second list',
+    kinds.length >= 2 && flagged.length > 0 && !disagree.length && !kindMismatch.length &&
+      app.attentionQueue(null).map(x => x.provider.id).sort().join(',') === flagged.map(x => x.provider.id).sort().join(',') &&
+      Object.keys(kindsSeenOnRoster).length >= 2,
+    'flagged ' + flagged.length + ' · kinds ' + JSON.stringify(kinds) +
+      ' · seen on the roster ' + JSON.stringify(Object.keys(kindsSeenOnRoster)) +
+      (disagree.length ? ' · reasons and kinds disagree for ' + disagree.join(', ') : '') +
+      (kindMismatch.length ? ' · a kind filter answers a different set: ' + kindMismatch.join(', ') : ''));
+
+  /* R7/A9: §10 asks that a booking's timeline, contact, schedule, price, completion and receipt be
+     *separate* things. Separation is a reading order, not a widget: the six groups are named in the
+     markup in that order, each with content under it, and nothing a decision needs is put behind a
+     control. Two halves, because one alone is trivially gamed — all six labels painted for a job that
+     has no completion time and no receipt would be §63's decorative claim, so the requested job is
+     required NOT to carry the two groups whose records do not exist yet. */
+  const GROUP_ORDER = ['Schedule', 'Progress', 'Contact', 'Price', 'Completion', 'Receipt'];
+  const groups = app.BOOKING_GROUPS;
+  const finishedJob = app.bookingsForResident().find(b => b.status === 'completed' &&
+    ['captured', 'collected'].includes(b.payStatus));
+  app.state.selectedBookingId = finishedJob ? finishedJob.id : null;
+  const painted = String(app.residentBookingDetail());
+  const positions = GROUP_ORDER.map(g => painted.indexOf('>' + g + '<'));
+  const ordered = positions.every(p => p >= 0) &&
+    positions.every((p, i) => i === 0 || p > positions[i - 1]);
+  const roomAfter = positions.every((p, i) => i === positions.length - 1 ||
+    (positions[i + 1] - p) > 200);
+  const heldJob = app.bookingsForResident().find(b => b.status === 'requested');
+  app.state.selectedBookingId = heldJob ? heldJob.id : null;
+  const heldHtml = String(app.residentBookingDetail());
+  const premature = GROUP_ORDER.slice(4).filter(g => heldHtml.indexOf('>' + g + '<') >= 0);
+  c.check('the booking detail names the six groups in order, and only the ones the record supports',
+    !!finishedJob && groups.join(',') === GROUP_ORDER.join(',') && ordered && roomAfter &&
+      !premature.length,
+    'constant ' + JSON.stringify(groups) + ' · job ' + (finishedJob ? finishedJob.id : 'none') +
+      ' · label positions ' + JSON.stringify(positions) +
+      ' · a requested job already promises ' + JSON.stringify(premature));
+
+  /* A14: §13 asks the help desk to work around status, priority, summary, linked booking, history and a
+     next action. Five of the six are records — a case carries `status`, `reason`, `bookingId`,
+     `openedAt`/`resolvedAt` and an evidence list, and the card links the booking and shows the money the
+     books froze. The sixth, priority, is the one the records do NOT carry, so the screen says so instead
+     of ordering by a field nobody owns: the plan's own instruction for this row was "if no priority
+     source exists, say unranked rather than invent one". Both halves are asserted, and the fixture is
+     built inside the check because the seed ships an empty case list — a render of nothing would let the
+     caption check pass by never running. */
+  verdict('the help desk orders by case state and names the absence of a priority rather than inventing one', (() => {
+    const before = app.DISPUTES.length;
+    const empty = String(app.adminDisputes());
+    app.DISPUTES.push({ id: 'ZZ-audit-fixture', bookingId: (app.BOOKINGS[0] || {}).id,
+      openedBy: 'customer', reason: 'an audit fixture, not a real case', amountInClaimCentavos: 0,
+      frozenCentavos: 0, status: 'open', openedAt: new Date().toISOString(),
+      evidence: [], resolution: null, resolvedAt: null });
+    let painted = '';
+    try { painted = String(app.adminDisputes()); }
+    finally { app.DISPUTES.length = before; }
+    /* The record-shape half has to read the BUILDER, not the list. `DISPUTES` is seeded empty on
+       purpose — a sample case would be a written record of a complaint nobody raised — so
+       `DISPUTES.some(d => d.priority)` cannot fail on the seed no matter what the code writes, which is
+       exactly what its own falsifier caught: the break that types `priority: 'High'` into
+       `openDispute` printed MISSED while this check reported clean. The builder's own text is the
+       evidence now, with a positive control that the scan found the function at all. */
+    const NL = String.fromCharCode(10);
+    const builder = (app._source.match(new RegExp('function openDispute\\([\\s\\S]{0,1800}?' + NL + '\\}')) || [''])[0];
+    const invented = /(priority|urgency|severity|rank)\s*:/.test(builder) ||
+      app.DISPUTES.some(d => d.priority || d.urgency || d.severity || d.rank);
+    const saysIt = /Nothing here is ranked by urgency/.test(painted) &&
+      /Open cases first, then closed/.test(painted);
+    /* The "caption stays off an empty list" half only applies when the list really is empty — on a
+       device that has raised its own cases the caption is correct and must still print. */
+    return { ok: saysIt && !invented && builder.includes("status: 'open'") &&
+        (before > 0 || !empty.includes('Nothing here is ranked')),
+      why: !saysIt ? 'the screen orders cases without saying on what basis'
+        : !builder.includes("status: 'open'") ? 'the case builder was not found, so the shape scan is blind'
+        : invented ? 'a case record carries a priority field, so the caption is now false'
+        : 'the caption prints above a list with nothing in it' };
+  })());
+
+  /* G10: §10 asks for five *distinct* empty states, and this build already paints all five — but it
+     paints them because twenty-two separate calls happened to word themselves differently, not because
+     anything says which kind a screen is answering. The distinction is the point: "No bookings yet" and
+     "No provider meets these filters" look identical in a screenshot and are opposite sentences to a
+     person, one saying nothing has happened and the other saying the screen is hiding something the
+     reader asked for. So the kinds are named here, and every empty state in the file has to answer to
+     one of them by its own literal wording. The count guard is the half that keeps this from being a
+     list somebody maintains: it counts the call sites, and a site whose title is built by an expression
+     rather than a literal has to appear in the named dynamic list, so the next empty state added with a
+     ternary title fails the check instead of drifting out of the census. Measured 2026-10-26: no kind is
+     missing. The one that used to have no representative — a destination a role cannot reach — is
+     "That booking is not on this account" on the resident's detail and "No provider record behind this
+     sign-in" on the provider's dashboard, and both are reached by handing an unknown id to a screen. */
+  const EMPTY_KIND_TITLES = {
+    records: ['No requests yet', 'No bookings yet', 'No finished jobs yet', 'No saved providers',
+      'Nothing under warranty', 'No reminders', 'No receipts yet', 'No unread messages',
+      'This room has no thread on this device', 'Nobody is on the roster', 'No provider is flagged',
+      'No decisions recorded yet', 'No applications are waiting', 'Nothing to review',
+      'Choose a completed service first', 'No repeat schedules yet'],
+    matches: ['No ', 'No provider meets these filters', 'No provider matches '],
+    unavailable: ['No provider is open here'],
+    notfound: ['That booking is not on this account', 'No provider carries that id',
+      'No application is open', 'That job is not on this account'],
+    access: ['No provider record behind this sign-in']
+  };
+  const KIND_OF = {};
+  Object.keys(EMPTY_KIND_TITLES).forEach(k => EMPTY_KIND_TITLES[k].forEach(t => { KIND_OF[t] = k; }));
+  const pageSrc = require('fs').readFileSync(require('./harness.cjs').APP, 'utf8');
+  const emptyTitles = [...pageSrc.matchAll(/emptyState\(\s*'[a-z0-9-]+',\s*\n?\s*'([^']*)'/g)].map(m => m[1]);
+  const unclassified = emptyTitles.filter(t => !KIND_OF[t]);
+  const siteCount = (pageSrc.match(/emptyState\(/g) || []).length - 1;
+  const DYNAMIC_SITES = 1;
+  const kindsSeen = new Set(emptyTitles.map(t => KIND_OF[t]).filter(Boolean));
+  c.check('every empty state answers to one of the five kinds §10 names, and all five are painted',
+    !unclassified.length && kindsSeen.size === 5 && siteCount === emptyTitles.length + DYNAMIC_SITES &&
+      Object.keys(EMPTY_KIND_TITLES).every(k => EMPTY_KIND_TITLES[k].some(t => pageSrc.includes("'" + t))),
+    'sites ' + siteCount + ' classified ' + emptyTitles.length + ' named-dynamic ' + DYNAMIC_SITES +
+      ' · kinds ' + JSON.stringify(Array.from(kindsSeen)) +
+      (unclassified.length ? ' · unclassified ' + JSON.stringify(unclassified) : ''));
+
+  /* A7/R3: a control that is painted is not yet a control that works. The brief asks twice whether the
+     filters "actually work"; the honest answer needed a reading per axis, because every one of these
+     four once had a shape that looked right in a screenshot: the barangay filter matched where a
+     provider lives rather than where they declared they serve, the wait filter read the same
+     `availabilityMin` the card prints as "can start in", and a query typed in the search field narrowed
+     the list while `activeFilterCount()` kept reporting zero filters active — so the Clear button the
+     screen offers beside the count was, on those axes, a button that cleared nothing. Each axis is
+     narrowed from the records themselves, every surviving row is re-read against the predicate, and
+     clear-all has to restore exactly the unfiltered count. The population guard is the positive
+     control: if the seed ever became one trade in one barangay with one wait time, no filter could
+     narrow anything and this check would have nothing to assert, so it says so instead of passing. */
+  verdict('every discovery filter narrows the set, and clearing restores it', (() => {
+    app.state.view = 'app'; app.state.role = 'resident'; app.state.tab = 'results';
+    app.state.searchQuery = ''; app.state.providerFilters = app.blankFilters();
+    const all = app.providerMatches();
+    const base = all.length;
+    const roster = app.PROVIDERS.filter(app.providerAccepting);
+    if (base < 2 || roster.length < 2)
+      return { ok: false, why: 'only ' + base + ' rows are matchable, so no filter can be shown narrowing' };
+    const bad = [];
+    const tryFilter = (label, patch, keeps) => {
+      app.state.providerFilters = app.blankFilters();
+      app.state.searchQuery = '';
+      patch();
+      const got = app.providerMatches();
+      /* Both halves, because each one breaks differently: a filter that keeps a row it should have
+         dropped is a wrong answer, and a filter that drops a row it should have kept is a smaller wrong
+         answer that still looks like a narrowing. The expected set is built here from the predicate, not
+         read back out of the app, or the comparison is a tautology. */
+      const expected = roster.filter(keeps).map(p => p.id).sort();
+      const seen = got.map(p => p.id).sort();
+      const wrong = got.filter(p => !keeps(p)).map(p => p.name);
+      const missing = expected.filter(id => seen.indexOf(id) < 0);
+      if (got.length === base) bad.push(label + ' narrowed nothing');
+      if (!got.length && expected.length) bad.push(label + ' emptied a list its own rule says has ' + expected.length);
+      if (wrong.length) bad.push(label + ' kept ' + wrong.join(', ') + ' which fails its own rule');
+      if (missing.length) bad.push(label + ' lost ' + missing.length + ' row(s) its own rule includes');
+    };
+    const service = roster.map(p => p.serviceId)
+      .filter((id, i, a) => a.indexOf(id) === i)
+      .find(id => roster.filter(p => p.serviceId === id).length < base);
+    if (!service) bad.push('no trade on the roster is a proper subset, so the trade filter cannot be tested');
+    else tryFilter('trade', () => { app.state.providerFilters.serviceId = service; },
+      p => p.serviceId === service);
+    const area = roster.map(p => (p.servesBarangays || [p.barangay])[0])
+      .filter((b, i, a) => a.indexOf(b) === i)
+      .find(b => roster.filter(p => app.providerServes(p, b)).length < base);
+    if (!area) bad.push('no declared barangay is a proper subset, so the area filter cannot be tested');
+    else tryFilter('barangay', () => { app.state.providerFilters.barangay = area; },
+      p => app.providerServes(p, area));
+    const waits = roster.map(p => p.availabilityMin).sort((a, b) => a - b);
+    const maxWait = waits.find(w => roster.filter(p => p.availabilityMin <= w).length < base);
+    if (!maxWait && maxWait !== 0) bad.push('every provider starts at the same minute, so the wait filter cannot be tested');
+    else tryFilter('start-within', () => { app.state.providerFilters.maxWait = maxWait; },
+      p => p.availabilityMin <= maxWait);
+    const word = (roster[0].service || '').toLowerCase();
+    tryFilter('query', () => { app.state.searchQuery = word; },
+      p => (p.name + ' ' + p.service + ' ' + p.barangay).toLowerCase().includes(word));
+    /* The count beside the Clear button has to be the number of axes that actually narrowed, or the
+       button promises a reset of a state the screen is not in. */
+    app.state.providerFilters = app.blankFilters(); app.state.searchQuery = '';
+    if (app.activeFilterCount() !== 0) bad.push('a clean filter set reports ' + app.activeFilterCount() + ' active');
+    if (service) { app.state.providerFilters.serviceId = service;
+      if (app.activeFilterCount() !== 1) bad.push('one axis narrowed reports ' + app.activeFilterCount()); }
+    if (area) { app.state.providerFilters.barangay = area;
+      if (app.activeFilterCount() !== 2) bad.push('two axes narrowed reports ' + app.activeFilterCount()); }
+    app.state.providerFilters = app.blankFilters(); app.state.searchQuery = '';
+    if (app.providerMatches().length !== base) bad.push('clearing the filters did not restore the ' + base + ' rows');
+    return { ok: !bad.length, why: bad.join(' · ') ||
+      base + ' rows unfiltered, every axis narrowed them and the survivors satisfy their own predicate' };
+  })());
+
 
   /* §27: "tapping a notification should open the object responsible for it". Measured in a real
      page first — `node tools/shot.cjs --probe=@tools/probe-notification-targets.js` walks every
@@ -3739,12 +4877,12 @@ suite('honesty', async () => {
     const quotedMiss = /No provider matches/.test(missWords);
     /* The count line is the second half of the same question, and it is the screen's OWN decision
        from a second copy of the trimmed query: `narrowing` prints "N of 8 providers" when
-       something is narrowing the list and "8 demo matches" when nothing is. A blank query that
+       something is narrowing the list and "8 ranked providers" when nothing is. A blank query that
        failed to trim would print "8 of 8 providers" over the whole unfiltered list — a screen
        telling the person their space bar applied a constraint. "plumbing" must produce the counted
        form, or this assertion has no way to fail. */
     const blankCounted = /\d+ of \d+ providers/.test(blankWords);
-    const blankUnfiltered = /demo matches/.test(blankWords);
+    const blankUnfiltered = /ranked providers/.test(blankWords);
     const realCounted = /\d+ of \d+ providers/.test(realWords);
     return { ok: none > 0 && spaces === none && !quotedBlank && blankUnfiltered && !blankCounted &&
         real > 0 && real < none && realCounted && quotedMiss,
@@ -3752,11 +4890,152 @@ suite('honesty', async () => {
         : spaces !== none ? 'a query of spaces found ' + spaces + ' providers where none found ' + none
         : quotedBlank ? 'the screen quoted a query nobody typed: No provider matches a blank'
         : blankCounted ? 'a blank query is printed as a constraint on the count line'
-        : !blankUnfiltered ? 'the unfiltered list does not call itself demo matches, so the screen cannot say "nothing is narrowing"'
+        : !blankUnfiltered ? 'the unfiltered list does not call itself ranked providers, so the screen cannot say "nothing is narrowing"'
         : !(real < none) ? 'searching "plumbing" did not narrow the list, so the matcher is not live'
         : !realCounted ? 'a real query does not print its count line, so the blank case cannot be told apart'
         : !quotedMiss ? 'a query matching nothing printed no empty state, so the words cannot be tested'
         : 'a space is being treated as a search term' };
+  })());
+
+  /* ---- the ranking is a computation, not a typed claim ───────────────────────
+     Before this slice nothing in tools/ referenced smartMatch at all: eight typed scores, a header
+     that claimed an ordering the code never performed, and four hand-written reasons per provider
+     naming facts no record holds. A claim nobody checks is the one that survives longest, so each
+     property below is asserted against behaviour — a record moving, a list ordering, a denominator
+     shrinking — with a population floor so an empty scan reads as a refusal. */
+  verdict('no provider record carries a typed match score', (() => {
+    const a = boot();
+    const typed = a.PROVIDERS.filter(p => 'smartMatch' in p);
+    return { ok: a.PROVIDERS.length >= 6 && typed.length === 0,
+      why: typed.length ? 'still typed on ' + typed.map(p => p.id).join(',')
+        : a.PROVIDERS.length < 6 ? 'only ' + a.PROVIDERS.length + ' providers, so the scan proved little'
+        : 'all ' + a.PROVIDERS.length + ' records are free of one' };
+  })());
+
+  verdict('the weight table names every signal and adds to one', (() => {
+    const a = boot();
+    const keys = a.MATCH_SIGNALS.map(s => s[0]);
+    const weights = Object.keys(a.CONFIG.matchWeights);
+    const sum = weights.reduce((t, k) => t + a.CONFIG.matchWeights[k], 0);
+    return { ok: keys.length >= 6 && weights.length === keys.length
+        && keys.every(k => weights.indexOf(k) >= 0) && Math.abs(sum - 1) < 1e-9,
+      why: 'signals ' + keys.join(',') + ' / weights ' + weights.join(',') + ' / sum ' + sum };
+  })());
+
+  verdict('a change to the record moves the score', (() => {
+    const a = boot();
+    const p = a.PROVIDERS.find(x => isFinite(x.availabilityMin) && isFinite(x.distanceKm));
+    if (!p) return { ok: false, why: 'no provider record answers either signal' };
+    const req = { serviceId: p.serviceId, barangay: p.barangay };
+    const near = a.scoreProvider(p, req, {}).score;
+    const slow = a.scoreProvider(Object.assign({}, p, { availabilityMin: p.availabilityMin + 4320 }), req, {}).score;
+    const far = a.scoreProvider(Object.assign({}, p, { distanceKm: 40 }), req, {}).score;
+    return { ok: near > slow && near > far,
+      why: p.id + ' near ' + near + ' / three days slow ' + slow + ' / 40 km away ' + far };
+  })());
+
+  verdict('the order is the score order, and every reason came from a signal', (() => {
+    const a = boot();
+    a.state.providerFilters = {};
+    const rows = a.rankedProviders();
+    const scores = rows.map(r => r.match.score);
+    const descending = scores.every((s, i) => i === 0 || scores[i - 1] >= s);
+    const sameOrder = rows.map(r => r.provider.id).join(',')
+      === a.providerMatches().map(p => p.id).join(',');
+    const reasonsFromSignals = rows.every(r => r.match.reasons.every(reason =>
+      r.match.signals.some(s => s.reason === reason && s.sub >= a.CONFIG.matchReasonFloor)));
+    return { ok: rows.length >= 6 && descending && sameOrder && reasonsFromSignals,
+      why: 'rows ' + rows.length + ' descending ' + descending + ' sameOrder ' + sameOrder
+        + ' reasonsFromSignals ' + reasonsFromSignals };
+  })());
+
+  verdict('a signal with no record leaves the denominator instead of scoring zero', (() => {
+    const a = boot();
+    const bare = a.PROVIDERS.find(p => a.closedJobCount(p.id) === 0);
+    if (!bare) return { ok: false, why: 'every provider has closed jobs on this device, so the branch cannot be reached' };
+    const req = { serviceId: bare.serviceId, barangay: bare.barangay };
+    const m = a.scoreProvider(bare, req, {});
+    const w = a.CONFIG.matchWeights;
+    const expected = Object.keys(w).reduce((t, k) => t + w[k], 0)
+      - w.completion - w.cancellation - w.recency;
+    return { ok: Math.abs(m.weightUsed - expected) < 1e-9 && m.score > 0
+        && m.signals.every(s => ['completion', 'cancellation', 'recency'].indexOf(s.key) < 0),
+      why: bare.id + ' used weight ' + m.weightUsed + ' against ' + expected + ', scored ' + m.score };
+  })());
+
+  verdict('one five-star rating does not outrank two hundred good ones', (() => {
+    const a = boot();
+    const one = a.smoothedRating({ rating: 5, seedRatings: 1, ratingsFromDevice: 0 });
+    const many = a.smoothedRating({ rating: 4.6, seedRatings: 200, ratingsFromDevice: 0 });
+    return { ok: !!one && !!many && many.value > one.value,
+      why: 'one rating ' + (one && one.value) + ' / two hundred ' + (many && many.value) };
+  })());
+
+  verdict('the screen names the method instead of a magic name', (() => {
+    const a = boot();
+    a.state.view = 'app'; a.state.role = 'resident'; a.state.tab = 'results';
+    a.render();
+    const html = a._document.getElementById('screen').innerHTML;
+    const rows = a.rankedProviders();
+    const reasons = rows.reduce((t, r) => t.concat(r.match.reasons), []);
+    /* The three sentences the seed used to type, which no record supports: a response time nobody
+       measures, a job count nobody counted, and an arrival nobody promised. A reason generator that
+       ever produces one of them has gone back to writing prose. */
+    const fabricated = ['Average response time', '300+ completed', 'arrives in ~'];
+    return { ok: rows.length >= 6 && reasons.length >= 8
+        && /Rule-based score/.test(html) && /from records on this device/.test(html)
+        && !/Smart Job Match|Smart Matched Providers|% Match/.test(html)
+        && fabricated.every(f => !reasons.some(r => r.indexOf(f) >= 0)),
+      why: 'rows ' + rows.length + ' reasons ' + reasons.length + ' method named '
+        + (/Rule-based score/.test(html) && /from records on this device/.test(html)) };
+  })());
+
+  /* The card, read as markup. `cards` splits on the attribute the app itself paints on every
+   provider card, so the population is the rows that actually rendered rather than a list of ids
+   remembered beside it. */
+  verdict('every card prints the score its own record produced', (() => {
+    const a = boot();
+    a.state.view = 'app'; a.state.role = 'resident'; a.state.tab = 'results';
+    a.render();
+    const html = a._document.getElementById('screen').innerHTML;
+    const rows = a.rankedProviders();
+    const cards = html.split('data-provider-detail="').slice(1);
+    if (rows.length < 6 || cards.length !== rows.length)
+      return { ok: false, why: 'rows ' + rows.length + ' painted cards ' + cards.length };
+    return { ok: rows.every(r => {
+      const chunk = cards.find(c => c.indexOf(r.provider.id + '"') === 0);
+      return !!chunk && chunk.indexOf(r.match.score + ' / 100 rule score') >= 0;
+    }), why: 'each card chip was compared to scoreProvider for the same id' };
+  })());
+
+  verdict('and every sentence in its fold was one of the signals it was given', (() => {
+    const a = boot();
+    a.state.view = 'app'; a.state.role = 'resident'; a.state.tab = 'results';
+    a.render();
+    const html = a._document.getElementById('screen').innerHTML;
+    const rows = a.rankedProviders();
+    const cards = html.split('data-provider-detail="').slice(1);
+    const REASON_ROW = '<div><span style="color:var(--success-ink); display:inline-flex; vertical-align:-2px;">';
+    if (rows.length < 6 || cards.length !== rows.length)
+      return { ok: false, why: 'rows ' + rows.length + ' painted cards ' + cards.length };
+    return { ok: rows.every(r => {
+      const chunk = cards.find(c => c.indexOf(r.provider.id + '"') === 0);
+      if (!chunk) return false;
+      const painted = chunk.split(REASON_ROW).length - 1;
+      const counted = chunk.indexOf('Why this ranking (' + r.match.reasons.length + ')') >= 0;
+      const allThere = r.match.reasons.every(reason => chunk.indexOf(a.esc(reason)) >= 0);
+      return painted === r.match.reasons.length && counted && allThere;
+    }), why: 'painted sentence count, summary count and sentence text were each compared' };
+  })());
+  verdict('a thin score says how many signals stood behind it', (() => {
+    const a = boot();
+    a.state.view = 'app'; a.state.role = 'resident'; a.state.tab = 'results';
+    a.render();
+    const html = a._document.getElementById('screen').innerHTML;
+    const thin = a.rankedProviders().filter(r => r.match.scoredOn < a.MATCH_SIGNALS.length);
+    return { ok: thin.length >= 1 && thin.every(r => html.indexOf('Ranked on ' + r.match.scoredOn
+        + ' of the ' + a.MATCH_SIGNALS.length + ' signals') >= 0),
+      why: thin.length + ' rows score on fewer than ' + a.MATCH_SIGNALS.length + ' signals' };
   })());
 
   verdict('marking yourself busy changes what a resident is shown', (() => {
@@ -3817,6 +5096,76 @@ suite('honesty', async () => {
   c.check('the payments module says the method is a label, not a linked account',
     /not a linked account/.test(appSrc) && /No card or wallet number is stored/.test(appSrc));
 
+  /* "Arrives within" sat above a row that filtered availabilityMin — when a provider can START a job,
+     which is not when anybody reaches the door. Nothing here computes travel time, so the wording is
+     the only honest place left to fix it. */
+  c.check('the wait filter is labelled for the field it actually filters',
+    /sheet-label">Can start within/.test(appSrc) && !/sheet-label">Arrives within/.test(appSrc)
+      && /p\.availabilityMin <= f\.maxWait/.test(appSrc),
+    'the label and the predicate no longer name the same thing');
+  c.check('no provider card calls availabilityMin an arrival',
+    !/arrives ~\$\{p\.availabilityMin\}/.test(appSrc) && /can start in ~\$\{p\.availabilityMin\}/.test(appSrc));
+  /* distanceKm is a number typed into the seed, so a card may not imply it was measured from whoever
+     is reading — especially now that registration accepts a barangay of the reader's own choosing. */
+  c.check('the seeded distance is disclosed as a sample, not as a measurement of the reader',
+    /km away \(sample figure, not measured from you\)/.test(appSrc)
+      && !appSrc.includes("' km from you'"));
+
+  /* Two FSM cards promised a surge suggestion engine and an "optimized sequence for your 2 active jobs
+     today" that saved 18 minutes between two typed streets. Neither mechanism exists, and the day's
+     jobs were already listed on the dashboard in the order their own times put them — so the route card
+     was deleted rather given new wording, and §82's rule held: a claim with no record behind it is
+     removed, and a second list of the same day is the drift this file keeps calling a defect. */
+  const pdash = boot();
+  pdash.state.view = 'app'; pdash.state.role = 'provider'; pdash.state.tab = 'dashboard';
+  pdash.applyProviderIdentity('p1');
+  const dashP1html = String(pdash.providerDashboard());
+  const fsmP1html = String(pdash.providerFSM());
+  const p1Today = pdash.BOOKINGS.filter(b => b.providerId === 'p1'
+    && (b.status === 'upcoming' || b.status === 'ongoing') && b.date === pdash.dayName(0));
+  c.check('no card claims an optimizer or a travel saving the build does not compute',
+    !/Optimiz/i.test(appSrc) && !/Travel time minimized/i.test(appSrc)
+      && !/minimized/i.test(fsmP1html) && !/Rizal St\. \(2:30 PM\)/.test(fsmP1html));
+  c.check('and the day is listed in exactly one place',
+    /<h3[^>]*>Today<\/h3>/.test(dashP1html) && !/<h3[^>]*>Today<\/h3>/.test(fsmP1html),
+    'either the dashboard lost its list or FSM grew a second one');
+  c.check("the one list carries every job today's records hold for this provider",
+    p1Today.length > 0 && p1Today.every(b => dashP1html.includes(b.summary)),
+    'records hold ' + p1Today.length + ' job(s) dated today');
+  pdash.applyProviderIdentity('p7');
+  const dashP7html = String(pdash.providerDashboard());
+  c.check('a provider with no job today is told so, and never shown p1’s day',
+    !/Kitchen faucet leak/.test(dashP7html) && /Nothing is scheduled for today/.test(dashP7html),
+    'p7 saw somebody else’s booking or a missing empty state');
+  c.check('the dispatch switch says what it does instead of promising suggestions',
+    /no surge model or suggestion engine/i.test(fsmP1html)
+      && !/Suggests when to go Available\/Busy/i.test(appSrc));
+
+  /* §8.4 asks that important actions not need excessive scrolling. Measured, not assumed: the
+     corrected density probe (tools/probe-density.js) counts anything a thumb can press, and on the
+     untouched build only ONE screen buried its only actions — Money, where "Run this week’s
+     payouts" and "Restore the sample records" sat 2,239px down a 2.5-screen scroll, below three
+     cards they change. The action card now leads the screen; the statement figures follow.
+     Master Administrator was NOT a defect: its 13 pressable section rows start at 121px, and the
+     thing 2,054px down is the lock/logout pair, which belongs at the bottom. Categories had one
+     pressable at 2,085px — a link to the fee settings on a screen whose own copy says it is
+     read-only, so promoting it would have surfaced a convenience over the catalogue that is the
+     screen's whole content. Two rows of §13's checklist turned out to be the metric, not the app. */
+  const fin = boot();
+  fin.state.view = 'app'; fin.state.role = 'admin';
+  /* The destination value behind the admin's dashboard button, not the word printed on it: 'dash'
+     paints nothing, and every marker this check looks for then reads -1. The check's own `> -1`
+     guards are what turned that into a red line instead of a passing vacuum. */
+  fin.state.tab = 'admin_dashboard'; fin.state.adminScreen = 'finance'; fin.render();
+  const finHtml = fin._document.getElementById('screen').innerHTML;
+  c.check('the Money screen offers its two actions before the figures those actions change',
+    finHtml.indexOf('Run this week') > -1 && finHtml.indexOf('Restore the sample records') > -1
+      && finHtml.indexOf('Platform statement') > -1
+      && finHtml.indexOf('Run this week') < finHtml.indexOf('Platform statement')
+      && finHtml.indexOf('Restore the sample records') < finHtml.indexOf('Platform statement'),
+    'actions at ' + finHtml.indexOf('Run this week') + '/' + finHtml.indexOf('Restore the sample records')
+      + ', statement at ' + finHtml.indexOf('Platform statement'));
+
   return c;
 });
 /* ══ 15. fruit — the pilot category, as the brief's checklist ═════════════════
@@ -3868,7 +5217,7 @@ suite('fruit', async () => {
   c.check('the combined visit is the one carrying an open rate', (() => {
     const both = app.offerTotals({ mode:'harvest_and_buy', labourCentavos:160000, produceCentavos:660000 });
     return both.produceFeeUndecided === true && both.produceFeeWaived === false &&
-      both.produceFeeCentavos === 0 && both.platformFeeCentavos === 16000;
+      both.produceFeeCentavos === 0 && both.platformFeeCentavos === 1920;
   })(), 'the undecided state must belong to harvest_and_buy alone');
   c.check('a sale stays free even once a produce rate exists', (() => {
     const keep = CONFIG.produceCommissionRate;
@@ -4196,6 +5545,190 @@ suite('fruit', async () => {
     return /data-booking="b8"/.test(html) && /waiting for your answer/i.test(html) &&
       !/Waiting for the provider to answer/.test(html);
   })(), 'the one booking where her answer is the story was the one screen that did not say so');
+
+  /* The owner's ruling of 2026-10-27: "The AI in the Home page will be changed in design, instead of
+     module there will be a chatbot at the bottom right." Three things have to be true for that to be
+     the change rather than a restyle — the module is gone, the new control opens the same screen, and
+     it is named. The second is behavioural, because a door that only exists in the markup is the defect
+     this repository keeps meeting: the check clicks the control the mount step wired and reads where the
+     app landed, behind a positive control that it had not landed there already. */
+  const fabBoot = boot();
+  fabBoot.state.view = 'app'; fabBoot.state.role = 'resident'; fabBoot.state.tab = 'home';
+  fabBoot.render();
+  const homeMarkup = fabBoot._document.getElementById('screen').innerHTML;
+  const fabCount = (homeMarkup.match(/class="concierge-fab"/g) || []).length;
+  const dockCount = (homeMarkup.match(/class="fab-dock"/g) || []).length;
+  c.check('Home carries one floating concierge control and no module card',
+    fabCount === 1 && dockCount === 1 && !/class="concierge-row"/.test(homeMarkup)
+      && !/concierge-row/.test(fabBoot._source),
+    'fab ' + fabCount + ' · dock ' + dockCount + ' · the old class survives anywhere in the file: '
+      + /concierge-row/.test(fabBoot._source));
+  c.check('the floating control says what it opens in words, not only in a glyph',
+    /aria-label="Ask the AI Service Concierge[^"]*"/.test(homeMarkup)
+      && /Ask the concierge/.test(homeMarkup)
+      && (homeMarkup.match(/ic\(|<svg/g) || []).length > 0,
+    homeMarkup.slice(homeMarkup.indexOf('concierge-fab'), homeMarkup.indexOf('concierge-fab') + 190).replace(/\s+/g, ' '));
+  const tabBefore = fabBoot.state.tab;
+  /* The Node harness cannot run an inline attribute, so the check does the next strongest thing: it
+     reads the handler NAME off the painted control, requires that name to resolve to a real function,
+     and calls it — which is what `audit-handler-reachability` exists to make meaningful. The real click
+     is the camera's row `concierge-from-fab`, which reaches the control through `clickPainted`. */
+  const fabAttr = (/id="concierge-fab"[^>]*onclick="([^"]+)"/.exec(homeMarkup.replace(/\s+/g, ' ')) || [])[1];
+  const fabFn = fabAttr && fabAttr.indexOf('openConcierge()') === 0 ? fabBoot.openConcierge : null;
+  const clicked = typeof fabFn === 'function' && (fabFn.call(fabBoot), true);
+  c.check('clicking the floating control opens the concierge, which is the whole promise of it',
+    tabBefore === 'home' && !!fabAttr && clicked && fabBoot.state.tab === 'concierge',
+    'painted handler ' + String(fabAttr) + ' resolves to a function: ' + !!clicked
+      + ' · tab was ' + tabBefore + ', after: ' + fabBoot.state.tab);
+  /* The dock is a full-width strip that must not shield the cards it overlaps, and it must sit above
+     them while scrolling — so the rule is split three ways, and each half is a different failure if it
+     goes missing: a dock that takes taps eats the screen, a dock without the rung hides behind cards. */
+  const cssRules = fabBoot._source.replace(/\/\*[\s\S]*?\*\//g, '');
+  c.check('the dock passes taps through to what it overlaps and keeps its own rung on the ladder',
+    /\.fab-dock\{[^}]*pointer-events:none[^}]*\}/.test(cssRules)
+      && /\.concierge-fab\{[^}]*pointer-events:auto[^}]*\}/.test(cssRules)
+      && /\.fab-dock\{[^}]*z-index:var\(--z-fab\)/.test(cssRules)
+      && /\.fab-dock\{[^}]*position:sticky/.test(cssRules),
+    'dock: ' + (/\.fab-dock\{([^}]*)\}/.exec(cssRules) || [, 'not found'])[1].replace(/\s+/g, ' ').slice(0, 130));
+
+  /* ── Phase D: the suggestion list, the web-only console, and the rate wizard ─────────────────
+     Three rules, each with its opposite asserted beside it, because every one of them can fail by
+     showing nothing: an empty suggestion list looks clean, a console that refuses everywhere looks
+     like a console that refuses on a phone, and a band computed from no rows is a null that renders
+     as an absence. */
+  const sug = boot();
+  sug.state.view = 'app'; sug.state.role = 'resident'; sug.state.tab = 'concierge';
+  const rowsWithSeed = sug.frequentActionRows();
+  c.check('the suggestions are counted from completed jobs, and each names the count that produced it',
+    rowsWithSeed.length >= 1 && rowsWithSeed.every(r => r.because && r.because.length > 8),
+    'rows: ' + rowsWithSeed.map(r => r.label + ' [' + r.because + ']').join(' | '));
+  const noHistory = boot();
+  noHistory.BOOKINGS.forEach(b => { if (b.status === 'completed') b.status = 'ongoing'; });
+  const rowsEmpty = noHistory.frequentActionRows();
+  noHistory.state.view = 'app'; noHistory.state.role = 'resident'; noHistory.state.tab = 'concierge';
+  const emptyCard = String(noHistory.frequentActionsCard());
+  c.check('with no completed job on the device the list is empty and the card says so, rather than guessing',
+    rowsEmpty.length === 0 && /Nothing yet/.test(emptyCard) && !/Book |Rate the job/.test(emptyCard),
+    'rows ' + rowsEmpty.length + ' · card: ' + emptyCard.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 90));
+  const door = boot();
+  door.state.view = 'app'; door.state.role = 'resident'; door.state.tab = 'concierge';
+  /* Every completed job in the seed already carries a rating, so the row this check exists to prove
+     does not exist until a record is changed inside the test — the same shape as voiding a payment to
+     watch a total move. Asserting against the seed alone would report "no unrated job" forever. */
+  const rated = door.BOOKINGS.find(b => b.status === 'completed' && b.myRating) || null;
+  if (rated) rated.myRating = null;
+  const rateRow = door.frequentActionRows().find(r => r.id === 'rate') || null;
+  const selectionBefore = door.state.selectedBookingId;
+  door.openFrequentAction('rate');
+  c.check('a suggestion opens the record it was counted from, not a screen that happens to exist',
+    !!rated && !!rateRow && rateRow.bookingId === rated.id
+      && door.state.selectedBookingId === rateRow.bookingId && door.state.selectedBookingId !== selectionBefore,
+    'voided the rating on ' + (rated ? rated.id : 'nothing') + ' · row names '
+      + (rateRow ? rateRow.bookingId : 'no row') + ' · the screen opened ' + String(door.state.selectedBookingId));
+  const stale = boot();
+  stale.state.view = 'app'; stale.state.role = 'resident';
+  const beforeTab = stale.state.tab, beforeSel = stale.state.selectedBookingId;
+  stale.BOOKINGS.forEach(b => { if (b.status === 'completed') b.status = 'ongoing'; });
+  stale.openFrequentAction('rate');
+  /* The rule is that nothing moves, so the assertion compares against the value the boot actually
+     left behind. Requiring the selection to be absent failed on a correct build because the app opens
+     a booking at start — an assertion about the world instead of about the change. */
+  c.check('a suggestion that has stopped being true says so instead of opening something else',
+    stale.state.tab === beforeTab && stale.state.selectedBookingId === beforeSel,
+    'tab stayed ' + stale.state.tab + ' · selection stayed ' + String(stale.state.selectedBookingId));
+
+  const shell = boot({ appMode: true });
+  const web = boot();
+  c.check('the app shell is read once from how the page loaded, and both answers are real',
+    shell.state.appShell === true && web.state.appShell === false,
+    'shell ' + String(shell.state.appShell) + ' · browser ' + String(web.state.appShell));
+  shell.state.view = 'app'; shell.state.role = 'admin'; shell.render();
+  const shellScreen = shell._document.getElementById('screen').innerHTML;
+  web.state.view = 'app'; web.state.role = 'admin'; web.state.tab = 'admin_dashboard'; web.render();
+  const webScreen = web._document.getElementById('screen').innerHTML;
+  c.check('inside the shell the admin role meets a stated refusal, and on the web the console is untouched',
+    /admin console is a desktop surface/i.test(shellScreen) && !/Provider verification/.test(shellScreen)
+      && /Provider verification|Marketplace Intelligence/.test(webScreen),
+    'shell paints ' + shellScreen.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 70)
+      + ' · browser paints the console: ' + /Provider verification|Marketplace Intelligence/.test(webScreen));
+  const shellLogin = (() => { const b = boot({ appMode: true }); b.state.view = 'login'; b.state.role = 'resident'; b.state.authMode = 'register'; return b.loginHTML(); })();
+  const webLogin = (() => { const b = boot(); b.state.view = 'login'; b.state.role = 'resident'; b.state.authMode = 'register'; return b.loginHTML(); })();
+  c.check('the shell never offers a route into an account it will not open',
+    !/id="rt-admin"/.test(shellLogin) && /id="rt-admin"/.test(webLogin),
+    'link in shell: ' + /id="rt-admin"/.test(shellLogin) + ' · in browser: ' + /id="rt-admin"/.test(webLogin));
+  const shellSignIn = boot({ appMode: true });
+  shellSignIn.state.view = 'login'; shellSignIn.state.role = 'admin';
+  shellSignIn._document.getElementById('login-email').value = 'admin@demo.ph';
+  shellSignIn._document.getElementById('login-pass').value = 'demo1234';
+  shellSignIn.submitAuth();
+  await new Promise(r => setTimeout(r, 900));
+  c.check('and signing in as Admin on a phone is refused in words that name the surface it is on',
+    shellSignIn.state.view === 'login' && shellSignIn.state.authError && /web browser/i.test(shellSignIn.state.authError.admin || ''),
+    'view ' + shellSignIn.state.view + ' · ' + JSON.stringify(shellSignIn.state.authError || null).slice(0, 90));
+
+  const band = boot();
+  const trades = [...new Set(band.PROVIDERS.map(p => p.service))];
+  const withBands = trades.filter(t => band.rateBandFor(t));
+  const plumb = band.rateBandFor(trades[0]);
+  c.check('the rate band is a division over the providers on this device, ordered and non-empty',
+    !!plumb && withBands.length >= 2 && plumb.low <= plumb.mid && plumb.mid <= plumb.high
+      && plumb.low > 0 && plumb.count === band.PROVIDERS.filter(p => p.service === plumb.trade).length,
+    trades[0] + ': ' + JSON.stringify(plumb) + ' · ' + withBands.length + ' of ' + trades.length + ' trades have a band');
+  c.check('a trade with no listed rate is refused a band rather than shown a zero',
+    band.rateBandFor('No Such Trade At All') === null,
+    String(band.rateBandFor('No Such Trade At All')));
+  const hint = band.marketRateHint('Plumbing');
+  /* Both branches of the rate step, because the seam sentence belongs wherever a rate is discussed.
+     The first draft painted only the branch that HAS a band — and the branch a real provider on this
+     build actually sees is the other one, because the profile's own service string is not a roster
+     trade. Each sheet is reached through the wizard's own draft, not by writing a rendered flag. */
+  const branchWithTrade = (trade) => {
+    const w = boot();
+    w.state.view = 'app'; w.state.role = 'provider';
+    w.openRateWizard();
+    w.state.rateWizard.trade = trade;
+    w.rateWizardGo(1);
+    return { markup: String(w.rateWizardSheet()), boot: w };
+  };
+  const withBand = branchWithTrade(plumb.trade);
+  const withoutBand = branchWithTrade('A trade nobody on this device lists');
+  const seamIn = (m) => m.indexOf(hint.reason.slice(0, 24)) > -1;
+  c.check('the outside market read is a named seam that says it did not happen, on every rate branch',
+    hint.available === false && /not wired in this build/i.test(hint.reason)
+      && seamIn(withBand.markup) && seamIn(withoutBand.markup),
+    'seam: ' + hint.reason.slice(0, 52) + ' · band branch quotes it: ' + seamIn(withBand.markup)
+      + ' · no-band branch quotes it: ' + seamIn(withoutBand.markup));
+  /* The defect the screenshot showed: the profile's own service string is "Plumbing Specialist" while
+     the rate rows say "Plumbing", so a band counted off the profile found nothing and the sheet told the
+     provider that nobody lists a rate for their own work. The trade now comes from the roster record,
+     and this asserts the branch the signed-in provider actually sees is the one with numbers in it. */
+  const own = boot();
+  own.state.view = 'app'; own.state.role = 'provider';
+  own.openRateWizard(); own.rateWizardGo(1);
+  const ownMarkup = String(own.rateWizardSheet());
+  const ownTrade = own.state.rateWizard.trade;
+  c.check('a provider opening the wizard sees a band for their own trade, not a claim that none exists',
+    own.rateBandFor(ownTrade) !== null && /Rates listed for/.test(ownMarkup)
+      && !/No provider on this device lists a rate/.test(ownMarkup),
+    'trade ' + ownTrade + ' · band ' + JSON.stringify(own.rateBandFor(ownTrade)));
+  const wizardBoot = withBand.boot;
+  /* Attempt the jump first: the refusal is a fact about the attempt, so reading `error` before asking
+     for the step would assert that nothing happened and call it a guard. */
+  wizardBoot.rateWizardGo(2);
+  const blocked = wizardBoot.state.rateWizard.step === 1 && /Pick a rate/.test(wizardBoot.state.rateWizard.error || '');
+  /* The amount has to differ from the rate the account already carries, or a Save that wrote nothing
+     would pass an equality test against the band. p1's own rate IS the middle of the Plumbing band, so
+     comparing to `mid` alone could not tell a write from a no-op. */
+  const rateBefore = wizardBoot.state.providerProfileData.rateCentavos;
+  const target = plumb.high !== rateBefore ? plumb.high : plumb.high + 5000;
+  wizardBoot.rateWizardChoose(target);
+  wizardBoot.rateWizardGo(2);
+  wizardBoot.rateWizardSave();
+  const rateAfter = wizardBoot.state.providerProfileData.rateCentavos;
+  c.check('the wizard will not confirm without a rate, and its Save writes the field the profile form writes',
+    blocked && wizardBoot.state.rateWizard === null && rateAfter === target && rateAfter !== rateBefore,
+    'forward without a rate refused: ' + blocked + ' · ' + rateBefore + ' -> ' + rateAfter
+      + ' (picked ' + target + ', band ' + plumb.low + '/' + plumb.mid + '/' + plumb.high + ')');
 
   c.check('the catalogue admits what it cannot do',
     /does not do/.test(adm.adminCategories()) && /not available here/.test(adm.adminCategories()));
@@ -5128,6 +6661,1027 @@ suite('repeat services', async () => {
   const empty = screen.sheetHTML();
   c.check('the series manager explains its empty state and how to start',
     /No repeat schedules yet/.test(empty) && /completed booking/.test(empty));
+  return c;
+});
+
+/* ══ 18. reschedule — a proposed time is a record, not a mutation ═════════════
+   The flow did not exist: a conflict after an appointment was agreed had one door, cancel, and
+   the record itself names the fee that costs. Every check here drives the real handlers and reads
+   the BOOKING back, because the promise the interface makes — "your current time stays as it is
+   until the other side answers" — is a claim about a record, and a claim that only holds while
+   nobody tries the accept path is the kind this file keeps finding after the fact. */
+suite('reschedule', async () => {
+  const c = makeChecker();
+  const app = boot();
+  app.state.view = 'app'; app.state.role = 'resident'; app.state.tab = 'bookings';
+
+  c.check('no reschedule request is seeded — a sample proposal would record an agreement nobody proposed',
+    app.RESCHEDULE_REQUESTS.length === 0);
+
+  const offered = Object.keys(app.BOOKING_STATES)
+    .filter(s => app.reschedulable({ status: s }) !== (s === 'upcoming'));
+  c.check('exactly the accepted-but-not-started state may be moved',
+    offered.length === 0, offered.join(', ') || 'only upcoming');
+
+  const b = app.BOOKINGS.find(x => x.status === 'requested') || app.BOOKINGS[0];
+  b.status = 'upcoming';
+  const was = { date: b.date, time: b.time, amount: b.amountCentavos,
+                pay: b.payStatus, status: b.status };
+
+  /* The refusal has to come from the reference, not from luck. The first break written against this
+     check fell back to BOOKINGS[0] and the suite still passed, because that particular first booking
+     happened not to be at a movable stage — so the substitution was invisible and the check was
+     measuring nothing. The table's own first row is therefore made reschedulable first: if the
+     lookup answers an unknown id with somebody else's job, a draft bound to THAT id is the evidence. */
+  app.BOOKINGS[0].status = 'upcoming';
+  c.check('an unknown booking id resolves to nothing at the lookup, not to the first job in the table',
+    app.rescheduleBooking('no-such-booking') === null
+      && app.rescheduleBooking(app.BOOKINGS[0].id) === app.BOOKINGS[0]);
+  c.check('an id the bookings do not hold arms no draft and writes no record', (() => {
+    app.state.rescheduleDraft = null;
+    app.openRescheduleRequest('no-such-booking');
+    return app.state.rescheduleDraft === null && app.RESCHEDULE_REQUESTS.length === 0;
+  })());
+
+  /* Measured, not assumed: in the Node harness, `openSheet()` leaves `state.sheet` null after
+     render() — and the pre-existing booking-request sheet behaves identically, which is why this
+     suite asserts the armed draft and the sheet's own markup rather than the flag. The camera walks
+     both sheets in a real browser, where they stay open; a check that read the flag here would be
+     measuring the harness. */
+  app.openRescheduleRequest(b.id);
+  const sheetMarkup = String(app.rescheduleSheet());
+  c.check('the door arms a draft bound to the job that was asked for, and its sheet names the current time',
+    app.state.rescheduleDraft && app.state.rescheduleDraft.bookingId === b.id
+      && /Propose a new time/.test(sheetMarkup) && sheetMarkup.includes(was.time)
+      && /does not change/.test(sheetMarkup),
+    'draft ' + JSON.stringify(app.state.rescheduleDraft) + ' | ' + sheetMarkup.replace(/<[^>]*>/g, ' ').slice(0, 120));
+  app.state.sheet = 'reschedule';
+  app.state.rescheduleDraft.dayIdx = 1;
+  app.state.rescheduleDraft.timeIdx = 2;
+  app.submitRescheduleRequest();
+  const r = app.RESCHEDULE_REQUESTS[0];
+  c.check('sending files a proposal and leaves the agreed time exactly where it was',
+    app.RESCHEDULE_REQUESTS.length === 1 && r && r.status === 'pending'
+      && r.bookingId === b.id && r.raisedBy === 'resident'
+      && b.date === was.date && b.time === was.time
+      && r.date === app.dayName(1) && r.time === '1:00 PM',
+    r ? r.date + ' ' + r.time + ' vs booking ' + b.date + ' ' + b.time : 'no record written');
+  c.check('the draft is cleared once the request is on the record',
+    app.state.rescheduleDraft === null);
+
+  app.openRescheduleRequest(b.id);
+  c.check('a second proposal is refused while one is waiting, so the answer decides one thing',
+    app.state.rescheduleDraft === null && app.RESCHEDULE_REQUESTS.length === 1,
+    'a second draft or record was armed');
+
+  app.answerReschedule(r.id, 'accepted');
+  c.check('the side that asked cannot accept its own request',
+    r.status === 'pending' && b.date === was.date && b.time === was.time);
+
+  /* The pending line the resident sees has to say the time is unchanged, because that is the
+     state the records are actually in. Asserted on the row's own markup: the booking detail is
+     reached by selecting a job, and a check that paints the wrong screen reports a clean result
+     about a screen nobody is looking at. */
+  const row = String(app.rescheduleRow(b));
+  c.check('the waiting line names the proposed time and swears the current one is unchanged',
+    /is waiting for/.test(row) && /Your time is unchanged until they answer/.test(row)
+      && row.includes(app.dayName(1)), row.replace(/<[^>]*>/g, ' ').slice(0, 160));
+
+  app.applyProviderIdentity(b.providerId);
+  app.state.role = 'provider';
+  app.answerReschedule(r.id, 'accepted');
+  c.check('accepting moves the day and the hour, and nothing else about the job',
+    r.status === 'accepted' && b.date === app.dayName(1) && b.time === '1:00 PM'
+      && b.amountCentavos === was.amount && b.payStatus === was.pay && b.status === was.status,
+    'booking now ' + b.date + ' ' + b.time + ' / ' + b.amountCentavos + ' / ' + b.status);
+  c.check('the decision is stamped with who made it and when',
+    typeof r.decidedAt === 'number' && r.decidedBy === 'provider:' + b.providerId,
+    String(r.decidedBy));
+  app.answerReschedule(r.id, 'declined');
+  c.check('a decided request cannot be decided a second time',
+    b.date === app.dayName(1) && b.time === '1:00 PM' && r.status === 'accepted');
+  /* Positive control on the card's own sentence: after an accept it has to read the NEW time,
+     or the summary line would be a fixed string that always looked right. */
+  const card = String(app.rescheduleCard(b));
+  c.check('the card always reads the live booking, not the proposal it is describing',
+    card.includes(app.dayName(1)) && card.includes('1:00 PM')
+      && /A proposed time becomes the appointment only when the other side accepts it/.test(card),
+    card.replace(/<[^>]*>/g, ' ').slice(0, 160));
+
+  /* Decline is the other half of the promise: nothing moves. */
+  const b2 = app.BOOKINGS.find(x => x.id !== b.id && x.status === 'upcoming')
+    || app.BOOKINGS.find(x => x.id !== b.id);
+  b2.status = 'upcoming';
+  const was2 = { date: b2.date, time: b2.time };
+  app.state.role = 'resident';
+  app.openRescheduleRequest(b2.id);
+  app.state.rescheduleDraft.dayIdx = 2;
+  app.state.rescheduleDraft.timeIdx = 4;
+  app.submitRescheduleRequest();
+  const r2 = app.RESCHEDULE_REQUESTS[1];
+  app.applyProviderIdentity(b2.providerId);
+  app.state.role = 'provider';
+  app.answerReschedule(r2.id, 'declined');
+  c.check('declining keeps the appointment and records the answer',
+    r2.status === 'declined' && b2.date === was2.date && b2.time === was2.time
+      && /^provider:/.test(r2.decidedBy),
+    'booking ' + b2.date + ' ' + b2.time + ', request ' + r2.status);
+
+  /* Withdraw: only the proposer, and it re-opens the door rather than wedging the job. */
+  app.state.role = 'provider';
+  app.withdrawReschedule(r2.id);
+  c.check('the answering side cannot withdraw a request it did not raise',
+    r2.status === 'declined');
+  const b3 = app.BOOKINGS.find(x => x.id !== b.id && x.id !== b2.id);
+  b3.status = 'upcoming';
+  app.state.role = 'resident';
+  app.openRescheduleRequest(b3.id);
+  app.submitRescheduleRequest();
+  const r3 = app.RESCHEDULE_REQUESTS[app.RESCHEDULE_REQUESTS.length - 1];
+  app.withdrawReschedule(r3.id);
+  c.check('the proposer can withdraw, and the job can then be proposed again',
+    r3.status === 'withdrawn' && !app.pendingReschedule(b3.id)
+      && (app.openRescheduleRequest(b3.id), app.state.rescheduleDraft
+        && app.state.rescheduleDraft.bookingId === b3.id));
+  app.state.rescheduleDraft = null;
+
+  /* The claim the app makes about a reload is the claim this repository measures by bytes. */
+  const store = fakeStorage();
+  const writer = boot({ storage: store });
+  writer.state.view = 'app'; writer.state.role = 'resident';
+  const wb = writer.BOOKINGS[0];
+  wb.status = 'upcoming';
+  const wbWas = { date: wb.date, time: wb.time };
+  writer.openRescheduleRequest(wb.id);
+  writer.state.rescheduleDraft.dayIdx = 1;
+  writer.state.rescheduleDraft.timeIdx = 0;
+  writer.submitRescheduleRequest();
+  const again = boot({ storage: store });
+  const back = again.hydrate();
+  c.check('a proposal survives a reload, because a request that vanishes is one nobody answered',
+    back.restored === true && again.RESCHEDULE_REQUESTS.length === 1
+      && again.RESCHEDULE_REQUESTS[0].bookingId === wb.id
+      && again.RESCHEDULE_REQUESTS[0].status === 'pending',
+    'restored ' + JSON.stringify(back) + ' rows ' + again.RESCHEDULE_REQUESTS.length);
+  c.check('and the reload does not move the booking either',
+    again.BOOKINGS[0].date === wbWas.date && again.BOOKINGS[0].time === wbWas.time);
+
+  /* Two ways the family can be wrong on disk, refused at the door like every other record. */
+  const dumpWith = (rows) => {
+    const bad = fakeStorage();
+    bad.setItem('sukinnect.snapshot.v1', JSON.stringify({
+      schemaVersion: app.SCHEMA_VERSION,
+      bookings: [{ id: 'z1', providerId: 'p1', customerId: 'c1', status: 'upcoming' }],
+      providers: [{ id: 'p1' }], customers: [{ id: 'c1' }],
+      repeatSeries: [], seriesPriceOffers: [],
+      rescheduleRequests: rows }));
+    return boot({ storage: bad }).hydrate();
+  };
+  c.check('a request attached to no booking is refused, not painted onto somebody else’s job',
+    dumpWith([{ id: 'rs1', bookingId: 'gone', raisedBy: 'resident', status: 'pending' }])
+      .restored === false);
+  c.check('an unknown state is refused',
+    dumpWith([{ id: 'rs1', bookingId: 'z1', raisedBy: 'resident', status: 'agreed' }])
+      .restored === false);
+  c.check('a proposer that is neither side is refused, because the answer controls are chosen from it',
+    dumpWith([{ id: 'rs1', bookingId: 'z1', raisedBy: 'admin', status: 'pending' }])
+      .restored === false);
+  c.check('and a well-formed dump restores — the positive control that stops those three passing on a door that blocks everything',
+    dumpWith([{ id: 'rs1', bookingId: 'z1', raisedBy: 'resident', status: 'pending',
+                date: 'Fri', time: '8:00 AM', createdAt: 1, decidedAt: null, decidedBy: null }])
+      .restored === true);
+
+  /* The machine's own invariants: a move must not re-open a closed job or re-price an agreed one. */
+  const closed = ['completed', 'cancelled', 'expired', 'no_show', 'disputed'];
+  c.check('no closed state is offered a door',
+    closed.every(s => !app.reschedulable({ status: s }))
+      && !app.reschedulable({ status: 'en_route' }) && !app.reschedulable({ status: 'arrived' })
+      && !app.reschedulable({ status: 'requested' }));
+  c.check('and the vocabulary the door validates against is the one the records print',
+    Object.keys(app.RESCHEDULE_STATES).join(',') === 'pending,accepted,declined,withdrawn,superseded,stale',
+    Object.keys(app.RESCHEDULE_STATES).join(','));
+
+  /* An accepted move is one act with two representations — the request record's decidedAt and the
+     row the booking's timeline prints — and §83 already learned what two readings of one press do
+     on a slow machine. One instant is taken and handed to both, and the timeline row is rendered
+     from its own note, because a reschedule does not change the status: printed under the status
+     label it would read as the same step twice, which is the repeated indicator §7 forbids. */
+  const tRows = app.bookingTimeline(b.id);
+  const movedRow = tRows.filter(e => e.kind === 'reschedule');
+  c.check('accepting writes exactly one timeline row, and its instant IS the record’s decided instant',
+    movedRow.length === 1 && Date.parse(movedRow[0].at) === r.decidedAt
+      && movedRow[0].bookingId === b.id && /Moved to/.test(movedRow[0].note),
+    movedRow.length + ' row(s); at=' + (movedRow[0] || {}).at + ' decidedAt=' + r.decidedAt);
+  c.check('and the timeline says what moved instead of repeating the state it never left',
+    /Moved to/.test(String(app.timelineRows(b))), String(app.timelineRows(b)).replace(/<[^>]*>/g, ' ').slice(0, 120));
+
+  /* §83 twice learned that a behavioural check cannot pin two clock readings a statement apart: on
+     a fast machine they land in the same millisecond and every timing assertion stays green while
+     the divergence is real. The break that made that visible here was a mutant which stopped
+     honouring the shared instant, and the timing check did not notice. So the SHAPE is pinned as
+     well: exactly one reading is taken in the answer path, the record stamps itself from that
+     reading, and the same value is what the event writer receives. */
+  const answerSrc = String(app.answerReschedule);
+  const clockReads = (answerSrc.match(/new Date\(\)/g) || []).length;
+  c.check('the answer path reads the clock ONCE, and that one reading is what both writers receive',
+    clockReads === 1
+      && /const at = new Date\(\)\.toISOString\(\);/.test(answerSrc)
+      && /r\.decidedAt = Date\.parse\(at\);/.test(answerSrc)
+      && /\r?\n {4}at\);/.test(answerSrc),
+    clockReads + ' clock reading(s) in answerReschedule');
+
+  /* Decline is the same promise in the other direction, on the timeline as well as in the record. */
+  const dRow = app.bookingTimeline(b2.id).filter(e => e.kind === 'reschedule');
+  c.check('a declined request leaves one row naming both the time refused and the time that stands',
+    dRow.length === 1 && dRow[0].note.includes(r2.date) && dRow[0].note.includes(was2.time)
+      && b2.date === was2.date && /declined/.test(dRow[0].note),
+    (dRow[0] || {}).note || 'no row');
+
+  /* A counter retires the proposal it answers rather than editing it, so the chain is readable and
+     exactly one ask is ever open. */
+  const b4 = app.BOOKINGS.find(x => x.id !== b.id && x.id !== b2.id && x.id !== b3.id);
+  b4.status = 'upcoming';
+  const was4 = { date: b4.date, time: b4.time };
+  app.state.role = 'resident';
+  app.openRescheduleRequest(b4.id);
+  app.state.rescheduleDraft.reason = 'The tank lorry comes that morning.';
+  app.submitRescheduleRequest();
+  const r4 = app.RESCHEDULE_REQUESTS.filter(x => x.bookingId === b4.id)[0];
+  c.check('an optional reason lands on the record and is shown to the other side',
+    r4.reason === 'The tank lorry comes that morning.'
+      && (app.rescheduleCard(b4).includes('The tank lorry comes')));
+  app.applyProviderIdentity(b4.providerId);
+  app.state.role = 'provider';
+  app.counterReschedule(r4.id);
+  app.state.rescheduleDraft.dayIdx = 2;
+  app.state.rescheduleDraft.timeIdx = 3;
+  app.submitRescheduleRequest();
+  const chain = app.RESCHEDULE_REQUESTS.filter(x => x.bookingId === b4.id);
+  c.check('countering supersedes the ask it answers, raises exactly one new ask, and moves nothing',
+    r4.status === 'superseded' && chain.length === 2 && chain[1].status === 'pending'
+      && chain[1].raisedBy === 'provider' && r4.raisedBy === 'resident'
+      && app.pendingReschedule(b4.id) === chain[1]
+      && b4.date === was4.date && b4.time === was4.time,
+    chain.map(x => x.raisedBy + ':' + x.status).join(' -> ') + ' | booking ' + b4.date + ' ' + b4.time);
+  c.check('the counter retires the old ask with who and when, not silently',
+    /^provider:/.test(r4.decidedBy) && typeof r4.decidedAt === 'number');
+  c.check('and countering something already answered writes nothing and re-opens nothing', (() => {
+    const before = app.RESCHEDULE_REQUESTS.filter(x => x.bookingId === b4.id).length;
+    app.state.rescheduleDraft = { bookingId: b4.id, dayIdx: 0, timeIdx: 0, reason: '', counterOf: r4.id };
+    app.submitRescheduleRequest();
+    return r4.status === 'superseded'
+      && app.RESCHEDULE_REQUESTS.filter(x => x.bookingId === b4.id).length === before
+      && !!app.state.rescheduleError;
+  })());
+
+  /* A reason left empty is stored as nothing rather than as an empty string, or the card would
+     print quotation marks around a sentence nobody wrote. Asserted on the FIRST proposal in this
+     suite, which was submitted without ever touching the field — the natural absent case, not a
+     hand-made one. */
+  c.check('a reason left empty is stored as nothing and paints no quotation marks',
+    r.reason === null && !/\u201c\u201d/.test(String(app.rescheduleRow(b)))
+      && !/\u201c\u201d/.test(String(app.rescheduleCard(b))),
+    'reason ' + JSON.stringify(r.reason));
+
+  /* A request records the schedule it was raised against, because the booking can move for another
+     reason before the answer arrives. Accepting then would overwrite a change nobody offered, so the
+     row is retired as `stale` and the booking is left exactly where the OTHER change put it. */
+  const b5 = app.BOOKINGS.find(x => ![b.id, b2.id, b3.id, b4.id].includes(x.id));
+  b5.status = 'upcoming';
+  const b5Was = { date: b5.date, time: b5.time };
+  app.state.role = 'resident';
+  app.openRescheduleRequest(b5.id);
+  app.state.rescheduleDraft.dayIdx = 2;
+  app.state.rescheduleDraft.timeIdx = 1;
+  app.submitRescheduleRequest();
+  const r5 = app.pendingReschedule(b5.id);
+  c.check('a request stores the schedule it was raised against and shows both ends of the move',
+    r5.fromDate === b5Was.date && r5.fromTime === b5Was.time
+      && String(app.rescheduleCard(b5)).includes(b5Was.date)
+      && /→/.test(String(app.rescheduleCard(b5))),
+    JSON.stringify({ from: r5.fromDate + ' ' + r5.fromTime, to: r5.date + ' ' + r5.time }));
+  /* Something else moves the job first — the only way this branch is reachable by a person. */
+  b5.date = app.dayName(2); b5.time = '5:00 PM';
+  app.applyProviderIdentity(b5.providerId);
+  app.state.role = 'provider';
+  app.answerReschedule(r5.id, 'accepted');
+  c.check('an answer whose schedule has moved on is refused, retires the row, and writes NOTHING',
+    r5.status === 'stale' && b5.date === app.dayName(2) && b5.time === '5:00 PM'
+      && app.pendingReschedule(b5.id) === null
+      && !app.bookingTimeline(b5.id).some(e => e.kind === 'reschedule'),
+    'request ' + r5.status + ', booking ' + b5.date + ' ' + b5.time);
+  c.check('and a retired row cannot be answered again', (() => {
+    app.answerReschedule(r5.id, 'accepted');
+    return b5.date === app.dayName(2) && r5.status === 'stale';
+  })());
+  /* Positive control: the same answer on a request that is NOT stale still moves the job, so the
+     four assertions above cannot pass by the accept path having been disabled wholesale. */
+  const b6 = app.BOOKINGS.find(x => ![b.id, b2.id, b3.id, b4.id, b5.id].includes(x.id));
+  b6.status = 'upcoming';
+  const b6Was = { date: b6.date, time: b6.time };
+  app.state.role = 'resident';
+  app.openRescheduleRequest(b6.id);
+  app.state.rescheduleDraft.dayIdx = 1;
+  app.state.rescheduleDraft.timeIdx = 0;
+  app.submitRescheduleRequest();
+  const r6 = app.pendingReschedule(b6.id);
+  app.applyProviderIdentity(b6.providerId);
+  app.state.role = 'provider';
+  app.answerReschedule(r6.id, 'accepted');
+  c.check('a current request still moves the job (the control that stops the stale guard passing by blocking everything)',
+    r6.status === 'accepted' && b6.date === r6.date && b6.time === r6.time
+      && (b6.date !== b6Was.date || b6.time !== b6Was.time),
+    'booking ' + b6.date + ' ' + b6.time + ' vs asked ' + r6.date + ' ' + r6.time);
+
+  /* §9's rule 6: "the resident sees it in their list, the provider in the request inbox; each entry
+     opens the booking." The records, the guards and both answer screens were built with 17 breaks to
+     prove them; the lists were not, and no check noticed, because every check asked what happens inside
+     the flow. So the card is asserted here — on both sides, from the card's own markup — and both lists
+     are asked only whether they carry it. A fixture is pushed because the seed ships an empty request
+     set on purpose: a sample proposal would record an agreement nobody proposed. */
+  c.check('a pending proposal reaches both booking lists, and a decided one reaches neither', (() => {
+    /* One side at a time, because the demo provider and the demo resident do not share a booking at
+       every stage: the first version pushed one ask and asserted it on both lists, so the provider
+       card rendered empty (its booking belongs to a provider whose identity this device cannot even
+       switch to — `applyProviderIdentity` falls back to p1 for anybody without a demo profile) and
+       every assertion about the other side's markup still held. A check that passes because a
+       different screen contains a similar string is not a check, which is what all three of its
+       falsifier breaks printing MISSED said. */
+    const providerJob = app.bookingsForProvider().find(b => b.status === 'upcoming');
+    const residentJob = app.bookingsForResident().find(b => b.status === 'upcoming');
+    if (!providerJob || !residentJob)
+      return { ok: false, why: 'one side has no movable booking, so its inbox cannot be exercised' };
+    const ask = (booking, raisedBy, status) => ({ id: 'rs-gate-' + raisedBy, bookingId: booking.id,
+      raisedBy, date: 'Mon', time: '9:00 AM', fromDate: booking.date, fromTime: booking.time,
+      reason: null, status: status || 'pending', createdAt: Date.now(),
+      decidedAt: status ? Date.now() : null, decidedBy: status ? 'gate' : null });
+    const read = () => {
+      app.state.view = 'app'; app.state.role = 'provider';
+      const providerCard = String(app.rescheduleAskCard('provider'));
+      const providerList = String(app.providerBookings());
+      app.state.role = 'resident';
+      return { providerCard, providerList,
+        residentCard: String(app.rescheduleAskCard('resident')),
+        residentList: String(app.residentBookings()) };
+    };
+    /* Each phase runs against an EMPTY ask list and puts the device's own records back afterwards. The
+       first version only restored the length it found at the start, and the suite is not the first
+       visitor: earlier checks leave a real pending ask on the books, so the card held two rows, the
+       heading was chosen by the leftover, and the phase that expected nothing expected it of a list that
+       was not empty. A behavioural check must own the world it asserts about. */
+    const savedAsks = app.RESCHEDULE_REQUESTS.slice();
+    const phase = (fixture, fn) => {
+      app.RESCHEDULE_REQUESTS.length = 0;
+      if (fixture) app.RESCHEDULE_REQUESTS.push(fixture);
+      let out = null;
+      try { out = read(); }
+      finally {
+        app.RESCHEDULE_REQUESTS.length = 0;
+        savedAsks.forEach(r => app.RESCHEDULE_REQUESTS.push(r));
+      }
+      return fn(out);
+    };
+    const problems = [];
+    /* Phase 1: an ask raised by a resident has to reach the provider as the provider's own decision. */
+    problems.push.apply(problems, phase(ask(providerJob, 'resident'), r => {
+      const p = [];
+      if (!/data-reschedule-asks="1"/.test(r.providerCard)) p.push('the provider card does not render the ask');
+      if (!/Waiting for your answer/.test(r.providerCard)) p.push('the provider card does not say the answer is theirs');
+      if (r.providerCard.indexOf("openProviderBooking('" + providerJob.id + "')") < 0)
+        p.push('the provider row does not open ' + providerJob.id);
+      if (r.providerCard.indexOf('until you answer') < 0) p.push('the provider card does not say what stays unchanged');
+      if (r.providerList.indexOf('data-reschedule-asks=') < 0) p.push('the provider list does not carry the card');
+      return p;
+    }));
+    /* Phase 2: the same kind of ask raised by a provider has to reach the resident, worded the other
+       way round, and a decided one has to disappear from both. */
+    problems.push.apply(problems, phase(ask(residentJob, 'provider'), r => {
+      const p = [];
+      if (!/Waiting for your answer/.test(r.residentCard)) p.push('the resident card does not say the answer is theirs');
+      if (r.residentCard.indexOf("openBookingDetail('" + residentJob.id + "')") < 0)
+        p.push('the resident row does not open ' + residentJob.id);
+      if (r.residentCard.indexOf('until you answer') < 0) p.push('the resident card does not say what stays unchanged');
+      if (r.residentList.indexOf('data-reschedule-asks=') < 0) p.push('the resident list does not carry the card');
+      return p;
+    }));
+    problems.push.apply(problems, phase(ask(residentJob, 'resident'), r => {
+      const p = [];
+      if (!/Waiting for the provider to answer/.test(r.residentCard)) p.push('an ask the resident raised is not marked as waiting on the provider');
+      if (r.residentCard.indexOf('until the provider answers') < 0) p.push('the waiting-on-them wording is missing');
+      return p;
+    }));
+    problems.push.apply(problems, phase(ask(residentJob, 'resident', 'accepted'), r => {
+      const p = [];
+      if (r.residentCard.trim() !== '' || r.providerCard.trim() !== '') p.push('a decided proposal still renders a card');
+      if (r.residentList.indexOf('data-reschedule-asks=') >= 0 || r.providerList.indexOf('data-reschedule-asks=') >= 0)
+        p.push('a decided proposal still prints in a list');
+      return p;
+    }));
+    /* The shape half. The behavioural half above depends on which booking each list happens to be able
+       to see at the moment the suite reaches it — earlier suites move bookings through the machine — and
+       that is not a stable premise: three falsifier breaks printed MISSED while every assertion above
+       held, so the check was reading a state rather than the rule. A list function that never calls the
+       card cannot render it on any state, so that is asserted directly, with a positive control that
+       each function body was found at all. */
+    const bodyOf = name => {
+      const i = app._source.indexOf('function ' + name + '(');
+      if (i < 0) return '';
+      const j = app._source.indexOf('\n}', i);
+      return j < 0 ? '' : app._source.slice(i, j);
+    };
+    const pBody = bodyOf('providerBookings'), rBody = bodyOf('residentBookings');
+    const askBody = bodyOf('pendingRescheduleAsks'), cardBody = bodyOf('rescheduleAskCard');
+    if (!pBody || !rBody || !askBody || !cardBody) problems.push('a function the inbox needs could not be read, so the shape scan is blind');
+    if (pBody && pBody.indexOf("rescheduleAskCard('provider')") < 0) problems.push('the provider list does not call the inbox card at all');
+    if (rBody && rBody.indexOf("rescheduleAskCard('resident')") < 0) problems.push('the resident list does not call the inbox card at all');
+    if (askBody && !/r\.status === 'pending'/.test(askBody)) problems.push('the inbox does not filter on the ask still being open');
+    if (cardBody && cardBody.indexOf("viewer === 'provider' ? 'openProviderBooking' : 'openBookingDetail'") < 0)
+      problems.push('one opener is hardcoded, so a row can route to the wrong person');
+    const okInbox = !problems.length;
+    return c.check('a pending proposal reaches both booking lists, and a decided one reaches neither',
+      okInbox, problems.join(' · ') ||
+        'provider sees ' + providerJob.id + ', resident sees ' + residentJob.id + ', and a decided one is nowhere');
+    /* The shape of this call is the lesson. The first version returned `{ ok, why }` from the IIFE into
+       `c.check`, and the checker coerces its condition with `!!` — an object is always truthy, so the
+       check could not fail no matter what the page did. That is the same trap this file recorded for a
+       function handed without its parentheses, arriving one shape over: an object is not a verdict. */
+  })());
+  return c;
+});
+
+/* ══ 19. the three documents, and the acceptance this device can point at ══════
+   Drafted from four statutes read in reproduction (RA 10173 §§12-13 and 16, RA 11967, RA 8792,
+   RA 7394) because the official URLs the brief names were unreachable from this machine — 403s and
+   one failed connection, recorded rather than hidden. The rule the checks hold is the one the brief
+   insists on: no invented legal fact. An entity name, an address, a privacy officer, a complaint
+   channel, a retention period and an effective date do not exist yet, so each one appears inside
+   square brackets marked NOT DECIDED, and a scan that finds a bracket without that mark, or an
+   email address outside one, fails. */
+suite('legal', async () => {
+  const c = makeChecker();
+  const app = boot();
+  const { LEGAL_DOCUMENTS, LEGAL_VERSION } = app;
+
+  c.check('three documents exist and each opens with a heading and real sections',
+    LEGAL_DOCUMENTS.length === 3 && LEGAL_DOCUMENTS.every(d =>
+      d.title && d.intro && d.sections.length >= 5 && d.sections.every(s => s.h && s.p.length)),
+    LEGAL_DOCUMENTS.map(d => d.id + ':' + d.sections.length).join(' '));
+
+  const text = LEGAL_DOCUMENTS.map(d => d.sections.map(s => s.h + ' ' + s.p.join(' ')).join(' ')).join(' ');
+  const brackets = text.match(/\[[^\]]*\]/g) || [];
+  const unmarked = brackets.filter(b => !/NOT DECIDED|currently/.test(b));
+  c.check('every unknown business fact is a bracket marked as undecided, and nothing is bracketed by accident',
+    brackets.length >= 6 && unmarked.length === 0,
+    brackets.length + ' placeholders, unmarked: ' + unmarked.join(' | '));
+  /* The specific fabrications the brief forbids: a company name, a DPO, an address, an email, a
+     date, a registration claim. Each would be a fact the business has not decided. */
+  const emailish = text.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g) || [];
+  const registrationClaim = /is registered with the National Privacy Commission|has registered with/.test(text);
+  c.check('no document invents a contact address, an officer, or a registration that has not happened',
+    emailish.length === 0 && !registrationClaim
+      && /has not registered with the National Privacy Commission/.test(text),
+    'emails found: ' + emailish.join(',') + ' | claim: ' + registrationClaim);
+
+  const drafts = LEGAL_DOCUMENTS.filter(d => /not reviewed by Philippine counsel|not legal advice|must be reviewed by qualified Philippine counsel/.test(
+    d.sections.map(s => s.h + ' ' + s.p.join(' ')).join(' ')));
+  c.check('each document tells the reader it is a draft awaiting counsel',
+    drafts.length === 3, drafts.map(d => d.id).join(',') || 'none marked as a draft');
+
+  /* Providers are merchants offering services through the platform — the owner's ruling, and the
+     choice that decides whether RA 11967's invoice and disclosure duties attach at all. It has to
+     be said in the documents, not only in the plan. */
+  const all = text.toLowerCase();
+  c.check('the documents state the merchant characterisation and the invoice duty it carries',
+    /merchants offering services through the platform/.test(all)
+      && /issues the receipt or invoice/.test(all),
+    'the merchant wording the owner ruled is missing from the documents');
+
+  /* Consent is not treated as the only lawful basis, which is the mistake the brief warns about. */
+  c.check('the Privacy Notice names the other lawful bases, not consent alone',
+    /Performance of a contract/.test(text) && /Compliance with a legal obligation/.test(text)
+      && /Legitimate interests/.test(text) && /Consent: the things you can say no to/.test(text));
+
+  /* Acceptance: unchecked by default, refused without it, versioned, and never re-asked at sign-in. */
+  /* Acceptance is asked for on the REGISTER screen, so it has to be measured there. The first
+     version read the sign-in render, where the register fields are never painted at all: the scan
+     found no `reg-terms`, concluded "not pre-ticked", and passed forever — a check that cannot fail
+     looks exactly like one that passes, and the falsifier caught it as a MISSED rather than a
+     green row. The positive control is in the same assertion: the box must be PRESENT. */
+  const loginBoot = boot();
+  loginBoot.state.view = 'login'; loginBoot.state.role = 'resident'; loginBoot.state.authMode = 'login';
+  loginBoot.render();
+  const regScreen = boot();
+  regScreen.state.view = 'login'; regScreen.state.role = 'resident';
+  regScreen.state.authMode = 'register'; regScreen.render();
+  const regHtml = regScreen._document.getElementById('screen').innerHTML;
+  const signInHtml = loginBoot._document.getElementById('screen').innerHTML;
+  c.check('the Terms box is painted, is not pre-ticked, and the document links are on the same screen',
+    /id="reg-terms"/.test(regHtml) && !/<input[^>]*id="reg-terms"[^>]*checked/.test(regHtml)
+      && /openLegalDoc\('terms'\)/.test(regHtml) && !/openLegalDoc\('privacy'\)/.test(signInHtml),
+    'box present: ' + /id="reg-terms"/.test(regHtml)
+      + ' | links on register: ' + /openLegalDoc\('terms'\)/.test(regHtml)
+      + ' | links on sign-in: ' + /openLegalDoc\('privacy'\)/.test(signInHtml));
+
+  c.check('signing in is never held up by a re-acceptance the app has no reason to ask for', (() => {
+    const s = boot();
+    s.state.view = 'login'; s.state.role = 'resident'; s.state.authMode = 'login';
+    s.render();
+    s._document.getElementById('login-email').value = 'ana@demo.ph';
+    s._document.getElementById('login-pass').value = 'demo1234';
+    s.submitAuth();
+    return s.state.authMode === 'login' && !(s.state.authError || {}).terms;
+  })());
+
+  /* A request for a document that does not exist gets a refusal, not a blank panel. The two halves
+     are the door and the sheet: the opener must not arm a destination that has no record, and the
+     renderer must name the absence rather than paint an empty legal screen. */
+  const missing = boot();
+  missing.state.view = 'app'; missing.state.role = 'resident';
+  missing.openLegalDoc('nonexistent-doc');
+  c.check('an unknown document id arms nothing',
+    !missing.state.legalDoc && !missing.state.sheet,
+    'legalDoc=' + String(missing.state.legalDoc) + ' sheet=' + String(missing.state.sheet));
+  missing.state.legalDoc = 'nonexistent-doc';
+  c.check('and the sheet itself refuses rather than painting an empty legal screen',
+    /Document not found/.test(String(missing.legalDocSheet())));
+
+  /* The version travels with the record, and the sheet reports what the record actually says. */
+  const recBoot = boot();
+  recBoot.state.view = 'app'; recBoot.state.role = 'resident';
+  recBoot.state.termsAcceptances = [{ role:'resident', doc:'terms', version: LEGAL_VERSION, at: Date.now() }];
+  recBoot.state.legalDoc = 'terms';
+  const sheetHtml = String(recBoot.legalDocSheet());
+  c.check('the document names the version this device agreed to, from the record',
+    sheetHtml.includes(LEGAL_VERSION) && /This device recorded your acceptance/.test(sheetHtml),
+    sheetHtml.replace(/<[^>]*>/g, ' ').slice(0, 140));
+  const recBoot2 = boot();
+  recBoot2.state.view = 'app'; recBoot2.state.role = 'resident'; recBoot2.state.legalDoc = 'privacy';
+  recBoot2.state.termsAcceptances = [{ role:'provider', doc:'privacy', version: LEGAL_VERSION, at: Date.now() }];
+  c.check('and says nothing about an acceptance that was never recorded',
+  !/This device recorded your acceptance/.test(String(recBoot2.legalDocSheet())));
+
+  /* The draft banner is on every document, not only in the prose. */
+  c.check('each document opens with the draft banner, so the status is visible before the text', (() => {
+    const b = boot();
+    b.state.view = 'app'; b.state.role = 'resident';
+    return b.LEGAL_DOCUMENTS.every(d => {
+      b.state.legalDoc = d.id;
+      return /Draft — not reviewed by Philippine counsel/.test(String(b.legalDocSheet()));
+    });
+  })());
+
+  /* The owner's ruling of 2026-10-27 asks for the terms and the privacy document to be read to their
+     end before the acceptance turns on. This build holds three documents, so the gate covers all three
+     and each declares HOW it is consented to — a notice is not an agreement, and RA 10173 lists consent
+     as one lawful basis of six. A missing declaration would be read as 'accept' by the comparison, so
+     the field itself is what this check holds, with both kinds required to be present: a scan that
+     matched nothing would report "every document declares a kind" forever. */
+  const kinds = LEGAL_DOCUMENTS.map(d => d.consent);
+  c.check('every legal document declares whether the reader accepts it or has merely read it',
+    LEGAL_DOCUMENTS.length >= 3 && kinds.every(k => k === 'accept' || k === 'read')
+      && kinds.includes('accept') && kinds.includes('read'),
+    'kinds: ' + LEGAL_DOCUMENTS.map(d => d.id + '=' + String(d.consent)).join(', '));
+  /* The record has to cover what the gate holds, or "you read this" is a claim with no row behind it
+     for the document the sentence names. Measured by running the real register path, not by reading the
+     source: a loop that writes two of three rows looks identical either way in prose. */
+  const gateBoot = boot();
+  gateBoot.state.view = 'login'; gateBoot.state.role = 'resident'; gateBoot.state.authMode = 'register';
+  gateBoot.render();
+  [['reg-name', 'Nueva Residente'], ['reg-brgy', 'Buayan'],
+   ['login-email', 'nueva@example.com'], ['login-pass', 'demo1234']].forEach(([id, v]) => {
+    gateBoot._document.getElementById(id).value = v;
+  });
+  gateBoot.acceptDocIds().forEach(id =>
+    gateBoot.docScrolled(id, { scrollTop: 1000, clientHeight: 600, scrollHeight: 1600 }));
+  gateBoot.render();
+  gateBoot._document.getElementById('reg-terms').checked = true;
+  gateBoot.submitAuth();
+  await new Promise(r => setTimeout(r, 900));
+  const gateRows = (gateBoot.state.termsAcceptances || []).filter(a => a.role === 'resident');
+  c.check('the acceptance record carries one row per document the gate holds',
+    gateRows.length === gateBoot.acceptDocIds().length
+      && gateBoot.acceptDocIds().every(id => gateRows.some(a => a.doc === id && a.version === LEGAL_VERSION)),
+    'recorded ' + (gateRows.map(a => a.doc).join(', ') || 'nothing')
+      + ' · gate holds ' + gateBoot.acceptDocIds().join(', '));
+  /* And the sheet's foot is a column, which is a measured thing rather than a style: a sentence and a
+     button in one flex row hands the whole shortfall to the sentence's larger content basis and leaves
+     the button one character wide, which no camera tally calls a defect. Found in a screenshot. */
+  gateBoot.state.legalDoc = 'terms';
+  const footMarkup = String(gateBoot.legalDocSheet());
+  const footTag = footMarkup.slice(footMarkup.indexOf('class="sheet-foot"'));
+  c.check('the document sheet foot stacks its line above its button, so neither crushes the other',
+    /flex-direction:column/.test(footTag.slice(0, 90)) && /id="doc-read-state"/.test(footTag)
+      && /onclick="closeSheet\(\)"/.test(footTag),
+    'foot opens: ' + footTag.slice(0, 96).replace(/\s+/g, ' '));
+
+  return c;
+});
+
+/* ══ the professional-verification stepper ═════════════════════════════════
+   The brief asks for government IDs, OCR on them, facial recognition and the identity extracted from
+   all of it. Two of those four are not wired in this build, so the test that matters is whether the
+   screen lies about them: it must name the seam, show no extracted field, and never announce a
+   submission no record backs. */
+suite('verification', async () => {
+  const c = makeChecker();
+  const app = boot();
+  const seam = app.readIdDocumentSeam('id.jpg');
+  c.check('the OCR seam answers that it did not run, and carries no extracted field',
+    seam.available === false && seam.fields === null && /not wired in this build/.test(seam.reason),
+    JSON.stringify(seam).slice(0, 110));
+  const face = app.matchFaceSeam();
+  c.check('the face seam answers that it did not run, and shows no score',
+    face.available === false && face.score === null && /not wired in this build/.test(face.reason),
+    JSON.stringify(face).slice(0, 110));
+
+  const w = boot();
+  w.state.view = 'app'; w.state.role = 'provider';
+  w.openVerificationWizard();
+  const steps = [];
+  for (let i = 0; i < 4; i++) { steps.push(String(w.verificationSheet())); w.verificationGo(i + 1); }
+  c.check('every step paints, and each names the step it is on',
+    steps.length === 4 && steps.every((m, i) => /sheet-title/.test(m) && m.indexOf('Step ' + (i + 1) + ' of 4') > -1),
+    steps.map((m, i) => i + 1 + ':' + m.length).join(' '));
+  c.check('the ID step prints the seam sentence and no invented identity field',
+    /nothing is extracted from the picture/.test(steps[0]) && !/[A-Z]{2}-\d{2,}/.test(steps[0])
+      && !/\b\d{9,}\b/.test(steps[0]),
+    steps[0].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 110));
+  c.check('the face step says the check was not performed rather than passing it',
+    /Face comparison is not wired/.test(steps[2]) && !/match/i.test(steps[2].replace(/not wired|Face comparison/g, '')),
+    steps[2].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 110));
+
+  /* Attaching a document has to yield a name and nothing else — the same rule the concierge follows,
+     and the one an OCR step would break if it were real. */
+  const att = boot();
+  att.state.view = 'app'; att.state.role = 'provider';
+  att.openVerificationWizard();
+  att.verificationAttach('idFile', { files: [{ name: 'philsys-front.jpg', size: 51903 }] });
+  const held = att.state.verification.idFile;
+  const dump = JSON.stringify(att.state.verification);
+  c.check('an attached document is held as a name, with no bytes in the draft',
+    held === 'philsys-front.jpg' && !/data:|blob:/.test(dump) && !/51903/.test(dump),
+    'held ' + String(held) + ' · draft ' + dump.slice(0, 90));
+  c.check('the review step states what the device holds and what it never sent',
+    /not performed by this build/.test(steps[3]) && /Saved on this device only/.test(steps[3])
+      && !/submitted|received by our team/i.test(steps[3]),
+    steps[3].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 120));
+  c.check('the last control keeps the details rather than announcing a submission',
+    /saveVerificationDraft\(\)/.test(steps[3]) && !/onclick="submitVerification/.test(steps[3]),
+    'foot of the review step: ' + steps[3].slice(steps[3].indexOf('sheet-foot')).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 90));
+  const entry = (() => { const e = boot(); e.state.view = 'app'; e.state.role = 'provider';
+    return String(e.providerSectionBody('credentials')); })();
+  c.check('the stepper is reached from the provider\'s own credentials section',
+    /openVerificationWizard\(\)/.test(entry) && typeof app.openVerificationWizard === 'function',
+    entry.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 90));
+  return c;
+});
+
+/* ══ the sign-up guide: a stepper whose answers go into the form, and a voice seam ══
+   Two promises to hold: the guide must fill the SAME fields the register path validates (not a parallel
+   copy of the person), and dictation must say what it is and what it is not — the browser's own engine
+   where one exists, and an honest refusal where it does not. */
+suite('signup-guide', async () => {
+  const c = makeChecker();
+  /* Two states, because the flag is a decision and the engine is a fact about the browser, and a
+     reviewer who sees only one of them cannot tell 'the pilot switched it off' from 'this phone
+     cannot do it'. Off is the default, so the default is what the first check reads. */
+  const offSeam = boot().speechSeam();
+  c.check('dictation is off by default and the seam names the flag, not the browser',
+    offSeam.available === false && offSeam.featureOff === true
+      && /voiceInput/.test(offSeam.reason) && !/no speech recognition engine/.test(offSeam.reason),
+    JSON.stringify(offSeam).slice(0, 120));
+  const voiceOn = boot();
+  voiceOn.CONFIG.featureFlags.voiceInput = true;
+  const seam = voiceOn.speechSeam();
+  c.check('with the flag on, the dictation seam names the engine it found, or says none is exposed',
+    typeof seam.available === 'boolean' && seam.reason.length > 40
+      && (seam.available ? /browser's own speech engine/.test(seam.reason) : /no speech recognition engine/.test(seam.reason)),
+    JSON.stringify(seam).slice(0, 120));
+
+  const g = boot();
+  g.CONFIG.featureFlags.voiceInput = true;
+  g.state.view = 'login'; g.state.role = 'resident'; g.state.authMode = 'register';
+  g.render();
+  g.openSignupGuide();
+  /* One question at a time is a fact about the body, not the rail: the rail names every step by design,
+     so "the next question's words appear" is true of a correct sheet. The discriminator is that the
+     card the person answers holds one title, and it is this step's. */
+  const first = String(g.signupGuideSheet());
+  const cardTitles = (first.match(/class="card-title">([^<]*)</g) || []).map(s => s.replace(/class="card-title">|</g, ''));
+  c.check('the guide asks one question at a time and counts the steps it has',
+    /Step 1 of 2/.test(first) && cardTitles.length === 1
+      && cardTitles[0] === 'What should we call you?' && /wiz-step/.test(first),
+    'titles: ' + JSON.stringify(cardTitles) + ' · rail steps ' + (first.match(/class="wiz-step/g) || []).length);
+  /* The whole point of the guide is that it is not a second place the answer can live. */
+  g.guideWrite(0, 'Nueva Residente');
+  g.guideGo(1);
+  g.guideWrite(1, 'Buayan');
+  const nameEl = g._document.getElementById('reg-name');
+  const brgyEl = g._document.getElementById('reg-brgy');
+  c.check('every guide answer lands in the field the register form itself reads',
+    nameEl.value === 'Nueva Residente' && brgyEl.value === 'Buayan',
+    'reg-name "' + nameEl.value + '" · reg-brgy "' + brgyEl.value + '"');
+  c.check('the guide is a guide: it fills the form and creates no account of its own',
+    g.state.view === 'login' && g.state.sheet === 'signupGuide'
+      && (g.state.termsAcceptances || []).length === 0,
+    'view ' + g.state.view + ' · sheet ' + String(g.state.sheet) + ' · acceptances ' + (g.state.termsAcceptances || []).length);
+  const last = String(g.signupGuideSheet());
+  c.check('the sheet states plainly what dictation is, and never calls the guide a model',
+    /speech engine|no speech recognition engine/.test(last) && !/AI-powered|powered by AI|our AI/i.test(last),
+    last.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(-110));
+  c.check('the dictation control is named and reports whether it is listening',
+    /aria-pressed="false"/.test(first) && /Dictate instead/.test(first),
+    first.slice(first.indexOf('guideDictate'), first.indexOf('guideDictate') + 120).replace(/\s+/g, ' '));
+  const listening = boot();
+  listening.CONFIG.featureFlags.voiceInput = true;
+  listening.state.view = 'login'; listening.state.role = 'resident'; listening.state.authMode = 'register';
+  listening.render();
+  listening.openSignupGuide();
+  listening.guideDictate(0);
+  c.check('with no engine on the platform, pressing dictate says so and leaves the field alone',
+    /no speech recognition engine/i.test(String(listening.state.signupGuideNote))
+      && listening._document.getElementById('reg-name').value === ''
+      && listening.state.signupGuideListening !== true,
+    'note: ' + String(listening.state.signupGuideNote).slice(0, 70));
+  /* The flag-off press is the case the brief asks a flag to prove: the affordance is unreachable,
+     it says why, and it writes nothing. A hidden button would pass the same test by accident, so
+     the reason is read as well as the empty field. */
+  const offPress = boot();
+  offPress.state.view = 'login'; offPress.state.role = 'resident'; offPress.state.authMode = 'register';
+  offPress.render(); offPress.openSignupGuide(); offPress.guideDictate(0);
+  c.check('with the flag off, pressing dictate names the flag and writes nothing',
+    /voiceInput/i.test(String(offPress.state.signupGuideNote))
+      && offPress._document.getElementById('reg-name').value === ''
+      && offPress.state.signupGuideListening !== true,
+    'note: ' + String(offPress.state.signupGuideNote).slice(0, 80));
+  const loginMode = (() => { const b = boot(); b.state.view = 'login'; b.state.role = 'resident'; b.state.authMode = 'login'; return b.loginHTML(); })();
+  const registerMode = (() => { const b = boot(); b.state.view = 'login'; b.state.role = 'resident'; b.state.authMode = 'register'; return b.loginHTML(); })();
+  c.check('the guide is offered where an account is being created, and not where one is being used',
+    /id="signup-guide-open"/.test(registerMode) && !/id="signup-guide-open"/.test(loginMode),
+    'in register: ' + /id="signup-guide-open"/.test(registerMode) + ' · in sign-in: ' + /id="signup-guide-open"/.test(loginMode));
+  return c;
+});
+
+/* ══ the wallet: a view over the ledger, with no value stored ─══════════════
+   The deck forbids a stored-value wallet and the owner asked for the experience anyway, so the rule
+   this suite exists to hold is narrow and hard: every number on the screen must be the number the books
+   already say, and the two things that would move real money must refuse. A check that only reads the
+   sheet's words would pass on a screen that typed its own balance. */
+suite('wallet', async () => {
+  const c = makeChecker();
+  const app = boot();
+  const w = app.walletSnapshot(app.CURRENT_PROVIDER_ID);
+  /* An ORACLE, not the function under test: the figures are re-added here from BOOKINGS, so a wallet that
+     typed its own balance, dropped the hold filter, or counted a cash job fails against records that have
+     not moved. Comparing the snapshot to providerBalances() would compare a value to the call it came from
+     and could never fail — the tautology this repository keeps having to delete. */
+  const oracle = (s) => {
+    const hold = s.CONFIG.payoutHoldDays * 86400000, now = Date.now();
+    const settled = s.BOOKINGS.filter(b => b.providerId === s.CURRENT_PROVIDER_ID
+      && b.status === 'completed' && b.pricing);
+    const share = (b) => s.settlementToProvider(b.pricing);
+    const held = settled.filter(b => !s.isCashJob(b));
+    const released = held.filter(b => Date.parse(b.pricing.frozenAt || b.createdAt) + hold <= now);
+    return {
+      available: released.reduce((t, b) => t + share(b), 0),
+      pending: held.reduce((t, b) => t + share(b), 0) - released.reduce((t, b) => t + share(b), 0),
+      lifetime: settled.reduce((t, b) => t + share(b), 0),
+      releasedIds: released.map(b => b.id)
+    };
+  };
+  const want = oracle(app);
+  c.check('the wallet prints what the records add up to, field by field',
+    w.availableCentavos === want.available && w.pendingCentavos === want.pending
+      && w.lifetimeCentavos === want.lifetime,
+    'wallet ' + w.availableCentavos + '/' + w.pendingCentavos + '/' + w.lifetimeCentavos
+      + ' · records ' + want.available + '/' + want.pending + '/' + want.lifetime);
+  c.check('and at least one ledger event actually touches this account (a scan over none proves nothing)',
+    w.entryCount >= 1 && w.entries.every(e => e.amountCentavos > 0),
+    'entries ' + w.entryCount + ' · first ' + JSON.stringify(w.entries[0] || null).slice(0, 90));
+  /* Move ONE job across the hold boundary and require the wallet to move by exactly that job's share, up
+     on one figure and down on the other. This is what distinguishes a derived figure from a remembered
+     one, and the exact amount is what distinguishes it from a total that merely changed. */
+  const moved = boot();
+  const before = moved.walletSnapshot(moved.CURRENT_PROVIDER_ID);
+  const onHold = moved.BOOKINGS.find(b => b.providerId === moved.CURRENT_PROVIDER_ID
+    && b.status === 'completed' && b.pricing && !moved.isCashJob(b)
+    && Date.parse(b.pricing.frozenAt || b.createdAt) + moved.CONFIG.payoutHoldDays * 86400000 > Date.now());
+  const shareOf = onHold ? moved.settlementToProvider(onHold.pricing) : 0;
+  if (onHold) onHold.pricing.frozenAt = new Date(Date.now() - 400 * 86400000).toISOString();
+  const after = moved.walletSnapshot(moved.CURRENT_PROVIDER_ID);
+  const wantAfter = oracle(moved);
+  c.check('releasing one held job moves the wallet by exactly that job share, and agrees with the records after',
+    !!onHold && shareOf > 0
+      && after.availableCentavos - before.availableCentavos === shareOf
+      && before.pendingCentavos - after.pendingCentavos === shareOf
+      && after.availableCentavos === wantAfter.available && after.pendingCentavos === wantAfter.pending,
+    (onHold ? onHold.id : 'no job on hold') + ' · share ' + shareOf + ' · available '
+      + before.availableCentavos + ' -> ' + after.availableCentavos + ' · pending '
+      + before.pendingCentavos + ' -> ' + after.pendingCentavos);
+
+  const src = app._source;
+  c.check('nothing in the file stores a wallet balance to type into',
+    !/walletBalance\s*=/.test(src) && !/state\.walletAmount/.test(src)
+      && !/wallet.*=\s*[^\n]*el\.value/.test(src),
+    'a stored balance found: ' + /walletBalance\s*=|state\.walletAmount/.test(src));
+
+  const inSeam = app.gatewayCashSeam('in', 50000);
+  const outSeam = app.gatewayCashSeam('out', 50000);
+  c.check('both cash movements are seams that record nothing',
+    inSeam.available === false && inSeam.recorded === false && outSeam.available === false
+      && /licensed payment partner/.test(inSeam.reason) && /nothing was moved/.test(inSeam.reason),
+    JSON.stringify(inSeam).slice(0, 110));
+  const press = boot();
+  press.state.view = 'app'; press.state.role = 'provider';
+  const ledgerBefore = press.LEDGER.length;
+  const balBefore = press.walletSnapshot(press.CURRENT_PROVIDER_ID).availableCentavos;
+  press._document.getElementById('wallet-amount').value = '500';
+  press.cashMovementSeam('in');
+  c.check('pressing Cash in changes no ledger line and no balance, and says so on the sheet',
+    press.LEDGER.length === ledgerBefore
+      && press.walletSnapshot(press.CURRENT_PROVIDER_ID).availableCentavos === balBefore
+      && /nothing was moved/.test(String(press.state.walletNote)),
+    'ledger ' + ledgerBefore + ' -> ' + press.LEDGER.length + ' · balance ' + balBefore + ' -> '
+      + press.walletSnapshot(press.CURRENT_PROVIDER_ID).availableCentavos);
+
+  const tier = app.loyaltyTier(app.CURRENT_PROVIDER_ID);
+  c.check('the tier is computed from jobs and payouts, and attaches no privilege',
+    ['New', 'Active', 'Established'].includes(tier.tier) && Array.isArray(tier.privileges)
+      && tier.privileges.length === 0 && /No privilege is attached/.test(tier.note)
+      && tier.jobs === app.BOOKINGS.filter(b => b.providerId === app.CURRENT_PROVIDER_ID && b.status === 'completed').length,
+    JSON.stringify({ tier: tier.tier, jobs: tier.jobs, earned: tier.earnedCentavos }));
+  /* The flag is off, so the seam names the flag. Switched on, it must STILL decline — a lending
+     answer belongs to a licensed lender, and a feature flag is not a credit decision. Both halves
+     are asserted so that turning the flag on cannot quietly become an approval. */
+  const funding = app.fundingEligibilitySeam();
+  c.check('funding referral is off by default and says so',
+    funding.available === false && /lendingReferral/.test(funding.reason),
+    JSON.stringify(funding).slice(0, 110));
+  const funded = boot();
+  funded.CONFIG.featureFlags.lendingReferral = true;
+  const fundingOn = funded.fundingEligibilitySeam();
+  c.check('and even with the flag on, funding eligibility declines to answer rather than inventing a decision',
+    fundingOn.evaluated === false && fundingOn.eligible === null && /not evaluated here/i.test(fundingOn.reason),
+    JSON.stringify(fundingOn).slice(0, 110));
+
+  const sheet = (() => { const s = boot(); s.state.view = 'app'; s.state.role = 'provider'; return String(s.walletSheet()); })();
+  c.check('the sheet states that it stores no money, and names the hold and the minimum',
+    /stores no money/.test(sheet) && /-day hold/.test(sheet) && /No partner is wired/.test(sheet),
+    sheet.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(-120));
+  c.check('the wallet is reached from the payout section the money already lives in',
+    /openWallet\(\)/.test(String(app.providerSectionBody('payout'))) && typeof app.openWallet === 'function',
+    String(app.providerSectionBody('payout')).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 90));
+  /* The chain's whole claim is that editing an entry after the fact is visible. A check that only asks
+     whether the head hash repeats proves determinism, which is not the property — so the second half of
+     this assertion edits a ledger line in place and requires the head to move. */
+  const chain0 = app.verifyLedgerChain();
+  const tampered = boot();
+  const headBefore = tampered.verifyLedgerChain().head;
+  tampered.LEDGER[0].lines[0].amountCentavos += 100;
+  const headAfter = tampered.verifyLedgerChain().head;
+  c.check('the chain covers every event, and an edited amount moves its head',
+    chain0.length === app.LEDGER.length && chain0.intact === true && chain0.length >= 3
+      && /^[0-9a-f]{8}$/.test(chain0.head) && headAfter !== headBefore,
+    'chain ' + chain0.length + ' of ' + app.LEDGER.length + ' · head ' + chain0.head
+      + ' · after editing one amount ' + headAfter);
+  c.check('the screen calls it a hash chain on this device and names the encryption it does not have',
+    /not a blockchain/.test(chain0.note) && /plain text/.test(chain0.note) && /Ledger chain/.test(sheet),
+    String(chain0.note).slice(0, 110));
+
+  /* ── three defects that only a screenshot showed, each pinned by the shape it left behind ──
+     The stylesheet silenced the first <b> of EVERY card of EVERY sheet, for a reason that only holds
+     where the sheet header repeats that one title. On a five-card sheet it deleted four headings, and
+     no tally could see it: text that is display:none is not clipped, does not collide, and is not
+     measured. A wallet figure painted inside a .stat box drew a card inside a card the same way. */
+  const css = String(app._source);
+  c.check('only the card a sheet header duplicates loses its title, not every card on the page',
+    /\.sheet-body > \.card:first-child > b:first-child\s*\{\s*display:none/.test(css)
+      && !/\.sheet-body \.card > b:first-child\s*\{\s*display:none/.test(css),
+    'scoped rule: ' + /\.sheet-body > \.card:first-child/.test(css) + ' · blanket rule still present: '
+      + /\.sheet-body \.card > b:first-child\s*\{\s*display:none/.test(css));
+  const cardCount = (sheet.match(/<div class="card"/g) || []).length;
+  const titleCount = (sheet.match(/<b class="card-title">/g) || []).length;
+  c.check('every card after the first still carries the heading that names it',
+    cardCount >= 4 && titleCount >= cardCount - 1,
+    'cards ' + cardCount + ' · headings ' + titleCount + ' (the first card may be titled by the sheet head)');
+  c.check('and the balance figure is a figure, not a card nested inside its own card',
+    !/class="stat"/.test(sheet) && /Available to pay out/.test(sheet),
+    'nested .stat box: ' + /class="stat"/.test(sheet));
+  const rowEls = (sheet.match(/border-bottom:1px solid var\(--line\)/g) || []).length;
+  const promised = /Its newest (\d+)(?: of \d+)?:/.exec(sheet);
+  c.check('the entry list names the rows it actually painted, never a count it did not reach',
+    rowEls === Math.min(w.entryCount, 8) && !!promised && Number(promised[1]) === rowEls
+      && !/newest eight/i.test(sheet),
+    'rows ' + rowEls + ' of ' + w.entryCount + ' events · caption says ' + JSON.stringify(promised && promised[0]));
+  c.check('a listed entry says plainly that it is not spendable money',
+    /not money that can be spent/.test(sheet) && /inside the \d+-day hold/.test(sheet),
+    sheet.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').match(/An entry is[^]{0,140}/)?.[0] || 'sentence absent');
+  const rate = app.exchangeRateSeam('USD');
+  c.check('the exchange feed is a seam that answers no rate rather than estimating one',
+    rate.available === false && rate.rate === null && rate.asOf === null && /no network call/.test(rate.reason),
+    JSON.stringify(rate).slice(0, 110));
+  const bot = app.spamCheckSeam();
+  c.check('the bot check is a seam that names all three things it does not have',
+    bot.available === false && bot.passed === null && /provider/.test(bot.reason) && /server/.test(bot.reason),
+    JSON.stringify(bot).slice(0, 110));
+  const wiz = (() => { const s = boot(); s.state.view = 'app'; s.state.role = 'provider'; s.openRateWizard(); return String(s.rateWizardSheet()); })();
+  /* Two halves, because the sentence sitting inside the band branch was the defect: a device whose
+     roster has no rate for the trade renders the other branch and went quiet exactly where the wizard
+     has nothing to offer. The render proves it paints; the shape proves it is outside the branch. */
+  c.check('the pricing wizard says where a foreign rate would have come from, in every band state',
+    /exchange feed/.test(wiz) && /no network call/.test(wiz)
+      && /\$\{rail\}\$\{body\}\$\{feed\}/.test(String(app._source))
+      && (String(app._source).match(/exchangeRateSeam\(\)/g) || []).length === 1,
+    'renders: ' + /exchange feed/.test(wiz) + ' · outside the branch: '
+      + /\$\{rail\}\$\{body\}\$\{feed\}/.test(String(app._source)) + ' · call sites: '
+      + (String(app._source).match(/exchangeRateSeam\(\)/g) || []).length);
+  const reg = (() => { const s = boot(); s.state.view = 'auth'; s.state.authMode = 'register'; return String(s.loginHTML()); })();
+  const sig = (() => { const s = boot(); s.state.view = 'auth'; s.state.authMode = 'login'; return String(s.loginHTML()); })();
+  /* The first version of this check demanded the not-stored sentence sit beside it, and that sentence
+     lives in a toast rather than on the card — the check was wrong about the app, not the app wrong.
+     What is true and falsifiable is the gating: the claim belongs to the surface that creates an account. */
+  c.check('the register card states that no bot check ran, and the sign-in card does not carry the claim',
+    /No bot check/.test(reg) && !/No bot check/.test(sig),
+    'register ' + (/No bot check/.test(reg) ? 'says it' : 'silent') + ' · sign-in '
+      + (/No bot check/.test(sig) ? 'also carries it' : 'free of it'));
+  return c;
+});
+
+/* ══ connections — the relationship a booking already created ═══════════════
+   The brief asks for connections per customer and per provider. The rule this suite holds is that a
+   connection is a DERIVED view over BOOKINGS: nothing can be added or requested, the provider's half
+   withholds a household until a job is accepted, and the organisation half is a seam. A check that
+   only read the sheet's words would pass on a list typed from memory. */
+suite('connections', async () => {
+  const c = makeChecker();
+  const app = boot();
+  const res = app.residentConnections();
+  const prov = app.providerConnections();
+  const books = app.bookingsForResident();
+  c.check('grouping loses nothing: the jobs summed equal the bookings on this side',
+    res.length >= 1 && res.reduce((t, g) => t + g.jobs, 0) === books.length,
+    'groups ' + res.length + ' · jobs ' + res.reduce((t, g) => t + g.jobs, 0) + ' · bookings ' + books.length);
+  res.forEach(g => {
+    const mine = books.filter(b => b.providerId === g.otherId).length;
+    if (g.jobs !== mine) c.check('one group counts its own provider exactly', false, g.otherId + ': ' + g.jobs + ' against ' + mine);
+  });
+  c.check('and one group counts its own provider exactly (over every group on the seed)',
+    res.every(g => g.jobs === books.filter(b => b.providerId === g.otherId).length),
+    res.map(g => g.otherId + '=' + g.jobs).join(' '));
+
+  /* The privacy half, asserted on both sides of the boundary with a positive control that the seed
+     actually contains a withheld case and a visible one. */
+  /* Directional, because an aggregate version of this passed with the whole gate inverted: a group is
+     keyed on the household, so "some rows are hidden and some are not" is true in both directions.
+     Naming which households must be hidden by rule, and which must be named by rule, is the only shape
+     of this assertion that can tell the two apart. */
+  const visibleIds = new Set(app.BOOKINGS.filter(b => b.providerId === app.CURRENT_PROVIDER_ID
+    && app.PROVIDER_VISIBLE_STATES.includes(b.status)).map(b => b.customerId));
+  const anyBookingIds = new Set(app.BOOKINGS.filter(b => b.providerId === app.CURRENT_PROVIDER_ID).map(b => b.customerId));
+  const mustHide = [...anyBookingIds].filter(id => !visibleIds.has(id));
+  c.check('the provider list hides a household whose only job is a request, and names one it accepted',
+    mustHide.length >= 1 && visibleIds.size >= 1
+      && prov.filter(g => mustHide.includes(g.key)).every(g => g.withheld && /has not booked you/.test(g.name))
+      && prov.filter(g => visibleIds.has(g.key)).every(g => !g.withheld && !/has not booked you/.test(g.name)),
+    'must hide ' + mustHide.length + ' · must name ' + visibleIds.size + ' · rows ' + prov.length);
+  c.check('a withheld row carries no link out, so the list cannot become a way to open a stranger',
+    prov.every(g => !g.withheld || !g.link), JSON.stringify(prov.filter(g => g.withheld).map(g => g.key)));
+
+  const src = String(app._source);
+  c.check('nothing in the file can add, request or follow a connection',
+    !/function\s+(addConnection|requestConnection|followProvider|connectWith)/.test(src)
+      && !/state\.connections\s*=/.test(src),
+    'an adder was found: ' + /function\s+(addConnection|requestConnection|followProvider|connectWith)/.test(src));
+  const org = app.organizationSeam();
+  c.check('the organisation half is a seam that lists nothing it cannot hold',
+    org.available === false && org.organizations === 0 && /legal entity/.test(org.reason)
+      && /disburse/.test(org.reason), JSON.stringify(org).slice(0, 100));
+
+  const sheet = (() => { const s = boot(); s.state.view = 'app'; s.state.role = 'resident'; return String(s.connectionsSheet()); })();
+  const pSheet = (() => { const s = boot(); s.state.view = 'app'; s.state.role = 'provider'; return String(s.connectionsSheet()); })();
+  c.check('each side is titled for what it is looking at',
+    /Providers you have booked/.test(sheet) && !/Providers you have booked/.test(pSheet)
+      && /Households you work for/.test(pSheet), 'resident/provider heads differ');
+  c.check('the sheet says a connection is a record rather than something you can add',
+    /not something you can add, request or remove/.test(sheet), sheet.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').match(/Grouped from[^]{0,120}/)?.[0] || 'absent');
+  c.check('and it keeps money out of a list that is about who, not how much',
+    !/\u20b1/.test(sheet) && !/\bpsp\b/i.test(sheet), 'a peso figure appeared in the connections sheet');
+  /* Found in the screenshot: the withheld sentence was repeated on all eight rows, and the connection
+     count sat inside a card-title — the one slot the sheet rule silences on the first card of a body.
+     Both halves are asserted: the head says it once, no row says it again, and the count is painted. */
+  c.check('the withheld rule is stated once on the head, not repeated on every row',
+    /A name appears once you have accepted the job/.test(pSheet)
+      && !/stays withheld/.test(pSheet) && !/Withheld</.test(pSheet),
+    'head carries it: ' + /A name appears once/.test(pSheet) + ' · rows repeat it: ' + /stays withheld/.test(pSheet));
+  c.check('the connection count is in the line that paints, not in a silenced card heading',
+    /^\s*\d+ connections?\s*$/m.test(sheet.replace(/<[^>]*>/g, '\n')) && !/card-title">\d+ connection/.test(sheet),
+    'count visible: ' + /font-weight:700;">\d+ connection/.test(sheet));
+  const entry = (() => { const s = boot(); s.state.view = 'app'; s.state.role = 'resident'; return String(s.connectionsEntry()); })();
+  c.check('the entry is reached from the two surfaces that already hold the records',
+    /openConnections\(\)/.test(entry) && /Your providers/.test(entry)
+      && (src.split('${connectionsEntry()}').length - 1) === 2,
+    'interpolated call sites: ' + (src.split('${connectionsEntry()}').length - 1)
+      + ' · definitions: ' + (src.split('function connectionsEntry').length - 1));
   return c;
 });
 
